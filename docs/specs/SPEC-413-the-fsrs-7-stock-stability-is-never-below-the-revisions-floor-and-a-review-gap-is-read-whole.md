@@ -234,3 +234,19 @@ after `cargo fmt` and occurs exactly once at its target.
 | S41301-STABILITY-FLOOR | `crates/fsrs7/src/stock.rs` | `project` writes the interval with no floor | `stock::a_first_review_rated_again_keeps_a_stock_stability_the_store_holds` |
 | S41302-GAP-WHOLE | `crates/fsrs7/src/convert.rs` | the gap wraps at the signed range | `convert::a_gap_past_the_signed_range_is_read_whole` |
 | S41303-STABILITY-MAX | `crates/fsrs7/src/stock.rs` | the floor takes the lesser of the interval and the floor | `formal_vectors_fsrs7_stock::the_stock_projection_and_the_curve_hold_the_lean_claims_on_every_vector` |
+| S41304-ENGINE-DAY-BEGINS | `crates/engine-core/src/replay.rs` | today begins at the next rollover, not a day before it | `formal_vectors_fsrs7_schedule::the_engine_cores_schedule_gives_every_lean_vectors_output` |
+| S41305-ENGINE-DAY-FLOOR | `crates/engine-core/src/replay.rs` | the engine day truncates toward zero instead of flooring | `formal_vectors_fsrs7_schedule::the_engine_cores_schedule_gives_every_lean_vectors_output` |
+| S41306-WRITE-STABILITY | `crates/engine-core/src/replay.rs` | the write puts the difficulty in the memory state's stability | `formal_vectors_fsrs7_schedule::the_engine_cores_schedule_gives_every_lean_vectors_output` |
+| S41307-BATCH-STARTS-FROM-NONE | `crates/fsrs7/src/replay.rs` | the batch starts every card from a state, not from none | `formal_vectors_fsrs7_memory_state::the_replay_holds_the_lean_claims_on_every_vector` |
+| S41308-FOLD-CHECKS-BEFORE-IT-WRITES | `crates/engine-core/src/replay.rs` | the fold writes the event before it checks it | `formal_vectors_fsrs7_port_state::the_engine_cores_port_state_gives_every_lean_vectors_output` |
+| S41309-CHECKPOINT-WRITES-ITS-FORMAT | `crates/engine-core/src/replay.rs` | the checkpoint writes the next format | `formal_vectors_fsrs7_port_state::the_engine_cores_port_state_gives_every_lean_vectors_output` |
+| S41310-CHECKPOINT-KEY-LITTLE-ENDIAN | `crates/engine-core/src/replay.rs` | the checkpoint writes an event's key big-endian | `formal_vectors_fsrs7_port_state::the_engine_cores_port_state_gives_every_lean_vectors_output` |
+
+S41304 to S41306 give A5's test its teeth over `day_of` (L9) and `stock_fields` (L10); L8's two steps already carry
+dev's rows S38609, S38614 and S49415, whose find texts these rows leave alone. S41307 gives the memory-state test its
+teeth through the batch (L6). The update lines of A6 call the pinned revision's `FSRS::next_states_with_elapsed_days`
+and no code in this tree, so no row here reaches them: a re-pin moves no cover and no row, and only the vectors test
+notices (ADR-427 D7, SKILL FEEDBACK A4). S41308 to S41310 give A7's test its teeth over the fold's order of check and
+write and the checkpoint's format byte and key encoding (L13); the check and the constants beside them carry dev's
+rows S49408, S49416 to S49418, S49422, S49423 and S49425 to S49427. No new find text equals another row's, and each
+occurs exactly once.

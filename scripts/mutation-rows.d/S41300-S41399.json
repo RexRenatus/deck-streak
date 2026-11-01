@@ -36,6 +36,69 @@
         "interval.min(STABILITY_MIN)",
         "formal_vectors_fsrs7_stock::the_stock_projection_and_the_curve_hold_the_lean_claims_on_every_vector",
         "the stock stability is the interval or the floor, whichever is greater; the lesser would hold every interval above the floor at it, and the Lean vectors' stability lines read the port's greater (SPEC-413 R1, R5, A3)"
+      ],
+      [
+        "S41304-ENGINE-DAY-BEGINS",
+        "engine-core",
+        "src/replay.rs",
+        "let began = day.next_day_at - SECONDS_PER_DAY;",
+        "let began = day.next_day_at;",
+        "formal_vectors_fsrs7_schedule::the_engine_cores_schedule_gives_every_lean_vectors_output",
+        "today began one day before the next rollover; begun at the rollover itself, every instant's engine day reads one day early, and the Lean vectors' last-review days and dues read the port's (SPEC-413 R9, A5)"
+      ],
+      [
+        "S41305-ENGINE-DAY-FLOOR",
+        "engine-core",
+        "src/replay.rs",
+        "- began).div_euclid(SECONDS_PER_DAY)",
+        "- began) / SECONDS_PER_DAY",
+        "formal_vectors_fsrs7_schedule::the_engine_cores_schedule_gives_every_lean_vectors_output",
+        "the engine day counts whole days by floor division; truncated toward zero, an instant less than a day before today began reads today, and the Lean vectors' instants before the day began read the port's floor (SPEC-413 R9, A5)"
+      ],
+      [
+        "S41306-WRITE-STABILITY",
+        "engine-core",
+        "src/replay.rs",
+        "stability: self.stability,",
+        "stability: self.difficulty,",
+        "formal_vectors_fsrs7_schedule::the_engine_cores_schedule_gives_every_lean_vectors_output",
+        "the write puts the replay's stability in the card's memory state; written from the difficulty, the Lean vectors' written cards read the port's stability (SPEC-413 R9, A5)"
+      ],
+      [
+        "S41307-BATCH-STARTS-FROM-NONE",
+        "fsrs7",
+        "src/replay.rs",
+        "let starting_states = vec![None; items.len()];",
+        "let starting_states = vec![Some(MemoryState { stability: 1.0, difficulty: 5.0, stability_fast: 1.0 }); items.len()];",
+        "formal_vectors_fsrs7_memory_state::the_replay_holds_the_lean_claims_on_every_vector",
+        "the batch replays every card from no starting state, as the card-by-card replay does; started from a state, the batch's states are not each card's alone on the Lean vectors (SPEC-413 R7, A4, A6)"
+      ],
+      [
+        "S41308-FOLD-CHECKS-BEFORE-IT-WRITES",
+        "engine-core",
+        "src/replay.rs",
+        "fn fold(&self, st: &mut Fsrs7State, ev: &port::ReviewEvent) -> Result<(), port::FoldError> {\n            self.same_model(st)?;",
+        "fn fold(&self, st: &mut Fsrs7State, ev: &port::ReviewEvent) -> Result<(), port::FoldError> {\n            st.events.push(*ev);\n            self.same_model(st)?;",
+        "formal_vectors_fsrs7_port_state::the_engine_cores_port_state_gives_every_lean_vectors_output",
+        "the fold checks an event before it writes it; written first, a refused event stays in the state and an admitted one is held twice, and the Lean vectors' checkpoints read the port's (SPEC-413 R11, A7)"
+      ],
+      [
+        "S41309-CHECKPOINT-WRITES-ITS-FORMAT",
+        "engine-core",
+        "src/replay.rs",
+        "bytes.push(CHECKPOINT_FORMAT);",
+        "bytes.push(CHECKPOINT_FORMAT + 1);",
+        "formal_vectors_fsrs7_port_state::the_engine_cores_port_state_gives_every_lean_vectors_output",
+        "the checkpoint writes the format its restore reads; written as the next format, every checkpoint differs from the Lean vectors' bytes and no state restores from its own checkpoint (SPEC-413 R11, A7)"
+      ],
+      [
+        "S41310-CHECKPOINT-KEY-LITTLE-ENDIAN",
+        "engine-core",
+        "src/replay.rs",
+        "bytes.extend_from_slice(&event.key.0.to_le_bytes());",
+        "bytes.extend_from_slice(&event.key.0.to_be_bytes());",
+        "formal_vectors_fsrs7_port_state::the_engine_cores_port_state_gives_every_lean_vectors_output",
+        "the checkpoint writes an event's key little-endian, as its reader reads it; written big-endian, the Lean vectors' checkpoints differ and a restored state's keys are not the folded ones (SPEC-413 R11, A7)"
       ]
     ]
   }
