@@ -22,9 +22,9 @@ EDGE = re.compile(r"^\s*(\[\*\]|\w+) --> (\[\*\]|\w+)", re.M)
 ROW = re.compile(r"^\| `(\w+)` \| [^|]+ \| ([^|]+?) \|$", re.M)
 STEP = re.compile(r"^### `(\w+)`", re.M)
 # The offsite archives' period, an ISO 8601 duration: the bucket's lifecycle rule deletes each archive
-# this long after it is written, the runbook checks the rule and the policy states the period
-# (SPEC-340 R11; ADR-351 D9). One constant, so the two documents cannot drift apart.
-OFFSITE_PERIOD = "P30D"
+# within this long of its writing, the runbook checks the rule and the policy states the period
+# (SPEC-340 R11; ADR-351 D9; SPEC-584). One constant, so the two documents cannot drift apart.
+OFFSITE_PERIOD = "P7D"
 BEFORE_THE_WINDOW = "## Before the window"
 # What the `rekeyed` step says of the sync key: its two triggers and what each needs (SPEC-340 R1;
 # ADR-347 D13), and that the hash is never printed.
