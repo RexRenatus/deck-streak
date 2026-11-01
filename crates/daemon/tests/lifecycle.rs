@@ -697,3 +697,158 @@ fn a_watchdog_below_the_minimum_arms_no_heartbeat_and_says_both_times_in_millise
         MIN_WATCHDOG.as_millis().to_string()
     );
 }
+
+/// A running `api` role whose log is read as it is written (SPEC-582 A1, A2): the guard of
+/// [`Daemon`] owns the child, and a reader thread sends each line of its standard output down
+/// `lines`, so the test reads the address the role's serve line names.
+struct Serving {
+    _guard: Daemon,
+    lines: mpsc::Receiver<String>,
+}
+
+impl Serving {
+    /// Starts `deckstreakd api` with a cleared environment holding the listen address, the state
+    /// directory and the log level, and `CREDENTIALS_DIRECTORY` only when `credentials` names one.
+    fn start(state: &Path, credentials: Option<&Path>) -> Self {
+        use std::io::{BufRead, BufReader};
+
+        let mut command = Command::new(env!("CARGO_BIN_EXE_deckstreakd"));
+        command
+            .arg("api")
+            .env_clear()
+            .env("DECKSTREAK_API_LISTEN", "127.0.0.1:0")
+            .env("STATE_DIRECTORY", state)
+            .env("RUST_LOG", "info")
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        if let Some(credentials) = credentials {
+            command.env("CREDENTIALS_DIRECTORY", credentials);
+        }
+        let mut child = command.spawn().expect("the binary starts");
+        let stdout = child.stdout.take().expect("the child's standard output");
+        let (line, lines) = mpsc::channel();
+        std::thread::spawn(move || {
+            for read in BufReader::new(stdout).lines() {
+                let Ok(text) = read else { break };
+                if line.send(text).is_err() {
+                    break;
+                }
+            }
+        });
+        Self {
+            _guard: Daemon::own(child, STOP_BOUND),
+            lines,
+        }
+    }
+
+    /// The address the role's `the api role serves` line names.
+    ///
+    /// # Errors
+    ///
+    /// Every line the role wrote, when it exited or the deadline passed before it served.
+    fn bound(&self) -> Result<std::net::SocketAddr, String> {
+        let started = Instant::now();
+        let mut seen = Vec::new();
+        loop {
+            let left = DEADLINE.saturating_sub(started.elapsed());
+            let Ok(text) = self.lines.recv_timeout(left) else {
+                return Err(format!("the api role did not serve; its lines: {seen:?}"));
+            };
+            let event: Value = text
+                .get(3..)
+                .and_then(|json| serde_json::from_str(json).ok())
+                .unwrap_or(Value::Null);
+            if event["message"] == "the api role serves"
+                && let Some(listen) = event["listen"].as_str()
+            {
+                return listen.parse().map_err(|error| format!("{listen}: {error}"));
+            }
+            seen.push(text);
+        }
+    }
+}
+
+/// `POST path` with the JSON `body`, same-origin, over one connection the request closes: the
+/// answer's status and body.
+fn post(address: std::net::SocketAddr, path: &str, body: &str) -> (u16, String) {
+    use std::io::{Read, Write};
+
+    let mut stream = std::net::TcpStream::connect(address).expect("the role accepts");
+    stream
+        .set_read_timeout(Some(DEADLINE))
+        .expect("a read timeout on the connection");
+    let request = format!(
+        "POST {path} HTTP/1.1\r\nHost: {address}\r\nContent-Type: application/json\r\n\
+         Sec-Fetch-Site: same-origin\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+        body.len()
+    );
+    stream
+        .write_all(request.as_bytes())
+        .expect("the request is written");
+    let mut answer = String::new();
+    stream
+        .read_to_string(&mut answer)
+        .expect("the answer is read");
+    let (head, rest) = answer
+        .split_once("\r\n\r\n")
+        .unwrap_or((answer.as_str(), ""));
+    let status = head
+        .split_whitespace()
+        .nth(1)
+        .and_then(|code| code.parse().ok())
+        .unwrap_or_default();
+    (status, rest.to_owned())
+}
+
+/// The role at `address` answers 404 `telegram_off` on the handshake, the launch validation and
+/// both link-code routes, each a well-formed same-origin JSON request (SPEC-582 R4).
+fn assert_telegram_off(address: std::net::SocketAddr) {
+    let launch =
+        json!({ "init_data": "auth_date=1736911800&query_id=synthetic-query" }).to_string();
+    let requests = [
+        ("/api/session", launch.clone()),
+        ("/api/launch", launch),
+        ("/api/link/code", String::from("{}")),
+        (
+            "/api/link/redeem",
+            json!({ "code": "synthetic-code" }).to_string(),
+        ),
+    ];
+    for (path, body) in requests {
+        assert_eq!(
+            post(address, path, &body),
+            (404, String::from(r#"{"reason":"telegram_off"}"#)),
+            "{path}"
+        );
+    }
+}
+
+#[test]
+fn the_api_role_starts_with_telegram_off_when_neither_identity_credential_is_held() {
+    // A credentials directory that holds neither of identity's credentials: the role starts with
+    // Telegram off, and the gate's four routes answer 404 telegram_off (SPEC-582 R3, R4).
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let state = directory.path().join("state");
+    std::fs::create_dir(&state).expect("the state directory");
+    let credentials = credentials_directory(directory.path(), &[]);
+    let serving = Serving::start(&state, Some(&credentials));
+    let address = serving.bound().unwrap_or_else(|lines| {
+        panic!("the api role refused start with neither credential: {lines}")
+    });
+    assert_telegram_off(address);
+}
+
+#[test]
+fn the_api_role_starts_with_telegram_off_when_no_credentials_directory_is_set() {
+    // No CREDENTIALS_DIRECTORY at all, as a unit that loads no credential is started: the role
+    // starts with Telegram off (SPEC-582 R3).
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let state = directory.path().join("state");
+    std::fs::create_dir(&state).expect("the state directory");
+    let serving = Serving::start(&state, None);
+    let address = serving
+        .bound()
+        .unwrap_or_else(|lines| panic!("the api role refused start with no credentials: {lines}"));
+    assert_telegram_off(address);
+}

@@ -360,3 +360,115 @@ fn an_owner_debug_shows_no_user_id() {
     let owner = Owner::new(TelegramUserId::new(OWNER));
     assert_eq!(format!("{owner:?}"), "Owner(..)");
 }
+
+/// SPEC-582 A4: the gate is held with both Telegram credentials, off with neither, and refused by
+/// the missing one's id when one is held without the other; a malformed one refuses as at the base.
+#[test]
+fn the_gate_is_held_only_with_both_credentials_and_off_with_neither() {
+    use deck_streak_identity::owner::telegram_pair;
+
+    let owner_id = OWNER.to_string();
+
+    // Both held: the pair, read through the kernel's loader, and the held gate, which admits the
+    // owner's launch data signed for that bot.
+    let both = credentials(&[(OWNER_USER_ID, &owner_id), (TELEGRAM_BOT_TOKEN, BOT_TOKEN)]);
+    let redactor = Redactor::new();
+    let (owner, token) = telegram_pair(&loader(&both, &redactor))
+        .expect("both credentials load")
+        .expect("both credentials are held");
+    assert_eq!(redactor.registered(), 2);
+    assert_eq!(owner.user(), TelegramUserId::new(OWNER));
+    assert_eq!(token.expose(), BOT_TOKEN);
+    let gate = OwnerGate::load_held(&loader(&both, &Redactor::new()), Freshness::default())
+        .expect("both credentials load")
+        .expect("with both held the gate is held");
+    let ours = launch(OWNER, SIGNED_AT);
+    assert_eq!(
+        gate.admit(&payload(&ours, &sign(BOT_TOKEN, &ours)), at(SIGNED_AT + 10))
+            .map(Owner::user),
+        Ok(TelegramUserId::new(OWNER))
+    );
+
+    // Neither held: Telegram is off, and nothing refuses start.
+    let neither = credentials(&[]);
+    assert!(
+        telegram_pair(&loader(&neither, &Redactor::new()))
+            .expect("neither held refuses nothing")
+            .is_none(),
+        "with neither held there is no pair"
+    );
+    assert!(
+        OwnerGate::load_held(&loader(&neither, &Redactor::new()), Freshness::default())
+            .expect("neither held refuses nothing")
+            .is_none(),
+        "with neither held the gate is off"
+    );
+
+    // One held without the other refuses start by the missing one's id, the pair and the gate alike.
+    let half = [
+        (OWNER_USER_ID, vec![(TELEGRAM_BOT_TOKEN, BOT_TOKEN)]),
+        (TELEGRAM_BOT_TOKEN, vec![(OWNER_USER_ID, owner_id.as_str())]),
+    ];
+    for (id, present) in examined("half pair(s)", half.to_vec()) {
+        let directory = credentials(&present);
+        let refusals = [
+            telegram_pair(&loader(&directory, &Redactor::new())).err(),
+            OwnerGate::load_held(&loader(&directory, &Redactor::new()), Freshness::default()).err(),
+        ];
+        for refusal in refusals {
+            let Some(refusal) = refusal else {
+                panic!("half a pair, {id} missing, did not refuse start");
+            };
+            let said = refusal.to_string();
+            assert!(said.contains(id), "the refusal does not name {id}: {said}");
+            assert!(
+                matches!(refusal, IdentityError::Credential(_)),
+                "{refusal:?}"
+            );
+        }
+    }
+
+    // A malformed owner id refuses by its id even with no token beside it, and a blank token beside
+    // the owner refuses by the token's id.
+    let malformed = [
+        (OWNER_USER_ID, vec![(OWNER_USER_ID, "the-owner")]),
+        (
+            TELEGRAM_BOT_TOKEN,
+            vec![
+                (OWNER_USER_ID, owner_id.as_str()),
+                (TELEGRAM_BOT_TOKEN, "   "),
+            ],
+        ),
+    ];
+    for (id, present) in examined("malformed credential(s)", malformed.to_vec()) {
+        let directory = credentials(&present);
+        let Some(refusal) = telegram_pair(&loader(&directory, &Redactor::new())).err() else {
+            panic!("a malformed {id} did not refuse start");
+        };
+        let said = refusal.to_string();
+        assert!(said.contains(id), "the refusal does not name {id}: {said}");
+        assert!(
+            matches!(refusal, IdentityError::Malformed { .. }),
+            "{refusal:?}"
+        );
+    }
+}
+
+/// SPEC-582 A5: `telegram_off` answers 404 with its reason alone, as identity's refusals are
+/// written.
+#[tokio::test]
+async fn telegram_off_answers_404_with_its_reason_alone() {
+    let refusal = Refusal::TelegramOff;
+    assert_eq!(refusal.reason(), "telegram_off");
+    assert_eq!(refusal.status(), StatusCode::NOT_FOUND);
+    let response = axum::response::IntoResponse::into_response(refusal);
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    let body = axum::body::to_bytes(response.into_body(), 1024)
+        .await
+        .expect("a readable body");
+    assert_eq!(
+        String::from_utf8_lossy(&body),
+        "{\"reason\":\"telegram_off\"}",
+        "the refusal's body is not its reason alone"
+    );
+}

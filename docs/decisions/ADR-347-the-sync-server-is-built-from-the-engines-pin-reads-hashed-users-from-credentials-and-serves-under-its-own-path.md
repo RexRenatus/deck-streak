@@ -351,3 +351,11 @@ D13, the sync key and its hash (SEC01-F01, the sync key's lifetime and the hash'
   `deck-streak-sync` (ADR-351 D1).
 - D4's route gains the edge's log of it, with no header and no key (ADR-351 D4), and no web cookie
   crosses it (ADR-351 D7).
+
+## Amendment (ADR-601 D7): the bot's share is freed
+
+The bot's unit leaves the install. Its memory ceilings and its processor quota are freed and given
+to no other unit: the four long-running units' ceilings plus the largest job's fit inside
+DeckStreak's share, where five filled it, and the four daemons' quotas fit inside its processors,
+where five divided them. The share and its processor count stay as decided, and
+`test_the_daemons_and_the_largest_job_fit_the_stack_share` holds the new sums (SPEC-582 A14).

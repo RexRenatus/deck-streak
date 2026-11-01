@@ -758,11 +758,6 @@ const LEDGER_NAMES: [&str; 8] = [
     "settle",
 ];
 
-/// SPEC-031's alert path: it pages the owner that a unit failed, the daemon among them, so it
-/// cannot go through the daemon's router. The one shipped source outside the bot that names the
-/// Bot API.
-const ALERT_PATH: &str = "deploy/scripts/alert-telegram.sh";
-
 /// Every send, and where it is made: (file, function, send). The census finds each once.
 const NAMED_SENDS: [(&str, &str, &str); 24] = [
     // The bot's command replies (#257): the erase prompt, every other reply, and the export.
@@ -1559,7 +1554,7 @@ fn census_read(sources: &[(String, String)], brought: &[(String, bool)]) -> Cens
             if rust {
                 request_refusals(&mut found, path, &code, &structure);
             }
-        } else if path != ALERT_PATH {
+        } else {
             for (at, name) in names_of_the_bot_api(&code) {
                 found
                     .refusals
@@ -2904,14 +2899,11 @@ fn no_delivery_goes_around_the_port() {
          the site names it, and nowhere else"
     );
 
-    // The one exception is needed: the alert path's text is refused anywhere else.
-    let (_, alert) = sources
-        .iter()
-        .find(|(path, _)| path == ALERT_PATH)
-        .expect("the alert path is a shipped source");
+    // No source outside the bot is exempt (SPEC-582 R7): a page that names the Bot API is refused
+    // at the old alert sender's path as anywhere else.
     let elsewhere = census(&[(
-        String::from("deploy/scripts/another-page.sh"),
-        alert.clone(),
+        String::from("deploy/scripts/alert-telegram.sh"),
+        String::from("curl --config - \"https://api.telegram.org/bot$token/sendMessage\"\n"),
     )]);
     let what: Vec<&str> = elsewhere
         .refusals
