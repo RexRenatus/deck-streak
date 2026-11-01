@@ -72,3 +72,16 @@ C19: green at 6a5b3eaf
 - **The planted controls read only what they plant.** C4's fourth route, C9's digest that answers the manifest's own,
   C10's instantiation handed `env.x`, C11's planted `import(` and `importScripts(` lines, and C14's check that skips the
   head clause each judge a planted subject with the census of its test, so they prove the census can fail.
+
+The swap race test, `a_file_swapped_past_the_cap_between_its_size_and_its_read_is_refused`, met CI red after #1060
+carried it. Run 41269302078 attempt 2, job 124796639171, artifact 13077155028: the unmutated baseline of mutation-rust
+shard 11 exited 100 in job 124796639171, which failed the test at `companion_route.rs:512:5` (both files were met) once
+job 124796639171 had read 712 requests over the swaps, 0 serving the one byte and 712 refused over the cap: the swapper
+had held the served name on the over-cap file for the whole bounded window. No local form reproduced it at 77059951:
+the test alone pinned to one CPU failed 0 of 200, the target under the nextest mutants profile with four test threads
+pinned to four CPUs failed 0 of 100, and the whole target pinned to one CPU failed 0 of 200. A plant holding the name on
+two over-cap files for the first 2 s failed that body 5 of 5 at the same assertion (0 served, 200 refused). 74c327fd
+keeps the window of 200 requests and 200 swaps and both assertions byte-equal, and runs the loop past the window until
+each file was met, under a 10 s deadline past which the assertion fails for real: at 74c327fd the test alone pinned to
+one CPU failed 0 of 200, the same plant failed 0 of 5, and a plant that never places the small file failed 3 of 3 at
+the same assertion once the deadline passed.
