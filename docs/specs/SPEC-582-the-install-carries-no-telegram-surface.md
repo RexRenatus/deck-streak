@@ -171,6 +171,7 @@ functions the first push cannot compile, so each of those is marked not red with
 | `crates/daemon/src/snapshot_lister.rs` | daemon | changed: the lister read with no credentials directory |
 | `crates/daemon/tests/lifecycle.rs` | daemon | changed: A1, A2 |
 | `crates/daemon/tests/roles.rs` | daemon | changed: A8 |
+| `crates/daemon/tests/snapshot_lister.rs` | daemon | changed: the lister with no credentials directory refuses a malformed command |
 | `crates/notifications/tests/one_router.rs` | notifications | changed: the alert path's exemption removed |
 | `scripts/tests/test_deploy_templates.py` | tests | changed |
 | `scripts/tests/test_deploy_scripts.py` | tests | changed |
