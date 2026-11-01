@@ -73,7 +73,7 @@ describe('the Telegram boundary', () => {
     ];
 
     expect(planted.filter(touches)).toEqual(planted);
-    expect(touches("import { telegram } from '$lib/telegram.svelte'; telegram.ready();")).toBe(false);
+    expect(touches("import { telegram } from '#lib/telegram.svelte.js'; telegram.ready();")).toBe(false);
     expect(touches('// null outside Telegram. The wrapper says so.')).toBe(false);
   });
 
@@ -93,13 +93,13 @@ describe('the Telegram boundary', () => {
     // SPEC-400 R8, A10: the start hook runs before any component and before the script has
     // loaded, so it reaches the launch module and never the wrapper that reads the script's object.
     const wrapper = /telegram\.svelte/;
-    expect(wrapper.test("import { telegram } from '$lib/telegram.svelte';")).toBe(true);
+    expect(wrapper.test("import { telegram } from '#lib/telegram.svelte.js';")).toBe(true);
 
     const hook = readFileSync(join(APP, HOOK), 'utf8');
     const launch = readFileSync(join(APP, LAUNCH), 'utf8');
 
     expect(wrapper.test(hook), HOOK).toBe(false);
     expect(wrapper.test(launch), LAUNCH).toBe(false);
-    expect(/from\s+['"]\$lib\/telegram-launch['"]/.test(hook), `${HOOK} imports the launch module`).toBe(true);
+    expect(/from\s+['"]#lib\/telegram-launch\.js['"]/.test(hook), `${HOOK} imports the launch module`).toBe(true);
   });
 });

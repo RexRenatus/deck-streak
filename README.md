@@ -1,5 +1,7 @@
 # DeckStreak
 
+![DeckStreak](docs/assets/deckstreak-hero-tide-light.gif)
+
 DeckStreak turns your Anki reviews into XP, levels, streaks, quests and badges in a Telegram Mini
 App, with daily pre-study readings written by a mentor for each subject you study. It reads the
 reviews you already do in Anki, through your own Anki sync server, and scores every study day.
@@ -23,7 +25,7 @@ stay quiet.
 ## Install
 
 DeckStreak is a Rust workspace (the backend) and a SvelteKit Mini App (the front end). You need the
-Rust toolchain pinned in `rust-toolchain.toml`, Node 24 (`.nvmrc`), pnpm 11 (pinned by
+Rust toolchain pinned in `rust-toolchain.toml`, Node 24 (`.nvmrc`), pnpm 12 (pinned by
 `packageManager` in `package.json`), Python 3.11 or later for the gate's probes, and
 `cargo-nextest`.
 

@@ -1,0 +1,428 @@
+{
+  "schema": "formal-obligations.v1",
+  "phases": {
+    "1": ["O1a", "O4", "O5", "O6"],
+    "2": ["O1", "O2", "O3", "O4", "O5", "O6", "O7", "O8", "O9", "O11"]
+  },
+  "obligations": [
+    {
+      "id": "O1a",
+      "property": "No review is lost on the first phase's path: the three existing sync models take the phone as a new client, and an answer the scheduler cannot take fails closed",
+      "layers": ["sync", "scheduler"],
+      "artifacts": [
+        {"kind": "tla", "entry": "tla/FullSyncChoice", "property": "BackupBeforeReplace", "state": "present"},
+        {"kind": "tla", "entry": "tla/FullSyncChoice", "property": "SnapshotBeforeUpload", "state": "present"},
+        {"kind": "tla", "entry": "tla/FullSyncChoice", "property": "CountsCoverTheUpload", "state": "present"},
+        {"kind": "tla", "entry": "tla/FullSyncChoice", "property": "AWindowSyncIsNotSilent", "state": "present"},
+        {"kind": "tla", "entry": "tla/FullSyncChoice", "property": "NoReviewLost", "state": "present"},
+        {"kind": "tla", "entry": "tla/MinimumClientHandshake", "property": "EverySyncFollowsAnAdmittingRead", "state": "present"},
+        {"kind": "tla", "entry": "tla/SyncCredential", "property": "NoKeyAtRestAfterSignOut", "state": "present"},
+        {"kind": "tla", "entry": "tla/SyncCredential", "property": "NoSendAfterSignOut", "state": "present"},
+        {"kind": "tla", "entry": "tla/SyncCredential", "property": "ARefusalDropsOnlyItsOwnKey", "state": "present"},
+        {"kind": "tla", "entry": "tla/SyncCredential", "property": "AFailureKeepsTheKey", "state": "present"},
+        {"kind": "tla", "entry": "tla/SyncCredential", "property": "UnsealOnlyInALiveSession", "state": "present"},
+        {"kind": "tla", "entry": "tla/ScheduledAnswer", "state": "planned"}
+      ],
+      "ties": [],
+      "gaps": [
+        "tied by covers only: the three sync models are bound to the code by covers stamps alone",
+        "the phone is not yet an actor of the three sync models",
+        "each model holds at its bounds, not universally"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "O1",
+      "property": "No lost review: every review a device records reaches the op log and stays there",
+      "layers": ["sync", "scheduler"],
+      "artifacts": [
+        {"kind": "tla", "entry": "tla/OpLog", "state": "planned"},
+        {"kind": "lean", "entry": "lean/SyncClock", "state": "planned"},
+        {"kind": "lean", "entry": "lean/ReviewKey", "state": "planned"},
+        {"kind": "lean", "entry": "lean/FieldMerge", "state": "planned"},
+        {"kind": "lean", "entry": "lean/PushJudge", "state": "planned"}
+      ],
+      "ties": [],
+      "gaps": [
+        "holds at two and three devices with a few operations each, not universally",
+        "SQLite's and the filesystem's durability are trusted",
+        "a Lean port proves the port; vectors tie it to the code, which is never extracted"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "O2",
+      "property": "The review log is append-only and monotone: the log and every cursor only grow, and a committed operation never changes",
+      "layers": ["sync", "storage"],
+      "artifacts": [
+        {"kind": "tla", "entry": "tla/OpLog", "state": "planned"}
+      ],
+      "ties": [],
+      "gaps": [
+        "a compaction added later is a new write path, so the model gains its action first",
+        "holds at the model's bounds, not universally"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "O3",
+      "property": "The op log converges: every device that reconnects reaches the same log, each operation once",
+      "layers": ["sync"],
+      "artifacts": [
+        {"kind": "tla", "entry": "tla/OpLog", "state": "planned"}
+      ],
+      "ties": [],
+      "gaps": [
+        "convergence holds only under the stated fairness; a device that never reconnects never converges",
+        "holds at the model's bounds, not universally"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "O4",
+      "property": "Interval determinism: one model version and one event set give the same state and the same due days on every host",
+      "layers": ["scheduler"],
+      "artifacts": [
+        {"kind": "lean", "tree": "companion", "about": "the scheduler's interval rule, proved in its own tree", "state": "planned"},
+        {"kind": "kani", "tree": "companion", "about": "harnesses on the scheduler's arithmetic, its caps and its loader, in its own tree", "state": "planned"}
+      ],
+      "ties": [],
+      "gaps": [
+        "cross-host equality is tested by shared hashes, never proved",
+        "rustc's and LLVM's per-target code generation is trusted",
+        "Kani checks its own nightly compiler's output, not the shipped compiler's",
+        "no formal tool runs on iOS",
+        "judged in the scheduling companion's own ledger; this ledger names it generically"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "O5",
+      "property": "The fold and the merge: the scheduler's state is a function of the set of events, whatever their arrival order",
+      "layers": ["scheduler", "sync"],
+      "artifacts": [
+        {"kind": "lean", "tree": "companion", "about": "the fold over the event set, proved in the scheduler's own tree", "state": "planned"},
+        {"kind": "tla", "tree": "companion", "about": "the merge of the scheduler's event sets, modelled in its own tree", "state": "planned"}
+      ],
+      "ties": [],
+      "gaps": [
+        "the proof assumes no two events share a key",
+        "judged in the scheduling companion's own ledger; this ledger names it generically"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "O6",
+      "property": "Fail closed where the scheduler is absent: no due date is written without a usable scheduler, and every answer is still logged",
+      "layers": ["scheduler", "boundary"],
+      "artifacts": [
+        {"kind": "tla", "entry": "tla/ScheduledAnswer", "state": "planned"},
+        {"kind": "lean", "entry": "lean/CompanionDecide", "state": "planned"},
+        {"kind": "lean", "entry": "lean/ScheduledState", "state": "planned"},
+        {"kind": "kani", "harness": "K-decide", "state": "planned"},
+        {"kind": "kani", "harness": "K-companion-codec", "state": "planned"}
+      ],
+      "ties": [],
+      "gaps": [
+        "stock Anki clients can still write due dates through sync while they are kept",
+        "the scheduling companion's own behaviour is covered by its own tests only",
+        "holds at the model's bounds, not universally"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "O7",
+      "property": "The relay holds ciphertext only",
+      "layers": ["sync"],
+      "artifacts": [
+        {"kind": "tla", "entry": "tla/RelayEnvelope", "state": "planned"},
+        {"kind": "lean", "entry": "lean/EnvelopeLayout", "state": "planned"},
+        {"kind": "kani", "harness": "K-envelope", "state": "planned"}
+      ],
+      "ties": [],
+      "gaps": [
+        "CryptoKit and WebCrypto are trusted",
+        "the model's encryption is symbolic, not computational"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "O8",
+      "property": "The import is idempotent, and no review is lost at the cut-over",
+      "layers": ["import"],
+      "artifacts": [
+        {"kind": "tla", "entry": "tla/AnkiCutover", "state": "planned"},
+        {"kind": "lean", "entry": "lean/ImportMerge", "state": "planned"},
+        {"kind": "lean", "entry": "lean/ImportPlan", "state": "planned"},
+        {"kind": "kani", "harness": "K-import-key", "state": "planned"},
+        {"kind": "kani", "harness": "K-plan-merge", "state": "planned"},
+        {"kind": "kani", "harness": "K-wire-walk", "state": "planned"},
+        {"kind": "kani", "harness": "K-field-split", "state": "planned"},
+        {"kind": "kani", "harness": "K-due-conversion", "state": "planned"},
+        {"kind": "kani", "harness": "K-member-names", "state": "planned"}
+      ],
+      "ties": [],
+      "gaps": [
+        "the goldens cover the synthetic inputs generated, not every collection",
+        "a remapped history entry takes a new id and so a new review key, so key continuity is proved for the port only"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "O9",
+      "property": "The converters round-trip what Anki can represent",
+      "layers": ["import"],
+      "artifacts": [
+        {"kind": "lean", "entry": "lean/AnkiRoundTrip", "state": "planned"}
+      ],
+      "ties": [],
+      "gaps": [
+        "Anki versions after the sandbox's pinned one are not covered"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "O10",
+      "property": "The learner boundary: a learner's opt-in and revoke hold wherever a scheduling companion reaches learners",
+      "layers": ["boundary"],
+      "artifacts": [
+        {"kind": "lean", "tree": "companion", "about": "the boundary's theorems, in the tree that holds its code", "state": "planned"},
+        {"kind": "tla", "tree": "companion", "about": "the boundary's model, in the tree that holds its code", "state": "planned"}
+      ],
+      "ties": [],
+      "gaps": [
+        "conditional: it joins a phase set only if a learner companion ships, and none ships",
+        "judged in the scheduling companion's own ledger; this ledger names it generically"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "O11",
+      "property": "The engine-tied entries are retired or re-pointed, and the coverage of no property drops",
+      "layers": ["formal"],
+      "artifacts": [
+        {"kind": "tla", "entry": "tla/FullSyncChoice", "property": "BackupBeforeReplace", "state": "present"},
+        {"kind": "tla", "entry": "tla/FullSyncChoice", "property": "SnapshotBeforeUpload", "state": "present"},
+        {"kind": "tla", "entry": "tla/FullSyncChoice", "property": "CountsCoverTheUpload", "state": "present"},
+        {"kind": "tla", "entry": "tla/FullSyncChoice", "property": "AWindowSyncIsNotSilent", "state": "present"},
+        {"kind": "tla", "entry": "tla/FullSyncChoice", "property": "NoReviewLost", "state": "present"},
+        {"kind": "tla", "entry": "tla/MinimumClientHandshake", "property": "EverySyncFollowsAnAdmittingRead", "state": "present"},
+        {"kind": "tla", "entry": "tla/SyncCredential", "property": "NoKeyAtRestAfterSignOut", "state": "present"},
+        {"kind": "tla", "entry": "tla/SyncCredential", "property": "NoSendAfterSignOut", "state": "present"},
+        {"kind": "tla", "entry": "tla/SyncCredential", "property": "ARefusalDropsOnlyItsOwnKey", "state": "present"},
+        {"kind": "tla", "entry": "tla/SyncCredential", "property": "AFailureKeepsTheKey", "state": "present"},
+        {"kind": "tla", "entry": "tla/SyncCredential", "property": "UnsealOnlyInALiveSession", "state": "present"},
+        {"kind": "tla", "entry": "tla/SyncSnapshotWindow", "property": "CopyOnlyWhileStopped", "state": "present"},
+        {"kind": "tla", "entry": "tla/SyncSnapshotWindow", "property": "PairFromOneGeneration", "state": "present"},
+        {"kind": "tla", "entry": "tla/SyncSnapshotWindow", "property": "ASyncInTheWindowIsRefusedWhole", "state": "present"},
+        {"kind": "tla", "entry": "tla/SyncSnapshotWindow", "property": "TheServerIsUpAfterEveryWindow", "state": "present"},
+        {"kind": "tla", "entry": "tla/UndoOwnAnswer", "property": "AnUndoRevertsOnlyTheOfferedAnswer", "state": "present"},
+        {"kind": "tla", "entry": "tla/UndoOwnAnswer", "property": "AnUndoRunsOnlyOnAConfirm", "state": "present"},
+        {"kind": "tla", "entry": "tla/UndoOwnAnswer", "property": "AnUndoRestoresOnlyTheOfferedChange", "state": "present"},
+        {"kind": "tla", "entry": "tla/UndoOwnAnswer", "property": "ARestoreRunsOnlyOnAConfirm", "state": "present"},
+        {"kind": "tla", "entry": "tla/SkipDayWrite", "property": "NoUploadOutsidePreview", "state": "present"},
+        {"kind": "tla", "entry": "tla/SkipDayWrite", "property": "FullSyncDemandWritesNothing", "state": "present"},
+        {"kind": "tla", "entry": "tla/SkipDayWrite", "property": "RestoreCheckAndPriorStateBeforeChange", "state": "present"},
+        {"kind": "tla", "entry": "tla/SkipDayWrite", "property": "PendingSettlesByRecordOnly", "state": "present"},
+        {"kind": "tla", "entry": "tla/SkipDayWrite", "property": "StoppedClassWritesNothing", "state": "present"},
+        {"kind": "tla", "entry": "tla/AwardOnce", "property": "AwardOnce", "state": "present"},
+        {"kind": "tla", "entry": "tla/AwardOnce", "property": "CelebrateAtMostOnce", "state": "present"},
+        {"kind": "tla", "entry": "tla/AwardOnce", "property": "NoSilentLoss", "state": "present"},
+        {"kind": "tla", "entry": "tla/FoldSettlesOnce", "property": "SettleOnce", "state": "present"},
+        {"kind": "tla", "entry": "tla/FoldSettlesOnce", "property": "SettleOldestFirst", "state": "present"},
+        {"kind": "tla", "entry": "tla/FoldSettlesOnce", "property": "SettleInTurn", "state": "present"},
+        {"kind": "tla", "entry": "tla/HeldFlush", "property": "NoDoubleDelivery", "state": "present"},
+        {"kind": "tla", "entry": "tla/HeldFlush", "property": "HeldReachesOrAbandons", "state": "present"},
+        {"kind": "tla", "entry": "tla/LandmarkOnce", "property": "FirstRunAtMostOne", "state": "present"},
+        {"kind": "tla", "entry": "tla/LandmarkOnce", "property": "CelebrateAtMostOnce", "state": "present"},
+        {"kind": "tla", "entry": "tla/LandmarkOnce", "property": "NoSilentLoss", "state": "present"},
+        {"kind": "tla", "entry": "tla/RelightOrder", "property": "S1", "state": "present"},
+        {"kind": "tla", "entry": "tla/RelightOrder", "property": "S2", "state": "present"},
+        {"kind": "tla", "entry": "tla/RelightOrder", "property": "L1", "state": "present"},
+        {"kind": "tla", "entry": "tla/RelightOrder", "property": "ImportIsHistory", "state": "present"},
+        {"kind": "tla", "entry": "tla/RelightOrder", "property": "NoOtherDayHeldBack", "state": "present"},
+        {"kind": "tla", "entry": "tla/SensitiveDeckGate", "property": "NoMarkedDeckIsSent", "state": "present"},
+        {"kind": "tla", "entry": "tla/SensitiveDeckGate", "property": "AnUnreadableSetSendsNothing", "state": "present"},
+        {"kind": "tla", "entry": "tla/SensitiveDeckGate", "property": "NoUnscopedCardIsSent", "state": "present"},
+        {"kind": "tla", "entry": "tla/SkipDayOnce", "property": "AtMostOneActivePerDay", "state": "present"},
+        {"kind": "tla", "entry": "tla/SkipDayOnce", "property": "ChargedOnlyWhenApplied", "state": "present"},
+        {"kind": "tla", "entry": "tla/SkipDayOnce", "property": "ChargedAtMostOncePerSkip", "state": "present"},
+        {"kind": "tla", "entry": "tla/SkipDayOnce", "property": "RefundOnlyWhenUndoneAtMostOnce", "state": "present"},
+        {"kind": "tla", "entry": "tla/SkipDayOnce", "property": "UndoRefusesWhilePending", "state": "present"},
+        {"kind": "lean", "entry": "lean/ReplayHistory", "property": "the_selection_keeps_the_rated_reviews_after_the_last_reset", "state": "present"},
+        {"kind": "lean", "entry": "lean/SensitiveDeck", "property": "a_marked_deck_or_an_ancestor_refuses_the_card", "state": "present"},
+        {"kind": "lean", "entry": "lean/SensitiveDeck", "property": "marking_more_decks_never_admits_a_refused_card", "state": "present"},
+        {"kind": "lean", "entry": "lean/SensitiveDeck", "property": "an_unresolved_deck_or_an_unreadable_set_is_refused", "state": "present"},
+        {"kind": "tla", "entry": "tla/OpLog", "state": "planned"}
+      ],
+      "ties": [
+        {"method": "vectors", "for": "lean/ReplayHistory", "test": "crates/fsrs7/tests/formal_vectors_replay_history.rs::the_history_selection_matches_the_lean_vectors"}
+      ],
+      "gaps": [
+        "tied by covers only: every entry here but the replay history is bound to the code by covers stamps alone",
+        "a retirement waits for the owner's signed ruling naming every retired property, witness and cover",
+        "a retired property's successor is present and clean before the retirement lands"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "O12",
+      "property": "The store's invariants: the review log is append-only, ids are unique, and the queue and day rules hold",
+      "layers": ["storage"],
+      "artifacts": [
+        {"kind": "tla", "entry": "tla/CollectionStore", "state": "planned"},
+        {"kind": "lean", "entry": "lean/IdSlot", "state": "planned"},
+        {"kind": "lean", "entry": "lean/EffectiveLog", "state": "planned"},
+        {"kind": "lean", "entry": "lean/QueueRule", "state": "planned"},
+        {"kind": "lean", "entry": "lean/AnkiDay", "state": "planned"},
+        {"kind": "kani", "harness": "K-next-id", "state": "planned"},
+        {"kind": "kani", "harness": "K-effective-log", "state": "planned"},
+        {"kind": "kani", "harness": "K-queue", "state": "planned"},
+        {"kind": "kani", "harness": "K-anki-day", "state": "planned"},
+        {"kind": "kani", "harness": "K-judges", "state": "planned"}
+      ],
+      "ties": [],
+      "gaps": [
+        "holds at the models' bounds, not universally",
+        "SQLite is trusted",
+        "a Lean port proves the port; vectors tie it to the code, which is never extracted"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "O13",
+      "property": "Media: no dangling reference, no rebinding, no lost or wrongly evicted file, and every hash checked",
+      "layers": ["media"],
+      "artifacts": [
+        {"kind": "tla", "entry": "tla/MediaSync", "state": "planned"},
+        {"kind": "lean", "entry": "lean/MediaBind", "state": "planned"},
+        {"kind": "lean", "entry": "lean/MediaGc", "state": "planned"},
+        {"kind": "kani", "harness": "K-blob-path", "state": "planned"},
+        {"kind": "kani", "harness": "K-bind", "state": "planned"},
+        {"kind": "kani", "harness": "K-sweep", "state": "planned"},
+        {"kind": "kani", "harness": "K-evictable", "state": "planned"},
+        {"kind": "kani", "harness": "K-scan", "state": "planned"},
+        {"kind": "kani", "harness": "K-put", "state": "planned"}
+      ],
+      "ties": [],
+      "gaps": [
+        "holds at the models' bounds, not universally",
+        "the filesystem and OPFS are trusted"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "O14",
+      "property": "Search: a compiled query binds every user value, and the operator profile is closed",
+      "layers": ["search"],
+      "artifacts": [
+        {"kind": "lean", "entry": "lean/SearchCompile", "state": "planned"},
+        {"kind": "kani", "harness": "K-compile-binds", "state": "planned"},
+        {"kind": "kani", "harness": "K-operator-profile", "state": "planned"}
+      ],
+      "ties": [],
+      "gaps": [
+        "a Lean port proves the port; vectors executed on SQLite tie it to the code",
+        "SQLite is trusted"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "O15",
+      "property": "Rendering and authoring: a card's front never shows its active deletions, the field filter is closed, and an edit's undo restores",
+      "layers": ["rendering", "notes"],
+      "artifacts": [
+        {"kind": "lean", "entry": "lean/ClozeFront", "state": "planned"},
+        {"kind": "lean", "entry": "lean/Allowlist", "state": "planned"},
+        {"kind": "lean", "entry": "lean/EditUndo", "state": "planned"},
+        {"kind": "kani", "harness": "K-template", "state": "planned"},
+        {"kind": "kani", "harness": "K-render-total", "state": "planned"},
+        {"kind": "kani", "harness": "K-cloze-front", "state": "planned"},
+        {"kind": "kani", "harness": "K-allowlist", "state": "planned"}
+      ],
+      "ties": [],
+      "gaps": [
+        "the typesetter's isolation rests on planted tests in three browser engines and on the browsers' opaque-origin rule, which is trusted",
+        "a Lean port proves the port; vectors tie it to the code"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "O16",
+      "property": "The sync core's pure functions: the clock, the review key, the field merge and the push judge",
+      "layers": ["sync"],
+      "artifacts": [
+        {"kind": "lean", "entry": "lean/SyncClock", "state": "planned"},
+        {"kind": "lean", "entry": "lean/ReviewKey", "state": "planned"},
+        {"kind": "lean", "entry": "lean/FieldMerge", "state": "planned"},
+        {"kind": "lean", "entry": "lean/PushJudge", "state": "planned"},
+        {"kind": "kani", "harness": "K-sync-codec", "state": "planned"},
+        {"kind": "kani", "harness": "K-key-order", "state": "planned"},
+        {"kind": "kani", "harness": "K-hlc", "state": "planned"}
+      ],
+      "ties": [],
+      "gaps": [
+        "a Lean port proves the port; vectors tie it to the code, which is never extracted"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "O17",
+      "property": "The release gates admit a release only when every gate holds",
+      "layers": ["release"],
+      "artifacts": [
+        {"kind": "lean", "entry": "lean/ReleaseGates", "state": "planned"}
+      ],
+      "ties": [],
+      "gaps": [
+        "a Lean port proves the port; vectors read by the release lane's test tie it to the code"
+      ],
+      "status": "planned"
+    }
+  ],
+  "entries": [
+    {"entry": "tla/AwardOnce", "disposition": "re-stamp", "act": "re-read against the model and re-stamped when the span it covers moves, with no weakening", "obligations": ["O11"]},
+    {"entry": "tla/BandUpOnce", "disposition": "keep", "act": "unaffected by the engine's replacement; nothing, unless a delivery's covers check shows a moved span", "obligations": []},
+    {"entry": "tla/BearerGuard", "disposition": "keep", "act": "unaffected by the engine's replacement; nothing, unless a delivery's covers check shows a moved span", "obligations": []},
+    {"entry": "tla/CaptureOnce", "disposition": "keep", "act": "unaffected by the engine's replacement; nothing, unless a delivery's covers check shows a moved span", "obligations": []},
+    {"entry": "tla/ChestOpenedOnce", "disposition": "keep", "act": "unaffected by the engine's replacement; nothing, unless a delivery's covers check shows a moved span", "obligations": []},
+    {"entry": "tla/ChestRolledOnce", "disposition": "keep", "act": "unaffected by the engine's replacement; nothing, unless a delivery's covers check shows a moved span", "obligations": []},
+    {"entry": "tla/EveryLegCounted", "disposition": "keep", "act": "unaffected by the engine's replacement; nothing, unless a delivery's covers check shows a moved span", "obligations": []},
+    {"entry": "tla/FoldSettlesOnce", "disposition": "re-stamp", "act": "re-read against the model and re-stamped when the span it covers moves, with no weakening", "obligations": ["O11"]},
+    {"entry": "tla/FullSyncChoice", "disposition": "retire", "act": "takes the phone as a new actor in the first phase; retired in the second, where no whole-collection upload or download remains, once the op log's NoLostReview carries its NoReviewLost", "obligations": ["O1a", "O11"]},
+    {"entry": "tla/HabitXpFollowsItsLog", "disposition": "keep", "act": "unaffected by the engine's replacement; nothing, unless a delivery's covers check shows a moved span", "obligations": []},
+    {"entry": "tla/HeldFlush", "disposition": "re-stamp", "act": "re-read against the model and re-stamped when the span it covers moves, its flush read as the head advancing, with no weakening", "obligations": ["O11"]},
+    {"entry": "tla/LandmarkOnce", "disposition": "re-stamp", "act": "re-read against the model and re-stamped when the span it covers moves, with no weakening", "obligations": ["O11"]},
+    {"entry": "tla/MinimumClientHandshake", "disposition": "re-point", "act": "takes the phone as a new caller in the first phase; re-pointed onto the op log's handshake in the second, keeping its property", "obligations": ["O1a", "O11"]},
+    {"entry": "tla/MintReadsTheFinalBase", "disposition": "keep", "act": "unaffected by the engine's replacement; nothing, unless a delivery's covers check shows a moved span", "obligations": []},
+    {"entry": "tla/PasskeyOnce", "disposition": "keep", "act": "unaffected by the engine's replacement; nothing, unless a delivery's covers check shows a moved span", "obligations": []},
+    {"entry": "tla/RelightOrder", "disposition": "re-stamp", "act": "re-read against the model and re-stamped when the span it covers moves, with no weakening", "obligations": ["O11"]},
+    {"entry": "tla/SecondRoute", "disposition": "keep", "act": "unaffected by the engine's replacement; nothing, unless a delivery's covers check shows a moved span", "obligations": []},
+    {"entry": "tla/SensitiveDeckGate", "disposition": "re-stamp", "act": "re-read against the model and re-stamped when the span it covers moves, with no weakening", "obligations": ["O11"]},
+    {"entry": "tla/SkipDayOnce", "disposition": "re-stamp", "act": "re-read against the model and re-stamped when the span it covers moves, with no weakening", "obligations": ["O11"]},
+    {"entry": "tla/SkipDayWrite", "disposition": "re-point", "act": "three properties re-pointed onto the store's declared write class; NoUploadOutsidePreview and FullSyncDemandWritesNothing retired, with an op-log counterpart: a skip write enters the log only as appended operations after its preview", "obligations": ["O11"]},
+    {"entry": "tla/StagedNoJournal", "disposition": "keep", "act": "unaffected by the engine's replacement; nothing, unless a delivery's covers check shows a moved span", "obligations": []},
+    {"entry": "tla/SyncCredential", "disposition": "re-point", "act": "takes the phone's keychain holder in the first phase; re-pointed in the second, keeping its five properties", "obligations": ["O1a", "O11"]},
+    {"entry": "tla/SyncSnapshotWindow", "disposition": "retire", "act": "retired after the final generation of the engine's sync server", "obligations": ["O11"]},
+    {"entry": "tla/TokenWindow", "disposition": "keep", "act": "unaffected by the engine's replacement; nothing, unless a delivery's covers check shows a moved span", "obligations": []},
+    {"entry": "tla/TracedSetCovers", "disposition": "keep", "act": "unaffected by the engine's replacement; nothing, unless a delivery's covers check shows a moved span", "obligations": []},
+    {"entry": "tla/UndoOwnAnswer", "disposition": "re-point", "act": "re-stamped if the answer seam edits the rate call it covers; re-pointed onto the store's own undo, a retraction on the op log, keeping its four properties", "obligations": ["O11"]},
+    {"entry": "tla/WalletFloor", "disposition": "keep", "act": "unaffected by the engine's replacement; nothing, unless a delivery's covers check shows a moved span", "obligations": []},
+    {"entry": "lean/Chest", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
+    {"entry": "lean/Exchange", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
+    {"entry": "lean/HabitWriting", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
+    {"entry": "lean/NextMilestone", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
+    {"entry": "lean/OpenLapse", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
+    {"entry": "lean/RecordClassBinding", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
+    {"entry": "lean/ReleaseCarry", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
+    {"entry": "lean/ReplayHistory", "disposition": "keep", "act": "stays while the FSRS-7 crate stays, and is retired with it otherwise", "obligations": ["O11"]},
+    {"entry": "lean/RoadToC2", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
+    {"entry": "lean/SensitiveDeck", "disposition": "re-stamp", "act": "re-stamped if the deck path form changes", "obligations": ["O11"]},
+    {"entry": "lean/SkipTariff", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
+    {"entry": "lean/TableCensusReach", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
+    {"entry": "lean/TokenBonus", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
+    {"entry": "lean/TokenProgress", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
+    {"entry": "lean/Wallet", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
+    {"entry": "lean/XpReconciliation", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []}
+  ]
+}

@@ -194,7 +194,7 @@ async fn a_run_while_one_runs_starts_nothing() {
     assert_eq!(count(&rig, 0), 0, "nothing started");
     let step = rig.instruments.step().await.expect("step");
     assert_eq!(step.deferred, vec!["alpha".to_owned()]);
-    assert!(step.ran.is_empty());
+    assert_eq!(step.ran, Vec::<String>::new());
     assert!(
         rig.instruments
             .store()
@@ -263,7 +263,7 @@ async fn dark_fields_is_passed_its_reads() {
     let envelope = frame.run(20_000).await.expect("the run");
     assert_eq!(envelope.instrument, "dark_fields");
     assert_eq!(envelope.study_day, 20_000);
-    assert!(envelope.failed_reads.is_empty());
+    assert_eq!(envelope.failed_reads, Vec::<String>::new());
     let dark = envelope.report["dark_fields"].as_array().expect("a list");
     assert_eq!(dark.len(), 1, "{dark:?}");
     assert_eq!(dark[0]["field"], "Hidden");

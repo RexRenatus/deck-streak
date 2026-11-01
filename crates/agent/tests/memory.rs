@@ -215,7 +215,7 @@ async fn a_source_the_template_does_not_declare_is_refused() {
     // Its declared source is served by no port here, so it reads nothing and records nothing.
     let nothing = reader.read_declared().await.expect("nothing to read");
     assert_eq!(nothing.len(), 0);
-    assert!(reader.reads().is_empty());
+    assert_eq!(reader.reads(), []);
 }
 
 #[tokio::test]

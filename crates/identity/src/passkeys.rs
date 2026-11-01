@@ -297,8 +297,9 @@ fn id_bytes(flow: &str) -> Option<Vec<u8>> {
         b'a'..=b'f' => Some(digit - b'a' + 10),
         _ => None,
     };
-    digits
-        .chunks_exact(2)
+    let (pairs, _) = digits.as_chunks::<2>();
+    pairs
+        .iter()
         .map(|pair| Some((value(pair[0])? << 4) | value(pair[1])?))
         .collect()
 }

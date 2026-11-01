@@ -1,9 +1,9 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { api, type Answer } from '$lib/api';
-  import BadgeGallery from '$lib/badges/BadgeGallery.svelte';
-  import type { BadgesView } from '$lib/badges/badges';
-  import { m } from '$lib/paraglide/messages.js';
+  import { api, type Answer } from '#lib/api.js';
+  import BadgeGallery from '#lib/badges/BadgeGallery.svelte';
+  import type { BadgesView } from '#lib/badges/badges.js';
+  import { m } from '#lib/paraglide/messages.js';
 
   // The badges screen (SPEC-073 R16, R19): the owner's badges, earned and locked, as the server
   // answers them.

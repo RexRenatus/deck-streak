@@ -2,8 +2,8 @@
  * @vitest-environment jsdom
  */
 import { describe, expect, it } from 'vitest';
-import { EngineError } from '$lib/engine/client';
-import type { CardView, Head, UndoOffer } from '$lib/engine/protocol';
+import { EngineError } from '#lib/engine/client.js';
+import type { CardView, Head, UndoOffer } from '#lib/engine/protocol.js';
 import {
   Review,
   step,

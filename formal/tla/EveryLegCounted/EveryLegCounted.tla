@@ -57,6 +57,10 @@
 (*     (Verdict): the model is sound for every reading.                    *)
 (*   - A mutant the plan dealt to no leg is Dropped, one past the last     *)
 (*     leg, so that every comparison is between integers.                 *)
+(*   - The Python plan's refusal: shards() returns before any deal         *)
+(*     when the Python listing needs more legs than the run's Python       *)
+(*     ceiling, as the Rust refusal already does: no leg is dealt and      *)
+(*     no verdict can pass, a stuttering step for this model (#825).       *)
 (*                                                                         *)
 (* Switches, each FALSE in MCEveryLegCounted.cfg, which models the code:   *)
 (*   CountReported - the verdict promises only the legs whose report       *)
@@ -65,11 +69,60 @@
 (*   TrustThePlan  - the verdict takes the plan's legs as the population   *)
 (*                   and never holds them to the tool's listing.           *)
 (***************************************************************************)
-\* @phx covers scripts/mutation-verdict.py anchor=shards digest=sha256:190874e5158025c39f987a531469ec61a0baa564f1a945e6ce4894010332e6c2
-\* @phx covers scripts/mutation-verdict.py anchor=whole_reports digest=sha256:4c2a91086efb74a19dee70816f1f39aac90712652548599ce8befd94f2340983
+\* mutation-verdict.py::python_by_cost is one deal Plan admits; mutation_python.py::planned_leg runs its leg's slice (ran) or refuses with no report (LegVoid).
+\* Re-read for SPEC-421 (ADR-435): every hunk of the two spans below implements Plan, and none moves a variable.
+\* mutation-verdict.py::python_by_cost prices each file by python_price's triple (control, sentinel, each): its
+\*   scoped triple first, else its whole-suite price p as (p, p, p). A run carries its setup, control plus
+\*   sentinel, once and each mutant at each; k is (PYTHON_LEG_BOUND_SECONDS - setup) // each; runs sort by that
+\*   weight; the refusal prints control and setup + each. A whole triple gives the base's k, weight and refusal
+\*   figures, so a whole-priced deal is the base's. Each listed mutant is still in exactly one run or in the
+\*   count rule's loose list, so the partition over legs is unchanged, and the count of legs moves only with the
+\*   deal, which Plan already chooses freely (dealt').
+\* mutation-verdict.py::shards passes PYTHON_SCOPED_SECONDS to python_by_cost and python_unpriced_legs exactly
+\*   when the legs trace, and prints one line counting the listed files priced scoped, whole and unpriced. The
+\*   line is printed after the deal and deals nothing: store, attempt, done, verdict and pick are untouched.
+\* Re-read for SPEC-422 (ADR-436): every hunk of the two spans below implements Plan or follows its deal, and none moves a variable.
+\* mutation-verdict.py::python_by_cost takes the release run's ceiling, or None. With None the share holds the
+\*   count of legs and refuses past it, as at the base; under a ceiling the ceiling holds it, and a listing past
+\*   it is refused the same way, before any deal. Which bound holds moves no run and no mutant: the deal and its
+\*   partition over legs are the base's, and a refusal is the stuttering step the abstractions above name.
+\* mutation-verdict.py::shards reads that ceiling from the plan (python_release_ceiling), passes it to
+\*   python_by_cost, prints the release line after the deal, and writes the legs 0..count-1 as two axes:
+\*   python_matrix holds the legs below PYTHON_MATRIX_LEGS and python_release_matrix the legs from it on, each
+\*   shard in exactly one, so Legs is the base's and dealt' is still Plan's free choice over it.
+\* The second matrix job, ci.yml's mutation-python-release, is a further actor of LegFinish: its legs are the
+\*   legs from PYTHON_MATRIX_LEGS on, which Legs holds with no bound below NLegs, and each uploads its report to
+\*   the store under the name a mutation-python leg uses. An owed leg it does not start leaves no report, which
+\*   the verdict reads as LegVoid; a leg the plan dealt no mutant is not owed.
+\* Re-read for SPEC-423 (ADR-437): every hunk of the shards span below implements Plan or follows its deal, and none moves a variable.
+\* mutation-verdict.py::shards reads the release run's Rust ceiling from the plan (rust_release_ceiling) and sizes
+\*   the count as the fewest legs within it for a release plan under a set ceiling, else within LEG_CEILING["ci"],
+\*   as at the base. This hunk implements Plan: which bound holds moves no mutant, the deal is still mutant i to
+\*   leg i mod count over legs 0..count-1, so Legs is the base's and dealt' is still Plan's free choice over it.
+\* mutation-verdict.py::shards refuses a release listing past that ceiling before any deal, as the pull request
+\*   refusal does: no plan is written and no verdict can pass, the stuttering step the abstractions above name.
+\* mutation-verdict.py::shards prints the Rust release line after the deal, and the Rust shards line and the
+\*   run-legs line read the ceiling that held: each line deals nothing, so store, attempt, done, verdict and pick
+\*   are untouched, and the legs of the one mutation-rust matrix are LegFinish's actors as before.
+\* Re-read for SPEC-437 (ADR-451): the python_by_cost hunk below implements Plan, and none moves a variable.
+\* mutation-verdict.py::python_by_cost appends each priced file's runs as indices[cut::cuts] for cut in
+\*   range(cuts), in place of contiguous slices: run j holds the file's listing positions j, j + cuts, j + 2 cuts
+\*   and so on. The runs keep the base's count and sizes, the larger first, and their order, since run j still
+\*   starts at the file's j-th position; so the legs, their projections and every refusal are the base's, each
+\*   listed mutant is still in exactly one run, and only which mutant a leg holds moves: one deal Plan already
+\*   chooses freely (dealt').
+\* Re-read for SPEC-492 (ADR-510): the whole_reports hunk below moves no variable.
+\* mutation-verdict.py::whole_reports iterates one list whose entries carry each promised report's mutant
+\*   count as a fifth field, in place of two lists built in lockstep and zipped. The promised reports, their
+\*   order, each leg's count and every VOID and not-started line are the base's, so Promised, LegVoid and
+\*   Whole read as before.
+\* @phx covers scripts/mutation-verdict.py anchor=shards digest=sha256:f02208bb1a049e3ca6ebc6812c981581d7d6d70d77a68505b2ba4e3511254f2c
+\* @phx covers scripts/mutation-verdict.py anchor=whole_reports digest=sha256:54b70ded44e4567887b8b0f105ff0be34a45028e31f9f650032c37c3c719f9d8
 \* @phx covers scripts/mutation-verdict.py anchor=partition digest=sha256:9b2464deb33fb55acce4bade799fac1d1d5094a4526a528d634aeb1f78f57677
 \* @phx covers scripts/mutation-verdict.py anchor=examined_sum digest=sha256:072ec1b6768a7616f7cf7b1f0e03846367d35874bcce6493458c470c4f63966e
 \* @phx covers scripts/mutation-verdict.py anchor=population_gaps digest=sha256:7c6d3867026cb32da3c8997757c7884886cbaa523a1af2b29bd260d9ca68b03f
+\* @phx covers scripts/mutation-verdict.py anchor=python_by_cost digest=sha256:ea6382a543a257a98c1ab8d48191de38b90f838eee1499aaeb53d50c869a6738
+\* @phx covers scripts/mutation_python.py anchor=planned_leg digest=sha256:6c7d8c820d1f1217cf16d187766c2cbaeb6c89aeaa60cb721f5922eb86d6ae6d
 \* @phx cites #220, #691
 \* @phx property PassMeansEveryLegCounted ramp=report
 \* @phx property PassMeansThePartition ramp=report

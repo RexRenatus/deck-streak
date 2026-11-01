@@ -1,0 +1,107 @@
+{"kind": "control", "path": "scripts/audit-web-verdict.py", "ran": 6, "failures": 0, "seconds": 1.61643392900001, "bound": 60.0, "shard": "12/16", "run": "38242806596", "attempt": "1"}
+{"kind": "mutant", "path": "scripts/audit-web-verdict.py", "name": "scripts/audit-web-verdict.py:38:27: replace \"metadata\" with \"\" in examined_count", "seconds": 1.5172429179999938, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/audit-web-verdict.py", "name": "scripts/audit-web-verdict.py:57:68: replace \"findings\" with \"\" in describe", "seconds": 1.5172884250000038, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/audit-web-verdict.py", "name": "scripts/audit-web-verdict.py:90:16: replace return value with return None in verdict", "seconds": 1.5171831830000144, "outcome": "killed"}
+{"kind": "uncovered", "path": "scripts/create-issues.py", "seconds": 0, "shard": "12/16", "run": "38242806596", "attempt": "1"}
+{"kind": "control", "path": "scripts/dynamic-imports-check.py", "ran": 8, "failures": 0, "seconds": 0.9153237579999995, "bound": 60.0, "shard": "12/16", "run": "38242806596", "attempt": "1"}
+{"kind": "mutant", "path": "scripts/dynamic-imports-check.py", "name": "scripts/dynamic-imports-check.py:52:32: replace True with False in loader_sites", "seconds": 0.9168674220000241, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/dynamic-imports-check.py", "name": "scripts/dynamic-imports-check.py:69:39: replace and with or in loader_sites", "seconds": 1.0671426999999767, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/dynamic-imports-check.py", "name": "scripts/dynamic-imports-check.py:107:24: replace 1 with 2 in register_modules", "seconds": 0.9169070229999932, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/dynamic-imports-check.py", "name": "scripts/dynamic-imports-check.py:134:45: replace == with != in module_name", "seconds": 0.8189244220000091, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/dynamic-imports-check.py", "name": "scripts/dynamic-imports-check.py:162:68: replace \".py\" with \"\" in changed_modules", "seconds": 0.9189569309999968, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/dynamic-imports-check.py", "name": "scripts/dynamic-imports-check.py:192:12: replace return value with return None in _judge", "seconds": 0.8669426760000079, "outcome": "killed"}
+{"kind": "control", "path": "scripts/ios_icon.py", "ran": 2, "failures": 0, "seconds": 0.6147927949999996, "bound": 60.0, "shard": "12/16", "run": "38242806596", "attempt": "1"}
+{"kind": "mutant", "path": "scripts/ios_icon.py", "name": "scripts/ios_icon.py:21:25: replace 137 with 138 in <module>", "seconds": 0.5657636040000114, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/ios_icon.py", "name": "scripts/ios_icon.py:33:54: replace 2 with 3 in icon", "seconds": 0.9632522480000034, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/ios_icon.py", "name": "scripts/ios_icon.py:45:37: replace \"write\" with \"\" in main", "seconds": 0.3652619639999841, "outcome": "killed"}
+{"kind": "control", "path": "scripts/ios_lane.py", "ran": 18, "failures": 0, "seconds": 7.77546912699998, "bound": 60.0, "shard": "12/16", "run": "38242806596", "attempt": "1"}
+{"kind": "mutant", "path": "scripts/ios_lane.py", "name": "scripts/ios_lane.py:62:18: replace \"github-actions[bot]\" with \"\" in <module>", "seconds": 7.578678105999984, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/ios_lane.py", "name": "scripts/ios_lane.py:78:5: replace \"Harness\" with \"\" in <module>", "seconds": 7.377875450000005, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/ios_lane.py", "name": "scripts/ios_lane.py:107:16: replace \"internal\" with \"\" in plan", "seconds": 7.381220151000008, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/ios_lane.py", "name": "scripts/ios_lane.py:120:25: replace \"--is-shallow-repository\" with \"\" in plan", "seconds": 7.277188644999995, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/ios_lane.py", "name": "scripts/ios_lane.py:132:28: replace \"-t\" with \"\" in plan", "seconds": 7.6786031549999905, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/ios_lane.py", "name": "scripts/ios_lane.py:140:41: replace \"--first-parent\" with \"\" in plan", "seconds": 7.879860347999994, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/ios_lane.py", "name": "scripts/ios_lane.py:158:23: replace \"all\" with \"\" in preflight", "seconds": 7.785689147999989, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/ios_lane.py", "name": "scripts/ios_lane.py:198:14: replace \"xcodebuild\" with \"\" in xcodebuild", "seconds": 6.376283782999991, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/ios_lane.py", "name": "scripts/ios_lane.py:228:40: replace \"PROFILE\" with \"\" in sign", "seconds": 4.773588603000007, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/ios_lane.py", "name": "scripts/ios_lane.py:239:16: replace \"ExpirationDate\" with \"\" in sign", "seconds": 4.674184768999993, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/ios_lane.py", "name": "scripts/ios_lane.py:253:9: replace \"-passout\" with \"\" in sign", "seconds": 7.577383122000015, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/ios_lane.py", "name": "scripts/ios_lane.py:277:27: replace \"lane.keychain-db\" with \"\" in sign", "seconds": 5.224740393000019, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/ios_lane.py", "name": "scripts/ios_lane.py:290:9: replace \"pkcs12\" with \"\" in sign", "seconds": 7.4286188290000155, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/ios_lane.py", "name": "scripts/ios_lane.py:307:13: replace \"search-list\" with \"\" in sign", "seconds": 6.17669551900002, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/ios_lane.py", "name": "scripts/ios_lane.py:317:9: replace \"team\" with \"\" in sign", "seconds": 7.829350401999989, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/ios_lane.py", "name": "scripts/ios_lane.py:337:39: replace \"-archivePath\" with \"\" in sign", "seconds": 6.6257432140000105, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/ios_lane.py", "name": "scripts/ios_lane.py:351:39: replace \"identity\" with \"\" in upload", "seconds": 7.928944000999991, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/ios_lane.py", "name": "scripts/ios_lane.py:364:13: replace \"-exportArchive\" with \"\" in upload", "seconds": 7.630793896, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/ios_lane.py", "name": "scripts/ios_lane.py:386:21: replace \"search-list\" with \"\" in clean", "seconds": 7.277101480999988, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/ios_lane.py", "name": "scripts/ios_lane.py:396:89: replace True with False in clean", "seconds": 7.827726224999992, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/ios_lane.py", "name": "scripts/ios_lane.py:424:43: replace \"stopped at the preflight\" with \"\" in summary", "seconds": 7.728409370999998, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/ios_lane.py", "name": "scripts/ios_lane.py:452:25: replace \"--lane\" with \"\" in main", "seconds": 8.528802568000003, "outcome": "killed"}
+{"kind": "control", "path": "scripts/memory_scope.py", "ran": 27, "failures": 0, "seconds": 23.448052539000003, "bound": 117.24026269500001, "shard": "12/16", "run": "38242806596", "attempt": "1"}
+{"kind": "mutant", "path": "scripts/memory_scope.py", "name": "scripts/memory_scope.py:44:22: replace False with True in build_parser", "seconds": 24.05194086099999, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/memory_scope.py", "name": "scripts/memory_scope.py:56:53: replace // with * in cap_of", "seconds": 1.6684982990000208, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/memory_scope.py", "name": "scripts/memory_scope.py:75:9: replace \"PIDs\" with \"\" in scope_call", "seconds": 22.99888020999998, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/memory_scope.py", "name": "scripts/memory_scope.py:97:41: replace True with False in write_record", "seconds": 2.2192168939999988, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/memory_scope.py", "name": "scripts/memory_scope.py:132:29: replace \"\\n\" with \"\" in lines_of", "seconds": 1.6684535100000062, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/memory_scope.py", "name": "scripts/memory_scope.py:157:36: replace != with == in peak_of", "seconds": 23.800439573999995, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/memory_scope.py", "name": "scripts/memory_scope.py:178:29: replace \"peak_percent\" with \"\" in counts_after", "seconds": 23.19984048599997, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/memory_scope.py", "name": "scripts/memory_scope.py:193:28: replace 1 with 2 in wait_for_scope", "seconds": 22.848274095000022, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/memory_scope.py", "name": "scripts/memory_scope.py:223:18: replace \"oom\" with \"\" in check_in_force", "seconds": 1.8188465199999655, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/memory_scope.py", "name": "scripts/memory_scope.py:232:15: replace False with True in check_in_force", "seconds": 23.29975492600005, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/memory_scope.py", "name": "scripts/memory_scope.py:249:13: replace \"peak_percent\" with \"\" in refuse", "seconds": 23.35085510099998, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/memory_scope.py", "name": "scripts/memory_scope.py:282:16: replace return value with return None in run", "seconds": 23.10070756799996, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/memory_scope.py", "name": "scripts/memory_scope.py:298:29: replace 0 with 1 in run", "seconds": 23.702525057999992, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/memory_scope.py", "name": "scripts/memory_scope.py:310:27: replace \"max\" with \"\" in run", "seconds": 23.401939112000036, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/memory_scope.py", "name": "scripts/memory_scope.py:327:56: replace \"--\" with \"\" in main", "seconds": 24.152633143999992, "outcome": "killed"}
+{"kind": "control", "path": "scripts/mutation-verdict.py", "ran": 117, "failures": 0, "seconds": 141.49852327300005, "bound": 707.4926163650002, "shard": "12/16", "run": "38242806596", "attempt": "1"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:118:22: replace r\"scripts/[^/]+\\.py\" with \"\" in <module>", "seconds": 108.05768363200002, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:144:8: replace \"a red baseline: the tests failed bef... with \"\" in <module>", "seconds": 140.4300190859999, "outcome": "survived"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:167:14: replace == with != in scope_of", "seconds": 136.46709670899986, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:180:16: replace return value with return None in scope_of", "seconds": 138.310584114, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:197:43: replace == with != in git_bytes", "seconds": 137.911504551, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:228:9: replace \"return\" with \"\" in <module>", "seconds": 143.2831561580001, "outcome": "survived"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:257:51: replace 1 with 2 in comment_or_blank", "seconds": 142.02103084299983, "outcome": "survived"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:280:14: replace < with >= in quoted_end", "seconds": 138.56617254599996, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:295:17: replace 0 with 1 in block_end", "seconds": 139.86792283099976, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:306:12: replace return value with return None in block_end", "seconds": 140.07074359200033, "outcome": "survived"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:316:23: replace 1 with 2 in rust_literal", "seconds": 139.91654230099994, "outcome": "survived"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:321:46: replace 1 with 2 in rust_literal", "seconds": 140.72232915999984, "outcome": "survived"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:327:29: replace + with - in rust_literal", "seconds": 141.52652203900016, "outcome": "survived"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:330:34: replace == with != in rust_literal", "seconds": 141.82088133200023, "outcome": "survived"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:339:56: replace False with True in web_literal", "seconds": 139.72776627800022, "outcome": "survived"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:347:21: replace == with != in web_literal", "seconds": 145.14444287100014, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:364:14: replace < with >= in template_part", "seconds": 146.492812512, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:373:12: replace return value with return None in template_part", "seconds": 141.72259308399998, "outcome": "survived"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:389:14: replace < with >= in c_code_lines", "seconds": 111.66450115399994, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:400:48: replace + with - in c_code_lines", "seconds": 142.17694144000006, "outcome": "survived"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:404:52: replace 1 with 2 in c_code_lines", "seconds": 140.0619168379999, "outcome": "survived"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:418:60: replace \"$\" with \"\" in c_code_lines", "seconds": 144.63646333299994, "outcome": "survived"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:427:31: replace 1 with 2 in c_code_lines", "seconds": 147.16032241099947, "outcome": "survived"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:438:12: replace return value with return None in language_of", "seconds": 142.2193823079997, "outcome": "survived"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:447:23: replace \"[\" with \"\" in <module>", "seconds": 140.77548702600052, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:471:13: replace continue with break in rust_tokens", "seconds": 139.48172369500026, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:485:13: replace 0 with 1 in closing", "seconds": 140.42537016700044, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:505:31: replace \"{\" with \"\" in is_test_mark", "seconds": 146.54398674000004, "outcome": "survived"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:521:26: replace and with or in item_keyword", "seconds": 146.60706816600032, "outcome": "survived"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:534:13: replace 0 with 1 in item_end", "seconds": 142.88296285899924, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:543:23: replace 0 with 1 in item_end", "seconds": 140.46670352, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:557:19: replace 1 with 2 in rust_test_spans", "seconds": 137.71324700700006, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:562:21: replace is with is not in rust_test_spans", "seconds": 140.0308928780005, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:587:47: replace + with - in rust_test_lines", "seconds": 141.11709654200058, "outcome": "survived"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:599:23: replace \"-U0\" with \"\" in changed_lines", "seconds": 49.727429953000865, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:612:60: replace \"deleted\" with \"\" in changed_lines", "seconds": 49.09209341599944, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:620:64: replace + with - in changed_lines", "seconds": 83.51259557200046, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:663:13: replace or with and in selected_rows", "seconds": 135.5369474300005, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:671:68: replace \"utf-8\" with \"\" in selected_rows", "seconds": 132.5068570399999, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:713:19: replace != with == in docstring_only", "seconds": 134.0002315799993, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:727:18: replace \"code\" with \"\" in docstring_only", "seconds": 133.18931777600028, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:751:22: replace 1 with 2 in class_case", "seconds": 138.20918038299988, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:773:32: replace \"applies\" with \"\" in plan_diff", "seconds": 136.8412055660001, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:778:44: replace \"--no-ext-diff\" with \"\" in plan_diff", "seconds": 48.81612234000022, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:788:18: replace != with == in plan_diff", "seconds": 86.60597654899993, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:795:48: replace \"added\" with \"\" in plan_diff", "seconds": 50.018538856000305, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:806:23: replace \"scripts\" with \"\" in plan_diff", "seconds": 50.769196147, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:820:12: replace return value with return None in plan_diff", "seconds": 50.2182757999999, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:860:5: replace \"deck-streak-coordination\" with \"\" in <module>", "seconds": 137.84050341799957, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:868:5: replace \"deck-streak-web-engine\" with \"\" in <module>", "seconds": 139.4541792810005, "outcome": "killed"}
+{"kind": "mutant", "path": "scripts/mutation-verdict.py", "name": "scripts/mutation-verdict.py:907:12: replace return value with return None in mutant_costs", "seconds": 72.16634672700002, "outcome": "killed"}

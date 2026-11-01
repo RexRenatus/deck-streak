@@ -61,7 +61,7 @@ need_node() {
     need node "Node 24, see .nvmrc" || return 1
     node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 24 ? 0 : 1)' ||
         { echo "node is older than 24 (.nvmrc)"; return 1; }
-    need pnpm "pnpm 11, pinned by packageManager in package.json; never corepack"
+    need pnpm "pnpm 12, pinned by packageManager in package.json; never corepack"
 }
 
 need_protoc() {

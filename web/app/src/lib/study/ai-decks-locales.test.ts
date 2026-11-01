@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { locales } from '$lib/paraglide/runtime.js';
+import { locales } from '#lib/paraglide/runtime.js';
 
 // SPEC-381 R9, A15; ADR-392 D3. Every string the AI-and-your-decks screen and its link show is a
 // message key in each of the seven locale files: present, not empty, carrying every placeholder the

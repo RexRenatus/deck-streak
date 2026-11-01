@@ -1,7 +1,7 @@
 // SPEC-341 R8, R13. A SvelteKit directive map written as a Content-Security-Policy header value, the
 // way SvelteKit writes its meta element: keyword sources quoted, sources joined by spaces and
 // directives by semicolons. The card harness serves the page policy the app ships through it, so
-// the planted suite measures the policy svelte.config.js declares rather than a copy of it.
+// the planted suite measures the policy sveltekit.config.js declares rather than a copy of it.
 
 /** The CSP keywords SvelteKit's directive map spells without their quotes. */
 const KEYWORDS = new Set([

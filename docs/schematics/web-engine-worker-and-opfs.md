@@ -1,7 +1,7 @@
 # Schematic: the web engine, from the page through its Worker to the engine and OPFS
 
 Kind: data flow, with the open order as a sequence and the Worker's session as a state machine.
-Read at DeckStreak `dev` f8b5dc3 (`web/app/svelte.config.js:19-22`, the page's policy;
+Read at DeckStreak `dev` f8b5dc3 (`web/app/sveltekit.config.js:26-29`, the page's policy;
 `Cargo.toml:111-112`, the `[patch]` entry this delivery moves). Added by SPEC-338 under ADR-348
 and ADR-349; the web client's place among the app's clients is drawn in
 `app-clients-engine-and-sync.md`.

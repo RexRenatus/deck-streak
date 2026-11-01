@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { replaceState } from '$app/navigation';
-  import { m } from '$lib/paraglide/messages.js';
-  import { redeem, register, webauthn, wordingText, type Wording } from '$lib/passkeys';
+  import { m } from '#lib/paraglide/messages.js';
+  import { redeem, register, webauthn, wordingText, type Wording } from '#lib/passkeys.js';
 
   /**
    * The link page (SPEC-385 R3, R6; ADR-399 D2, D3). The methods screen opens it in the browser

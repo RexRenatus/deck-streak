@@ -2,8 +2,8 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { EngineError } from '$lib/engine/client';
-import { getLocale, overwriteGetLocale } from '$lib/paraglide/runtime.js';
+import { EngineError } from '#lib/engine/client.js';
+import { getLocale, overwriteGetLocale } from '#lib/paraglide/runtime.js';
 import { StudyEngine, studyEngine, type WorkerLike } from './engine';
 
 // SPEC-350 R5, A10; ADR-361. The app starts the engine's Worker in one place, `engine.ts`: on the
@@ -263,7 +263,7 @@ describe("the app's engine", () => {
     expect(made).toHaveLength(2);
     // the app's engine asks through the page's persistent-storage request
     const source = readFileSync(join(SRC, 'lib', 'study', 'engine.ts'), 'utf8');
-    expect(source).toContain("from '$lib/engine/persistence'");
+    expect(source).toContain("from '#lib/engine/persistence.js'");
     expect(source).toMatch(
       /new StudyEngine\(\s*browserWorker,\s*window,\s*location\.origin,\s*\(\) => engineLanguages\(\),\s*requestPersistence,?\s*\)/
     );

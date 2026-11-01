@@ -1,5 +1,5 @@
 {
-  "extends": "./.svelte-kit/tsconfig.json",
+  "extends": "$app/tsconfig",
   "compilerOptions": {
     "rewriteRelativeImportExtensions": true,
     "allowJs": true,
@@ -11,10 +11,22 @@
     "sourceMap": true,
     "strict": true,
     "moduleResolution": "bundler"
-  }
-  // Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias
-  // except $lib which is handled by https://svelte.dev/docs/kit/configuration#files
-  //
-  // To make changes to top-level options such as include and exclude, we recommend extending
-  // the generated config; see https://svelte.dev/docs/kit/configuration#typescript
+  },
+  // svelte-check reads this project, which covers src, tests and the app's configuration; the card
+  // harness and its two configurations are type-checked too (SPEC-341), and so are the study suite
+  // and its two (SPEC-350). `$app/tsconfig` names no files, so the list is complete here.
+  "include": [
+    "src",
+    "tests",
+    "vite.config.ts",
+    "sveltekit.config.js",
+    "playwright.config.ts",
+    "tests-card/**/*.ts",
+    "vite.card.config.ts",
+    "playwright.card.config.ts",
+    "policy-header.ts",
+    "tests-study/**/*.ts",
+    "vite.study.config.ts",
+    "playwright.study.config.ts"
+  ]
 }

@@ -522,5 +522,5 @@ async fn the_derived_bonuses_follow_the_run_the_buff_and_the_state_of_the_day() 
     assert_eq!(quiet.run, 0);
     assert!((quiet.multiplier - 1.0).abs() < f64::EPSILON);
     assert!(!quiet.ascendant);
-    assert!(quiet.today.is_empty());
+    assert_eq!(quiet.today, Vec::<SettledRow>::new());
 }

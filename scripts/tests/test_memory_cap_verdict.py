@@ -94,9 +94,15 @@ def cap_shard(
 ):
     """One leg's artifact: `report`, each outcome's log (`kills` maps a mutant to the lines its
     log holds, `ghosts` the same for a scenario whose outcome was never written), the exit and the
-    memory-scope record (None: absent; a string: written as is)."""
+    memory-scope record (None: absent; a string: written as is), and a green record of the leg's
+    own baseline, which the verdict reads for every leg the plan deals a mutant (SPEC-480 R13)."""
     directory = Path(root) / directory_name
     (directory / "mutants.out" / "log").mkdir(parents=True)
+    (directory / "baseline").mkdir()
+    (directory / "baseline" / "baseline.exit").write_text("0\n", encoding="utf-8")
+    (directory / "baseline" / "baseline.log").write_text(
+        "        PASS [   0.004s] (1/1) fix tests::one\n", encoding="utf-8"
+    )
     for outcome in report["outcomes"]:
         scenario = outcome["scenario"]
         if scenario == "Baseline":

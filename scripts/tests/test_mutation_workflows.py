@@ -38,9 +38,9 @@ ZERO_SCOPE = {
 }
 EXAMINED = re.compile(r"^examined (\d+)", re.MULTILINE)
 INSTALL = re.compile(r"(?m)^\s*tool: cargo-mutants@27\.1\.0$")
-#: Each mutation job's job-level conditions (SPEC-290): the plan and the web job always start, the
-#: verdict runs whatever its needs returned, and a leg is not started only when the plan's listing
-#: gives it nothing to examine.
+#: Each mutation job's job-level conditions (SPEC-290): the plan and the web shards always start,
+#: the verdict and the web sweep's verdict (SPEC-419) run whatever their needs returned, and a leg
+#: is not started only when the plan's listing gives it nothing to examine.
 JOB_CONDITIONS = {
     "mutation-plan": [],
     "mutation-rust": ["${{ needs.mutation-plan.outputs.listed != '0' }}"],
@@ -49,7 +49,8 @@ JOB_CONDITIONS = {
         "needs.mutation-plan.outputs.scope == 'diff' }}"
     ],
     "mutation-verdict": ["${{ always() }}"],
-    "mutation-web": [],
+    "mutation-web": ["${{ always() }}"],
+    "mutation-web-shard": [],
 }
 
 
@@ -90,6 +91,112 @@ def run(*args, env=None):
         timeout=300,
         check=False,
     )
+
+
+#: The rows runner: its module constants are read from its text and never imported (SPEC-417 R11).
+ROWS_RUNNER = REPO / "scripts" / "mutation_rows.py"
+
+
+def rows_constant(name):
+    """The rows runner's module constant `name`, an integer read from its text."""
+    found = re.search(rf"(?m)^{name} = (\d+)$", ROWS_RUNNER.read_text(encoding="utf-8"))
+    if found is None:
+        raise AssertionError(f"scripts/mutation_rows.py sets no {name}")
+    return int(found.group(1))
+
+
+#: R2's web production code as StrykerJS's `mutate` globs, spelled here as the configuration check
+#: must find them, so a fixture tree's Stryker file passes that check.
+PASSING_MUTATE = [
+    "src/**/*.ts",
+    "src/**/*.js",
+    "src/**/*.svelte",
+    "!src/**/*.test.*",
+    "!src/**/*.spec.*",
+    "!src/**/*.d.ts",
+    "!src/lib/paraglide/**",
+]
+#: A Stryker configuration the configuration check passes: the Vitest runner, the json report and
+#: R2's production code as its `mutate`.
+PASSING_STRYKER = {"testRunner": "vitest", "reporters": ["json"], "mutate": PASSING_MUTATE}
+#: Every key `.cargo/mutants.toml` may hold, in cargo-mutants 27.1.0's order, as (the key, a TOML
+#: value of its own kind, a TOML value of another kind, how the configuration check names that
+#: other value).
+CARGO_KEY_KINDS = (
+    ("additional_cargo_args", '["x"]', "1", "not a list of strings"),
+    ("additional_cargo_test_args", '["x"]', "1", "not a list of strings"),
+    ("all_features", "true", "1", "not a boolean"),
+    ("build_timeout_multiplier", "2", '"x"', "not a number"),
+    ("cap_lints", "true", "1", "not a boolean"),
+    ("copy_vcs", "true", "1", "not a boolean"),
+    ("copy_target", "false", "1", "not a boolean"),
+    ("error_values", '["x"]', "1", "not a list of strings"),
+    ("examine_globs", '["x"]', "1", "not a list of strings"),
+    ("examine_re", '["x"]', "1", "not a list of strings"),
+    ("exclude_globs", '["x"]', "1", "not a list of strings"),
+    ("exclude_re", '["x"]', "1", "not a list of strings"),
+    ("gitignore", "true", "1", "not a boolean"),
+    ("features", '["x"]', "1", "not a list of strings"),
+    ("minimum_test_timeout", "2.5", '"x"', "not a number"),
+    ("no_default_features", "true", "1", "not a boolean"),
+    ("output", '"x"', "1", "not a string"),
+    ("profile", '"x"', "1", "not a string"),
+    ("skip_calls", '["x"]', "1", "not a list of strings"),
+    ("skip_calls_defaults", "true", "1", "not a boolean"),
+    ("test_package", '["x"]', "1", "not a list of strings"),
+    ("test_workspace", "true", "1", "not a boolean"),
+    ("timeout_multiplier", "2", '"x"', "not a number"),
+    ("test_tool", '"nextest"', '"pytest"', "'pytest', not one of cargo, nextest"),
+    ("sharding", '"slice"', '"x"', "'x', not one of slice, round-robin"),
+)
+#: Every name StrykerJS reads a configuration from in its working directory but the one the gate
+#: keeps, in the order the configuration check looks for them (StrykerJS's config-file chapter).
+SECOND_STRYKER_NAMES = (
+    "stryker.conf.json",
+    "stryker.conf.js",
+    "stryker.conf.mjs",
+    "stryker.conf.cjs",
+    "stryker.config.js",
+    "stryker.config.mjs",
+    "stryker.config.cjs",
+    ".stryker.conf.json",
+    ".stryker.conf.js",
+    ".stryker.conf.mjs",
+    ".stryker.conf.cjs",
+    ".stryker.config.json",
+    ".stryker.config.js",
+    ".stryker.config.mjs",
+    ".stryker.config.cjs",
+)
+#: Every suffix the exclusions check reads as web source (SPEC-057 R11), in the order its sorted
+#: walk meets one planted file of each.
+WEB_SUFFIXES = (".cjs", ".cts", ".js", ".jsx", ".mjs", ".mts", ".svelte", ".ts", ".tsx")
+#: A child that loads the verdict by its path, registered under its own name before it runs since
+#: its dataclasses look their module up by name, calls one verb on a root and prints what the verb
+#: returned: the verb's own value, which `sys.exit` reads as 0 when it is None.
+VERB_IN_PROCESS = (
+    "import importlib.util, pathlib, sys\n"
+    "spec = importlib.util.spec_from_file_location('mutation_workflows_verb', sys.argv[1])\n"
+    "module = importlib.util.module_from_spec(spec)\n"
+    "sys.modules[spec.name] = module\n"
+    "spec.loader.exec_module(module)\n"
+    "print(repr(getattr(module, sys.argv[2])(pathlib.Path(sys.argv[3]))))\n"
+)
+
+
+def configured(root, cargo='test_tool = "nextest"\n', stryker=None):
+    """`root` as a fixture tree holding `.cargo/mutants.toml` as the text `cargo` (no such file when
+    it is None) and the web app's `stryker.config.json` as `stryker`, a text or an object
+    (PASSING_STRYKER when it is None)."""
+    if cargo is not None:
+        (root / ".cargo").mkdir(exist_ok=True)
+        (root / ".cargo" / "mutants.toml").write_text(cargo, encoding="utf-8")
+    app = root / "web" / "app"
+    app.mkdir(parents=True, exist_ok=True)
+    document = PASSING_STRYKER if stryker is None else stryker
+    text = document if isinstance(document, str) else json.dumps(document)
+    (app / "stryker.config.json").write_text(text, encoding="utf-8")
+    return root
 
 
 class NoExclusionHidesAMutant(unittest.TestCase):
@@ -157,6 +264,79 @@ class NoExclusionHidesAMutant(unittest.TestCase):
         self.assertNotIn("exclusions: ", done.stdout)
         self.assertRegex(done.stdout, r"(?m)^examined [1-9]\d* file\(s\)$")
 
+    def test_a_stryker_disable_comment_is_refused_in_every_web_source(self):
+        suffixes = examined("web source suffixes", WEB_SUFFIXES)
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            lib = root / "web" / "app" / "src" / "lib"
+            lib.mkdir(parents=True)
+            for suffix in suffixes:
+                (lib / f"a{suffix}").write_text("// Stryker disable all\n", encoding="utf-8")
+            # A file of no web suffix is no web source, whatever it holds.
+            (lib / "a.md").write_text("// Stryker disable all\n", encoding="utf-8")
+            done = run(str(VERDICT), "exclusions", "--root", str(root))
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertEqual(
+            done.stdout.splitlines(),
+            [
+                *(
+                    f"exclusions: web/app/src/lib/a{suffix}:1: a Stryker disable comment leaves a "
+                    "mutant ignored, never run (SPEC-057 R11)"
+                    for suffix in suffixes
+                ),
+                "examined 9 file(s)",
+            ],
+        )
+
+    def test_a_stryker_file_that_is_not_an_object_is_refused_by_name(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            root = configured(Path(scratch), cargo=None, stryker="[]")
+            done = run(str(VERDICT), "exclusions", "--root", str(root))
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertEqual(
+            done.stdout.splitlines(),
+            [
+                "exclusions: web/app/stryker.config.json: not JSON, so nothing is read",
+                "examined 1 file(s)",
+            ],
+        )
+
+    def test_an_ignorer_is_refused_by_name(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            root = configured(Path(scratch), cargo=None, stryker={"ignorers": ["x"]})
+            done = run(str(VERDICT), "exclusions", "--root", str(root))
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertEqual(
+            done.stdout.splitlines(),
+            [
+                "exclusions: web/app/stryker.config.json: the ignorer x leaves mutants ignored "
+                "(SPEC-057 R11)",
+                "examined 1 file(s)",
+            ],
+        )
+
+    def test_ignore_static_is_refused_by_name(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            root = configured(Path(scratch), cargo=None, stryker={"ignoreStatic": True})
+            done = run(str(VERDICT), "exclusions", "--root", str(root))
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertEqual(
+            done.stdout.splitlines(),
+            [
+                "exclusions: web/app/stryker.config.json: ignoreStatic leaves every static "
+                "mutant ignored (SPEC-057 R11)",
+                "examined 1 file(s)",
+            ],
+        )
+
+    def test_the_verb_returns_ok_in_process(self):
+        # The verb's own value, read in the child that calls it: a None would exit 0 as well.
+        with tempfile.TemporaryDirectory() as scratch:
+            root = configured(Path(scratch))
+            done = run("-c", VERB_IN_PROCESS, str(VERDICT), "exclusions", str(root))
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(done.stdout.splitlines(), ["examined 2 file(s)", "0"])
+
 
 class TheToolsConfigurationsAreValid(unittest.TestCase):
     def test_the_tool_configurations_load_under_their_own_rules(self):
@@ -169,7 +349,7 @@ class TheToolsConfigurationsAreValid(unittest.TestCase):
         self.assertEqual(stryker["thresholds"]["break"], 100)
         package = json.loads((REPO / "web/app/package.json").read_text(encoding="utf-8"))
         for name in ("@stryker-mutator/core", "@stryker-mutator/vitest-runner"):
-            self.assertEqual(package["devDependencies"].get(name), "10.0.0", name)
+            self.assertEqual(package["devDependencies"].get(name), "10.1.1", name)
         # Planted: what each tool itself refuses. cargo-mutants 27.1.0 denies an unknown key and a
         # value of the wrong type; StrykerJS refuses a high threshold below the low one (80 and 60
         # by default), a threshold out of 0 to 100, and a JSON file with a comment.
@@ -210,6 +390,191 @@ class TheToolsConfigurationsAreValid(unittest.TestCase):
         self.assertRegex(planted.stdout, r"(?m)^examined 2 configuration")
         self.assertEqual(commented.returncode, 1, commented.stdout + commented.stderr)
         self.assertIn("configs: web/app/stryker.config.json: is not JSON", commented.stdout)
+
+    def test_every_cargo_mutants_key_takes_its_own_kind(self):
+        kinds = examined("cargo-mutants keys", CARGO_KEY_KINDS)
+        own = "".join(f"{key} = {value}\n" for key, value, _other, _named in kinds)
+        other = "".join(f"{key} = {value}\n" for key, _own, value, _named in kinds)
+        with tempfile.TemporaryDirectory() as scratch:
+            root = configured(Path(scratch), cargo=own)
+            passing = run(str(VERDICT), "configs", "--root", str(root))
+            configured(root, cargo=other)
+            refused = run(str(VERDICT), "configs", "--root", str(root))
+        self.assertEqual(passing.returncode, 0, passing.stdout + passing.stderr)
+        self.assertEqual(passing.stdout.splitlines(), ["examined 2 configuration(s)"])
+        self.assertEqual(refused.returncode, 1, refused.stdout + refused.stderr)
+        lines = refused.stdout.splitlines()
+        for key, _own, _other, named in kinds:
+            with self.subTest(key=key):
+                self.assertIn(f"configs: .cargo/mutants.toml: {key} is {named}", lines)
+        self.assertEqual(len(lines), 26, refused.stdout)
+        self.assertEqual(lines[-1], "examined 2 configuration(s)")
+
+    def test_the_default_high_threshold_is_80(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            stryker = dict(PASSING_STRYKER, thresholds={"low": 81})
+            root = configured(Path(scratch), stryker=stryker)
+            done = run(str(VERDICT), "configs", "--root", str(root))
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertEqual(
+            done.stdout.splitlines(),
+            [
+                "configs: web/app/stryker.config.json: thresholds.high 80 is below "
+                "thresholds.low 81",
+                "examined 2 configuration(s)",
+            ],
+        )
+
+    def test_every_default_stryker_name_is_a_second_configuration(self):
+        names = examined("second Stryker names", SECOND_STRYKER_NAMES)
+        with tempfile.TemporaryDirectory() as scratch:
+            root = configured(Path(scratch))
+            for name in names:
+                (root / "web" / "app" / name).write_text("{}", encoding="utf-8")
+            done = run(str(VERDICT), "configs", "--root", str(root))
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertEqual(
+            done.stdout.splitlines(),
+            [
+                *(
+                    f"configs: web/app/{name}: a second Stryker configuration; StrykerJS reads "
+                    "the first of its default names it finds, which may not be stryker.config.json"
+                    for name in names
+                ),
+                "examined 2 configuration(s)",
+            ],
+        )
+
+    def test_a_list_key_holding_a_non_string_is_refused_as_a_list_of_strings(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            root = configured(Path(scratch), cargo="additional_cargo_args = [1]\n")
+            done = run(str(VERDICT), "configs", "--root", str(root))
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertEqual(
+            done.stdout.splitlines(),
+            [
+                "configs: .cargo/mutants.toml: additional_cargo_args is not a list of strings",
+                "examined 2 configuration(s)",
+            ],
+        )
+
+    def test_a_boolean_key_holding_a_boolean_passes(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            root = configured(Path(scratch), cargo="copy_vcs = true\n")
+            done = run(str(VERDICT), "configs", "--root", str(root))
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(done.stdout.splitlines(), ["examined 2 configuration(s)"])
+
+    def test_a_string_key_holding_a_string_passes(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            root = configured(Path(scratch), cargo='profile = "x"\n')
+            done = run(str(VERDICT), "configs", "--root", str(root))
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(done.stdout.splitlines(), ["examined 2 configuration(s)"])
+
+    def test_a_cargo_mutants_file_that_is_not_toml_is_refused_by_name(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            root = configured(Path(scratch), cargo="x = \n")
+            done = run(str(VERDICT), "configs", "--root", str(root))
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        lines = done.stdout.splitlines()
+        self.assertEqual(len(lines), 2, done.stdout + done.stderr)
+        # The parser's own words after the name are tomllib's, so only the name is pinned.
+        self.assertTrue(
+            lines[0].startswith("configs: .cargo/mutants.toml: is not TOML: "), done.stdout
+        )
+        self.assertEqual(lines[1], "examined 2 configuration(s)")
+
+    def test_a_stryker_file_that_is_not_an_object_is_refused_by_name(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            root = configured(Path(scratch), stryker="[]")
+            done = run(str(VERDICT), "configs", "--root", str(root))
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertEqual(
+            done.stdout.splitlines(),
+            [
+                "configs: web/app/stryker.config.json: is not an object",
+                "examined 2 configuration(s)",
+            ],
+        )
+
+    def test_ignore_static_under_the_default_coverage_passes(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            stryker = dict(PASSING_STRYKER, ignoreStatic=True)
+            root = configured(Path(scratch), stryker=stryker)
+            done = run(str(VERDICT), "configs", "--root", str(root))
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(done.stdout.splitlines(), ["examined 2 configuration(s)"])
+
+    def test_a_coverage_analysis_without_ignore_static_passes(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            stryker = dict(PASSING_STRYKER, coverageAnalysis="all")
+            root = configured(Path(scratch), stryker=stryker)
+            done = run(str(VERDICT), "configs", "--root", str(root))
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(done.stdout.splitlines(), ["examined 2 configuration(s)"])
+
+    def test_ignore_static_under_per_test_coverage_passes(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            stryker = dict(PASSING_STRYKER, ignoreStatic=True, coverageAnalysis="perTest")
+            root = configured(Path(scratch), stryker=stryker)
+            done = run(str(VERDICT), "configs", "--root", str(root))
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(done.stdout.splitlines(), ["examined 2 configuration(s)"])
+
+    def test_thresholds_that_are_not_an_object_are_refused_by_name(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            stryker = dict(PASSING_STRYKER, thresholds=[])
+            root = configured(Path(scratch), stryker=stryker)
+            done = run(str(VERDICT), "configs", "--root", str(root))
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertEqual(
+            done.stdout.splitlines(),
+            [
+                "configs: web/app/stryker.config.json: thresholds is not an object",
+                "examined 2 configuration(s)",
+            ],
+        )
+
+    def test_a_null_break_threshold_passes(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            stryker = dict(PASSING_STRYKER, thresholds={"break": None})
+            root = configured(Path(scratch), stryker=stryker)
+            done = run(str(VERDICT), "configs", "--root", str(root))
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(done.stdout.splitlines(), ["examined 2 configuration(s)"])
+
+    def test_a_zero_threshold_is_inside_its_range(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            stryker = dict(PASSING_STRYKER, thresholds={"low": 0})
+            root = configured(Path(scratch), stryker=stryker)
+            done = run(str(VERDICT), "configs", "--root", str(root))
+        self.assertNotIn("outside 0 to 100", done.stdout)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(done.stdout.splitlines(), ["examined 2 configuration(s)"])
+
+    def test_an_absent_cargo_file_still_judges_the_stryker_file(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            stryker = dict(PASSING_STRYKER, testRunner="jest")
+            root = configured(Path(scratch), cargo=None, stryker=stryker)
+            done = run(str(VERDICT), "configs", "--root", str(root))
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertEqual(
+            done.stdout.splitlines(),
+            [
+                "configs: .cargo/mutants.toml: is absent",
+                "configs: web/app/stryker.config.json: testRunner is not vitest (SPEC-039 R6)",
+                "examined 1 configuration(s)",
+            ],
+        )
+
+    def test_the_verb_returns_ok_in_process(self):
+        # The verb's own value, read in the child that calls it: a None would exit 0 as well.
+        with tempfile.TemporaryDirectory() as scratch:
+            root = configured(Path(scratch))
+            done = run("-c", VERB_IN_PROCESS, str(VERDICT), "configs", str(root))
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(done.stdout.splitlines(), ["examined 2 configuration(s)", "0"])
 
 
 class TheConfigurationCheckSeesWhatStrykerReads(unittest.TestCase):
@@ -320,7 +685,7 @@ class TheMutationJobsGateEveryPullRequest(unittest.TestCase):
         found = jobs(text)
         aggregate = found.get("ci", "")
         names = ["mutation-plan", "mutation-rust", "mutation-rows", "mutation-verdict"]
-        for name in examined("mutation jobs", [*names, "mutation-web"]):
+        for name in examined("mutation jobs", [*names, "mutation-web", "mutation-web-shard"]):
             self.assertIn(name, found, f"ci.yml has no {name} job")
             job = found[name]
             self.assertRegex(aggregate, rf"needs: \[[^\]]*\b{name}\b", f"ci does not need {name}")
@@ -356,7 +721,9 @@ class TheMutationJobsGateEveryPullRequest(unittest.TestCase):
             0 <= made < prove.find("mutation_rows.py prove"),
             "the rows job never makes the directory its report goes to",
         )
-        self.assertIn("stryker run", found["mutation-web"])
+        # SPEC-419: StrykerJS runs in each web shard, and the job of the leg's name only judges.
+        self.assertIn("stryker run", found["mutation-web-shard"])
+        self.assertNotIn("stryker run", found["mutation-web"])
 
 
 class TheShardsAreThePlans(unittest.TestCase):
@@ -392,11 +759,84 @@ class TheShardsAreThePlans(unittest.TestCase):
         # shards the plan promised rather than the ones that reported.
         self.assertRegex(
             verdict,
-            r"(?m)^    needs: \[mutation-plan, mutation-rust, mutation-python, mutation-rows\]$",
+            r"(?m)^    needs: \[mutation-plan, mutation-rust, mutation-python, "
+            r"mutation-python-release, mutation-rows\]$",
         )
         self.assertRegex(verdict, r"(?m)^    if: \$\{\{ always\(\) \}\}$")
         self.assertRegex(verdict, r"(?m)^\s+pattern: mutation-rust-shard-\*$")
         self.assertRegex(verdict, r"judge [^\n]*--class rust [^\n]*--shard-reports ")
+
+
+#: The rows legs' axis: the plan deals the rows into at most `ROWS_MAX_LEGS` legs (SPEC-417 R9).
+ROWS_AXIS_LINE = "        leg: ${{ fromJSON(needs.mutation-plan.outputs.rows_matrix) }}"
+ROWS_PLANNED_IF = "${{ needs.mutation-plan.outputs.rows == 'true' }}"
+STEP_IF = re.compile(r"(?m)^        if: (.*)$")
+
+
+def numbered(job, *held):
+    """The positions of the job's steps whose text holds every one of `held`."""
+    return [n for n, step in enumerate(steps(job)) if all(text in step for text in held)]
+
+
+class TheRowsLegsRunAsPlanned(unittest.TestCase):
+    """SPEC-417 A8 and A9 (R9, R10): the plan deals the rows into legs, each leg proves its deal
+    within the rows job's kept bound, and the verdict merges the legs before it judges."""
+
+    def test_the_rows_legs_run_as_planned_and_the_verdict_merges_them_first(self):
+        found = jobs(workflow(CI))
+        plan, rows, verdict = (
+            found.get(name, "") for name in ("mutation-plan", "mutation-rows", "mutation-verdict")
+        )
+        self.assertIn(
+            f"      matrix:\n{ROWS_AXIS_LINE}\n",
+            rows,
+            "mutation-rows has no matrix over rows_matrix",
+        )
+        self.assertRegex(rows, r"(?m)^      fail-fast: false$")
+        for output in examined("rows plan outputs", ["rows_legs", "rows_matrix"]):
+            self.assertRegex(
+                plan, rf"(?m)^      {output}: \$\{{\{{ steps\.legs\.outputs\.{output} \}}\}}$"
+            )
+        sized = numbered(plan, "        id: legs\n")
+        sharded = numbered(plan, "        id: shards\n")
+        self.assertEqual((len(sized), len(sharded)), (1, 1), "the plan's steps legs and shards")
+        self.assertGreater(sized[0], sharded[0], "the rows legs are dealt before the shards")
+        self.assertIn(
+            'mutation_rows.py legs --rows-from "$RUNNER_TEMP/mutation/plan.json"',
+            steps(plan)[sized[0]],
+        )
+        prove = numbered(rows, "mutation_rows.py prove")
+        self.assertEqual(len(prove), 1, "the rows job's prove steps")
+        proving = steps(rows)[prove[0]]
+        for held in ('--leg "$LEG/$LEGS"', '--report "$RUNNER_TEMP/rows/rows-leg-$LEG.json"'):
+            self.assertIn(held, proving)
+        self.assertRegex(proving, r"(?m)^          LEG: \$\{\{ matrix\.leg \}\}$")
+        self.assertRegex(
+            proving, r"(?m)^          LEGS: \$\{\{ needs\.mutation-plan\.outputs\.rows_legs \}\}$"
+        )
+        retired = numbered(rows, "mutation_rows.py retired")
+        self.assertEqual(len(retired), 1, "the rows job's retirement steps")
+        self.assertRegex(
+            STEP_IF.search(steps(rows)[retired[0]]).group(1), r"&& matrix\.leg == 0 \}\}$"
+        )
+        self.assertRegex(rows, r"(?m)^          name: mutation-rows-leg-\$\{\{ matrix\.leg \}\}$")
+        download = numbered(verdict, "          pattern: mutation-rows-leg-*\n")
+        merge = numbered(verdict, "mutation_rows.py merge")
+        judge = numbered(verdict, "mutation-verdict.py judge")
+        self.assertEqual(
+            (len(download), len(merge), len(judge)), (1, 1, 1), "the rows download, merge, judge"
+        )
+        self.assertIn("          merge-multiple: true\n", steps(verdict)[download[0]])
+        self.assertLess(download[0], merge[0], "the merge runs before the rows are downloaded")
+        self.assertLess(merge[0], judge[0], "the judge runs before the merge")
+        conditions = [STEP_IF.findall(steps(verdict)[n]) for n in (download[0], merge[0])]
+        self.assertEqual(conditions, [[ROWS_PLANNED_IF], [ROWS_PLANNED_IF]])
+
+    def test_the_rows_bound_is_half_of_the_rows_jobs_timeout(self):
+        rows = jobs(workflow(CI)).get("mutation-rows", "")
+        found = re.findall(r"(?m)^    timeout-minutes: (\d+)$", rows)
+        self.assertEqual(found, ["90"], "mutation-rows keeps 90 minutes, now each leg's")
+        self.assertEqual(rows_constant("ROWS_BOUND_SECONDS") * 2, int(found[0]) * 60)
 
 
 #: The guard's module, read here as text and never imported: its tests load the wrapper, and this
@@ -983,7 +1423,7 @@ class CargoMutantsRunsTheGatesTestTool(unittest.TestCase):
         for workflow_name, name, job in examined("jobs that run cargo-mutants", running):
             self.assertRegex(
                 job,
-                r"(?m)^\s*tool: cargo-nextest@0\.9\.146$",
+                r"(?m)^\s*tool: cargo-nextest@0\.9\.149$",
                 f"{workflow_name}:{name} runs cargo-mutants without the nextest it names",
             )
 
@@ -1246,6 +1686,65 @@ class TheBriefTeachesTheRecord(unittest.TestCase):
             self.assertIn("scripts/mutation-equivalent.d/", words, name)
             for form in forms:
                 self.assertNotIn(form, words, f"{name} teaches {form}")
+
+
+#: A `mutation-rust` leg's cargo-mutants command before SPEC-480 section 9, spelled out so that
+#: the leg's command is held to it word for word.
+BASE_LEG_COMMAND = (
+    'python3 scripts/memory_scope.py --report "$out" -- cargo mutants --no-shuffle -vV --in-place '
+    '--in-diff "$RUNNER_TEMP/mutation/git.diff" --sharding round-robin --shard "$SHARD/$SHARDS" '
+    '--timeout 2300 --build-timeout 600 --output "$out" || rc=$?'
+)
+BASELINE_STEP_ID = re.compile(r"(?m)^        id: baseline$")
+
+
+class TheRustLegRunsItsBoundedBaselineFirst(unittest.TestCase):
+    """SPEC-480 A19 and A21 (R11, R12, R16): each `mutation-rust` leg runs its own unmutated
+    baseline in the memory scope and records it before cargo-mutants, which runs only after a
+    green one and skips its own; and the verdict job prints each Rust package's Timeouts after
+    the verdict, whatever the verdict read."""
+
+    def test_the_bounded_baseline_runs_before_cargo_mutants_which_skips_its_own(self):
+        rust = steps(jobs(workflow(CI)).get("mutation-rust", ""))
+        baseline = next((at for at, step in enumerate(rust) if BASELINE_STEP_ID.search(step)), None)
+        mutants = next((at for at, step in enumerate(rust) if "cargo mutants " in step), None)
+        self.assertIsNotNone(baseline, "mutation-rust has no step whose id is baseline")
+        self.assertIsNotNone(mutants, "mutation-rust runs no cargo-mutants")
+        self.assertLess(baseline, mutants)
+        lines = [
+            'python3 scripts/memory_scope.py --report "$out/baseline" -- bash '
+            'scripts/mutation-baseline.sh "$RUNNER_TEMP/mutation/listed.json" "$SHARD" "$SHARDS" '
+            '"$out/baseline/baseline.log" || rc=$?',
+            'echo "$rc" > "$out/baseline/baseline.exit"',
+            'if [ "$rc" -eq 0 ]; then echo "green=true" >> "$GITHUB_OUTPUT"; fi',
+        ]
+        for line in examined("lines of the baseline step", lines):
+            self.assertIn(line, rust[baseline])
+        condition = STEP_IF.search(rust[mutants])
+        self.assertIsNotNone(condition, "the cargo-mutants step has no if:")
+        self.assertEqual(
+            condition.group(1),
+            "${{ needs.mutation-plan.outputs.rust == 'true' && "
+            "steps.baseline.outputs.green == 'true' }}",
+        )
+        command = next((x for x in rust[mutants].splitlines() if "cargo mutants " in x), "")
+        words = BASE_LEG_COMMAND.split()
+        words.insert(words.index("--sharding"), "--baseline=skip")
+        self.assertEqual(command.split(), words)
+        self.assertIn("--timeout 2300 --build-timeout 600", command)
+
+    def test_the_verdict_job_prints_the_timeouts_by_package(self):
+        verdict = steps(jobs(workflow(CI)).get("mutation-verdict", ""))
+        judge = next(
+            (at for at, step in enumerate(verdict) if "mutation-verdict.py judge" in step), None
+        )
+        self.assertIsNotNone(judge, "mutation-verdict runs no judge")
+        last = verdict[-1]
+        self.assertIn('run: bash scripts/mutation-timeouts.sh "$RUNNER_TEMP/reports"', last)
+        condition = STEP_IF.search(last)
+        self.assertIsNotNone(condition, "the Timeouts step has no if:")
+        self.assertEqual(condition.group(1), "${{ always() }}")
+        self.assertLess(judge, len(verdict) - 1)
 
 
 if __name__ == "__main__":

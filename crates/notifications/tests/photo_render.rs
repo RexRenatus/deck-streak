@@ -223,8 +223,8 @@ async fn an_unsupported_photo_is_withheld_by_name_and_sends_nothing() {
     assert_eq!(harness.decisions().await.len(), 1);
     assert!(harness.bot.pushes().is_empty(), "nothing else is sent");
     assert_eq!(harness.deliveries().await, 0);
-    assert!(harness.feed().await.is_empty());
-    assert!(harness.queue().await.is_empty());
+    assert_eq!(harness.feed().await, Vec::<String>::new());
+    assert_eq!(harness.queue().await, Vec::<support::Queued>::new());
 }
 
 #[tokio::test]
@@ -535,10 +535,10 @@ async fn a_prepared_share_records_no_delivery() {
         bot.shares(),
         vec![(FILE.to_owned(), "synthetic caption".to_owned())]
     );
-    assert!(harness.decisions().await.is_empty());
+    assert_eq!(harness.decisions().await, Vec::<support::Recorded>::new());
     assert_eq!(harness.deliveries().await, 0);
-    assert!(harness.feed().await.is_empty());
-    assert!(harness.queue().await.is_empty());
+    assert_eq!(harness.feed().await, Vec::<String>::new());
+    assert_eq!(harness.queue().await, Vec::<support::Queued>::new());
 
     bot.answer_share(Prepared::Failed);
     assert_eq!(
@@ -549,7 +549,7 @@ async fn a_prepared_share_records_no_delivery() {
         Prepared::Failed,
         "the transport's outcome is the answer"
     );
-    assert!(harness.decisions().await.is_empty());
+    assert_eq!(harness.decisions().await, Vec::<support::Recorded>::new());
 }
 
 #[test]

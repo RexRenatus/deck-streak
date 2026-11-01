@@ -27,6 +27,13 @@
       "test_ios_lane"
     ]
   },
+  "scripts/lock-digest-line.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_lock_digest_line",
+      "test_audit_sync_server"
+    ]
+  },
   "scripts/memory_scope.py": {
     "dir": "scripts/tests",
     "modules": [
@@ -41,7 +48,19 @@
       "test_mutation_python_shard_binding",
       "test_mutation_verdict",
       "test_mutation_equivalent",
-      "test_memory_cap_verdict"
+      "test_memory_cap_verdict",
+      "test_release_python_ceiling",
+      "test_release_rust_ceiling",
+      "test_mutation_workflows",
+      "test_mutation_verdict_survivor_kills"
+    ]
+  },
+  "scripts/mutation_carry.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_mutation_carry_kills",
+      "test_mutation_carry",
+      "test_mutation_carry_census"
     ]
   },
   "scripts/mutation_python.py": {
@@ -61,7 +80,8 @@
       "test_mutation_rows",
       "test_mutation_verdict",
       "test_mutation_equivalent",
-      "test_bin_kind_census"
+      "test_bin_kind_census",
+      "test_mutation_rows_survivor_kills"
     ]
   },
   "scripts/public-scrub.py": {
@@ -91,9 +111,17 @@
       "test_web_engine_size"
     ]
   },
+  "scripts/web_mutation_shards.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_web_mutation_shards"
+    ]
+  },
   "scripts/write-back-issues.py": {
     "dir": "scripts/tests",
-    "modules": []
+    "modules": [
+      "test_write_back_issues"
+    ]
   },
   "tools/parity-oracle/generate.py": {
     "dir": "tools/parity-oracle",

@@ -414,20 +414,20 @@ impl AnkiEngine for Unread {
         Ok(NewCardQueue::default())
     }
 
-    async fn normal_sync(
+    fn normal_sync(
         &self,
         _collection: &Path,
         _login: &SyncLogin,
-    ) -> Result<SyncOutcome, EngineError> {
-        Err(EngineError::EngineFailed)
+    ) -> impl Future<Output = Result<SyncOutcome, EngineError>> + Send {
+        std::future::ready(Err(EngineError::EngineFailed))
     }
 
-    async fn full_download(
+    fn full_download(
         &self,
         _collection: &Path,
         _login: &SyncLogin,
-    ) -> Result<(), EngineError> {
-        Err(EngineError::EngineFailed)
+    ) -> impl Future<Output = Result<(), EngineError>> + Send {
+        std::future::ready(Err(EngineError::EngineFailed))
     }
 }
 

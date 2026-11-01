@@ -4,10 +4,10 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Action, Side } from '$lib/remote/actions';
-import type { PadSnapshot } from '$lib/remote/gamepad';
-import type { KeyInput } from '$lib/remote/keys';
-import { BUTTONS, KEYS, STICK } from '$lib/remote/mapping';
+import type { Action, Side } from '#lib/remote/actions.js';
+import type { PadSnapshot } from '#lib/remote/gamepad.js';
+import type { KeyInput } from '#lib/remote/keys.js';
+import { BUTTONS, KEYS, STICK } from '#lib/remote/mapping.js';
 import { KEY_SWITCH, StudyInput } from './input';
 import { buttonOf, keyOf, MappingStore } from './mapping-store';
 import MappingScreen from './MappingScreen.svelte';

@@ -2,8 +2,8 @@
 
 Kind: data flow (the pull request's mutation jobs, the weekly battery) and a state machine (one
 row's proof). Read at DeckStreak `dev` 32bf1e1 (`.github/workflows/ci.yml`, `scripts/check.sh`,
-the mutation-rows pack's row shape), with cargo-mutants 27.1.0 and StrykerJS 10.0.0 as SPEC-039 §1
-measured them, and its shards as R18 sizes them. Decided by ADR-057; built by SPEC-039. The
+the mutation-rows pack's row shape), with cargo-mutants 27.1.0 and StrykerJS 10.1.1 (SPEC-039 §1
+measured 10.0.0), and its shards as R18 sizes them. Decided by ADR-057; built by SPEC-039. The
 equivalence record (ADR-070, SPEC-057) joins the verdict's step and the battery; its own path, from
 a fragment to a verdict, is drawn in `docs/schematics/mutation-equivalence-record.md`.
 
@@ -410,3 +410,301 @@ cited. A line moves with any edit above it, so search by the item named beside i
 | the battery's verdict | `.github/workflows/mutation-weekly.yml:395`; `scripts/mutation-verdict.py:2109` |
 | the model of the legs and the verdict | `formal/tla/EveryLegCounted/EveryLegCounted.tla` |
 | the rows that pin each new constant and check | `scripts/mutation-rows.d/S36200-S36299.json` |
+
+## 9. The rows legs: dealt by measured cost, merged before the verdict (SPEC-417, ADR-431)
+
+Kind: data flow. Read at DeckStreak `dev` 8870392 (`.github/workflows/ci.yml:376-441`, `:578`,
+`:582`, `:615`, `:628-644`, `:668-672`, `:685-702`; `scripts/mutation_rows.py:1169-1188`,
+`:1191-1222`; `scripts/mutation-verdict.py:879`, `:1195`). Decided by ADR-431; built by SPEC-417.
+
+Schematic for SPEC-417 and ADR-431 (rows band S41700-S41799). It draws how a pull request's
+hand-written mutation rows reach the verdict, before and after the rows are dealt into legs. Names
+are the jobs, artifacts and files the workflow writes; section 9.4 cites each step by `path:line`.
+The rows job keeps its bound of 90 minutes: what changes is how many jobs share the rows.
+
+### 9.1 Before: one rows job, cut at its bound
+
+```mermaid
+flowchart TD
+  plan["job mutation-plan<br/>artifact mutation-plan, plan.json"] -->|"needs"| rows["job mutation-rows, one job<br/>timeout-minutes: 90"]
+  rows --> prove["mutation_rows.py prove<br/>every chosen row, one at a time"]
+  prove --> bound{"every row proved<br/>within 90 minutes?"}
+  bound -->|"yes"| report["rows.json, written after the last row<br/>artifact mutation-rows"]
+  bound -->|"no: cut at the bound"| noreport["no report written<br/>nothing uploaded"]
+  report --> verdict["job mutation-verdict<br/>downloads mutation-rows by name"]
+  noreport --> verdict
+  verdict --> judge["judge_rows"]
+  judge -->|"a report"| graded["each row KILLED or SURVIVED"]
+  judge -->|"no report"| void["every selected row VOID<br/>selected and never proved"]
+```
+
+A release's diff selects all 2512 rows. At the measured mean of 16.2 s a row they need about 678
+minutes, more than the 360 minutes a hosted job may run, so one job cannot hold them at any bound.
+The release run's rows job proved 331 of them in 5357 s and was cut at its 90 minutes, with no
+report.
+
+### 9.2 After: legs dealt by measured cost, merged before the verdict
+
+```mermaid
+flowchart TD
+  plan["job mutation-plan<br/>mutation_rows.py legs"] --> fit{"the fewest legs n whose largest,<br/>ceil(R / n) rows x ROW_SECONDS,<br/>is within ROWS_BOUND_SECONDS,<br/>with n at most ROWS_MAX_LEGS?"}
+  fit -->|"none"| refused["REFUSED, whole, by name:<br/>the count and the most legs<br/>exit 2, no output written"]
+  refused -->|"the plan job fails"| cifail["job ci fails"]
+  fit -->|"n"| outputs["outputs rows_legs = n<br/>rows_matrix = 0 to n-1"]
+  outputs -->|"needs"| leg["job mutation-rows, matrix leg k = 0 to n-1<br/>timeout-minutes: 90, fail-fast: false"]
+  leg --> deal["mutation_rows.py prove --leg k/n<br/>the chosen rows k, k+n, k+2n, in plan order"]
+  leg --> retired["leg 0 only<br/>mutation_rows.py retired"]
+  deal --> legreport["rows-leg-k.json<br/>artifact mutation-rows-leg-k"]
+  legreport -->|"needs: every leg has ended"| download["job mutation-verdict<br/>downloads every mutation-rows-leg-k,<br/>merged into reports/mutation-rows"]
+  download --> merge["mutation_rows.py merge<br/>legs 0 to n-1, in leg order"]
+  merge --> dealcheck{"every id in the leg its deal gave it,<br/>and in one leg only?"}
+  dealcheck -->|"no"| refusedmerge["REFUSED by name<br/>exit 2, no report written"]
+  dealcheck -->|"yes"| merged["rows.json, the one report<br/>each absent leg named on its own line"]
+  merged --> judge["judge_rows, unchanged"]
+  judge --> graded["each proved row KILLED or SURVIVED"]
+  judge --> void["an absent leg's rows VOID by id"]
+```
+
+A leg cut at its bound uploads nothing, so `merge` names it and the judge reads its rows as VOID
+by id, never as a pass. The legs share no written object: each uploads its own artifact, they read
+the plan's artifact and a restore-only cache, and the verdict's job reads the legs only after
+`needs` has ended every one (ADR-431 D8).
+
+### 9.3 The arithmetic, and the run's ceiling
+
+- price: 5357 s over 331 rows is 16.2 s a row; `ROW_SECONDS = 17`, rounded up to the second;
+- bound: the rows job keeps 90 minutes, 5400 s, now each leg's; `ROWS_BOUND_SECONDS = 2700`, half
+  of it; a leg holds at most 158 rows (158 x 17 = 2686 s; 159 x 17 = 2703 s);
+- a release's 2512 rows: 2512 x 17 = 42,704 s in all; 15 legs hold 2370 rows, too few, so 16 legs
+  of at most 157 rows, each projected at 157 x 17 = 2669 s, within 2700 s;
+- room: `ROWS_MAX_LEGS = 17` legs hold 2686 rows; 2687 rows are refused whole, by name;
+- the release's re-run: at least 2539 rows, the 2512 with SPEC-415's 8, SPEC-416's 3 and this delivery's 16;
+  16 legs hold 2528, too few, so 17 legs of at most 150 rows, each projected at 2550 s;
+- the run's ceiling for Rust legs: every `ci.yml` job but `mutation-rust` can generate 47 jobs at
+  the base, the rows job among them as one; counted at its most legs, they generate 63, so
+  `LEG_CEILING["ci"]` falls from 209 to 193, the run's 256 less 63. A release listing of 200 Rust
+  legs is then refused whole by name, and a listing of 192 fits.
+
+### 9.4 Where each step lives
+
+Read at `8870392`, before this delivery's change. A line moves with any edit above it, so search
+by the item named beside it after that.
+
+| step | `path:line` |
+|---|---|
+| job `mutation-plan`, its outputs and its steps | `.github/workflows/ci.yml:376-441` |
+| job `mutation-rows`, and its `timeout-minutes: 90` | `.github/workflows/ci.yml:578`, `:582` |
+| the rows job's dependency cache, restored only | `.github/workflows/ci.yml:615` |
+| `mutation_rows.py prove`, the rows the diff selects | `.github/workflows/ci.yml:628-634` |
+| `mutation_rows.py retired` | `.github/workflows/ci.yml:635-637` |
+| artifact `mutation-rows` | `.github/workflows/ci.yml:638-644` |
+| the verdict's download of the rows report, by name | `.github/workflows/ci.yml:668-672` |
+| the judge step | `.github/workflows/ci.yml:685-702` |
+| `chosen`: the population the runner proves | `scripts/mutation_rows.py:1169-1188` |
+| `prove`, its report written once, after the last row | `scripts/mutation_rows.py:1191-1222`, `:1217-1218` |
+| `LEG_CEILING` | `scripts/mutation-verdict.py:879` |
+| `judge_rows`: a selected row with no proof is VOID | `scripts/mutation-verdict.py:1195` |
+| the rows that pin each new constant, verb and step | `scripts/mutation-rows.d/S41700-S41799.json` |
+
+## 10. The pull request's web sweep in three shards, read by name (SPEC-419, ADR-433)
+
+Kind: data flow. Read at DeckStreak `dev` e64a778 (`.github/workflows/ci.yml:736-794`, the one
+`mutation-web` job before this change; `scripts/mutation-verdict.py:1993-2051`, `judge_web`, which
+reads only the report's `files` and is unchanged). Decided by ADR-433; built by SPEC-419 (rows
+band S41900-S41999). It supersedes the `mutation-web` subgraph of section 1: names are the jobs,
+artifacts and files the workflow and `scripts/web_mutation_shards.py` write.
+
+### 10.1 Before: one job, cut at its bound
+
+```mermaid
+flowchart TD
+  plan1["job mutation-web, one job<br/>timeout-minutes: 100<br/>mutation-verdict.py plan"] --> run1["stryker run --mutate every changed web file"]
+  run1 --> fits{"done within 100 minutes,<br/>upload included?"}
+  fits -->|"yes"| report1["reports/mutation/mutation.json"]
+  fits -->|"no: the job is cut"| cut1["the job reads cancelled<br/>even when StrykerJS finished"]
+  report1 --> judge1["mutation-verdict.py judge --class web"]
+```
+
+### 10.2 After: three shards dealt by StrykerJS's own count, one job reads them by name
+
+```mermaid
+flowchart TD
+  shard["job mutation-web-shard, matrix shard k = 0, 1, 2<br/>timeout-minutes: 100, fail-fast: false"] --> planS["mutation-verdict.py plan<br/>stryker_mutate: the changed web files"]
+  planS --> count["web_mutation_shards.py deal --shard k<br/>stryker serve stdio: configure, discover<br/>each planned file's mutant count"]
+  count -->|"the count fails"| novoid["VOID, no shard.json written"]
+  count --> deal["whole files, largest count first,<br/>each onto the lightest shard;<br/>ties by path, then the lowest index"]
+  deal --> record["shard.json: counts, the whole deal,<br/>this shard's files and mutants, empty"]
+  record -->|"mutants above 0"| sweep["stryker run --mutate this shard's files<br/>stryker.exit and mutation.json"]
+  record -->|"no mutant: an explicit empty record"| keep["artifact mutation-web-shard-k<br/>uploaded if: always()"]
+  sweep --> keep
+  keep -->|"needs: every shard has ended"| verdictjob["job mutation-web, one job, if: always()<br/>timeout-minutes: 100<br/>downloads mutation-web-shard-*"]
+  verdictjob --> union["web_mutation_shards.py union<br/>reads mutation-web-shard-0, -1 and -2 by name"]
+  union --> whole{"every record present and its shard's,<br/>its files the deal of its counts,<br/>every dealt mutant in its report,<br/>every planned file in one shard,<br/>the shards' result success?"}
+  whole -->|"no"| void2["VOID by name, exit 3<br/>no union written"]
+  whole -->|"yes"| merged["the shards' files merged<br/>stryker/mutation.json"]
+  merged --> judge2["mutation-verdict.py judge --class web, unchanged"]
+```
+
+A shard cut at its bound reads `cancelled`, so the union reads VOID by name and judges no mutant;
+a shard the deal gave nothing still writes and uploads its record, so a missing record is always a
+defect, never an empty shard. The shards share no written object: each writes its own directory
+and artifact, and the verdict's job reads them only after every shard has ended.
+
+## 11. The release run's Rust legs, up to one signed ceiling in one matrix (SPEC-423, ADR-437)
+
+Schematic for SPEC-423 and ADR-437 (rows band S42300-S42399). It draws the Rust half of the plan
+before and after the delivery, read at dev `a3a052b2`: the release mark the plan already carries,
+the ceiling constant, the two refusals, the one `mutation-rust` matrix of at most 256 legs, and
+the verdict's count of every leg. Names are the jobs, outputs, constants and texts the scripts
+write. Where section 8.1 says one run holds every leg within `LEG_CEILING` for `ci.yml`, this
+section narrows it for the release pull request's run alone.
+
+### 11.1 Before: every run's Rust legs are held to the pull request ceiling
+
+```mermaid
+flowchart TD
+    MARK["plan.json: release true only when release_run holds<br/>(SPEC-422 R1, R2)"] --> RS
+    LIST["listed.json: the diff's Rust mutants"] --> RS
+    RS["shards: fewest_shards up to LEG_CEILING ci"] --> RC{"fits within 190 legs?"}
+    RC -- "no" --> RR["REFUSED, whole: the pull request run's ceiling<br/>exit 1, no shards, no outputs"]
+    RC -- "yes" --> RP["plan.json shards 0..N-1<br/>outputs shards and matrix<br/>prints legs N of ceiling 190"]
+    RP --> MR["job mutation-rust, matrix shard = 0..N-1"]
+```
+
+The release mark reaches the Python half only (`python_release_ceiling`, SPEC-422): on the release
+run a Rust listing that needs more than 190 legs reads the pull request refusal.
+
+### 11.2 After: the release run's Rust legs are held to RUST_RELEASE_CEILING
+
+```mermaid
+flowchart TD
+    MAIN["shards verb: python_share_refused, python_ceiling_refused,<br/>then rust_ceiling_refused, before any deal"] --> RANGE{"RUST_RELEASE_CEILING an int<br/>within LEG_CEILING ci .. RUST_MATRIX_LEGS?"}
+    RANGE -- "no" --> RANGEOUT["REFUSED by name: the release ceiling is outside its range<br/>exit 1, no deal, on every run"]
+    RANGE -- "yes" --> HELP{"rust_release_ceiling: release mark true<br/>and the constant above LEG_CEILING ci?"}
+    HELP -- "no: None" --> PRPATH["ceiling = LEG_CEILING ci<br/>sized, refused and printed as before, byte for byte"]
+    HELP -- "yes" --> RELPATH["ceiling = RUST_RELEASE_CEILING"]
+    PRPATH --> FIT{"fewest_shards within the ceiling?"}
+    RELPATH --> FIT
+    FIT -- "no, release" --> RELOUT["REFUSED, whole: the release run's ceiling (RUST_RELEASE_CEILING)<br/>a larger figure needs a new measurement and a new owner-signed ruling"]
+    FIT -- "no, pull request" --> PROUT["REFUSED, whole: the pull request run's ceiling<br/>(lines not edited)"]
+    FIT -- "yes" --> DEALT["plan.json shards 0..N-1, round robin i mod N<br/>outputs shards and matrix = 0..N-1"]
+    DEALT --> LINES["release run only: the Rust release line beside the Python one<br/>legs N of ceiling C, and the run-legs line, read the ceiling"]
+    LINES --> ONE["job mutation-rust, ONE matrix, shard = 0..N-1<br/>N at most RUST_MATRIX_LEGS"]
+```
+
+- The release mark is the one SPEC-422 writes; no second predicate reads the event.
+- At the placeholder, `RUST_RELEASE_CEILING` equals `LEG_CEILING["ci"]`, the helper returns None,
+  and the release run takes the pull request path byte for byte.
+- A figure above `RUST_MATRIX_LEGS` never reaches a deal: the range check refuses it on every run,
+  so a second matrix is a new decision, never a cap.
+- No job, output or check-run name is added: `mutation-rust` expands the plan's `matrix` output
+  whatever its count, and `LEG_CEILING`'s derivation sets that one job apart as before.
+
+### 11.3 The verdict counts every leg, whatever the count
+
+```mermaid
+flowchart LR
+    PLANS["plan.json shards 0..N-1"] --> WALK["whole_reports: one promised report per leg 0..N-1"]
+    ARTS[("mutation-rust-shard-k, merged download")] --> WALK
+    WALK -- "a leg with mutants and no report" --> VOIDLEG["VOID by the leg's name"]
+    WALK --> PART["partition: each listed mutant tested once"]
+    PART --> SUM["examined_sum: the reports count the listing exactly"]
+    SUM --> CIJOB{"job ci needs mutation-verdict"}
+```
+
+The walk reads the plan's own legs, never the artifacts that arrived, so a count past 190 is walked
+whole exactly as any count is (SPEC-290, SPEC-362 R8; SPEC-423 A9).
+
+### 11.4 Where each step lives
+
+Read at dev `a3a052b2`; the new lines are cited by name, and the build re-reads every line at its
+green commit.
+
+| step | where |
+|---|---|
+| the release mark: written by the plan, read as `is True` | `scripts/mutation-verdict.py:825-832`, `:1100` |
+| `LEG_CEILING`, the pull request and battery ceilings | `scripts/mutation-verdict.py:961` |
+| `RUST_RELEASE_CEILING` and `RUST_MATRIX_LEGS`, each with its `#:` line | directly after `:961` (new) |
+| `rust_ceiling_refused` and `rust_release_ceiling` | after `python_release_ceiling`, `:1095` (new) |
+| `fewest_shards`, the scan up to a ceiling | `scripts/mutation-verdict.py:993` |
+| the Rust sizing, its pull request refusal and its headroom line in `shards` | `scripts/mutation-verdict.py:1322`, `:1323-1329`, `:1382-1386` |
+| the run-legs line | `scripts/mutation-verdict.py:1387-1399` |
+| `announce`, the `shards` and `matrix` outputs | `scripts/mutation-verdict.py:1256` |
+| the range check in the `shards` verb | `scripts/mutation-verdict.py:3713-3721` |
+| `mutation-rust`'s axis on the plan's `matrix` output | `.github/workflows/ci.yml:468-469` |
+| the verdict's walk of every leg | `scripts/mutation-verdict.py:1542`, `:1588`, `:1617` |
+| `RUN_JOBS`, the limit one matrix holds | `scripts/tests/test_dispatch_shards.py:219` |
+
+## 12. Each Rust leg's own bounded baseline, then cargo-mutants without its own (SPEC-480 section 9, ADR-509)
+
+Schematic for SPEC-480 section 9 and ADR-509 (rows S48008 to S48038 of band S48000-S48099). It
+draws one leg of the `mutation-rust` matrix before and after the delivery, read at dev `3bdfccd6`,
+and the verdict job's reads of every leg's artifact. Names are the steps, files, constants and
+texts the workflow and the scripts write. Where section 11 draws how many legs one run holds, this
+section draws what each leg runs and how the verdict reads it.
+
+### 12.1 Before: cargo-mutants' one timeout bounds the leg's own baseline too
+
+```mermaid
+flowchart TD
+    LISTB["listed.json and git.diff, from the plan job"] --> CMB["cargo-mutants, one shard, in the memory scope<br/>--timeout 2300 --build-timeout 600"]
+    CMB --> BASEB{"its own baseline: the shard's packages,<br/>each test within the 2300 s timeout?"}
+    BASEB -- "no: Timeout" --> NONEB["no mutant of the leg is run<br/>outcomes.json holds the Baseline outcome alone"]
+    BASEB -- "yes" --> MUTB["each mutant within --timeout 2300"]
+    NONEB --> VERB["verdict: baseline_void reads the report's Baseline outcome<br/>VOID by the leg's name"]
+    MUTB --> VERB
+```
+
+A leg whose tests together take longer than the per-mutant timeout can judge no mutant: its
+baseline is cut at the same timeout that bounds each mutant (ADR-328).
+
+### 12.2 After: the leg's own baseline under its budget, then cargo-mutants with --baseline=skip
+
+```mermaid
+flowchart TD
+    LISTA["listed.json, from the plan job"] --> STEP["step id baseline: mutation-baseline.sh in the memory scope<br/>the shard's packages, mutant i to leg i mod n, under timeout 3845"]
+    STEP --> REC["baseline/baseline.exit and baseline/baseline.log<br/>under the leg's report directory"]
+    REC --> GREEN{"exit 0?"}
+    GREEN -- "yes: green=true" --> CMA["cargo-mutants --baseline=skip --timeout 2300<br/>--build-timeout 600, in the memory scope"]
+    GREEN -- "no" --> NOTRUN["cargo-mutants does not run<br/>no mutant of the leg is run"]
+    CMA --> OUTA["mutants.out/outcomes.json, with no Baseline outcome"]
+    OUTA --> ARTA[("artifact mutation-rust-shard-k")]
+    REC --> ARTA
+    NOTRUN --> ARTA
+    ARTA --> BVA["verdict: baseline_void for every leg the plan deals a mutant"]
+    BVA -- "no record" --> VNONE["VOID: it left no record of its unmutated baseline"]
+    BVA -- "exit 124" --> VBUDGET["VOID: its unmutated baseline reached its 3845 s budget"]
+    BVA -- "another non-zero exit" --> VFAIL["VOID: its unmutated baseline failed, with its exit"]
+    BVA -- "exit 0" --> SLOW{"its log's slowest test, times 1.5,<br/>within the 2300 s timeout?"}
+    SLOW -- "no, or no test timed" --> VSLOW["VOID by the leg's name, as SPEC-362 R7 reads it"]
+    SLOW -- "yes" --> JUDGED["the leg's mutants are judged"]
+    ARTA --> TMO["step after the verdict's, if always: mutation-timeouts.sh<br/>each package's Timeouts beside its baseline tests' seconds"]
+    TMO --> NAMED["READ BY NAME: each Timeout of a package over the margin, or untimed"]
+```
+
+- A leg's mutants are judged only against that leg's own baseline record; the plan's charge of a
+  baseline, `BASELINE_SECONDS`, does not change (SPEC-480 R14).
+- `--timeout 2300 --build-timeout 600` and every other word of the cargo-mutants command are
+  unchanged: no mutant is filtered or skipped, and a leg whose baseline is not green runs none.
+- A VOID is never a pass; a report that holds no `Baseline` outcome, as `--baseline=skip` writes
+  it, is read whole.
+
+### 12.3 Where each step lives
+
+Read at dev `3bdfccd6`; the new lines are cited by name, and the build re-reads every line at its
+green commit.
+
+| step | where |
+|---|---|
+| the plan job's listing, `listed.json` | `.github/workflows/ci.yml:426` |
+| the leg's plan download | `.github/workflows/ci.yml:476-479` |
+| the step `id: baseline` and `scripts/mutation-baseline.sh` | before the cargo-mutants step, `.github/workflows/ci.yml:524` (new) |
+| the cargo-mutants command, its `if:` and `--baseline=skip` | `.github/workflows/ci.yml:533` |
+| the leg's upload of its report directory | `.github/workflows/ci.yml:536-542` |
+| `BASELINE_BUDGET_SECONDS` and `BASELINE_BUDGET_EXIT` | after `TIMEOUT_MARGIN`, `scripts/mutation-verdict.py:971` (new) |
+| `baseline_void`, over the leg's own record | `scripts/mutation-verdict.py:1684` |
+| the shard loop of `judge_rust`, every dealt leg | `scripts/mutation-verdict.py:1779` |
+| `read_exit` | `scripts/mutation-verdict.py:2501` |
+| the verdict step | `.github/workflows/ci.yml:767` |
+| the Timeouts step and `scripts/mutation-timeouts.sh` | after the verdict step, `.github/workflows/ci.yml:785` (new) |
+| the derive of the budget | `tools/rust-baseline-budget/size_budget.py` (new) |

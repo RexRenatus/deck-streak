@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
+  import { m } from '#lib/paraglide/messages.js';
   import type { CourseProgress } from './progress';
 
   // One course's Road to C2 (SPEC-077 R17): its flag and name, its band and mastery, its current

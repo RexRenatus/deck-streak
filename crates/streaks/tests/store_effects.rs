@@ -193,7 +193,10 @@ async fn the_freeze_events_are_stored_once_and_read_in_order() {
     let directory = tempfile::tempdir().expect("a temporary directory");
     let db = open(&directory).await;
     let mut write = db.write().await.expect("a write");
-    assert!(store::events(&mut write).await.expect("read").is_empty());
+    assert_eq!(
+        store::events(&mut write).await.expect("read"),
+        Vec::<FreezeEvent>::new()
+    );
     let events = [
         FreezeEvent {
             day: day(19_999),

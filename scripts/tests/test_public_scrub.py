@@ -5,6 +5,7 @@ passes a systemd unit instance name, and composes its rules once (SPEC-054 A1 to
 public shapes are its own files, each family still found, and its loader still reads the private
 list's schema (SPEC-056 A9, A10)."""
 
+import hashlib
 import importlib.util
 import json
 import os
@@ -590,6 +591,288 @@ class TheScrubOwnsItsShapes(unittest.TestCase):
             )
             self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
             self.assertIn("schema is not phx.persona.deny.v1", done.stdout)
+
+    def test_the_flags_default_is_excused_by_one_whole_record(self):
+        # SPEC-492 A2 (R3): the scrub's mapped suite runs no record census, so its one equivalent
+        # survivor, the flags default, is excused by a record that binds it alone.
+        path = REPO / "scripts" / "mutation-equivalent.d" / "python.json"
+        records = json.loads(path.read_text(encoding="utf-8"))["records"]
+        mine = [
+            record
+            for record in examined("Python equivalence records", records)
+            if record.get("file") == "scripts/public-scrub.py"
+        ]
+        self.assertEqual(len(mine), 1, "exactly one record names scripts/public-scrub.py")
+        record = mine[0]
+        self.assertEqual(
+            sorted(record),
+            ["anchor", "evidence", "file", "issue", "mutant", "reached_by", "reason"],
+        )
+        self.assertEqual(record["mutant"], 'replace "" with "XX" in compiled')
+        self.assertEqual(record["anchor"], 'str(row.get("flags", ""))')
+        self.assertEqual(
+            record["reached_by"],
+            "test_public_scrub.TheScrubOwnsItsShapes."
+            "test_the_loader_reads_a_synthetic_private_list_in_its_schema",
+        )
+        self.assertEqual(SCRUB.read_text(encoding="utf-8").count('str(row.get("flags", ""))'), 1)
+
+
+def deny_list(directory, name="deny.json", **fields):
+    """A deny list in the scrub's schema holding `fields`, written to `directory` as `name`."""
+    path = Path(directory) / name
+    path.write_text(json.dumps({"schema": "phx.persona.deny.v1", **fields}), encoding="utf-8")
+    return path
+
+
+def scrub_help():
+    """(the exit, the words) of the scrub's --help, its words joined by single spaces, so neither
+    the terminal's width nor colour decides what the words are."""
+    env = {key: value for key, value in os.environ.items() if key != "PERSONA_CORE_DENY_LIST"}
+    done = subprocess.run(
+        [sys.executable, str(SCRUB), "--help"],
+        capture_output=True,
+        text=True,
+        check=False,
+        env=dict(env, COLUMNS="200", NO_COLOR="1", PYTHON_COLORS="0"),
+    )
+    return done.returncode, " ".join(done.stdout.split())
+
+
+class TheLoaderRefusesEveryMalformedList(unittest.TestCase):
+    """The scrub's own loader, read in process over literal rows and scratch lists: a malformed
+    list or row is refused by name, and a row's flags and id are read as the schema says."""
+
+    def test_a_row_with_no_i_flag_matches_case(self):
+        module = scrub_module()
+        rule, pattern = module.compiled({"id": "a", "regex": "ABC"}, "w")
+        self.assertEqual(rule, "a")
+        self.assertEqual(pattern.search("xABCx").group(0), "ABC")
+        self.assertIsNone(pattern.search("abc"))
+
+    def test_key_markers_that_are_not_a_list_are_refused(self):
+        module = scrub_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = deny_list(tmp, key_markers="x")
+            with self.assertRaises(module.DenyListError) as refused:
+                module.load_deny(path, "private")
+        self.assertEqual(str(refused.exception), "private deny-list: key_markers is not a list")
+
+    def test_a_public_list_tags_its_literals_public(self):
+        module = scrub_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            deny_list(tmp, "persona-core.json", literals=["x"])
+            deny_list(tmp, "privacy-gdpr.json", literals=["y"])
+            module.RULES = Path(tmp)
+            scan = module.rules(None)
+        self.assertEqual(scan.literals, [("public", "x"), ("public", "y")])
+        self.assertEqual(scan.rows, [])
+
+    def test_a_pattern_row_without_a_regex_is_refused_by_name(self):
+        module = scrub_module()
+        # Each operand alone: a dict with no regex, and a row that is no dict.
+        for row in examined("rows without a regex", [{"id": "x"}, "x"]):
+            with self.subTest(row=row):
+                with self.assertRaises(module.DenyListError) as refused:
+                    module.compiled(row, "w")
+                self.assertEqual(str(refused.exception), "w: a row has no regex")
+
+    def test_a_row_with_no_id_is_named_by_a_question_mark(self):
+        module = scrub_module()
+        rule, pattern = module.compiled({"regex": "x"}, "w")
+        self.assertEqual(rule, "?")
+        self.assertEqual(pattern.pattern, "x")
+
+    def test_journal_paths_that_are_not_a_list_are_refused(self):
+        module = scrub_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = deny_list(tmp, journal_paths="x")
+            with self.assertRaises(module.DenyListError) as refused:
+                module.load_deny(path, "private")
+        self.assertEqual(str(refused.exception), "private deny-list: journal_paths is not a list")
+
+    def test_a_literal_that_is_not_a_string_is_refused_by_name(self):
+        module = scrub_module()
+        # Each operand alone: a literal that is no string, and an empty one.
+        for literal in examined("malformed literals", [5, ""]):
+            with self.subTest(literal=literal), tempfile.TemporaryDirectory() as tmp:
+                path = deny_list(tmp, literals=[literal])
+                with self.assertRaises(module.DenyListError) as refused:
+                    module.load_deny(path, "private")
+                self.assertEqual(
+                    str(refused.exception), "private deny-list: literals holds a non-string"
+                )
+
+
+class TheCommandLineSaysWhatItDoes(unittest.TestCase):
+    """The scrub run as a script: its help names each option and opens with its docstring's first
+    paragraph, its private list is read from its environment variable, and a run that examines
+    nothing is VOID."""
+
+    def test_help_names_each_option_by_its_help_text(self):
+        code, said = scrub_help()
+        self.assertEqual(code, 0, said)
+        for text in examined(
+            "option help texts",
+            [
+                "a file, or every file under a directory",
+                "scan only the --subject paths",
+                "also read every blob reachable from --rev",
+                "the revision whose history --history reads",
+            ],
+        ):
+            with self.subTest(text=text):
+                self.assertIn(text, said)
+
+    def test_help_opens_with_the_docstrings_first_paragraph(self):
+        code, said = scrub_help()
+        self.assertEqual(code, 0, said)
+        self.assertIn(
+            "public-scrub: refuse any file, blob or issue body that would disclose what a public "
+            "repository must not.",
+            said,
+        )
+
+    def test_the_private_list_is_read_from_its_environment_variable(self):
+        env = {key: value for key, value in os.environ.items() if key != "PERSONA_CORE_DENY_LIST"}
+        with tempfile.TemporaryDirectory() as tmp:
+            note = Path(tmp) / "note.md"
+            note.write_text("a clean note\n", encoding="utf-8")
+            private = private_list(tmp, ["zebra" + "-canary"])
+            done = subprocess.run(
+                [sys.executable, str(SCRUB), "--root", tmp, "--no-tree", "--subject", str(note)],
+                capture_output=True,
+                text=True,
+                check=False,
+                env=dict(env, PERSONA_CORE_DENY_LIST=str(private)),
+            )
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(
+            done.stdout.splitlines(),
+            ["examined 1 file(s) against public shapes and the private list; 0 finding(s)"],
+        )
+
+    def test_a_run_that_examines_nothing_is_void(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            done = public_scrub(Path(tmp), "--no-tree")
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(
+            done.stdout.splitlines(),
+            ["examined 0 file(s) against public shapes only; 0 finding(s)"],
+        )
+
+
+# SPEC-579's planted brand file: the listed path, and the list's own path at a scanned root.
+LISTED = "icons/logo.png"
+BRAND_LIST = "scripts/brand-files.json"
+
+
+def write_brand_list(root, entries):
+    """Write the brand list at `root`: one entry per (path, bytes), its sha256 and size computed
+    from the bytes, so this file holds no digest."""
+    files = [
+        {"path": path, "sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data)}
+        for path, data in entries
+    ]
+    listed = root / BRAND_LIST
+    listed.parent.mkdir(parents=True, exist_ok=True)
+    listed.write_text(json.dumps({"files": files}, indent=2) + "\n", encoding="utf-8")
+
+
+def brand_repo(tmp, files, entries):
+    """A committed repository holding a clean README, `files` (path to bytes) and a brand list of
+    `entries`."""
+    root = new_repo(tmp)
+    (root / "README.md").write_text("a clean readme\n", encoding="utf-8")
+    for path, data in files.items():
+        (root / path).parent.mkdir(parents=True, exist_ok=True)
+        (root / path).write_bytes(data)
+    write_brand_list(root, entries)
+    commit_all(root, "add the brand files")
+    return root
+
+
+class AListedBrandBinaryIsAdmitted(unittest.TestCase):
+    """SPEC-579 A15 to A19 (R6; ADR-598 D5): a binary is admitted only at a path the brand list
+    names with its sha256 and byte count, in the tree scan and in the history scan; an admitted
+    binary is still searched for every private literal; every other binary is refused as before;
+    and a list the scrub cannot read stops it by name."""
+
+    def test_a_listed_binary_passes_the_tree_and_history_scans(self):
+        # A15.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = brand_repo(tmp, {LISTED: BINARY}, [(LISTED, BINARY)])
+            done = run_scrub(root)
+            self.assertEqual(done.returncode, 0, done.stdout)
+            self.assertNotIn("binary", done.stdout)
+            self.assertRegex(done.stdout, r"examined 3 file\(s\) against .*; 0 finding\(s\)")
+            done = run_scrub(root, "--history")
+            self.assertEqual(done.returncode, 0, done.stdout)
+            self.assertNotIn("binary", done.stdout)
+            self.assertRegex(
+                done.stdout, r"examined 3 file\(s\) and 3 history blob\(s\) against .*; 0 finding"
+            )
+
+    def test_a_listed_path_with_other_bytes_is_refused_as_binary(self):
+        # A16: one byte changed, the size kept.
+        other = BINARY[:-1] + b"\x01"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = brand_repo(tmp, {LISTED: other}, [(LISTED, BINARY)])
+            done = run_scrub(root, "--history")
+            self.assertEqual(done.returncode, 1, done.stdout)
+            self.assertIn(f"public-scrub: {LISTED}: binary", done.stdout.splitlines())
+            self.assertRegex(done.stdout, r"history:icons/logo\.png@[0-9a-f]{9}: binary")
+
+    def test_listed_bytes_at_an_unlisted_path_are_refused_as_binary(self):
+        # A17.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = brand_repo(tmp, {"icons/other.png": BINARY}, [(LISTED, BINARY)])
+            done = run_scrub(root, "--history")
+            self.assertEqual(done.returncode, 1, done.stdout)
+            self.assertIn("public-scrub: icons/other.png: binary", done.stdout.splitlines())
+            self.assertRegex(done.stdout, r"history:icons/other\.png@[0-9a-f]{9}: binary")
+
+    def test_a_private_literal_inside_a_listed_binary_is_still_found(self):
+        # A18: the listed bytes hold the word "compiled", which the private list names.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = brand_repo(tmp, {LISTED: BINARY}, [(LISTED, BINARY)])
+            deny = private_list(tmp, ["compiled"])
+            done = run_scrub(root, "--history", "--deny-list", str(deny))
+            self.assertEqual(done.returncode, 1, done.stdout)
+            self.assertIn(f"public-scrub: {LISTED}: private literal #0", done.stdout.splitlines())
+            self.assertRegex(
+                done.stdout, r"history:icons/logo\.png@[0-9a-f]{9}: private literal #0"
+            )
+            self.assertNotIn("binary", done.stdout)
+
+    def test_a_malformed_list_stops_the_scrub_by_name(self):
+        # A19: a list that is not JSON, an entry whose sha256 has 63 digits, a path named twice,
+        # an entry that is not an object, an empty path and a byte count that is a boolean.
+        digest = hashlib.sha256(BINARY).hexdigest()
+        entry = {"path": LISTED, "sha256": digest, "bytes": len(BINARY)}
+        other = {"path": LISTED, "sha256": hashlib.sha256(b"other").hexdigest(), "bytes": 5}
+        planted = {
+            "not JSON": "{ a list that is not JSON\n",
+            "a 63-digit sha256": json.dumps({"files": [dict(entry, sha256=digest[:63])]}),
+            "a path named twice": json.dumps({"files": [entry, other]}),
+            "an entry that is not an object": json.dumps({"files": [LISTED]}),
+            "an empty path": json.dumps({"files": [dict(entry, path="")]}),
+            "a byte count that is a boolean": json.dumps({"files": [dict(entry, bytes=True)]}),
+        }
+        reached = 0
+        for name, text in examined("planted malformed lists", list(planted.items())):
+            with self.subTest(name), tempfile.TemporaryDirectory() as tmp:
+                root = new_repo(tmp)
+                (root / "README.md").write_text("a clean readme\n", encoding="utf-8")
+                (root / "scripts").mkdir()
+                (root / BRAND_LIST).write_text(text, encoding="utf-8")
+                commit_all(root, "add a malformed brand list")
+                done = run_scrub(root)
+                self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+                self.assertIn(BRAND_LIST, done.stdout)
+                self.assertEqual(done.stderr, "", "a refusal, never a traceback")
+                reached += 1
+        self.assertEqual(reached, len(planted))
 
 
 if __name__ == "__main__":

@@ -41,13 +41,13 @@ THIS_REPOSITORY = "RexRenatus/deck-streak"
 # admitted to (SPEC-336, ADR-345 D4): the XCFramework job needs Apple's SDKs, which only a macOS
 # runner holds. The admission is by the workflow's file name, so the same runner under any other
 # name is refused, and this workflow on any other runner is refused.
-ADMITTED_RUNNERS = {"xcframework.yml": "macos-26"}
+ADMITTED_RUNNERS = {"xcframework.yml": "xcode-27"}
 # The jobs admitted to that runner by file and job (SPEC-352 R15, ADR-363): each TestFlight lane's
 # `app` job archives, signs and uploads the app, which only a macOS runner can. The lane's plan
 # job, a job of the same name in any other file, and the job on any other runner are refused.
 ADMITTED_JOB_RUNNERS = {
-    ("testflight-internal.yml", "app"): "macos-26",
-    ("testflight-release.yml", "app"): "macos-26",
+    ("testflight-internal.yml", "app"): "xcode-27",
+    ("testflight-release.yml", "app"): "xcode-27",
 }
 # A pull request into main, as the github context presents it; each test changes what it needs.
 INTO_MAIN = {
@@ -166,7 +166,7 @@ class WorkflowsAreHardened(unittest.TestCase):
         # its runner is refused under any other name (PLANTED_KEYS plants it in the control too).
         for name, admitted in examined("admitted runners", list(ADMITTED_RUNNERS.items())):
             self.assertRegex(admitted, admitted_runner(name))
-            for runner in ("macos-15", "ubuntu-24.04", [admitted], "self-hosted"):
+            for runner in ("macos-15", "macos-26", "ubuntu-24.04", [admitted], "self-hosted"):
                 self.assertNotRegex(str(runner), admitted_runner(name))
             for other in ("planted.yml", "ci.yml", name.replace(".yml", ".yaml"), f"x{name}"):
                 self.assertNotRegex(admitted, admitted_runner(other))
@@ -2397,6 +2397,10 @@ class TheGateRunsInParallelJobs(unittest.TestCase):
             "mutation-rows",
             "mutation-verdict",
             "mutation-web",
+            # SPEC-419 deals the web sweep into shards, a job ci needs beside the one that judges.
+            "mutation-web-shard",
+            # SPEC-422 deals the release run's Python legs past one matrix into a second job.
+            "mutation-python-release",
         ]
         # SPEC-338 adds the web engine's job, which builds the module and holds it to its budget.
         self.assertEqual(
@@ -3363,8 +3367,8 @@ PLANTED_KEYS = (
     (
         HARDENING_RUNNER,
         "    runs-on: ubuntu-24.04",
-        "    runs-on: macos-26",
-        r"planted\.yml runs on macos-26$",
+        "    runs-on: xcode-27",
+        r"planted\.yml runs on xcode-27$",
     ),
     (
         HARDENING_RUNNER,
@@ -4815,6 +4819,15 @@ NOT_WORKFLOW_READS = {
         ),
     ),
     **allowed(
+        "the web shard script, whose shard count and artifact prefix the SPEC-419 pin reads; never handed to the reader",
+        (
+            "test_ci_workflows",
+            "ThePullRequestsWebSweepRunsInShards.test_the_web_sweep_runs_in_three_shards_read_by_name",
+            "(REPO / WEB_SHARDS_SCRIPT).read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
         "calls run_step, which runs a cache step's shell over a planted lockfile's text and reads its outputs",
         (
             "test_ci_workflows",
@@ -5156,6 +5169,10 @@ NOT_WORKFLOW_READS = {
         ("test_mutation_workflows", "<module>", "GUARD.read_text(encoding='utf-8')", 1),
     ),
     **allowed(
+        "the rows runner's own Python source, read for one module constant and never imported; never a workflow file",
+        ("test_mutation_workflows", "rows_constant", "ROWS_RUNNER.read_text(encoding='utf-8')", 1),
+    ),
+    **allowed(
         "calls the bash oracle, which runs planted scripts with cargo stubbed and reads the stubs' logs",
         (
             "test_dispatch_shards",
@@ -5282,6 +5299,12 @@ NOT_WORKFLOW_READS = {
         ),
         (
             "test_dispatch_shards",
+            "TheReleaseFitsOneRun.test_the_release_listing_fits_one_run",
+            "size(listing)",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
             "TheReleaseFitsOneRun.test_the_whole_tree_is_sized_from_its_listing",
             "size(listing)",
             1,
@@ -5317,7 +5340,7 @@ NOT_WORKFLOW_READS = {
         (
             "test_dispatch_shards",
             "TheReleaseFitsOneRun.test_a_listing_beyond_the_ceiling_is_refused_whole",
-            "plan_shards(entries('deck-streak-ingest', 14213))",
+            "plan_shards(entries('deck-streak-ingest', 12853))",
             1,
         ),
         (
@@ -5752,6 +5775,12 @@ NOT_WORKFLOW_READS = {
             1,
         ),
         (
+            "test_dispatch_shards",
+            "TheReleaseFitsOneRun.test_the_python_bound_is_half_of_the_python_legs_timeout",
+            "verdict_module()",
+            1,
+        ),
+        (
             "test_not_started_legs",
             "ALegWithNothingToExamineIsNotStarted.test_a_leg_the_listing_gives_nothing_reads_not_started",
             "judge(reports)",
@@ -6007,6 +6036,12 @@ NOT_WORKFLOW_READS = {
             "test_dispatch_shards",
             "TheReleaseFitsOneRun.test_the_ceiling_is_the_runs_job_budget",
             "module.PYTHON_MAX_SHARDS",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
+            "TheReleaseFitsOneRun.test_the_python_bound_is_half_of_the_python_legs_timeout",
+            "module.PYTHON_LEG_BOUND_SECONDS",
             1,
         ),
     ),
@@ -6476,6 +6511,792 @@ NOT_WORKFLOW_READS = {
             1,
         ),
     ),
+    **allowed(
+        "the mutation verdict script loaded as a module, read for its constants and run in process for its verbs; a production script, never the reader",
+        (
+            "test_dispatch_shards",
+            "TheReleaseFitsOneRun.test_each_python_matrix_of_the_release_run_fits_the_run_jobs",
+            "module.PYTHON_MATRICES",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
+            "TheReleaseFitsOneRun.test_each_python_matrix_of_the_release_run_fits_the_run_jobs",
+            "module.PYTHON_MATRIX_LEGS",
+            2,
+        ),
+        (
+            "test_dispatch_shards",
+            "TheReleaseFitsOneRun.test_each_python_matrix_of_the_release_run_fits_the_run_jobs",
+            "verdict_module()",
+            1,
+        ),
+    ),
+    **allowed(
+        "the mutation verdict script loaded as a module, read for its constants and run in process for its verbs; a production script, never the reader",
+        (
+            "test_release_python_ceiling",
+            "EveryLegOfBothMatricesIsJudged.test_python_matrices_equals_the_workflows_python_matrix_jobs",
+            "module.PYTHON_MATRICES",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "EveryLegOfBothMatricesIsJudged.test_python_matrices_equals_the_workflows_python_matrix_jobs",
+            "verdict_module()",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "EveryLegOfBothMatricesIsJudged.test_the_verdict_counts_every_shard_of_both_matrices",
+            "module.Verdict('scripts')",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "EveryLegOfBothMatricesIsJudged.test_the_verdict_counts_every_shard_of_both_matrices",
+            "module.python_reports(judged, {'python': {'count': 300}}, str(scratch(self)))",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "EveryLegOfBothMatricesIsJudged.test_the_verdict_counts_every_shard_of_both_matrices",
+            "verdict_module()",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheReleaseRunDealsUpToItsCeiling.test_the_placeholder_ceiling_deals_the_release_run_as_a_pull_request_run",
+            "module.PYTHON_SHARE_CAP",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheReleaseRunDealsUpToItsCeiling.test_the_placeholder_ceiling_deals_the_release_run_as_a_pull_request_run",
+            "verdict_module()",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheReleaseRunIsNamedByAFailClosedPredicate.test_release_run_holds_only_for_this_repositorys_dev_into_main",
+            "module.release_run(*inputs)",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheReleaseRunIsNamedByAFailClosedPredicate.test_release_run_holds_only_for_this_repositorys_dev_into_main",
+            "verdict_module()",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheReleaseRunIsNamedByAFailClosedPredicate.test_the_plan_records_release_only_when_the_predicate_holds",
+            "module.plan_diff(fixture.root, fixture.base, 'HEAD', fixture.out, ('diff', 'a diff'))",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheReleaseRunIsNamedByAFailClosedPredicate.test_the_plan_records_release_only_when_the_predicate_holds",
+            "verdict_module()",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "verb",
+            "module",
+            2,
+        ),
+        (
+            "test_release_python_ceiling",
+            "verb",
+            "module.LEG_CEILING",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "verb",
+            "module.PYTHON_CONTROL_SECONDS",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "verb",
+            "module.PYTHON_SCOPED_SECONDS",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "verb",
+            "module.main([str(each) for each in argv])",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "verb",
+            "verdict_module()",
+            1,
+        ),
+    ),
+    **allowed(
+        "an in-memory buffer that captures the printed lines of a verb run in process; it reads no file",
+        (
+            "test_release_python_ceiling",
+            "EveryLegOfBothMatricesIsJudged.test_the_verdict_counts_every_shard_of_both_matrices",
+            "io.StringIO()",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "verb",
+            "io.StringIO()",
+            1,
+        ),
+    ),
+    **allowed(
+        "the in-process helpers that run one verb of the verdict script over a plan and a listing written to a scratch directory, and read back the plan and the step outputs it wrote there; never a workflow",
+        (
+            "test_dispatch_shards",
+            "TheReleaseFitsOneRun.test_each_python_matrix_of_the_release_run_fits_the_run_jobs",
+            "deal(self, mutants(1, 20 * (most - 1)), True, most)",
+            1,
+        ),
+    ),
+    **allowed(
+        "the in-process helpers that run one verb of the verdict script over a plan and a listing written to a scratch directory, and read back the plan and the step outputs it wrote there; never a workflow",
+        (
+            "test_release_python_ceiling",
+            "EveryLegOfBothMatricesIsJudged.test_legs_judges_the_release_leg_against_the_plan",
+            "legs_of(self, 256)",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "EveryLegOfBothMatricesIsJudged.test_legs_judges_the_release_leg_against_the_plan",
+            "legs_of(self, count, *given)",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheReleaseRunDealsUpToItsCeiling.test_a_ceiling_outside_its_range_is_refused_by_name",
+            "deal(self, entries, True, ceiling)",
+            2,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheReleaseRunDealsUpToItsCeiling.test_a_run_that_is_not_the_release_keeps_the_share_at_any_ceiling",
+            "deal(self, entries, ABSENT, ceiling)",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheReleaseRunDealsUpToItsCeiling.test_a_run_that_is_not_the_release_keeps_the_share_at_any_ceiling",
+            "deal(self, entries, True, 200)",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheReleaseRunDealsUpToItsCeiling.test_the_count_rule_keeps_the_share_on_the_release_run",
+            "deal(self, entries, True, 200, {'b.py': 300})",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheReleaseRunDealsUpToItsCeiling.test_the_count_rule_keeps_the_share_on_the_release_run",
+            "deal(self, entries, True, ceiling)",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheReleaseRunDealsUpToItsCeiling.test_the_placeholder_ceiling_deals_the_release_run_as_a_pull_request_run",
+            "deal(self, entries, True, 200)",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheReleaseRunDealsUpToItsCeiling.test_the_placeholder_ceiling_deals_the_release_run_as_a_pull_request_run",
+            "deal(self, entries, release, module.PYTHON_SHARE_CAP)",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheReleaseRunDealsUpToItsCeiling.test_the_release_legs_split_into_matrices_each_shard_once",
+            "deal(self, mutants(1, 20 * (legs - 1)), True, 300)",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheReleaseRunDealsUpToItsCeiling.test_the_release_run_deals_up_to_the_ceiling_and_refuses_one_leg_past_it",
+            "deal(self, mutants(1, 20 * 299 + 1), True, 300)",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheReleaseRunDealsUpToItsCeiling.test_the_release_run_deals_up_to_the_ceiling_and_refuses_one_leg_past_it",
+            "deal(self, mutants(1, 20 * 299), True, 300)",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheReleaseRunIsNamedByAFailClosedPredicate.test_a_release_mark_that_is_not_true_is_not_the_release_run",
+            "deal(self, entries, True, 200)",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheReleaseRunIsNamedByAFailClosedPredicate.test_a_release_mark_that_is_not_true_is_not_the_release_run",
+            "deal(self, entries, mark, 200)",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "deal",
+            "(root / 'plan.json').read_text(encoding='utf-8')",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "deal",
+            "verb(argv, ceiling, prices)",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "legs_of",
+            "verb([*argv, *given])",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "verb",
+            "sink.read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
+        "the verdict script's own source, parsed as a syntax tree for its constants; a production script, never handed to the reader",
+        (
+            "test_release_python_ceiling",
+            "TheCeilingIsSignedAndTheRunbookSaysTheMethod.test_the_ceiling_cites_the_signed_ruling_only_above_the_cap",
+            "VERDICT.read_text(encoding='utf-8')",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheCeilingIsSignedAndTheRunbookSaysTheMethod.test_the_release_run_assigns_no_share_cap_bound_or_ceiling_of_its_own",
+            "VERDICT.read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
+        "the ceiling's ruling check over the verdict script's source or a planted copy, and the ruling file it cites, a markdown file of the tree or of a scratch tree; never a workflow",
+        (
+            "test_release_python_ceiling",
+            "TheCeilingIsSignedAndTheRunbookSaysTheMethod.test_the_ceiling_cites_the_signed_ruling_only_above_the_cap",
+            "ceiling_problems(VERDICT.read_text(encoding='utf-8'), REPO)",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheCeilingIsSignedAndTheRunbookSaysTheMethod.test_the_ceiling_cites_the_signed_ruling_only_above_the_cap",
+            "ceiling_problems(source(128, ''), root)",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheCeilingIsSignedAndTheRunbookSaysTheMethod.test_the_ceiling_cites_the_signed_ruling_only_above_the_cap",
+            "ceiling_problems(source(200, ', docs/rulings/signed.md'), root)",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheCeilingIsSignedAndTheRunbookSaysTheMethod.test_the_ceiling_cites_the_signed_ruling_only_above_the_cap",
+            "ceiling_problems(text, root)",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "ceiling_problems",
+            "path.read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
+        "the release runbook, a markdown file read for its sentence and its paragraph; never a workflow",
+        (
+            "test_release_python_ceiling",
+            "TheCeilingIsSignedAndTheRunbookSaysTheMethod.test_the_runbook_names_the_release_ceiling_its_job_and_its_refusal",
+            "RELEASING.read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
+        "the mutation fixture's scratch repository, committed and planned by the verdict script; no workflow's text reaches the reader",
+        (
+            "test_release_python_ceiling",
+            "TheReleaseRunIsNamedByAFailClosedPredicate.test_the_plan_records_release_only_when_the_predicate_holds",
+            "(fixture.out / 'plan.json').read_text(encoding='utf-8')",
+            2,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheReleaseRunIsNamedByAFailClosedPredicate.test_the_plan_records_release_only_when_the_predicate_holds",
+            "fixture.head({LIB: LIB_TEXT.replace('x * 2', 'x + x')})",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheReleaseRunIsNamedByAFailClosedPredicate.test_the_plan_records_release_only_when_the_predicate_holds",
+            "fixture.plan(*flags)",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheReleaseRunIsNamedByAFailClosedPredicate.test_the_plan_records_release_only_when_the_predicate_holds",
+            "fixture.plan(*into_main, '--subject', 'chore: a run', flag, 'XX')",
+            1,
+        ),
+    ),
+    **allowed(
+        "the matrix-limit run's committed record and its jobs listing, a JSON file and a tab-separated one read for their facts; never a workflow",
+        (
+            "test_release_python_ceiling",
+            "TheMatrixLimitIsMeasuredInPublic.test_the_recorded_matrix_limit_run_ran_each_matrix_whole",
+            "(runs[0] / 'jobs.tsv').read_text(encoding='utf-8')",
+            1,
+        ),
+        (
+            "test_release_python_ceiling",
+            "TheMatrixLimitIsMeasuredInPublic.test_the_recorded_matrix_limit_run_ran_each_matrix_whole",
+            "(runs[0] / 'matrix-limit.json').read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
+        "the mutation verdict script loaded as a module, read for its constants and run in process for its verbs; a production script, never the reader",
+        (
+            "test_dispatch_shards",
+            "TheReleaseFitsOneRun.test_the_rust_matrix_of_the_release_run_fits_the_run_jobs",
+            "module.RUST_MATRIX_LEGS",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
+            "TheReleaseFitsOneRun.test_the_rust_matrix_of_the_release_run_fits_the_run_jobs",
+            "verdict_module()",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "TheReleaseRunSizesItsRustLegsToItsCeiling.test_only_a_true_release_mark_holds_the_rust_ceiling",
+            "module",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "TheReleaseRunSizesItsRustLegsToItsCeiling.test_only_a_true_release_mark_holds_the_rust_ceiling",
+            "module.rust_release_ceiling(plan)",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "TheReleaseRunSizesItsRustLegsToItsCeiling.test_only_a_true_release_mark_holds_the_rust_ceiling",
+            "verdict_module()",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "WhatTheReleaseRunKeeps.test_the_python_ceiling_tests_read_the_rust_ceiling_at_its_placeholder",
+            "planted",
+            2,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "WhatTheReleaseRunKeeps.test_the_python_ceiling_tests_read_the_rust_ceiling_at_its_placeholder",
+            "planted.PYTHON_SHARE_CAP",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "WhatTheReleaseRunKeeps.test_the_python_ceiling_tests_read_the_rust_ceiling_at_its_placeholder",
+            "run_main(planted, argv, 200, 128)",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "WhatTheReleaseRunKeeps.test_the_python_ceiling_tests_read_the_rust_ceiling_at_its_placeholder",
+            "verdict_module()",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "WhatTheReleaseRunKeeps.test_the_python_ceiling_tests_read_the_rust_ceiling_at_its_placeholder.<locals>.<lambda>",
+            "planted",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "run_main",
+            "sink.read_text(encoding='utf-8')",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "rust_verb",
+            "run_main(verdict_module(), argv, rust, python, prices)",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "rust_verb",
+            "verdict_module()",
+            1,
+        ),
+    ),
+    **allowed(
+        "an in-memory buffer that captures the printed lines of a verb run in process; it reads no file",
+        (
+            "test_release_rust_ceiling",
+            "run_main",
+            "io.StringIO()",
+            1,
+        ),
+    ),
+    **allowed(
+        "the in-process helpers that run one verb of the verdict script over a plan and a listing written to a scratch directory, and read back the plan and the step outputs it wrote there; never a workflow",
+        (
+            "test_dispatch_shards",
+            "TheReleaseFitsOneRun.test_the_rust_matrix_of_the_release_run_fits_the_run_jobs",
+            "rust_deal(self, fits, None, True, 256, 128)",
+            1,
+        ),
+        (
+            "test_dispatch_shards",
+            "TheReleaseFitsOneRun.test_the_rust_matrix_of_the_release_run_fits_the_run_jobs",
+            "rust_deal(self, past, None, True, 256, 128)",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "TheReleaseRunSizesItsRustLegsToItsCeiling.test_a_run_that_is_not_the_release_keeps_the_pull_request_ceiling_at_any_rust_ceiling",
+            "rust_deal(self, crowded, None, ABSENT, ceiling, 128)",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "TheReleaseRunSizesItsRustLegsToItsCeiling.test_a_run_that_is_not_the_release_keeps_the_pull_request_ceiling_at_any_rust_ceiling",
+            "rust_deal(self, crowded, None, True, 200, 128)",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "TheReleaseRunSizesItsRustLegsToItsCeiling.test_a_run_that_is_not_the_release_keeps_the_pull_request_ceiling_at_any_rust_ceiling",
+            "rust_deal(self, listed, scripts, ABSENT, ceiling, 128)",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "TheReleaseRunSizesItsRustLegsToItsCeiling.test_a_rust_ceiling_outside_its_range_is_refused_by_name",
+            "rust_deal(self, listed, scripts, True, ceiling, 128)",
+            2,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "TheReleaseRunSizesItsRustLegsToItsCeiling.test_the_placeholder_ceiling_sizes_the_release_run_as_a_pull_request_run",
+            "rust_deal(self, listed, scripts, True, 200, 128)",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "TheReleaseRunSizesItsRustLegsToItsCeiling.test_the_placeholder_ceiling_sizes_the_release_run_as_a_pull_request_run",
+            "rust_deal(self, listed, scripts, release, 189, 128)",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "TheReleaseRunSizesItsRustLegsToItsCeiling.test_the_release_run_sizes_up_to_its_ceiling_and_refuses_one_mutant_past_it",
+            "rust_deal(self, rust_listing(INGEST, 13600), None, True, 200, 128)",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "TheReleaseRunSizesItsRustLegsToItsCeiling.test_the_release_run_sizes_up_to_its_ceiling_and_refuses_one_mutant_past_it",
+            "rust_deal(self, rust_listing(INGEST, 13601), None, True, 200, 128)",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "TheReleaseRunSizesItsRustLegsToItsCeiling.test_the_rust_lines_read_the_release_ceiling_on_the_release_run_alone",
+            "rust_deal(self, listed, scripts, ABSENT, 200, 128)",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "TheReleaseRunSizesItsRustLegsToItsCeiling.test_the_rust_lines_read_the_release_ceiling_on_the_release_run_alone",
+            "rust_deal(self, listed, scripts, True, 200, 128)",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "TheReleaseRunSizesItsRustLegsToItsCeiling.test_the_rust_release_line_stands_beside_the_python_release_line",
+            "rust_deal(self, listed, None, True, 200, 128)",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "TheReleaseRunSizesItsRustLegsToItsCeiling.test_the_rust_release_line_stands_beside_the_python_release_line",
+            "rust_deal(self, listed, scripts, True, 200, 300)",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "TheReleaseRunSizesItsRustLegsToItsCeiling.test_the_rust_release_line_stands_beside_the_python_release_line",
+            "rust_deal(self, listed, scripts, release, ceiling, 300)",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "WhatTheReleaseRunKeeps.test_the_python_ceiling_tests_read_the_rust_ceiling_at_its_placeholder",
+            "deal(self, mutants(3), True, planted.PYTHON_SHARE_CAP)",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "rust_deal",
+            "path.read_text(encoding='utf-8')",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "rust_deal",
+            "rust_verb(argv, rust, python)",
+            1,
+        ),
+    ),
+    **allowed(
+        "the verdict script's own source, parsed as a syntax tree for its constants; a production script, never handed to the reader",
+        (
+            "test_release_rust_ceiling",
+            "TheRustCeilingIsSignedAndTheRunbookSaysTheMethod.test_the_rust_ceiling_cites_the_signed_ruling_only_above_the_pull_request_ceiling",
+            "VERDICT.read_text(encoding='utf-8')",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "WhatTheReleaseRunKeeps.test_the_release_run_restates_no_rust_bound_and_assigns_each_once",
+            "VERDICT.read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
+        "the ceiling's ruling check over the verdict script's source or a planted copy, and the ruling file it cites, a markdown file of the tree or of a scratch tree; never a workflow",
+        (
+            "test_release_rust_ceiling",
+            "TheRustCeilingIsSignedAndTheRunbookSaysTheMethod.test_the_rust_ceiling_cites_the_signed_ruling_only_above_the_pull_request_ceiling",
+            "rust_ceiling_problems(VERDICT.read_text(encoding='utf-8'), REPO)",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "TheRustCeilingIsSignedAndTheRunbookSaysTheMethod.test_the_rust_ceiling_cites_the_signed_ruling_only_above_the_pull_request_ceiling",
+            "rust_ceiling_problems(source(189, ''), root)",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "TheRustCeilingIsSignedAndTheRunbookSaysTheMethod.test_the_rust_ceiling_cites_the_signed_ruling_only_above_the_pull_request_ceiling",
+            "rust_ceiling_problems(source(200, ', docs/rulings/signed.md'), root)",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "TheRustCeilingIsSignedAndTheRunbookSaysTheMethod.test_the_rust_ceiling_cites_the_signed_ruling_only_above_the_pull_request_ceiling",
+            "rust_ceiling_problems(text, root)",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "rust_ceiling_problems",
+            "path.read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
+        "the release runbook, a markdown file read for its sentence and its paragraph; never a workflow",
+        (
+            "test_release_rust_ceiling",
+            "TheRustCeilingIsSignedAndTheRunbookSaysTheMethod.test_the_runbook_names_the_rust_release_ceiling_its_matrix_and_its_refusal",
+            "RELEASING.read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
+        "the mutation fixture's scratch repository, committed, planned and judged by the verdict script over shard reports written there; no workflow's text reaches the reader",
+        (
+            "test_release_rust_ceiling",
+            "EveryRustLegIsCounted.test_the_verdict_walks_every_leg_past_the_pull_request_ceiling",
+            "fixture.head({LIB: LIB_TEXT.replace('x * 2', 'x + x')})",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "EveryRustLegIsCounted.test_the_verdict_walks_every_leg_past_the_pull_request_ceiling",
+            "fixture.judge('rust', '--shard-reports', gap)",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "EveryRustLegIsCounted.test_the_verdict_walks_every_leg_past_the_pull_request_ceiling",
+            "fixture.judge('rust', '--shard-reports', whole)",
+            1,
+        ),
+        (
+            "test_release_rust_ceiling",
+            "EveryRustLegIsCounted.test_the_verdict_walks_every_leg_past_the_pull_request_ceiling",
+            "fixture.plan()",
+            1,
+        ),
+    ),
+    **allowed(
+        "the mutation map, a JSON file read for the test modules it names for the verdict script; never a workflow",
+        (
+            "test_release_rust_ceiling",
+            "WhatTheReleaseRunKeeps.test_the_map_judges_the_verdict_scripts_mutants_with_the_rust_ceiling_tests",
+            "MAP.read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
+        "calls run, which runs the verdict script over a fixture tree it writes to a scratch directory and reads its output; never a workflow file",
+        (
+            "test_mutation_workflows",
+            "NoExclusionHidesAMutant.test_a_stryker_disable_comment_is_refused_in_every_web_source",
+            "run(str(VERDICT), 'exclusions', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "NoExclusionHidesAMutant.test_a_stryker_file_that_is_not_an_object_is_refused_by_name",
+            "run(str(VERDICT), 'exclusions', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "NoExclusionHidesAMutant.test_an_ignorer_is_refused_by_name",
+            "run(str(VERDICT), 'exclusions', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "NoExclusionHidesAMutant.test_ignore_static_is_refused_by_name",
+            "run(str(VERDICT), 'exclusions', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_a_boolean_key_holding_a_boolean_passes",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_a_cargo_mutants_file_that_is_not_toml_is_refused_by_name",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_a_coverage_analysis_without_ignore_static_passes",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_a_list_key_holding_a_non_string_is_refused_as_a_list_of_strings",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_a_null_break_threshold_passes",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_a_string_key_holding_a_string_passes",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_a_stryker_file_that_is_not_an_object_is_refused_by_name",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_a_zero_threshold_is_inside_its_range",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_an_absent_cargo_file_still_judges_the_stryker_file",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_every_cargo_mutants_key_takes_its_own_kind",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            2,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_every_default_stryker_name_is_a_second_configuration",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_ignore_static_under_per_test_coverage_passes",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_ignore_static_under_the_default_coverage_passes",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_the_default_high_threshold_is_80",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_thresholds_that_are_not_an_object_are_refused_by_name",
+            "run(str(VERDICT), 'configs', '--root', str(root))",
+            1,
+        ),
+    ),
+    **allowed(
+        "calls run, which runs a child that loads the verdict script by its constant path and prints what one verb returns over a fixture tree in a scratch directory; never a workflow file",
+        (
+            "test_mutation_workflows",
+            "NoExclusionHidesAMutant.test_the_verb_returns_ok_in_process",
+            "run('-c', VERB_IN_PROCESS, str(VERDICT), 'exclusions', str(root))",
+            1,
+        ),
+        (
+            "test_mutation_workflows",
+            "TheToolsConfigurationsAreValid.test_the_verb_returns_ok_in_process",
+            "run('-c', VERB_IN_PROCESS, str(VERDICT), 'configs', str(root))",
+            1,
+        ),
+    ),
 }
 
 # Every site in the test directory that imports, runs code or reaches a namespace by a name held
@@ -6573,6 +7394,14 @@ DYNAMIC_IMPORTS = {
             1,
         ),
         ("test_mutation_python_lister_kills", "load", "spec.loader.exec_module(module)", 1),
+        ("test_mutation_carry_kills", "load", "importlib.util.module_from_spec(spec)", 1),
+        (
+            "test_mutation_carry_kills",
+            "load",
+            "importlib.util.spec_from_file_location('mutation_carry_under_kill', CARRY)",
+            1,
+        ),
+        ("test_mutation_carry_kills", "load", "spec.loader.exec_module(module)", 1),
         ("test_mutation_python_verdict", "runner", "importlib.util.module_from_spec(spec)", 1),
         (
             "test_mutation_python_verdict",
@@ -6581,6 +7410,14 @@ DYNAMIC_IMPORTS = {
             1,
         ),
         ("test_mutation_python_verdict", "runner", "spec.loader.exec_module(module)", 1),
+        ("test_mutation_rows", "load_runner", "importlib.util.module_from_spec(spec)", 1),
+        (
+            "test_mutation_rows",
+            "load_runner",
+            "importlib.util.spec_from_file_location('mutation_rows_inprocess', RUNNER)",
+            1,
+        ),
+        ("test_mutation_rows", "load_runner", "spec.loader.exec_module(module)", 1),
         ("test_mutation_rows_group", "<module>", "SPEC.loader.exec_module(runner)", 1),
         ("test_mutation_rows_group", "<module>", "importlib.util.module_from_spec(SPEC)", 1),
         (
@@ -6629,6 +7466,19 @@ DYNAMIC_IMPORTS = {
             1,
         ),
         ("test_threat_model", "load", "spec.loader.exec_module(module)", 1),
+        (
+            "test_write_back_issues",
+            "write_back_module",
+            "importlib.util.module_from_spec(spec)",
+            1,
+        ),
+        (
+            "test_write_back_issues",
+            "write_back_module",
+            "importlib.util.spec_from_file_location('write_back_issues', SCRIPT)",
+            1,
+        ),
+        ("test_write_back_issues", "write_back_module", "spec.loader.exec_module(module)", 1),
     ),
     **allowed(
         "imports a production module from scripts/, which the test puts on sys.path; never a module of the test directory",
@@ -6676,6 +7526,7 @@ DYNAMIC_IMPORTS = {
             1,
         ),
         ("test_mutation_rows", "runner_module", "import mutation_rows", 1),
+        ("test_web_mutation_shards", "<module>", "import web_mutation_shards", 1),
     ),
     **allowed(
         "an import of this repository's own script module by its constant name, `import mutation_rows`, after a sys.path insert of the constant scripts directory; it reads no workflow file",
@@ -6727,6 +7578,16 @@ DYNAMIC_IMPORTS = {
         ("test_github_setup", "<module>", "unittest.main(argv=[sys.argv[0]])", 1),
     ),
     **allowed(
+        "the fixture's checks import their target from the directory the runner's child puts on the path; nothing reads a workflow",
+        (
+            "fixtures.mutation-python-control.control_checks",
+            "<module>",
+            "import control_target",
+            1,
+        ),
+        ("fixtures.mutation-python-scope.scope_checks", "<module>", "import scope_target", 1),
+    ),
+    **allowed(
         "a stat result's field, by a key the test lists",
         (
             "test_host_scrub",
@@ -6770,7 +7631,9 @@ DYNAMIC_IMPORTS = {
         ("test_mutation_python_cli_kills", "runner", "sys.modules", 1),
         ("test_mutation_python_judge_kills", "load", "sys.modules", 1),
         ("test_mutation_python_lister_kills", "load", "sys.modules", 1),
+        ("test_mutation_carry_kills", "load", "sys.modules", 1),
         ("test_mutation_python_verdict", "runner", "sys.modules", 1),
+        ("test_mutation_rows", "load_runner", "sys.modules", 1),
         ("test_mutation_rows_group", "<module>", "sys.modules", 1),
         ("test_mutation_verdict", "verdict_module", "sys.modules", 1),
     ),
@@ -7037,6 +7900,38 @@ DYNAMIC_IMPORTS = {
         ),
     ),
     **allowed(
+        "packs a planted image's header and chunk fields into bytes, and compresses and checksums its rows, to build the brand census's refused files in memory (SPEC-579 R2); numbers and bytes in and bytes out, and it imports, runs and reads nothing",
+        (
+            "test_brand_files",
+            "TheBrandFilesAreTheExports.test_a_text_or_time_chunk_is_refused",
+            "struct.pack('>HBBBBB', 2026, 1, 1, 0, 0, 0)",
+            1,
+        ),
+        ("test_brand_files", "chunk", "struct.pack('>I', len(body))", 1),
+        ("test_brand_files", "chunk", "struct.pack('>I', zlib.crc32(kind + body))", 1),
+        ("test_brand_files", "chunk", "zlib.crc32(kind + body)", 1),
+        ("test_brand_files", "planted_gif", "struct.pack('<HHBBB', 1, 1, 128, 0, 0)", 1),
+        ("test_brand_files", "planted_gif", "struct.pack('<HHHHB', 0, 0, 1, 1, 0)", 1),
+        (
+            "test_brand_files",
+            "planted_ico",
+            "struct.pack('<BBBBHHII', side, side, 0, 0, 1, 32, len(image), offset)",
+            1,
+        ),
+        ("test_brand_files", "planted_ico", "struct.pack('<HHH', 0, 1, len(images))", 1),
+        (
+            "test_brand_files",
+            "planted_png",
+            "struct.pack('>IIBBBBB', width, height, 8, 2, 0, 0, 0)",
+            1,
+        ),
+        ("test_brand_files", "planted_png", "zlib.compress(rows)", 1),
+    ),
+    **allowed(
+        "checksums each chunk of a PNG the brand census walks, to refuse a chunk whose checksum is wrong (SPEC-579 R2); bytes in and a number out, and it imports, runs and reads nothing",
+        ("test_brand_files", "png_chunks", "zlib.crc32(kind + body)", 1),
+    ),
+    **allowed(
         "names the exception class plistlib's XML parser raises on a malformed property list, to refuse it by name (SPEC-347 A13); a class caught, and it imports, runs and reads nothing",
         ("test_ios_app_tree", "plist_of", "ExpatError", 1),
     ),
@@ -7069,6 +7964,45 @@ DYNAMIC_IMPORTS = {
             "base64.urlsafe_b64decode(head + '=' * (-len(head) % 4))",
             1,
         ),
+    ),
+    **allowed(
+        "loads the production verdict script by its constant path under the kill module's own name and registers it, so its dataclasses resolve; never a module of the test directory",
+        (
+            "test_mutation_verdict_survivor_kills",
+            "verdict",
+            "importlib.util.module_from_spec(spec)",
+            1,
+        ),
+        (
+            "test_mutation_verdict_survivor_kills",
+            "verdict",
+            "importlib.util.spec_from_file_location('mutation_verdict_survivor_kills', VERDICT)",
+            1,
+        ),
+        ("test_mutation_verdict_survivor_kills", "verdict", "spec.loader.exec_module(module)", 1),
+        ("test_mutation_verdict_survivor_kills", "verdict", "sys.modules", 1),
+    ),
+    **allowed(
+        "stands in for the loaded verdict script's own verbs, each by a name the test lists in its own literal table; it imports nothing and reads no workflow file",
+        (
+            "test_mutation_verdict_survivor_kills",
+            "TheMain.main",
+            "mock.patch.object(V, name, stub)",
+            1,
+        ),
+    ),
+    **allowed(
+        "stands in for the loaded carry module's one URL opener by its constant attribute name, so the test opens no URL; it imports nothing and reads no workflow file",
+        (
+            "test_mutation_carry_kills",
+            "BaseChoice.test_choose_base_requests_and_answers_exactly.<locals>.fetched",
+            "mock.patch.object(self.mc.urllib.request, 'urlopen', urlopen)",
+            1,
+        ),
+    ),
+    **allowed(
+        "an import of this repository's own script module by its constant name, `import mutation_rows`, after a sys.path insert of the constant scripts directory; it reads no workflow file",
+        ("test_mutation_rows_survivor_kills", "<module>", "import mutation_rows as runner", 1),
     ),
 }
 
@@ -9093,6 +10027,224 @@ class TheWebMutationLegsHoldTheWholeSweep(unittest.TestCase):
                 workflows = {other: leg(other, job, floor) for other, job in WEB_MUTATION_LEGS}
                 workflows[name] = leg(name, job_id, minutes)
                 self.assertEqual(web_mutation_bound_problems(workflows), [refusal])
+
+
+# ------------------------------- the pull request's web sweep in three shards (SPEC-419 R1 to R8)
+
+# The pull request's Mini App sweep is one matrix job of three shards, each dealt whole files by
+# StrykerJS's own mutant count, and one job of the leg's own name, not a matrix, so the check that
+# reports `mutation-web` still reports under that name, reads every shard by name before its judge.
+WEB_SHARD_JOB = "mutation-web-shard"
+WEB_VERDICT_JOB = "mutation-web"
+WEB_SHARDS = 3
+WEB_SHARD_MINUTES = "100"
+WEB_SHARD_ARTIFACT = "mutation-web-shard-${{ matrix.shard }}"
+WEB_SHARDS_SCRIPT = "scripts/web_mutation_shards.py"
+
+
+def web_shard_problems(workflow):
+    """What ci.yml gets wrong about the pull request's sharded web sweep (SPEC-419 R1, R3, R4, R6):
+    a shard job that is not one matrix of exactly shards 0, 1 and 2, lets one shard's failure
+    cancel the others, or is bounded other than 100 minutes; a shard that does not deal its own
+    shard, runs StrykerJS over other files than its deal's, or keeps its report under a name
+    without its index or only when it succeeds; and a verdict job that is a matrix, does not need
+    the shards, can be skipped, runs StrykerJS itself, or judges without first reading every
+    shard's artifact by name into the one report its judge reads."""
+    jobs = workflow.get("jobs") or {}
+    problems = []
+    shard = jobs.get(WEB_SHARD_JOB)
+    if not isinstance(shard, dict):
+        problems.append(f"ci.yml has no {WEB_SHARD_JOB} job")
+        shard = {}
+    strategy = shard.get("strategy") or {}
+    matrix = strategy.get("matrix") or {}
+    shards = matrix.get("shard") if isinstance(matrix, dict) else None
+    wanted = [str(index) for index in range(WEB_SHARDS)]
+    if not isinstance(shards, list) or [str(index) for index in shards] != wanted:
+        problems.append(f"the {WEB_SHARD_JOB} shards are {shards}, not {wanted}")
+    if str(strategy.get("fail-fast")) != "false":
+        problems.append(f"one {WEB_SHARD_JOB} failure cancels the other shards")
+    minutes = str(shard.get("timeout-minutes") or "unset")
+    if minutes != WEB_SHARD_MINUTES:
+        problems.append(
+            f"the {WEB_SHARD_JOB} job's timeout is {minutes}, not {WEB_SHARD_MINUTES} minutes"
+        )
+    steps = shard.get("steps") or []
+    deals = [s for s in steps if f"{WEB_SHARDS_SCRIPT} deal " in str(s.get("run", ""))]
+    handed = [(s.get("id"), (s.get("env") or {}).get("SHARD")) for s in deals]
+    if handed != [("deal", "${{ matrix.shard }}")]:
+        problems.append(f"the {WEB_SHARD_JOB} job deals {handed}, not its own shard once")
+    sweeps = [s for s in steps if "stryker run" in str(s.get("run", ""))]
+    swept = [(s.get("if"), (s.get("env") or {}).get("MUTATE")) for s in sweeps]
+    if swept != [("${{ steps.deal.outputs.run == 'true' }}", "${{ steps.deal.outputs.mutate }}")]:
+        problems.append(f"the {WEB_SHARD_JOB} job runs StrykerJS as {swept}, not over its deal")
+    kept = [s for s in steps if action(s) == "actions/upload-artifact"]
+    names = [((s.get("with") or {}).get("name"), s.get("if")) for s in kept]
+    if names != [(WEB_SHARD_ARTIFACT, "${{ always() }}")]:
+        problems.append(
+            f"the {WEB_SHARD_JOB} job keeps {names}, not {WEB_SHARD_ARTIFACT} whatever its outcome"
+        )
+    verdict = jobs.get(WEB_VERDICT_JOB)
+    if not isinstance(verdict, dict):
+        return [*problems, f"ci.yml has no {WEB_VERDICT_JOB} job"]
+    if "strategy" in verdict:
+        problems.append(f"the {WEB_VERDICT_JOB} job is a matrix, so no check reports its own name")
+    needs = verdict.get("needs")
+    if WEB_SHARD_JOB not in (needs if isinstance(needs, list) else [needs]):
+        problems.append(f"the {WEB_VERDICT_JOB} job does not need {WEB_SHARD_JOB}")
+    if verdict.get("if") != "${{ always() }}":
+        problems.append(f"the {WEB_VERDICT_JOB} job is skipped when a shard fails")
+    steps = verdict.get("steps") or []
+    runs = [str(s.get("run", "")) for s in steps]
+    if any("stryker run" in run for run in runs):
+        problems.append(f"the {WEB_VERDICT_JOB} job runs StrykerJS itself")
+    fetched = [s.get("with") or {} for s in steps if action(s) == "actions/download-artifact"]
+    patterns = [(w.get("name"), w.get("pattern"), str(w.get("merge-multiple"))) for w in fetched]
+    if patterns != [(None, "mutation-web-shard-*", "true")]:
+        problems.append(f"the {WEB_VERDICT_JOB} job downloads {patterns}, not every shard")
+    unions = [at for at, run in enumerate(runs) if f"{WEB_SHARDS_SCRIPT} union " in run]
+    judges = [at for at, run in enumerate(runs) if "mutation-verdict.py judge " in run]
+    if len(unions) != 1 or len(judges) != 1 or unions[0] > judges[0]:
+        problems.append(f"the {WEB_VERDICT_JOB} job does not read every shard before its judge")
+        return problems
+    union, judge = steps[unions[0]], runs[judges[0]]
+    if (union.get("env") or {}).get("RESULT") != f"${{{{ needs.{WEB_SHARD_JOB}.result }}}}":
+        problems.append(f"the {WEB_VERDICT_JOB} job's union does not read the shards' result")
+    out = re.search(r'--out "([^"]+)"', str(union.get("run")))
+    read = re.search(r'--stryker "([^"]+)"', judge)
+    if out is None or read is None or out.group(1) != read.group(1):
+        problems.append(f"the {WEB_VERDICT_JOB} job's judge does not read the union's report")
+    return problems
+
+
+class ThePullRequestsWebSweepRunsInShards(unittest.TestCase):
+    def test_the_web_sweep_runs_in_three_shards_read_by_name(self):
+        """SPEC-419 A1: `mutation-web-shard` is one matrix of exactly shards 0, 1 and 2, each
+        bounded at 100 minutes, dealing its own shard and keeping its report by its index, and
+        `mutation-web` reads every shard by name before its judge. The script deals and reads the
+        same three shards by the same name the matrix uploads."""
+        workflow = load("ci.yml")
+        self.assertEqual(web_shard_problems(workflow), [])
+        examined("web shards", workflow["jobs"][WEB_SHARD_JOB]["strategy"]["matrix"]["shard"])
+        script = (REPO / WEB_SHARDS_SCRIPT).read_text(encoding="utf-8")
+        self.assertRegex(script, rf"(?m)^SHARDS = {WEB_SHARDS}$")
+        prefix = WEB_SHARD_ARTIFACT.removesuffix("${{ matrix.shard }}")
+        self.assertRegex(script, rf'(?m)^PREFIX = "{re.escape(prefix)}"$')
+        self.assertNotIn("stryker run", str(workflow["jobs"][WEB_VERDICT_JOB]))
+
+    def test_a_web_shard_defect_is_refused_by_name(self):
+        """SPEC-419 A2: each defect planted into a copy of ci.yml is refused by its own line and
+        by no other: one, two or four shards, a shard bound past 100, one shard's failure
+        cancelling the others, StrykerJS over the plan's files instead of the deal's, a report kept
+        without its index, and a verdict job that can be skipped, does not wait for the shards or
+        downloads one shard."""
+        text = workflow_file_text(WORKFLOWS / "ci.yml")
+        self.assertEqual(web_shard_problems(read_workflow(text)), [])
+        shard, verdict = WEB_SHARD_JOB, WEB_VERDICT_JOB
+        wanted = "['0', '1', '2']"
+        mutate = "MUTATE: ${{ steps.deal.outputs.mutate }}"
+        plants = [
+            (
+                shard,
+                "        shard: [0, 1, 2]\n",
+                "        shard: [0]\n",
+                f"the {shard} shards are ['0'], not {wanted}",
+            ),
+            (
+                shard,
+                "        shard: [0, 1, 2]\n",
+                "        shard: [0, 1]\n",
+                f"the {shard} shards are ['0', '1'], not {wanted}",
+            ),
+            (
+                shard,
+                "        shard: [0, 1, 2]\n",
+                "        shard: [0, 1, 2, 3]\n",
+                f"the {shard} shards are ['0', '1', '2', '3'], not {wanted}",
+            ),
+            (
+                shard,
+                "    timeout-minutes: 100\n",
+                "    timeout-minutes: 101\n",
+                f"the {shard} job's timeout is 101, not 100 minutes",
+            ),
+            (
+                shard,
+                "      fail-fast: false\n",
+                "",
+                f"one {shard} failure cancels the other shards",
+            ),
+            (
+                shard,
+                mutate,
+                "MUTATE: ${{ steps.plan.outputs.mutate }}",
+                f"the {shard} job runs StrykerJS as [(\"${{{{ steps.deal.outputs.run == 'true' }}}}\""
+                ", '${{ steps.plan.outputs.mutate }}')], not over its deal",
+            ),
+            (
+                shard,
+                f"name: {WEB_SHARD_ARTIFACT}\n",
+                "name: mutation-web-shard\n",
+                f"the {shard} job keeps [('mutation-web-shard', '${{{{ always() }}}}')], not "
+                f"{WEB_SHARD_ARTIFACT} whatever its outcome",
+            ),
+            (
+                verdict,
+                f"    needs: [{shard}]\n    if: ${{{{ always() }}}}\n",
+                f"    needs: [{shard}]\n",
+                f"the {verdict} job is skipped when a shard fails",
+            ),
+            (verdict, f"    needs: [{shard}]\n", "", f"the {verdict} job does not need {shard}"),
+            (
+                verdict,
+                "pattern: mutation-web-shard-*\n",
+                "pattern: mutation-web-shard-0\n",
+                f"the {verdict} job downloads [(None, 'mutation-web-shard-0', 'true')], not every "
+                "shard",
+            ),
+        ]
+        for job, old, new, refusal in examined("planted web shard defects", plants):
+            with self.subTest(job=job, plant=new):
+                self.assertEqual(web_shard_problems(planted_job(text, job, (old, new))), [refusal])
+
+
+#: The scoped price workflow, and the one command each of its legs runs (SPEC-421 R11).
+PRICE_WORKFLOW = "mutation-prices.yml"
+PRICE_COMMAND = (
+    'python3 scripts/mutation_python.py run --file "$FILE" --scoped --sample 20 --failfast '
+    '--report "$out/report.json"'
+)
+
+
+class ThePriceWorkflowMeasuresScoped(unittest.TestCase):
+    def test_the_price_workflow_measures_scoped_on_the_python_legs_runner_class(self):
+        """SPEC-421 A16 (R11): the price workflow's one matrix job runs on the runner class of
+        ci.yml's `mutation-python` legs and runs each file `--scoped --sample 20 --failfast`, the
+        step taking `MUTATION_JOB_ID` from `job.check_run_id`; it keeps each leg's report as
+        `mutation-prices-<job index>` under `if: always()`, and no permission it holds writes."""
+        prices, ci = load(PRICE_WORKFLOW), load("ci.yml")
+        jobs = examined("price workflow jobs", list(prices["jobs"].items()))
+        legs = [(name, job) for name, job in jobs if "matrix" in (job.get("strategy") or {})]
+        self.assertEqual([name for name, _job in legs], ["price"])
+        job = legs[0][1]
+        self.assertEqual(job.get("runs-on"), ci["jobs"]["mutation-python"]["runs-on"])
+        steps = examined("price leg steps", job["steps"])
+        runs = [step for step in steps if PRICE_COMMAND in str(step.get("run") or "")]
+        self.assertEqual(len(runs), 1, "the leg runs the scoped, sampled command once")
+        job_id = (runs[0].get("env") or {}).get("MUTATION_JOB_ID")
+        self.assertEqual(job_id, "${{ job.check_run_id }}")
+        uploads = [
+            step
+            for step in steps
+            if str(step.get("uses") or "").startswith("actions/upload-artifact@")
+        ]
+        self.assertEqual(
+            [(step.get("if"), (step.get("with") or {}).get("name")) for step in uploads],
+            [("${{ always() }}", "mutation-prices-${{ strategy.job-index }}")],
+        )
+        self.assertEqual(prices.get("permissions"), {"contents": "read"})
+        granted = [str(each.get("permissions")) for _name, each in jobs if each.get("permissions")]
+        self.assertEqual([grant for grant in granted if "write" in grant], [])
 
 
 if __name__ == "__main__":

@@ -1,0 +1,38 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S49301-THE-PLAN-READS-OTHER-RUNS-ACTIONS",
+        ".github/workflows/ci.yml",
+        "    permissions:\n      contents: read\n      actions: read",
+        "    permissions:\n      contents: read",
+        "the plan job reads other runs' artifacts only by actions: read beside contents: read (SPEC-493 R2, A3)",
+        "test_mutation_carry.Workflow.test_the_plan_job_reads_contents_and_actions_only"
+      ],
+      [
+        "S49302-NO-BASE-STEP-FAILS-THE-PLAN",
+        ".github/workflows/ci.yml",
+        "        id: base\n        continue-on-error: true",
+        "        id: base\n        continue-on-error: false",
+        "a base step or download that fails never fails the plan (SPEC-493 R3, A3)",
+        "test_mutation_carry.Workflow.test_no_base_step_can_fail_the_plan"
+      ],
+      [
+        "S49303-SHARDS-DEALS-THE-RERUN-SET",
+        ".github/workflows/ci.yml",
+        "--python-listed \"$RUNNER_TEMP/mutation/python-rerun.json\"",
+        "--python-listed \"$RUNNER_TEMP/mutation/python-listed.json\"",
+        "shards deals the re-run set, not the listing (SPEC-493 R9, A3)",
+        "test_mutation_carry.Workflow.test_shards_deals_the_rerun_set"
+      ],
+      [
+        "S49304-THE-MANIFEST-IS-ALWAYS-KEPT",
+        ".github/workflows/ci.yml",
+        "      - name: keep the run's outcomes for a later release run's carry\n        if: ${{ always() }}",
+        "      - name: keep the run's outcomes for a later release run's carry",
+        "the manifest is kept when a leg fails (SPEC-493 R12, A3)",
+        "test_mutation_carry.Workflow.test_the_manifest_is_kept_when_a_leg_fails"
+      ]
+    ]
+  }
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { StatusWord, Synced, Unsynced } from '$lib/engine/protocol';
+import type { StatusWord, Synced, Unsynced } from '#lib/engine/protocol.js';
 import { UpdateNow, type UpdateClient } from './update-now';
 
 // SPEC-409 R2, R4 to R7, R12; ADR-423 D1, D2, D7. The offer's state machine alone, driven without

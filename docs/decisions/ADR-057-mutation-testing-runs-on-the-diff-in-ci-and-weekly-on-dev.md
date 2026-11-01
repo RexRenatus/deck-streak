@@ -263,3 +263,10 @@ which restores each file by digest and runs its tests once per mutant; its shard
 `mutation-python`. This is ADR-073 (SPEC-087, SPEC-039 section 18). The decisions above are
 unchanged: a survivor still fails, an equivalent mutant is still recorded and never skipped, and
 no annotation hides a mutant.
+
+## Note: a release run carries Python outcomes (ADR-511)
+
+The release run of a release pull request that SPEC-493 admits carries a Python mutant's outcome from one recorded release run
+of this repository, for a file whose whole read set is byte-identical at that run and here, and runs every other listed mutant.
+ADR-511 decides it. The decisions above are unchanged: a survivor still fails, a carried one included, an equivalent mutant is
+still recorded and never skipped, and no annotation hides a mutant.

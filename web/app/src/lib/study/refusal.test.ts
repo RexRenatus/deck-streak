@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { getLocale, locales, overwriteGetLocale } from '$lib/paraglide/runtime.js';
+import { getLocale, locales, overwriteGetLocale } from '#lib/paraglide/runtime.js';
 import { STATUS_KEYS, statusText } from './refusal';
 
 // SPEC-350 R5, R7, R10, R11; ADR-361. Each status the review announces, every engine refusal, the

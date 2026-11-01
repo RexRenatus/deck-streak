@@ -135,7 +135,7 @@ async fn a12_the_vapid_header_carries_a_jwt_the_fake_verifies_with_k() {
     let received = service.fake.received();
     assert_eq!(received.len(), 1);
     let vapid = FakePushService::vapid(&received[0]).expect("vapid t=..., k=...");
-    let public = key.verifying().to_encoded_point(false);
+    let public = key.verifying().to_sec1_point(false);
     assert_eq!(
         vapid.key,
         Base64UrlUnpadded::encode_string(public.as_bytes())

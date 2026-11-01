@@ -41,6 +41,9 @@
 //!   engine's day, and the rule that judges a card past its due day in it (SPEC-376 R1, R2).
 //! - [`replay`]: the replay of a deck set's review history into stock-field values, and their
 //!   mapping onto the engine's card; it writes nothing (SPEC-386 R7 to R13).
+//! - [`scheduler`]: the scheduling port the replay's due days come through, its review event,
+//!   key, recall and refusals, the event check and the day queue with its sibling rule (SPEC-494
+//!   R1, R5 to R8).
 //! - [`reorder`]: the reorder-only input of due-card scores and the one function that orders
 //!   today's stock queue by it, only on the input's own day and schema stamp; it moves entries and
 //!   writes nothing (SPEC-414 R1 to R6).
@@ -67,6 +70,7 @@ pub mod reorder;
 pub mod replay;
 pub mod retention;
 pub mod review;
+pub mod scheduler;
 pub mod table;
 pub mod undo_answer;
 pub mod undo_change;

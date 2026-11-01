@@ -60,11 +60,11 @@ flowchart LR
 ```
 
 - The web client and the Mini App are one application on one origin
-  (`web/app/svelte.config.js:24-33`, `deploy/caddy/deck-streak.caddy:46-52,89-93`), so the
+  (`web/app/sveltekit.config.js:26-35`, `deploy/caddy/deck-streak.caddy:46-52,89-93`), so the
   relying party ADR-132 names covers both. A ceremony runs only at top level outside Telegram:
   the edge declares no Permissions-Policy (`deploy/caddy/deck-streak.caddy:11-21`), so WebAuthn's
   default `self` allowlist holds there, and Telegram's frame is granted none.
-- The page's `connect-src` is `'self'` (`web/app/svelte.config.js:30`). The ceremonies add no
+- The page's `connect-src` is `'self'` (`web/app/sveltekit.config.js:32`). The ceremonies add no
   outbound request: the API verifies against its own configured origin and reaches no network.
 - Identity depends on the kernel alone (`docs/CONTEXT-MAP.md:15`); `webauthn-rs`, `uuid` and
   `sqlx` are external crates, so no context edge is added.

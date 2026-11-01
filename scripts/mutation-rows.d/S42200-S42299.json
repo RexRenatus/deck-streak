@@ -1,0 +1,158 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S42200-THE-RELEASE-JOB-RUNS-ONLY-WHEN-THE-PLAN-DEALS-IT-LEGS",
+        ".github/workflows/ci.yml",
+        "if: ${{ needs.mutation-plan.outputs.python_release_legs != '0' }}",
+        "if: ${{ needs.mutation-plan.outputs.python_release_legs == '0' }}",
+        "mutation-python-release runs exactly when the plan deals it legs (SPEC-422 R9, A11)",
+        "test_release_python_ceiling.EveryLegOfBothMatricesIsJudged.test_the_release_job_is_the_python_job_on_the_release_axis"
+      ],
+      [
+        "S42201-THE-RELEASE-JOB-READS-THE-RELEASE-AXIS",
+        ".github/workflows/ci.yml",
+        "fromJSON(needs.mutation-plan.outputs.python_release_matrix)",
+        "fromJSON(needs.mutation-plan.outputs.python_matrix)",
+        "mutation-python-release expands the plan's release axis, never the first matrix's (SPEC-422 R9, A11)",
+        "test_release_python_ceiling.EveryLegOfBothMatricesIsJudged.test_the_release_job_is_the_python_job_on_the_release_axis"
+      ],
+      [
+        "S42202-THE-VERDICT-NEEDS-THE-RELEASE-JOB",
+        ".github/workflows/ci.yml",
+        "mutation-python-release, mutation-rows]",
+        "mutation-rows]",
+        "mutation-verdict waits for the release job and reads its reports (SPEC-422 R10, A14)",
+        "test_release_python_ceiling.EveryLegOfBothMatricesIsJudged.test_the_verdict_counts_every_shard_of_both_matrices"
+      ],
+      [
+        "S42203-CI-NEEDS-THE-RELEASE-JOB",
+        ".github/workflows/ci.yml",
+        "mutation-python-release, mutation-rows, mutation-verdict",
+        "mutation-rows, mutation-verdict",
+        "ci needs the release job, so its result is judged (SPEC-422 R10, A13)",
+        "test_not_started_legs.ALegWithNothingToExamineIsNotStarted.test_ci_admits_a_not_started_leg_and_no_other_skip"
+      ],
+      [
+        "S42204-CI-ADMITS-THE-RELEASE-JOBS-SKIP",
+        ".github/workflows/ci.yml",
+        "\"mutation-rows:$ROWS_LEG\" \"mutation-python-release:$PYTHON_RELEASE_LEG\"; do",
+        "\"mutation-rows:$ROWS_LEG\"; do",
+        "ci admits a skip of the release job once, as it admits the two legs' (SPEC-422 R11, A13)",
+        "test_not_started_legs.ALegWithNothingToExamineIsNotStarted.test_ci_admits_a_not_started_leg_and_no_other_skip"
+      ],
+      [
+        "S42205-THE-LEGS-CALL-PASSES-THE-RELEASE-RESULT",
+        ".github/workflows/ci.yml",
+        " --python-release-leg \"$PYTHON_RELEASE_LEG\" || legs=$?",
+        " || legs=$?",
+        "mutation-verdict's legs call passes the release job's result (SPEC-422 R11, A14)",
+        "test_release_python_ceiling.EveryLegOfBothMatricesIsJudged.test_the_verdict_counts_every_shard_of_both_matrices"
+      ],
+      [
+        "S42206-THE-PLAN-READS-THE-HEAD-REPOSITORY",
+        ".github/workflows/ci.yml",
+        "HEAD_REF: ${{ github.head_ref }}\n          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}",
+        "HEAD_REF: ${{ github.head_ref }}\n          HEAD_REPO: ${{ github.repository }}",
+        "the plan step passes the pull request's head repository, never this repository's name (SPEC-422 R2, A4)",
+        "test_release_python_ceiling.TheReleaseRunIsNamedByAFailClosedPredicate.test_the_plan_step_passes_head_ref_head_repo_and_repo_by_env"
+      ],
+      [
+        "S42207-THE-PLAN-READS-THE-HEAD-REF",
+        ".github/workflows/ci.yml",
+        " --head-ref \"$HEAD_REF\"",
+        " --head-ref \"$BASE_REF\"",
+        "the plan command passes the pull request's head ref, read by name (SPEC-422 R2, A4)",
+        "test_release_python_ceiling.TheReleaseRunIsNamedByAFailClosedPredicate.test_the_plan_step_passes_head_ref_head_repo_and_repo_by_env"
+      ],
+      [
+        "S42208-PAST-THE-CEILING-NEEDS-A-NEW-RULING",
+        "scripts/mutation-verdict.py",
+        "\"a new owner-signed ruling, since a run is never capped\"",
+        "\"an owner-signed ruling, since a run is never capped\"",
+        "the release run's refusal says a larger figure needs a new owner-signed ruling (SPEC-422 R6, A7)",
+        "test_release_python_ceiling.TheReleaseRunDealsUpToItsCeiling.test_the_release_run_deals_up_to_the_ceiling_and_refuses_one_leg_past_it"
+      ],
+      [
+        "S42209-A-CEILING-OUTSIDE-ITS-RANGE-IS-REFUSED-BY-NAME",
+        "scripts/mutation-verdict.py",
+        "{ceiling} is outside {PYTHON_SHARE_CAP}",
+        "{ceiling} is within {PYTHON_SHARE_CAP}",
+        "the range refusal names the ceiling as outside its range (SPEC-422 R5, A6)",
+        "test_release_python_ceiling.TheReleaseRunDealsUpToItsCeiling.test_a_ceiling_outside_its_range_is_refused_by_name"
+      ],
+      [
+        "S42210-THE-RELEASE-LEGS-OUTPUT-IS-NAMED",
+        "scripts/mutation-verdict.py",
+        "python_release_legs={len(second_axis)}",
+        "python_release_shards={len(second_axis)}",
+        "shards writes the release job's leg count as the output its condition reads (SPEC-422 R8, A10)",
+        "test_release_python_ceiling.TheReleaseRunDealsUpToItsCeiling.test_the_release_legs_split_into_matrices_each_shard_once"
+      ],
+      [
+        "S42211-THE-RELEASE-AXIS-OUTPUT-IS-NAMED",
+        "scripts/mutation-verdict.py",
+        "python_release_matrix={json.dumps(second_axis)}",
+        "python_extra_matrix={json.dumps(second_axis)}",
+        "shards writes the second matrix's axis as the output the release job expands (SPEC-422 R8, A10)",
+        "test_release_python_ceiling.TheReleaseRunDealsUpToItsCeiling.test_the_release_legs_split_into_matrices_each_shard_once"
+      ],
+      [
+        "S42212-THE-FIRST-MATRIX-HOLDS-AT-MOST-PYTHON-MATRIX-LEGS",
+        "scripts/mutation-verdict.py",
+        "first_axis = list(range(min(python[\"count\"], PYTHON_MATRIX_LEGS)))",
+        "first_axis = list(range(python[\"count\"]))",
+        "the first matrix holds at most PYTHON_MATRIX_LEGS legs, so no shard is in both (SPEC-422 R8, A10)",
+        "test_release_python_ceiling.TheReleaseRunDealsUpToItsCeiling.test_the_release_legs_split_into_matrices_each_shard_once"
+      ],
+      [
+        "S42213-THE-RELEASE-LINE-NAMES-THE-RELEASE-JOB",
+        "scripts/mutation-verdict.py",
+        "} in mutation-python-release, at most \"",
+        "} in mutation-python, at most \"",
+        "the release line counts the legs past the first matrix in mutation-python-release (SPEC-422 R6, A7)",
+        "test_release_python_ceiling.TheReleaseRunDealsUpToItsCeiling.test_the_release_run_deals_up_to_the_ceiling_and_refuses_one_leg_past_it"
+      ],
+      [
+        "S42214-A-RELEASE-JOB-OWED-NOTHING-READS-NOT-STARTED",
+        "scripts/mutation-verdict.py",
+        "\"the plan deals no python leg past PYTHON_MATRIX_LEGS\",",
+        "\"the plan deals no python leg past PYTHON_MAX_SHARDS\",",
+        "legs reads a release job the plan owes nothing as not started past PYTHON_MATRIX_LEGS (SPEC-422 R11, A12)",
+        "test_release_python_ceiling.EveryLegOfBothMatricesIsJudged.test_legs_judges_the_release_leg_against_the_plan"
+      ],
+      [
+        "S42215-THE-RUNBOOK-SENTENCE-NAMES-THE-CEILING",
+        "RELEASING.md",
+        "up to `PYTHON_RELEASE_CEILING` (SPEC-422).",
+        "up to `PYTHON_SHARE_CAP` (SPEC-422).",
+        "the runbook's sentence names the release ceiling (SPEC-422 R16, A20)",
+        "test_release_python_ceiling.TheCeilingIsSignedAndTheRunbookSaysTheMethod.test_the_runbook_names_the_release_ceiling_its_job_and_its_refusal"
+      ],
+      [
+        "S42216-THE-RUNBOOK-SAYS-A-LARGER-FIGURE-NEEDS-A-NEW-SIGNATURE",
+        "RELEASING.md",
+        "a new measurement and a new signature.",
+        "a new measurement.",
+        "the runbook's paragraph says a larger figure needs a new measurement and a new signature (SPEC-422 R16, A20)",
+        "test_release_python_ceiling.TheCeilingIsSignedAndTheRunbookSaysTheMethod.test_the_runbook_names_the_release_ceiling_its_job_and_its_refusal"
+      ],
+      [
+        "S42217-THE-COUNT-JOB-RUNS-WHATEVER-ITS-NEEDS-RETURNED",
+        ".github/workflows/matrix-limit.yml",
+        "    if: ${{ always() }}",
+        "    if: ${{ success() }}",
+        "count keeps the run's record whatever its needs returned (SPEC-422 R14, A18)",
+        "test_release_python_ceiling.TheMatrixLimitIsMeasuredInPublic.test_the_matrix_limit_workflow_measures_two_matrices_in_one_run"
+      ],
+      [
+        "S42218-THE-SECOND-MATRIX-EXPANDS-ITS-OWN-AXIS",
+        ".github/workflows/matrix-limit.yml",
+        "fromJSON(needs.size.outputs.second)",
+        "fromJSON(needs.size.outputs.first)",
+        "second expands its own axis, the legs numbered past the first's (SPEC-422 R14, A18)",
+        "test_release_python_ceiling.TheMatrixLimitIsMeasuredInPublic.test_the_matrix_limit_workflow_measures_two_matrices_in_one_run"
+      ]
+    ]
+  }
+}

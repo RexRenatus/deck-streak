@@ -4,7 +4,7 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { CardView, Clip, Faces, FaceView, UndoOffer } from '$lib/engine/protocol';
+import type { CardView, Clip, Faces, FaceView, UndoOffer } from '#lib/engine/protocol.js';
 import { Review, type StudyClient } from './review';
 import { deviceSpeaker, NATIVE_DEFAULT_RATE, WebSpeaker, type Synthesis, type Utterance } from './speech';
 import { VOICE_CHOICES, VoiceChoices, type Voice } from './voice';

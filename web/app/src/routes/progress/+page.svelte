@@ -1,9 +1,9 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { api, type Answer } from '$lib/api';
-  import CourseLadder from '$lib/progress/CourseLadder.svelte';
-  import type { ProgressView } from '$lib/progress/progress';
-  import { m } from '$lib/paraglide/messages.js';
+  import { api, type Answer } from '#lib/api.js';
+  import CourseLadder from '#lib/progress/CourseLadder.svelte';
+  import type { ProgressView } from '#lib/progress/progress.js';
+  import { m } from '#lib/paraglide/messages.js';
 
   // The progress screen (SPEC-077 R17): each configured course's Road to C2 as the server answers
   // it, the same figures the bot's /progress reports. The page computes none of them.

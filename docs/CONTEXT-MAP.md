@@ -10,7 +10,7 @@ that amends this file in the same change. Never add an edge to make code compile
 ## The map
 
 ```context-map
-deck-streak-kernel        (shared kernel: ids, study day, track, verdict, errors, config, Db, data-rights port)  depends on: nothing
+deck-streak-kernel        (shared kernel: ids, study day, track, verdict, errors, config, Db, data-rights port)  depends on: study-day
 deck-streak-ingest        (anti-corruption layer for Anki: sync, read, change gate, new-card queue, skip day)  depends on: kernel
 deck-streak-identity      (Telegram initData, the owner allow-list, sessions, linked sign-in)  depends on: kernel
 deck-streak-analytics     (daily rollup, per-language stats, five-pillar score, today snapshot)  depends on: kernel, ingest
@@ -42,6 +42,7 @@ deck-streak-migration     (one-off import of v9's schema 24, planned)  depends o
 deck-streak-web-engine    (Anki's engine on wasm32 in the web client's Worker: the study calls over OPFS)  depends on: engine-core
 deck-streak-push          (APNs and web push senders for a native or web client: provider and VAPID tokens, RFC 8291; ADR-354)  depends on: kernel
 deck-streak-xp            (the per-review XP rule, with no I/O, for the server and both clients; ADR-371)  depends on: nothing
+deck-streak-study-day     (the study day, its instant and its date error, with no I/O, for the server and both clients; ADR-515)  depends on: nothing
 miniapp   web/app/src     (the SvelteKit Mini App)  depends on: nothing internal
 ios-harness  ios/  (the SwiftUI harness over deck-streak-ffi's XCFramework; ADR-335)  depends on: nothing internal
 landing   web/site/src    (the Astro landing page, planned)  depends on: nothing internal
@@ -68,6 +69,12 @@ module is the replay-time harness, which the crate's two examples only call (ADR
 translates an ingest review into it at its edge (ADR-371 D2 and D3). The umbrella FFI crate and
 the web engine depend on it when #639 links it (ADR-357 D1).
 
+`deck-streak-study-day` holds the study day the kernel counts in: the rollover rule in a fixed
+offset and its ISO calendar, the instant it is computed from and the error a malformed date gives
+(SPEC-497, ADR-515). It depends on nothing and does no I/O, so both clients can link it without the
+kernel. The kernel depends on it alone and re-exports each item at the path it always had;
+`SystemClock`, the one reader of the system time, stays in the kernel.
+
 `deck-streak-push` is an outbound adapter: it builds APNs and web push requests and reports what
 each platform answered, and it depends on the kernel's clock alone (SPEC-343, ADR-354 D3). The
 daemon does not compose it until native push carries the one router (#640), which adds its
@@ -86,7 +93,8 @@ The graph has three layers, and an edge only ever points down.
    SQLite repository base, and the data-rights port every stateful context implements. Domain
    logic placed in the kernel for convenience is a context hiding in shared code. Beside the
    kernel sits `xp`, one context's rule published for the clients, which every layer above may
-   depend on and which depends on nothing.
+   depend on and which depends on nothing. Below the kernel sits `study-day`, the study day the
+   kernel re-exports, which the clients may link and which depends on nothing.
 2. **The domain contexts** depend on the kernel, and on `ingest` where they compute from Anki
    reviews, cards or queues. No domain context depends on another domain context. What crosses
    between them (an XP grant after a reading is marked read, a coin fine after a broken

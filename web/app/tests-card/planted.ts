@@ -47,6 +47,17 @@ export interface Unobservable {
   why: string;
 }
 
+/**
+ * An engine, card and layer whose single-layer variant reads one bare connection at the TCP
+ * listener and nothing else, and why (SPEC-402 R10; ADR-498 D7).
+ */
+export interface Bare {
+  engine: Engine;
+  id: string;
+  layer: Layer;
+  why: string;
+}
+
 /** The render-proof card: text, a `data:` image and a table, and no channel. */
 export interface RenderCard {
   html: string;
@@ -69,6 +80,14 @@ function loads(id: string, alone: Layer | null, html: (http: string) => string, 
 /** A card whose full-frame link or button acts when clicked, toward the HTTP listener. */
 function clicks(id: string, alone: Layer | null, html: (http: string) => string): PlantedCard {
   return { id, alone, click: true, html: (l) => html(`${l.http}/${id}`), css: () => COVER, paths: [`/${id}/`] };
+}
+
+/**
+ * A card whose full-frame link acts when clicked, toward the TCP listener, which counts every
+ * connection, a bare one with no request included (SPEC-402 R10; ADR-498 D7, D9).
+ */
+function clicksAtTcp(id: string, alone: Layer | null, html: (tcp: string) => string): PlantedCard {
+  return { id, alone, click: true, html: (l) => html(`${l.tcp}/${id}`), css: () => COVER, paths: ['tcp'] };
 }
 
 /** The page's bridge, as a card script reaches for it: each call that throws is passed over. */
@@ -167,8 +186,31 @@ export const PLANTED: readonly PlantedCard[] = [
   loads('meta-refresh', null, (h) => `<meta http-equiv="refresh" content="0; url=${h}/1"><p>refreshing</p>`),
   loads('base', null, (h) => `<base href="${h}/"><img alt="" src="1">`),
   clicks('nav-self', 'W4', (h) => `<a class="cover" href="${h}/1">open</a>`),
-  clicks('nav-top', 'W1', (h) => `<a class="cover" target="_top" href="${h}/1">open</a>`),
-  clicks('nav-blank', 'W1', (h) => `<a class="cover" target="_blank" href="${h}/1">open</a>`),
+  clicks('nav-top', 'W4', (h) => `<a class="cover" target="_top" href="${h}/1">open</a>`),
+  clicks('nav-blank', 'W4', (h) => `<a class="cover" target="_blank" href="${h}/1">open</a>`),
+  // SPEC-402 R10; ADR-498 D1, D9: an image map's area and an SVG link, each with a blank target
+  // (the SVG link the control: its handler starts no preconnect), and an SVG link that asks for a
+  // new window with no target at all, W1's own channel. The cover class sets a position and no
+  // size, so the image and each svg carry the frame's size themselves
+  clicksAtTcp(
+    'nav-blank-area',
+    'W4',
+    (t) =>
+      `<img class="cover" usemap="#m" alt="" width="100%" height="100%" src="${PIXEL}">` +
+      `<map name="m"><area shape="default" target="_blank" href="${t}/1" alt="open"></map>`
+  ),
+  clicksAtTcp(
+    'nav-blank-svg',
+    'W4',
+    (t) =>
+      `<svg class="cover" width="100%" height="100%"><a target="_blank" href="${t}/1"><rect width="100%" height="100%"/></a></svg>`
+  ),
+  clicksAtTcp(
+    'nav-show-new',
+    'W1',
+    (t) =>
+      `<svg class="cover" width="100%" height="100%"><a xlink:show="new" href="${t}/1"><rect width="100%" height="100%"/></a></svg>`
+  ),
   clicks('download', 'W4', (h) => `<a class="cover" download="card.txt" href="${h}/1">save</a>`),
   clicks('ping', null, (h) => `<a class="cover" href="#planted" ping="${h}/1">ping</a><p id="planted">here</p>`),
   clicks('form', null, (h) => `<form method="post" action="${h}/1"><button class="cover" type="submit">send</button></form>`),
@@ -217,6 +259,15 @@ export const UNOBSERVABLE: readonly Unobservable[] = [
   { engine: 'firefox', id: 'ping', why: 'measured: Firefox under the suite sends no hyperlink audit' },
   { engine: 'firefox', id: 'webrtc', why: 'measured: Firefox under the suite sends no datagram from a peer connection to the UDP listener' },
   { engine: 'webkit', id: 'external-scheme', why: 'no listener sees a mail handler launch' }
+];
+
+export const BARE: readonly Bare[] = [
+  {
+    engine: 'webkit',
+    id: 'nav-blank-area',
+    layer: 'W3',
+    why: "with W3 off the area's target is back and the sandbox refuses the popup, and WebKit's click handler preconnects to the area's host"
+  }
 ];
 
 /** The render-proof card: it points nowhere, so the frame shows it whole or not at all. */

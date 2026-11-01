@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
-  import { telegram } from '$lib/telegram.svelte';
+  import { m } from '#lib/paraglide/messages.js';
+  import { telegram } from '#lib/telegram.svelte.js';
 
   // The privacy policy, and the source code: the AGPL's offer to everyone who uses DeckStreak over
   // a network (ADR-018).

@@ -1,0 +1,230 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S43700-A-FILES-RUNS-ARE-INTERLEAVED",
+        "scripts/mutation-verdict.py",
+        "indices[cut::cuts]",
+        "indices[cut * len(indices) // cuts : (cut + 1) * len(indices) // cuts]",
+        "a priced file's runs are interleaved across its legs, never contiguous slices (SPEC-437 R1, A1)",
+        "test_mutation_python_shard_binding.EachFilesRunsAreInterleaved.test_a_files_runs_are_interleaved_across_its_legs"
+      ],
+      [
+        "S43701-EVERY-RUN-OF-A-FILE-IS-DEALT",
+        "scripts/mutation-verdict.py",
+        "for cut in range(cuts):",
+        "for cut in range(1, cuts):",
+        "every run of a priced file is dealt, its first among them (SPEC-437 R2, A3)",
+        "test_mutation_python_shard_binding.EachFilesRunsAreInterleaved.test_every_listed_mutant_is_dealt_exactly_once_when_runs_are_interleaved"
+      ],
+      [
+        "S43702-A-RECORD-IS-BOUND-ONLY-IN-ITS-OWN-CLASS",
+        "scripts/mutation-verdict.py",
+        "classify(str(record.get(\"file\"))) == klass]",
+        "classify(str(record.get(\"file\"))) != klass]",
+        "an equivalence record is bound only in its own class (SPEC-437 R3, A5)",
+        "test_mutation_verdict_python_kills.EachRecordIsJudgedInItsOwnClass.test_a_record_of_the_judged_class_that_binds_nothing_stays_stale"
+      ],
+      [
+        "S43703-JUDGE-PYTHON-BINDS-IN-ITS-OWN-CLASS",
+        "scripts/mutation-verdict.py",
+        "population, scope, klass=klass)",
+        "population, scope, klass=None)",
+        "judge_python binds the records of the class it judges and no other (SPEC-437 R3, A4)",
+        "test_mutation_verdict_python_kills.EachRecordIsJudgedInItsOwnClass.test_a_record_of_another_class_is_neither_bound_nor_stale"
+      ],
+      [
+        "S43704-AN-UNKNOWN-KEY-REFUSES-BEFORE-ANY-WRITE",
+        "scripts/write-back-issues.py",
+        "    if missing:",
+        "    if not missing:",
+        "an unknown issue key refuses the write-back before any file is written (SPEC-437 R4, A7)",
+        "test_write_back_issues.TheIssuesAreWrittenBack.test_an_unknown_key_is_named_and_nothing_is_written"
+      ],
+      [
+        "S43705-A-KEY-THE-MANIFEST-LACKS-IS-COLLECTED",
+        "scripts/write-back-issues.py",
+        "if key not in issues}",
+        "if key in issues}",
+        "a key the manifest lacks is collected and named (SPEC-437 R4, A7)",
+        "test_write_back_issues.TheIssuesAreWrittenBack.test_an_unknown_key_is_named_and_nothing_is_written"
+      ],
+      [
+        "S43706-A-KNOWN-KEYS-TOKEN-IS-WRITTEN",
+        "scripts/write-back-issues.py",
+        "issues[m.group(1)]",
+        "issues[m.group(2)]",
+        "a known key's token is written from its own key (SPEC-437 R4, A6)",
+        "test_write_back_issues.TheIssuesAreWrittenBack.test_a_known_key_is_written_as_its_issue_number"
+      ],
+      [
+        "S43707-A-TOKEN-IS-WRITTEN-AS-ITS-ISSUE-NUMBER",
+        "scripts/write-back-issues.py",
+        "f\"#{issues[",
+        "f\"{issues[",
+        "a token is written as #<number> (SPEC-437 R4, A6)",
+        "test_write_back_issues.TheIssuesAreWrittenBack.test_a_known_key_is_written_as_its_issue_number"
+      ],
+      [
+        "S43708-THE-DEFAULT-REGISTRY-IS-THE-REGISTRY-DIRECTORY",
+        "tools/parity-oracle/generate.py",
+        "REGISTRY = HERE.parent / \"registry\"",
+        "REGISTRY = HERE.parent / \"\"",
+        "the default registry is the registry directory (SPEC-437 R6, A9)",
+        "test_generate.EachOperandOfTheGeneratorIsHeld.test_the_default_registry_names_every_committed_golden"
+      ],
+      [
+        "S43709-A-BAD-NAME-STRING-IS-REFUSED",
+        "tools/parity-oracle/generate.py",
+        "if not isinstance(name, str) or not GOLDEN_NAME.fullmatch(name):",
+        "if not isinstance(name, str) and not GOLDEN_NAME.fullmatch(name):",
+        "a registration whose name is not a golden's name is refused (SPEC-437 R6, A10)",
+        "test_generate.EachOperandOfTheGeneratorIsHeld.test_a_registration_is_refused_for_each_operand_alone"
+      ],
+      [
+        "S43710-AN-EMPTY-NAMES-LIST-IS-REFUSED",
+        "tools/parity-oracle/generate.py",
+        "not isinstance(names, list)\n            or not names\n",
+        "not isinstance(names, list)\n            and not names\n",
+        "a registration with an empty names list is refused (SPEC-437 R6, A10)",
+        "test_generate.EachOperandOfTheGeneratorIsHeld.test_a_registration_is_refused_for_each_operand_alone"
+      ],
+      [
+        "S43711-A-NAMES-LIST-HOLDING-A-NON-STRING-IS-REFUSED",
+        "tools/parity-oracle/generate.py",
+        "            or not all(isinstance(n, str) for n in names)",
+        "            and not all(isinstance(n, str) for n in names)",
+        "a registration whose names list holds a non-string is refused (SPEC-437 R6, A10)",
+        "test_generate.EachOperandOfTheGeneratorIsHeld.test_a_registration_is_refused_for_each_operand_alone"
+      ],
+      [
+        "S43712-A-FUNCTION-AND-CASES-ARE-EACH-CHECKED",
+        "tools/parity-oracle/generate.py",
+        "if not isinstance(registration[\"function\"], str) or not callable(",
+        "if not isinstance(registration[\"function\"], str) and not callable(",
+        "a registration's function name and case builder are each checked (SPEC-437 R6, A10)",
+        "test_generate.EachOperandOfTheGeneratorIsHeld.test_a_registration_is_refused_for_each_operand_alone"
+      ],
+      [
+        "S43713-THE-ADAPTER-KIND-IS-CHECKED",
+        "tools/parity-oracle/generate.py",
+        "if kind == \"adapter\" and not (",
+        "if kind == \"\" and not (",
+        "an adapter registration's kind is checked (SPEC-437 R6, A10)",
+        "test_generate.EachOperandOfTheGeneratorIsHeld.test_a_registration_is_refused_for_each_operand_alone"
+      ],
+      [
+        "S43714-THE-ADAPTER-IS-CHECKED-BESIDE-ITS-NOTE",
+        "tools/parity-oracle/generate.py",
+        "callable(registration[\"adapter\"])\n        and isinstance(registration[\"note\"], str)",
+        "callable(registration[\"adapter\"])\n        or isinstance(registration[\"note\"], str)",
+        "an adapter is checked beside its note (SPEC-437 R6, A10)",
+        "test_generate.EachOperandOfTheGeneratorIsHeld.test_a_registration_is_refused_for_each_operand_alone"
+      ],
+      [
+        "S43715-A-BLANK-NOTE-IS-REFUSED",
+        "tools/parity-oracle/generate.py",
+        "        and registration[\"note\"].strip()",
+        "        or registration[\"note\"].strip()",
+        "an adapter with a blank note is refused (SPEC-437 R6, A10)",
+        "test_generate.EachOperandOfTheGeneratorIsHeld.test_a_registration_is_refused_for_each_operand_alone"
+      ],
+      [
+        "S43716-A-MISSING-DEPENDENCY-IS-RAISED",
+        "tools/parity-oracle/generate.py",
+        "if missing.name is None or not (",
+        "if missing.name is None and not (",
+        "a dependency the predecessor lacks is raised by its name (SPEC-437 R6, A11)",
+        "test_generate.GeneratorWritesGoldensFromTheRegistry.test_a_dependency_the_predecessor_lacks_is_raised_by_its_name"
+      ],
+      [
+        "S43717-A-DICTS-VALUES-ARE-MADE-PLAIN",
+        "tools/parity-oracle/generate.py",
+        "return {key: plain(item) for key, item in value.items()}",
+        "return None",
+        "a dict's values are made plain (SPEC-437 R6, A12)",
+        "test_generate.EachOperandOfTheGeneratorIsHeld.test_a_date_inside_a_dict_or_a_list_is_written_as_its_epoch_day"
+      ],
+      [
+        "S43718-A-LISTS-ITEMS-ARE-MADE-PLAIN",
+        "tools/parity-oracle/generate.py",
+        "return [plain(item) for item in value]",
+        "return None",
+        "a list's items are made plain (SPEC-437 R6, A12)",
+        "test_generate.EachOperandOfTheGeneratorIsHeld.test_a_date_inside_a_dict_or_a_list_is_written_as_its_epoch_day"
+      ],
+      [
+        "S43719-AN-EMPTY-CASE-CLASS-IS-REFUSED",
+        "tools/parity-oracle/generate.py",
+        "if edge is not None and not (isinstance(edge, str) and edge):",
+        "if edge is not None and not (isinstance(edge, str) or edge):",
+        "a case whose class is the empty name is refused (SPEC-437 R6, A13)",
+        "test_generate.EachOperandOfTheGeneratorIsHeld.test_a_case_whose_class_is_the_empty_name_is_refused"
+      ],
+      [
+        "S43720-A-NAN-INPUT-IS-REFUSED",
+        "tools/parity-oracle/generate.py",
+        "json.dumps(arguments, allow_nan=False)",
+        "json.dumps(arguments, allow_nan=True)",
+        "a case input holding NaN is refused as strict JSON refuses it (SPEC-437 R6, A14)",
+        "test_generate.EachOperandOfTheGeneratorIsHeld.test_a_case_input_holding_nan_is_refused_before_the_predecessor_runs"
+      ],
+      [
+        "S43721-THE-CHECKOUT-FLAG-IS-REQUIRED",
+        "tools/parity-oracle/generate.py",
+        "\"--source-checkout\", required=True,",
+        "\"--source-checkout\", required=False,",
+        "main requires its source checkout flag (SPEC-437 R6, A15)",
+        "test_generate.EachOperandOfTheGeneratorIsHeld.test_main_requires_its_checkout_and_package_and_states_each_help_text"
+      ],
+      [
+        "S43722-THE-CHECKOUT-FLAG-STATES-ITS-HELP",
+        "tools/parity-oracle/generate.py",
+        "help=\"the predecessor's private checkout\"",
+        "help=\"\"",
+        "the source checkout flag states its help text (SPEC-437 R6, A15)",
+        "test_generate.EachOperandOfTheGeneratorIsHeld.test_main_requires_its_checkout_and_package_and_states_each_help_text"
+      ],
+      [
+        "S43723-THE-PACKAGE-FLAG-IS-REQUIRED",
+        "tools/parity-oracle/generate.py",
+        "\"--package\",\n        required=True,",
+        "\"--package\",\n        required=False,",
+        "main requires its package flag (SPEC-437 R6, A15)",
+        "test_generate.EachOperandOfTheGeneratorIsHeld.test_main_requires_its_checkout_and_package_and_states_each_help_text"
+      ],
+      [
+        "S43724-THE-PACKAGE-FLAG-STATES-ITS-HELP",
+        "tools/parity-oracle/generate.py",
+        "help=\"the predecessor's top-level package, which registry paths are relative to\"",
+        "help=\"\"",
+        "the package flag states its help text (SPEC-437 R6, A15)",
+        "test_generate.EachOperandOfTheGeneratorIsHeld.test_main_requires_its_checkout_and_package_and_states_each_help_text"
+      ],
+      [
+        "S43725-THE-REGISTRY-FLAG-STATES-ITS-HELP",
+        "tools/parity-oracle/generate.py",
+        "help=\"the registry directory (default: registry/)\"",
+        "help=\"\"",
+        "the registry flag states its help text (SPEC-437 R6, A15)",
+        "test_generate.EachOperandOfTheGeneratorIsHeld.test_main_requires_its_checkout_and_package_and_states_each_help_text"
+      ],
+      [
+        "S43726-NO-BYTECODE-IS-WRITTEN-INTO-THE-CHECKOUT",
+        "tools/parity-oracle/generate.py",
+        "sys.dont_write_bytecode = sys.dont_write_bytecode, True",
+        "sys.dont_write_bytecode = sys.dont_write_bytecode, False",
+        "the generator writes no bytecode into the predecessor's checkout (SPEC-437 R6, A16)",
+        "test_generate.GeneratorWritesGoldensFromTheRegistry.test_the_checkout_is_imported_before_any_other_path_and_gets_no_bytecode"
+      ],
+      [
+        "S43727-THE-CHECKOUT-IS-FIRST-ON-THE-PATH",
+        "tools/parity-oracle/generate.py",
+        "sys.path.insert(0, str(checkout))",
+        "sys.path.insert(1, str(checkout))",
+        "the predecessor's checkout is first on the import path (SPEC-437 R6, A16)",
+        "test_generate.GeneratorWritesGoldensFromTheRegistry.test_the_checkout_is_imported_before_any_other_path_and_gets_no_bytecode"
+      ]
+    ]
+  }
+}

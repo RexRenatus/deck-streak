@@ -46,7 +46,7 @@ fn the_table_holds_each_boundary_and_nothing_beside_it() {
 /// The table is sorted and no two ranges touch or overlap, which the binary search relies on.
 #[test]
 fn the_table_is_sorted_and_its_ranges_are_disjoint() {
-    assert!(!RANGES.is_empty());
+    assert_ne!(RANGES.as_slice(), []);
     for range in RANGES {
         assert!(range.0 <= range.1, "a range runs upward");
     }

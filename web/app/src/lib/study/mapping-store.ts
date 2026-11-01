@@ -3,10 +3,10 @@
 // keys, is kept per device under one local-storage key, and the review's input passes it to #663's
 // readers. A mode the learner never changed is not stored, so it keeps its default; a value this
 // page cannot read is no mapping; and a storage the browser refuses keeps a change for the page.
-import type { Intent } from '$lib/remote/actions';
-import type { PadSnapshot } from '$lib/remote/gamepad';
-import type { KeyInput } from '$lib/remote/keys';
-import { BUTTONS, KEYS, STICK } from '$lib/remote/mapping';
+import type { Intent } from '#lib/remote/actions.js';
+import type { PadSnapshot } from '#lib/remote/gamepad.js';
+import type { KeyInput } from '#lib/remote/keys.js';
+import { BUTTONS, KEYS, STICK } from '#lib/remote/mapping.js';
 import { Unstored, type SwitchStorage } from './input';
 
 /** The one local-storage key the mapping is kept under, on this device. */
