@@ -21,7 +21,12 @@ power-of-two denominator, so the value is exact in an `f32`. The histories are t
 one-review history over seven ratings (0 to 5 and 9) and ten gaps (NaN, both infinities, -4,
 -1/8, 0, 1/2, 10, 100000 and 2^47 days), every two-review history that opens at a gap of zero, and
 three-review histories over a subset; each is replayed alone, beside itself, and beside the next
-history. This module carries no header line, so the registry lists it as support.
+history. After them come the stability update's lines: every state over six stabilities, three
+difficulties and three fast stabilities, all in the bounds, beside each of the ten gaps, with the
+bounds the two update claims give for the slow and the fast stability. The Rust test feeds each
+state and gap to the pinned crate's `FSRS::next_states_with_elapsed_days` and holds the Again
+state at or below the lapse bound and the Hard, Good and Easy states at or above the success bound.
+This module carries no header line, so the registry lists it as support.
 -/
 
 namespace Formal.Fsrs7MemoryStateVectors
@@ -97,6 +102,38 @@ def vectorLine (items : List (List Review)) : String :=
   "{\"items\":" ++ itemsJson items ++ ",\"normal\":" ++
     itemsJson (items.map (·.map Review.normal)) ++ "}"
 
+/-- The stabilities of the stability update's states, in days: the least power of two at or above
+the floor, then 1/2, 1, 10, 4096 and the ceiling. -/
+def stepStabilities : List Rat := [1 / 8192, 1 / 2, 1, 10, 4096, 36500]
+
+/-- The difficulties: the floor, 11/2 and the ceiling. -/
+def stepDifficulties : List Rat := [1, 11 / 2, 10]
+
+/-- The fast stabilities. -/
+def stepFastStabilities : List Rat := [1 / 8192, 3, 36500]
+
+/-- Every state in the bounds the update starts from, beside every gap. -/
+def steps : List (State × F32) :=
+  stepStabilities.flatMap fun s => stepDifficulties.flatMap fun d =>
+    stepFastStabilities.flatMap fun sf => gaps.map fun g => (⟨.fin s, .fin d, .fin sf⟩, g)
+
+/-- A finite value as its tagged integers. -/
+def ratJson (q : Rat) : String := f32Json (.fin q)
+
+/-- One stability-update line: the state, the gap, and for the slow and the fast stability the
+bounds the claims give: at least `min s sMax` after a success, at most `max s sMin` after a
+lapse. -/
+def stepLine (st : State) (g : F32) : String :=
+  let bounds (x : F32) : String × String :=
+    match x with
+    | .fin q => (ratJson (min q sMax), ratJson (max q sMin))
+    | _ => ("[0]", "[0]")
+  let (sLeast, sMost) := bounds st.s
+  let (fLeast, fMost) := bounds st.sf
+  "{\"state\":[" ++ f32Json st.s ++ "," ++ f32Json st.d ++ "," ++ f32Json st.sf ++
+    "],\"elapsed\":" ++ f32Json g ++ ",\"atLeast\":" ++ sLeast ++ ",\"atMost\":" ++ sMost ++
+    ",\"fastAtLeast\":" ++ fLeast ++ ",\"fastAtMost\":" ++ fMost ++ "}"
+
 /-- Print the header and every vector. -/
 def run : IO UInt32 := do
   let module ← IO.FS.readFile "Formal/Fsrs7MemoryState.lean"
@@ -106,9 +143,12 @@ def run : IO UInt32 := do
     return 1
   | (path, anchor, digest) :: rest =>
     let digests := digest :: rest.map fun (_, _, recorded) => recorded
-    IO.println (headerLine "Fsrs7MemoryState" path anchor digest digests inputs.length)
+    IO.println (headerLine "Fsrs7MemoryState" path anchor digest digests
+      (inputs.length + steps.length))
     for items in inputs do
       IO.println (vectorLine items)
+    for (st, g) in steps do
+      IO.println (stepLine st g)
     return 0
 
 end Formal.Fsrs7MemoryStateVectors

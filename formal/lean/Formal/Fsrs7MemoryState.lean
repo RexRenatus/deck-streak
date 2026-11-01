@@ -6,6 +6,10 @@
 -- @phx witness a_batch_keyed_on_the_starting_states_alone_gives_every_card_the_first_cards_state kills=the_batch_replays_each_card_as_alone
 -- @phx theorem a_review_reads_through_its_clamped_rating_and_gap ramp=report
 -- @phx witness a_replay_that_reads_the_raw_gap_tells_a_negative_gap_from_zero kills=a_review_reads_through_its_clamped_rating_and_gap
+-- @phx theorem a_success_never_lowers_the_stability ramp=report
+-- @phx witness a_growth_factor_without_its_one_lets_a_success_lower_the_stability kills=a_success_never_lowers_the_stability
+-- @phx theorem a_lapse_never_raises_the_stability ramp=report
+-- @phx witness a_lapse_that_keeps_the_larger_stability_raises_it kills=a_lapse_never_raises_the_stability
 -- @phx vectors formal/vectors/fsrs7-memory-state.jsonl
 
 /-!
@@ -27,6 +31,14 @@ infinities included, and every list of histories with no empty history:
   below zero, or NaN, replays as a gap of zero, for both methods; a rating of 0 keeps its own
   meaning.
 
+For the stability update `stability_for_set_scalar`, which sets the slow and the fast stability
+after each review, under `Laws`:
+- `a_success_never_lowers_the_stability`: a rating of 2 or more from a stability of at least
+  0.0001 days, a difficulty of at most 10 and a retrievability of at most 1 leaves the stability at
+  least where it was, or at 36500 days if it was above.
+- `a_lapse_never_raises_the_stability`: a rating of 1, or of 0, which the update reads as 1, leaves
+  the stability at most where it was, or at 0.0001 days if it was below. This half rests on no law.
+
 **What is ported.** The pinned revision's `FSRS::memory_state`, `memory_state_batch`,
 `forward_reviews`, `init_state_from_first_review`, `step` and `validate_state`, branch for branch,
 at the place each clamps its values, compares a rating with 0, or reads a gap through
@@ -39,6 +51,14 @@ stability and difficulty updates, and the fast stability's product with 0.8. Eac
 of the claims (`Ops`), so every claim holds for every value they compute, finite or not, and so
 rests on no fact about `powf`, `exp` or `ln`. The crate's source is not in this tree, so no cover
 names it: a re-pin of the crate does not stale this entry.
+
+The stability update is ported over its finite values, branch for branch: the rating's clamp, the
+hard and easy factors, the lapse's `min`, the growth factor's `+ 1.0`, the success's `max` and the
+final clamp. `exp`, `powf` and the weights are parameters (`Arith`), held to `Laws`: `exp` is
+positive, monotone and 1 at 0, `powf` is positive on a positive base, and every weight is at least 0,
+as `FSRS::new`'s clip leaves each of the 34 (parameter_clipper_v7.rs:31-47). The clip also keeps
+every operand small, so no step overflows; the retrievability's bound of 1 is the curve's ceiling
+(`lean/Fsrs7Stock`).
 -/
 
 namespace Formal.Fsrs7MemoryState
@@ -496,6 +516,119 @@ theorem a_review_reads_through_its_clamped_rating_and_gap : ReadingRule replay :
     rw [batch_single, batch_single]
     exact single items
 
+/-! ## The stability update -/
+
+/-- The steps of `stability_for_set_scalar` left abstract: `exp`, `powf`, and the clipped
+parameters `w`, over finite values. -/
+structure Arith where
+  exp : Rat → Rat
+  pow : Rat → Rat → Rat
+  w : Nat → Rat
+
+/-- What the update's claims rest on. -/
+structure Laws (a : Arith) : Prop where
+  exp_pos : ∀ x, 0 < a.exp x
+  exp_mono : ∀ x y, x ≤ y → a.exp x ≤ a.exp y
+  exp_zero : a.exp 0 = 1
+  pow_pos : ∀ b e, 0 < b → 0 < a.pow b e
+  w_nonneg : ∀ i, 0 ≤ a.w i
+
+/-- `f32::clamp(lo, hi)` on a finite value. -/
+def clampQ (q lo hi : Rat) : Rat :=
+  if q < lo then lo else if hi < q then hi else q
+
+/-- `stability_for_set_scalar`, the growth factor's `+ 1.0` (`growthOne`) and the lapse's `min`
+(`keepSmaller`) as switches. -/
+def stabilityForSetWith (growthOne keepSmaller : Bool) (a : Arith) (lastS lastD r : Rat)
+    (rating start : Nat) : Rat :=
+  let rr := clampRating rating
+  let hard := if rr = 2 then a.w (start + 6) else 1
+  let easy := if rr = 4 then a.w (start + 7) else 1
+  let fail := a.w (start + 3) * (a.pow (lastS + 1) (a.w (start + 4)) - 1) *
+    a.exp ((1 - r) * a.w (start + 5))
+  let pls := if keepSmaller then min lastS fail else max lastS fail
+  let growth := a.exp (a.w start - 3 / 2) * (11 - lastD) * a.pow lastS (-a.w (start + 1)) *
+    (a.exp ((1 - r) * a.w (start + 2)) - 1) * hard * easy
+  let sinc := if growthOne then growth + 1 else growth
+  clampQ (if 1 < rr then max pls (lastS * sinc) else pls) sMin sMax
+
+/-- The code: the `+ 1.0` and the lapse's `min`. -/
+def stabilityForSet : Arith → Rat → Rat → Rat → Nat → Nat → Rat :=
+  stabilityForSetWith true true
+
+/-- The success claim over a stability update. -/
+def SuccessRule (f : Arith → Rat → Rat → Rat → Nat → Nat → Rat) : Prop :=
+  ∀ a, Laws a → ∀ s d r g start, sMin ≤ s → d ≤ dMax → r ≤ 1 → 2 ≤ g →
+    min s sMax ≤ f a s d r g start
+
+/-- The lapse claim over a stability update. -/
+def LapseRule (f : Arith → Rat → Rat → Rat → Nat → Nat → Rat) : Prop :=
+  ∀ a s d r g start, g ≤ 1 → f a s d r g start ≤ max s sMin
+
+/-- A value at least `m`, itself at least the floor, clamps to at least `min m sMax`. -/
+theorem min_le_clampQ {m x : Rat} (hm : sMin ≤ m) (hx : m ≤ x) :
+    min m sMax ≤ clampQ x sMin sMax := by
+  have := sMin_le
+  unfold clampQ
+  rw [Rat.min_def]
+  split <;> split <;> (try split) <;> grind
+
+/-- A value at most `m` clamps to at most `max m sMin`. -/
+theorem clampQ_le_max {m x : Rat} (hx : x ≤ m) : clampQ x sMin sMax ≤ max m sMin := by
+  have := sMin_le
+  unfold clampQ
+  rw [Rat.max_def]
+  split <;> split <;> (try split) <;> grind
+
+/-- The growth factor's product is at least 0 under the laws. -/
+theorem growth_nonneg (a : Arith) (l : Laws a) {s d r : Rat} (rr start : Nat) (hs : 0 < s)
+    (hd : d ≤ dMax) (hr : r ≤ 1) :
+    0 ≤ a.exp (a.w start - 3 / 2) * (11 - d) * a.pow s (-a.w (start + 1)) *
+      (a.exp ((1 - r) * a.w (start + 2)) - 1) * (if rr = 2 then a.w (start + 6) else 1) *
+      (if rr = 4 then a.w (start + 7) else 1) := by
+  have e1 := Rat.le_of_lt (l.exp_pos (a.w start - 3 / 2))
+  have hd10 : dMax = 10 := rfl
+  have e2 : 0 ≤ 11 - d := by grind
+  have e3 := Rat.le_of_lt (l.pow_pos s (-a.w (start + 1)) hs)
+  have m := Rat.mul_nonneg (show 0 ≤ 1 - r by grind) (l.w_nonneg (start + 2))
+  have x := l.exp_mono 0 _ m
+  rw [l.exp_zero] at x
+  have e4 : 0 ≤ a.exp ((1 - r) * a.w (start + 2)) - 1 := by grind
+  have e5 : 0 ≤ (if rr = 2 then a.w (start + 6) else 1) := by
+    split
+    · exact l.w_nonneg _
+    · decide +kernel
+  have e6 : 0 ≤ (if rr = 4 then a.w (start + 7) else 1) := by
+    split
+    · exact l.w_nonneg _
+    · decide +kernel
+  exact Rat.mul_nonneg (Rat.mul_nonneg (Rat.mul_nonneg (Rat.mul_nonneg (Rat.mul_nonneg e1 e2) e3)
+    e4) e5) e6
+
+/-- A stability times a factor of at least 1, under a `max`, is at least the stability. -/
+theorem le_max_mul_succ {s p q : Rat} (hs : 0 < s) (hp : 0 ≤ p) : s ≤ max q (s * (p + 1)) := by
+  have h0 := Rat.mul_nonneg (Rat.le_of_lt hs) hp
+  have h1 : s * (p + 1) = s * p + s := by grind
+  rw [Rat.max_def]
+  split <;> grind
+
+theorem a_success_never_lowers_the_stability : SuccessRule stabilityForSet := by
+  intro a l s d r g start hs hd hr hg
+  have hrr : 1 < clampRating g := by unfold clampRating; omega
+  have s0 : 0 < s := by
+    have : (0 : Rat) < sMin := by decide +kernel
+    grind
+  simp only [stabilityForSet, stabilityForSetWith, hrr, ↓reduceIte]
+  exact min_le_clampQ hs (le_max_mul_succ s0 (growth_nonneg a l (clampRating g) start s0 hd hr))
+
+theorem a_lapse_never_raises_the_stability : LapseRule stabilityForSet := by
+  intro a s d r g start hg
+  have hrr : ¬ 1 < clampRating g := by unfold clampRating; omega
+  simp only [stabilityForSet, stabilityForSetWith, hrr, ↓reduceIte]
+  apply clampQ_le_max
+  rw [Rat.min_def]
+  split <;> grind
+
 /-! ## The witnesses -/
 
 /-- A replay that returns `forward_reviews`'s state with no `validate_state`. -/
@@ -552,6 +685,43 @@ theorem a_replay_that_reads_the_raw_gap_tells_a_negative_gap_from_zero :
     ¬ ReadingRule replayReadingTheRawGap := by
   intro h
   have := h gapOps .single [[⟨3, .fin 0⟩, ⟨3, .fin (-4)⟩]]
+  revert this
+  decide +kernel
+
+/-- An update whose growth factor drops its `+ 1.0`. -/
+def stabilityForSetWithNoOne : Arith → Rat → Rat → Rat → Nat → Nat → Rat :=
+  stabilityForSetWith false true
+
+/-- Arithmetic with `exp` and `powf` 1 everywhere and every weight 0. -/
+def flatArith : Arith := ⟨fun _ => 1, fun _ _ => 1, fun _ => 0⟩
+
+theorem flatArith_laws : Laws flatArith :=
+  ⟨fun _ => show (0 : Rat) < 1 by decide +kernel, fun _ _ _ => Rat.le_refl, rfl,
+    fun _ _ _ => show (0 : Rat) < 1 by decide +kernel, fun _ => Rat.le_refl⟩
+
+/-- A Good review of a one-day stability: with no `+ 1.0` the growth factor is 0, and the
+stability falls to the floor. -/
+theorem a_growth_factor_without_its_one_lets_a_success_lower_the_stability :
+    ¬ SuccessRule stabilityForSetWithNoOne := by
+  intro h
+  have := h flatArith flatArith_laws 1 1 0 3 7 (by decide +kernel) (by decide +kernel)
+    (by decide +kernel) (by decide)
+  revert this
+  decide +kernel
+
+/-- An update whose lapse keeps the larger of the stability and the lapse's own. -/
+def stabilityForSetKeepingTheLarger : Arith → Rat → Rat → Rat → Nat → Nat → Rat :=
+  stabilityForSetWith true false
+
+/-- Arithmetic with `exp` 1 everywhere, `powf` 3 everywhere and every weight 1. -/
+def lapseArith : Arith := ⟨fun _ => 1, fun _ _ => 3, fun _ => 1⟩
+
+/-- An Again review of a one-day stability whose lapse stability is 2 days: keeping the larger,
+the stability rises to 2. -/
+theorem a_lapse_that_keeps_the_larger_stability_raises_it :
+    ¬ LapseRule stabilityForSetKeepingTheLarger := by
+  intro h
+  have := h lapseArith 1 1 0 1 7 (by decide)
   revert this
   decide +kernel
 

@@ -5,8 +5,10 @@
 //! port reads them, and no state, because the port leaves the arithmetic abstract: every state
 //! the replay returns lies in the scheduler's bounds, the batch returns what the card-by-card
 //! replay returns bit for bit, and the histories as read replay to the same states as the
-//! histories as they arrive. The crate's one dependency stays the pinned scheduler, so the vectors
-//! are read by a small parser of integer arrays.
+//! histories as they arrive. The update lines that follow carry a state in the bounds and a gap:
+//! from each, the pinned scheduler's next states hold the two stability-update claims, Again never
+//! raising the stability and Hard, Good and Easy never lowering it. The crate's one dependency
+//! stays the pinned scheduler, so the vectors are read by a small parser of integer arrays.
 
 #![allow(
     clippy::expect_used,
@@ -170,6 +172,56 @@ fn bounded(state: &MemoryState) -> bool {
         && (S_MIN..=S_MAX).contains(&state.stability_fast)
 }
 
+/// The desired retention the update lines read the next states at; the claims judge the memory
+/// states, which do not depend on it.
+const DESIRED_RETENTION: f32 = 0.9;
+
+/// A stability-update line: under every model, the four next states from the line's state after
+/// its gap. The Again state lies at or below the lapse bound and the Hard, Good and Easy states at
+/// or above the success bound, for the slow and the fast stability alike. Returns the number of
+/// next states judged.
+fn the_update_holds_its_bounds(line: &str, models: &[(&'static str, FSRS)]) -> usize {
+    let state_value = field(line, "state");
+    let [s, d, sf] = state_value.list() else {
+        panic!("a state of three values, not {state_value:?}");
+    };
+    let state = MemoryState {
+        stability: float(s),
+        difficulty: float(d),
+        stability_fast: float(sf),
+    };
+    let elapsed = float(&field(line, "elapsed"));
+    let at_least = float(&field(line, "atLeast"));
+    let at_most = float(&field(line, "atMost"));
+    let fast_at_least = float(&field(line, "fastAtLeast"));
+    let fast_at_most = float(&field(line, "fastAtMost"));
+    let mut judged = 0_usize;
+    for (name, model) in models {
+        let next = model
+            .next_states_with_elapsed_days(Some(state), DESIRED_RETENTION, elapsed)
+            .expect("every state in the bounds steps");
+        let again = next.again.memory;
+        assert!(
+            again.stability <= at_most && again.stability_fast <= fast_at_most,
+            "{name}: Again from {line} gives {again:?}, above the lapse bound"
+        );
+        judged += 1;
+        for (rating, item) in [
+            ("Hard", &next.hard),
+            ("Good", &next.good),
+            ("Easy", &next.easy),
+        ] {
+            let after = item.memory;
+            assert!(
+                after.stability >= at_least && after.stability_fast >= fast_at_least,
+                "{name}: {rating} from {line} gives {after:?}, below the success bound"
+            );
+            judged += 1;
+        }
+    }
+    judged
+}
+
 #[test]
 fn the_replay_holds_the_lean_claims_on_every_vector() {
     let mut lines = VECTORS.lines();
@@ -187,7 +239,15 @@ fn the_replay_holds_the_lean_claims_on_every_vector() {
 
     let mut examined = 0_i64;
     let mut states = 0_usize;
+    let mut steps = 0_usize;
+    let mut stepped = 0_usize;
     for line in lines {
+        if line.contains("\"state\":") {
+            stepped += the_update_holds_its_bounds(line, &models);
+            steps += 1;
+            examined += 1;
+            continue;
+        }
         let arriving = field(line, "items");
         let read = field(line, "normal");
         for (name, model) in &models {
@@ -230,9 +290,16 @@ fn the_replay_holds_the_lean_claims_on_every_vector() {
         examined, declared,
         "the header declares {declared} vector(s)"
     );
-    println!("examined {examined} vector(s), {states} state(s) in bounds");
+    println!(
+        "examined {examined} vector(s), {states} state(s) in bounds, {steps} update line(s), \
+         {stepped} next state(s) within the update bounds"
+    );
     assert!(
         examined > 0,
         "examined 0 vectors: the population is empty, so nothing was judged"
+    );
+    assert!(
+        steps > 0,
+        "examined 0 update lines: the update claims judged nothing"
     );
 }
