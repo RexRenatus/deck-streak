@@ -114,6 +114,11 @@ fn entity(body: &str) -> Option<char> {
 /// starts before the last match ends is skipped, so the search resumes after a match, and each
 /// occurrence is tried at most once: a match that ends where it began, or before, cannot hold the
 /// search in place, and what it matched is listed once for each occurrence tried.
+///
+/// # Panics
+///
+/// When `matcher` answers a match that ends inside a character or past the text's end: neither is
+/// a position in `text`.
 pub fn each_match<T>(
     text: &str,
     pattern: &str,
@@ -128,6 +133,11 @@ pub fn each_match<T>(
         match matcher(start) {
             ControlFlow::Break(()) => break,
             ControlFlow::Continue(Some((item, end))) => {
+                assert!(
+                    text.is_char_boundary(end),
+                    "a match ends inside a character or past the text: at byte {end} of {}",
+                    text.len()
+                );
                 found.push(item);
                 resume = end;
             }
