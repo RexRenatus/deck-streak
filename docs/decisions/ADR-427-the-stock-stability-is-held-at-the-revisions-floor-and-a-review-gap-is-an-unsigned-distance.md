@@ -229,9 +229,9 @@ Considered options:
 - `replay.rs` carries three hidden public functions (D6) that no production caller uses.
 - #823's "the interval it derives" is partly proved: the whole-day mapping is proved, and the revision's Newton and
   bisection derivation (L14, the interval monotone in desired retention) stays a recorded gap, accepted by main in
-  writing (N-1370 A1).
+  writing.
 - The witnesses of D7 are planted variants, which phx-formal-lean's witness rule does not yet name; main filed that
-  as skill feedback (N-1370 A4).
+  as skill feedback.
 
 ## Confirmation
 

@@ -170,9 +170,9 @@ the floor as the stock stability (R2), and whose Hard, Good and Easy rows are un
 - It does not prove the interval monotone in desired retention (L14): the revision's Newton and bisection search is
   not ported, and the property was measured clean, not proved. #823's "the interval it derives" is therefore partly
   proved: the whole-day mapping (R9's L8) is proved, the derivation is a recorded gap, which main accepted in writing
-  (N-1370 A1) (#823).
+  (#823).
 - It does not prove the difficulty update beyond its clamp (L5); "a higher rating never raises the difficulty" is an
-  optional claim the check named (N-1370 A2) and this delivery leaves (#823).
+  optional claim the check named and this delivery leaves (#823).
 - It does not model the replay's state in TLA+: one caller folds a state local to its call (section 8) (#823).
 - It writes nothing into a collection: the scheduler switch owns the write (#611).
 - It does not change the replay's arithmetic, its methods or its parameters (#641).
@@ -208,14 +208,14 @@ tla/UndoOwnAnswer).
   `lean/Fsrs7PortState` (R11: a refused event leaves the state unchanged; the folded keys strictly increase; a
   checkpoint restores as the state). R4's witness and R6's port read the merge-base's code; every other theorem's
   witness is a planted variant named for a defect class, as main ruled for a verification issue whose code already
-  holds (N-1370 Q2, ADR-427 D7).
-- **TLA+: NOT APPLICABLE by surface** (main's written answer, N-1370 Q1). The replay reads one statement and
+  holds (ADR-427 D7).
+- **TLA+: NOT APPLICABLE by surface** (main's written answer). The replay reads one statement and
   computes in memory; `stock_fields` writes a card its caller owns, and nothing writes the collection. No second
   actor shares state with it: the port's state is made per call by `Dispatcher::replay` and dropped at its end, and
   its `OnceCell` memo is `!Sync`. The state's discipline is proved in Lean instead (R11). The existing models
   `tla/FullSyncChoice` and `tla/UndoOwnAnswer` cover the full-sync choice and the undo paths, which this delivery
   does not change; the one-preset switch (#611) is not built.
-- **The ledger** (`formal/obligations.json`, ADR-514; N-1370 Q4 and T15). `lean/Fsrs7Stock` and
+- **The ledger** (`formal/obligations.json`, ADR-514). `lean/Fsrs7Stock` and
   `lean/Fsrs7MemoryState` keep, as `lean/ReplayHistory` does: they stay while the FSRS-7 crate stays, and are
   retired with it otherwise. `lean/Fsrs7Schedule` (it writes an engine card) and `lean/Fsrs7PortState` (it covers
   the engine core's port) re-point. All four link O11: their 15 properties are O11's present artifacts, each
