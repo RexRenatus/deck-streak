@@ -52,3 +52,15 @@ did not change.
 
 The mutation rows S41300 to S41303 were each proved by hand over `d4b30543`: the mutant applied, its
 killer run alone and red, the file restored with `git checkout --`, and the killer run again green.
+
+After the merge of dev the band gained S41304 to S41310 (`19606285`, SPEC-413 section 9): three rows for A5's
+test over `day_of` and `stock_fields`, one for the memory-state test over the batch, and three for A7's test over
+the fold's order of check and write and the checkpoint's format byte and key encoding. At `19606285` the whole
+band, S41300 to S41310, was proved by the repository's own prover, `python3 scripts/mutation_rows.py prove --band
+S41300-S41399`: for each row its killer ran alone and passed, one test selected; its one mutant was installed and
+built; its killer ran alone and failed, one test selected; and the file was restored byte for byte, its sha256
+checked. All eleven read KILLED (`rows: examined 11: killed 11, survived 0, void 0`, exit 0). The sha256 of
+`crates/fsrs7/src/stock.rs`, `convert.rs`, `replay.rs` and `crates/engine-core/src/replay.rs` read the same before
+and after, and the tree held no tracked change. Over the same tree `cargo test --locked -p deck-streak-fsrs7`
+passed 22 tests in 11 binaries and `cargo test --locked -p deck-streak-engine-core` 168 tests in 28 binaries. The
+update lines of A6 call the pinned revision and no code in this tree, so no row reaches them.
