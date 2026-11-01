@@ -110,24 +110,28 @@ fn entity(body: &str) -> Option<char> {
 
 /// Each match `matcher` finds where `pattern` occurs in `text`, in order. `matcher` is given where
 /// an occurrence starts, and answers what matched there and where the match ends, nothing when
-/// nothing matches there, or a break when nothing can match there or later. The search resumes
-/// after a match, and after an occurrence where nothing matched.
+/// nothing matches there, or a break when nothing can match there or later. An occurrence that
+/// starts before the last match ends is skipped, so the search resumes after a match, and each
+/// occurrence is tried at most once: a match that ends where it began, or before, cannot hold the
+/// search in place, and what it matched is listed once for each occurrence tried.
 pub fn each_match<T>(
     text: &str,
     pattern: &str,
     mut matcher: impl FnMut(usize) -> ControlFlow<(), Option<(T, usize)>>,
 ) -> Vec<T> {
     let mut found = Vec::new();
-    let mut from = 0;
-    while let Some(offset) = text[from..].find(pattern) {
-        let start = from + offset;
+    let mut resume = 0;
+    for (start, _) in text.match_indices(pattern) {
+        if start < resume {
+            continue;
+        }
         match matcher(start) {
             ControlFlow::Break(()) => break,
             ControlFlow::Continue(Some((item, end))) => {
                 found.push(item);
-                from = end;
+                resume = end;
             }
-            ControlFlow::Continue(None) => from = start + 1,
+            ControlFlow::Continue(None) => {}
         }
     }
     found
