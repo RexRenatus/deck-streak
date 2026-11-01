@@ -47,6 +47,15 @@
     },
     {
       "file": "crates/media/src/scan.rs",
+      "mutant": "replace + with - in push_items",
+      "anchor": "close > at + 1\n        {\n            stack.push(",
+      "reason": "close > at - 1 always holds, so, like the >= mutant, the mutant only adds the empty quoted run whose end the closing quote's character item reaches first.",
+      "evidence": "close is found from at + 1, so close >= at + 1 > at - 1, and at lies past the tag's name, so at - 1 does not wrap: the condition admits exactly what the >= mutant admits, an empty run ending at at + 2, whose record gives why that entry is always popped marked. Measured: with the hand case <img a=\"\">\" src=\"b.png\"> added to the edge cases, the unmutated scan and the mutant both read [\"b.png\"], and the mutant was missed.",
+      "reached_by": "scan_golden::scan_reads_the_engines_grammar_over_hand_cases",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/media/src/scan.rs",
       "mutant": "replace + with * in value_at",
       "anchor": "find_byte(bytes, close + 1, b'>')",
       "reason": "The search for the tag's > then starts at the closing quote instead of after it, and a quote is not >.",
@@ -58,8 +67,8 @@
       "file": "crates/media/src/scan.rs",
       "mutant": "replace + with * in value_at",
       "anchor": "close], end + 1))",
-      "reason": "The match then ends at the tag's > instead of after it, and tag_names resumes by searching for <, which a > is not.",
-      "evidence": "The returned end is used only as tag_names' next from, where text[from..].find('<') runs. bytes[end] is the > that find_byte found, ASCII and so a char boundary, and it is not <, so the search from end finds the same < as the search from end + 1.",
+      "reason": "The match then ends at the tag's > instead of after it, and each_match resumes at any < from the end on, which a > is not.",
+      "evidence": "each_match uses the returned end only as resume, trying each occurrence of < that starts at or after it. A resume of end instead of end + 1 differs only for an occurrence starting at end, and bytes[end] is the > that find_byte found. end is the position of an ASCII byte, so a char boundary, and each_match's boundary assertion holds both ways.",
       "reached_by": "scan_golden::scan_reads_the_engines_grammar_over_hand_cases",
       "issue": "#1060"
     },
@@ -84,9 +93,18 @@
     {
       "file": "crates/media/src/scan.rs",
       "mutant": "replace + with * in value_at",
+      "anchor": "Some((&text[at..stop], stop + 1))",
+      "reason": "The match then ends at the tag's > instead of after it, and each_match resumes at any < from the end on, which a > is not.",
+      "evidence": "each_match uses the returned end only as resume, trying each occurrence of < that starts at or after it. A resume of stop instead of stop + 1 differs only for an occurrence starting at stop, and bytes[stop] is the > this arm matched. stop is the position of an ASCII byte, so a char boundary, and each_match's boundary assertion holds both ways.",
+      "reached_by": "scan_golden::scan_reads_the_grammars_edges_over_hand_cases",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/media/src/scan.rs",
+      "mutant": "replace + with * in value_at",
       "anchor": "stop], end + 1))",
-      "reason": "The match then ends at the tag's > instead of after it, and tag_names resumes by searching for <, which a > is not.",
-      "evidence": "The returned end is used only as tag_names' next from, where text[from..].find('<') runs. bytes[end] is the > that find_byte found, ASCII and so a char boundary, and it is not <, so the search from end finds the same < as the search from end + 1.",
+      "reason": "The match then ends at the tag's > instead of after it, and each_match resumes at any < from the end on, which a > is not.",
+      "evidence": "each_match uses the returned end only as resume, trying each occurrence of < that starts at or after it. A resume of end instead of end + 1 differs only for an occurrence starting at end, and bytes[end] is the > that find_byte found after the space. end is the position of an ASCII byte, so a char boundary, and each_match's boundary assertion holds both ways.",
       "reached_by": "scan_golden::scan_reads_the_engines_grammar_over_hand_cases",
       "issue": "#1060"
     },
@@ -94,8 +112,8 @@
       "file": "crates/media/src/scan.rs",
       "mutant": "replace + with * in sound_at",
       "anchor": "Some((name, close + 1))",
-      "reason": "The next sound search then starts at the tag's ] instead of after it, and [sound: cannot begin at a ].",
-      "evidence": "The returned end is used only as sound_names' next from, where text[from..].find(SOUND_OPEN) runs. text[close] is the ] that find(']') found, ASCII and so a char boundary, and SOUND_OPEN begins with [, so the search from close finds the same match as the search from close + 1.",
+      "reason": "each_match then resumes at the tag's ] instead of after it, and [sound: cannot begin at a ].",
+      "evidence": "each_match uses the returned end only as resume, trying each occurrence of SOUND_OPEN that starts at or after it. A resume of close instead of close + 1 differs only for an occurrence starting at close, and text[close] is the ] that find(']') found, while SOUND_OPEN begins with [. close is the position of an ASCII byte, so a char boundary, and each_match's boundary assertion holds both ways.",
       "reached_by": "scan_golden::scan_reads_the_engines_grammar_over_hand_cases",
       "issue": "#1060"
     },
