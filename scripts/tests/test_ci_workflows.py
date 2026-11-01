@@ -8814,7 +8814,7 @@ class TheHarnessLinksItsOwnRunsFramework(unittest.TestCase):
 
 # The harness's warm (SPEC-339 R12 as #1060 amends it, R15 and R16; ADR-350 D10 to D12): each
 # Harness test step is three steps, side by side: a build for testing; a warm that waits for each
-# simulator's boot, installs the build's app, launches it and ends it, inside one budget, recording
+# simulator's boot, installs the build's app, launches it and ends it, inside its budget, recording
 # each phase; and the tests, run without building, their console teed under pipefail. The Debug
 # warm writes the warm's script once and the Release warm runs it; the report reads the warm's and
 # the consoles' rows.
@@ -8883,7 +8883,7 @@ WARM_TEST_NEEDS = {
     ),
 }
 # What the warm's script holds: both simulators, a boot wait, an install, a launch and an end of the
-# build's own app by its bundle id, each phase run without `check` inside one budget, a record per
+# build's own app by its bundle id, each phase run without `check` inside its budget, a record per
 # step, and a failure only for a name that is not one simulator.
 WARM_SCRIPT_NEEDS = (
     'for simulator in (os.environ["IPHONE_SIM"], os.environ["IPAD_SIM"]):',
@@ -8892,7 +8892,7 @@ WARM_SCRIPT_NEEDS = (
     '["xcrun", "simctl", "launch", udid, bundle]',
     '["xcrun", "simctl", "terminate", udid, bundle]',
     '["CFBundleIdentifier"]',
-    "deadline = time.monotonic() + 480",
+    "left = deadline - time.monotonic()",
     "done = subprocess.run(command, capture_output=True, text=True, timeout=left)",
     'f"warm-{label}.json"',
     "raise SystemExit(1 if problems else 0)",
@@ -8964,6 +8964,57 @@ def harness_warm_problems(workflow):
     reports = [s for s in steps if s.get("name") == "the report"]
     text = str(reports[0].get("run", "")) if len(reports) == 1 else ""
     problems += [f"harness: the report lacks {n}" for n in WARM_REPORT_NEEDS if n not in text]
+    return problems
+
+
+# The warm's budget for each simulator and each session's longest end (SPEC-339 R15 and R16 as #1074
+# amends them; ADR-350 D13 and D14): each simulator's phases run inside a budget of their own, set
+# for each step, so the first simulator's slow boot cannot spend the second's warm; and the report
+# reads, per simulator and step, the longest time XCTest took to end an earlier instance.
+WARM_BUDGET = 'budget = {"debug": 480, "release": 120}[label]'
+WARM_DEADLINE = "deadline = time.monotonic() + budget"
+WARM_PHASES = "for phase, command in ("
+WARM_END_NEEDS = (
+    "def end_rows(label, title):",
+    'rows.append((f"{title} longest end, {simulator}", value))',
+    'end_rows("debug", "Debug")',
+    'end_rows("release", "Release")',
+)
+
+
+def harness_warm_budget_problems(workflow):
+    """Each way the `harness` job's warm could let one simulator spend another's budget, or its
+    report miss a session's longest end, named (SPEC-339 R15 and R16 as #1074 amends them): the
+    warm's script sets each step's budget once, and each simulator's deadline once, inside the
+    simulator loop and before its phases; and the report reads each step's longest ends."""
+    steps = ((workflow.get("jobs") or {}).get("harness") or {}).get("steps") or []
+    warms = [s for s in steps if s.get("name") == WARM_STEPS["debug"][1]]
+    lines = str(warms[0].get("run", "")).splitlines() if len(warms) == 1 else []
+    bare = [line.strip() for line in lines]
+    problems = []
+    if bare.count(WARM_BUDGET) != 1:
+        problems.append(
+            f"harness: {bare.count(WARM_BUDGET)} budget lines in the warm's script, not one"
+        )
+    deadlines = [at for at, line in enumerate(bare) if line.startswith("deadline = ")]
+    loops = [at for at, line in enumerate(bare) if line == WARM_SCRIPT_NEEDS[0]]
+    phases = [at for at, line in enumerate(bare) if line == WARM_PHASES]
+    if len(deadlines) != 1:
+        problems.append(f"harness: {len(deadlines)} deadline lines in the warm's script, not one")
+    elif bare[deadlines[0]] != WARM_DEADLINE:
+        problems.append(
+            f"harness: the warm's deadline is {bare[deadlines[0]]!r}, not {WARM_DEADLINE!r}"
+        )
+    elif len(loops) != 1 or len(phases) != 1:
+        problems.append("harness: the warm's script has not one simulator loop and one phase loop")
+    else:
+        at, loop, phase = deadlines[0], loops[0], phases[0]
+        depth = [len(lines[i]) - len(lines[i].lstrip()) for i in (loop, at, phase)]
+        if not (loop < at < phase and depth[0] < depth[1] == depth[2]):
+            problems.append("harness: the warm's deadline is not per simulator, before its phases")
+    reports = [s for s in steps if s.get("name") == "the report"]
+    text = str(reports[0].get("run", "")) if len(reports) == 1 else ""
+    problems += [f"harness: the report lacks {n}" for n in WARM_END_NEEDS if n not in text]
     return problems
 
 
@@ -9064,7 +9115,7 @@ class TheHarnessWarmsEachSimulatorBeforeItsTests(unittest.TestCase):
                 [script_lacks + WARM_SCRIPT_NEEDS[4]],
             ),
             "no budget": (
-                replaced(debug_warm, "+ 480", "+ 10**9"),
+                replaced(debug_warm, "left = deadline - time.monotonic()", "left = 10**9"),
                 [script_lacks + WARM_SCRIPT_NEEDS[6]],
             ),
             "a phase that fails the warm": (
@@ -9092,6 +9143,63 @@ class TheHarnessWarmsEachSimulatorBeforeItsTests(unittest.TestCase):
         for name, (workflow, wanted) in examined("planted warm jobs", list(plants.items())):
             with self.subTest(plant=name):
                 self.assertEqual(harness_warm_problems(workflow), wanted, name)
+
+    def test_the_warm_budgets_each_simulator_and_the_report_reads_its_longest_end(self):
+        """SPEC-339 A12: the warm's script sets each step's budget, and each simulator's deadline
+        inside the simulator loop and before its phases, so one simulator cannot spend another's
+        warm; and the report reads, per simulator and step, the session's longest end."""
+        jobs = load("xcframework.yml")["jobs"]
+        read = (WARM_STEPS["debug"][1], "the report")
+        steps = [s for s in jobs["harness"].get("steps") or [] if s.get("name") in read]
+        examined("budget steps", steps)
+        self.assertEqual(harness_warm_budget_problems({"jobs": jobs}), [])
+
+        # The controls: the good job is accepted, and each plant is refused by its rule's name.
+        top = [f"cat > {WARM_SCRIPT} <<'PY'", WARM_BUDGET, WARM_SCRIPT_NEEDS[0]]
+        body = ['    udid = devices[0]["udid"]', "    " + WARM_DEADLINE, "    " + WARM_PHASES]
+        tail = ["        left = deadline - time.monotonic()", "PY"]
+        ends = "\n".join(WARM_END_NEEDS) + "\n"
+
+        def harness(script, report=ends):
+            warm = {"name": WARM_STEPS["debug"][1], "run": "\n".join(script) + "\n"}
+            return {"jobs": {"harness": {"steps": [warm, {"name": "the report", "run": report}]}}}
+
+        placed = "harness: the warm's deadline is not per simulator, before its phases"
+        shared = "deadline = time.monotonic() + 480"
+        plants = {
+            "the good job": (harness(top + body + tail), []),
+            "one deadline for both simulators": (
+                harness([*top[:2], WARM_DEADLINE, top[2], body[0], body[2], *tail]),
+                [placed],
+            ),
+            "a deadline per phase": (
+                harness([*top, body[0], body[2], "    " + body[1], *tail]),
+                [placed],
+            ),
+            "two deadlines": (
+                harness([*top, body[0], body[1], body[1], body[2], *tail]),
+                ["harness: 2 deadline lines in the warm's script, not one"],
+            ),
+            "the one budget's figure": (
+                harness([*top, body[0], "    " + shared, body[2], *tail]),
+                [f"harness: the warm's deadline is {shared!r}, not {WARM_DEADLINE!r}"],
+            ),
+            "one budget for both steps": (
+                harness([top[0], "budget = 480", top[2], *body, *tail]),
+                ["harness: 0 budget lines in the warm's script, not one"],
+            ),
+            "no Debug longest end": (
+                harness(top + body + tail, ends.replace(WARM_END_NEEDS[2] + "\n", "")),
+                [f"harness: the report lacks {WARM_END_NEEDS[2]}"],
+            ),
+            "no longest end row": (
+                harness(top + body + tail, ends.replace(WARM_END_NEEDS[1] + "\n", "")),
+                [f"harness: the report lacks {WARM_END_NEEDS[1]}"],
+            ),
+        }
+        for name, (workflow, wanted) in examined("planted budget jobs", list(plants.items())):
+            with self.subTest(plant=name):
+                self.assertEqual(harness_warm_budget_problems(workflow), wanted, name)
 
 
 # The app's steps in the `harness` job (SPEC-347 R13 and A14, ADR-358 D10; SPEC-348 R20, ADR-359
