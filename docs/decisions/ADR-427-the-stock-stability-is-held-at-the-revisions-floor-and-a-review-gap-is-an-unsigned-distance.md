@@ -125,16 +125,48 @@ Considered options:
 - Asserting only that the stored stability is not 0, rejected because a mutant that moves the floor to another
   positive value would survive it.
 
-The replay of `lean/Fsrs7Schedule`'s vectors through the engine core's `scheduled` and `day_of` is owed by #823: this
-delivery adds no engine-core test.
+The replay of `lean/Fsrs7Schedule`'s vectors through the engine core's `scheduled` and `day_of` was owed by #823 when
+this decision was first written; D6 delivers it after the merge of dev.
+
+## D6. The pure seam for the schedule's vectors, and what it was chosen against
+
+Since the scheduling port (SPEC-494, ADR-512), `crates/engine-core/src/replay.rs` reaches a review card's schedule in
+two steps: the port's `interval_days` returns the whole days of the projected interval, and the private `scheduled`
+holds them to the preset's maximum and to at least one day, due that many days after the private `day_of` of the last
+kept review. Together they compute what the fork's single `scheduled` did, so `lean/Fsrs7Schedule` was re-ported over
+the two steps and its claims held unchanged (SPEC-413 A5 is "not red" for that reason).
+
+The vectors test `crates/engine-core/tests/formal_vectors_fsrs7_schedule.rs` reaches the steps through three
+`#[doc(hidden)] pub` functions of `replay.rs`, each a pure function of its arguments:
+
+- `whole_days(f32) -> u32`, the rounding step itself, moved out of `interval_days`, which now returns
+  `whole_days(interval)`. The text `let whole = interval.round() as u32;` lives only there, so the S49400 row on it
+  (S49415, `S49400-S49499.json`) still finds it once and its killer still reaches it through the port.
+- `schedule_of`, which calls `scheduled` and reads its refusal as `None`, and `engine_day_of`, which calls `day_of`.
+  Neither copies a line of the function it calls, so `scheduled`'s `let ivl = rounded.min(max_ivl).max(1);` (rows
+  S38609 and S38614, `S38600-S38699.json`) stays present and unique, and every other mutation row on `replay.rs`
+  (21 rows, counted by a census of `scripts/mutation-rows.d/`) still finds its text exactly once.
+
+Considered options:
+
+- Three hidden pure seams, chosen because the vectors hold `f32` intervals no review history yields (NaN, both
+  infinities, values past `u32::MAX`), and each seam is the code the replay runs, not a copy of it.
+- Driving the vectors through `Dispatcher::replay`, rejected because it takes review rows and a collection: no row set
+  produces a NaN or an infinite interval, and `interval_days` takes a folded state, so the rounding step cannot be fed
+  a vector's interval.
+- Making `scheduled` and `day_of` themselves public, rejected because it moves the spans `lean/Fsrs7Schedule` covers
+  for no gain, and puts two engine helpers in the crate's public surface without the hidden marker.
+- A copy of the rounding in the test, rejected because a test that recomputes the code's answer proves nothing about
+  the code, and a second copy of the text in `replay.rs` would leave S49415's find text no longer unique.
 
 ## Consequences
 
 - A card whose 90-percent interval is below `0.0001` days reports and is written with a stock stability of `0.0001`,
   which the store keeps and the stock curve reads finite. Every other value is unchanged.
 - `histories` is total over every row set: no build panics and none reads a wrapped gap.
-- Four Lean entries hold the scheduler's projection, replay, schedule and selection, each replayed by the fsrs7
-  crate's tests but the schedule's.
+- Four Lean entries hold the scheduler's projection, replay, schedule and selection, each replayed by a Rust vectors
+  test: the fsrs7 crate's for the projection, the replay and the selection, and the engine core's for the schedule.
+- `replay.rs` carries three hidden public functions (D6) that no production caller uses.
 
 ## Confirmation
 

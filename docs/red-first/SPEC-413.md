@@ -15,6 +15,7 @@ A1: cargo test -p deck-streak-fsrs7 --test stock -- --exact a_first_review_rated
 A2: cargo test -p deck-streak-fsrs7 --test convert -- --exact a_gap_past_the_signed_range_is_read_whole
 A3: cargo test -p deck-streak-fsrs7 --test formal_vectors_fsrs7_stock -- --exact the_stock_projection_and_the_curve_hold_the_lean_claims_on_every_vector
 A4: cargo test -p deck-streak-fsrs7 --test formal_vectors_fsrs7_memory_state -- --exact the_replay_holds_the_lean_claims_on_every_vector
+A5: cargo test -p deck-streak-engine-core --test formal_vectors_fsrs7_schedule
 ```
 
 ```red-first
@@ -22,6 +23,7 @@ A1: red at 76a5eb17495d6ca0b9ef29213660c76ff09fae3c: panicked at crates/fsrs7/te
 A2: red at 76a5eb17495d6ca0b9ef29213660c76ff09fae3c: panicked at crates/fsrs7/src/convert.rs:68:66: attempt to subtract with overflow
 A3: red at 76a5eb17495d6ca0b9ef29213660c76ff09fae3c: panicked at crates/fsrs7/tests/formal_vectors_fsrs7_stock.rs:154:5: {"interval":[0],"stability":[3,13743895,137438953472]}: the stock stability is NaN, not 0.0001
 A4: not red: it replays the formal pass's memory-state vectors over `crates/fsrs7/src/replay.rs`, which this delivery does not change (SPEC-413 section 3); it passed over the seam commit (1 test), and over the green it examined 2222 vectors, 18495 states in bounds
+A5: not red: it replays `lean/Fsrs7Schedule`'s vectors over dev's code, which already holds L8 to L10: dev's `interval_days` (its rounding now `whole_days`, `interval.round() as u32`) then `scheduled` (`rounded.min(max_ivl).max(1)`) compose to exactly the fork's `scheduled`, and `day_of` and `stock_fields` are text-identical; over 2cf9684b it examined 3516 vectors (3510 schedules, 6 writes), 0 differing, and its literal cases passed (2 tests); its teeth are the band rows its killer kills
 A1: green at 1bd6bba972a49c6ff885463f80225e0677c4dab5
 A2: green at 1bd6bba972a49c6ff885463f80225e0677c4dab5
 A3: green at 1bd6bba972a49c6ff885463f80225e0677c4dab5

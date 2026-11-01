@@ -1,7 +1,8 @@
 # SPEC-413: the FSRS-7 stock stability is never below the revision's floor, and a review gap is read whole
 
 - **Wave:** the scheduler's formal pass. **Issue:** #823. **Context(s):** `deck-streak-fsrs7` (`crates/fsrs7`), with
-  one comment in `deck-streak-engine-core` (`crates/engine-core/src/replay.rs`).
+  one comment, three hidden pure seams and one vectors test in `deck-streak-engine-core`
+  (`crates/engine-core/src/replay.rs`, R9).
 - **Decided by:** ADR-427 (this SPEC's own: D1 the stability floor, D2 the gap, D3 the formal surface, D4 the
   upstream findings, D5 the tests), under ADR-338, ADR-353 and ADR-400. It amends SPEC-386 R6 and ADR-400 D2 (the
   stock stability below the floor).
@@ -61,6 +62,13 @@ R7. **The formal pass's entries.** `lean/Fsrs7Schedule`, `lean/Fsrs7MemoryState`
     their vectors; the memory-state and stock vectors are replayed by the fsrs7 crate's own tests.
 R8. **Upstream stays upstream.** M8, M9 and M10 are recorded here and in ADR-427 D4. Nothing in the pinned revision is
     changed, and nothing is filed anywhere else.
+R9. **The schedule's port and its replay.** After the merge of dev, `lean/Fsrs7Schedule` ports the scheduling port's
+    two steps, `interval_days`'s rounding (`whole_days`, `interval.round() as u32`) then `scheduled`'s
+    `rounded.min(max_ivl).max(1)`, and covers `interval_days` and `whole_days` beside `scheduled`, `day_of` and
+    `stock_fields`; its three claims (L8 to L10) keep their statements over the two steps. Its writer records each
+    vector's whole days, and the engine core's test `formal_vectors_fsrs7_schedule` replays every vector through the
+    hidden pure seams `whole_days`, `schedule_of` and `engine_day_of` and through `CardReplay::stock_fields`, with
+    the recorded counterexamples as literal cases (ADR-427 D6).
 
 ## 3. Acceptance criteria
 
@@ -70,12 +78,14 @@ R8. **Upstream stays upstream.** M8, M9 and M10 are recorded here and in ADR-427
 | A2 | R3: a gap past the signed range is read whole | the subtraction overflows | ADR-427 D2 |
 | A3 | R4, R5: the stock projection and the curve hold the Lean claims on every vector, the stability lines included | the stability lines are not floored | ADR-427 D3 |
 | A4 | R7: the replay holds the Lean claims on every memory-state vector | not red: it replays the formal pass's own vectors over code this delivery does not change | ADR-427 D3 |
+| A5 | R9: the engine core's schedule gives every schedule vector, and the recorded counterexamples hold as literal cases | not red: dev's `interval_days` then `scheduled` compose to the fork's `scheduled`, and `day_of` and `stock_fields` are text-identical, so the vectors hold over dev's code; the band rows its killer kills give it its teeth | ADR-427 D6 |
 
 ```acceptance
 A1: cargo test -p deck-streak-fsrs7 --test stock -- --exact a_first_review_rated_again_keeps_a_stock_stability_the_store_holds
 A2: cargo test -p deck-streak-fsrs7 --test convert -- --exact a_gap_past_the_signed_range_is_read_whole
 A3: cargo test -p deck-streak-fsrs7 --test formal_vectors_fsrs7_stock -- --exact the_stock_projection_and_the_curve_hold_the_lean_claims_on_every_vector
 A4: cargo test -p deck-streak-fsrs7 --test formal_vectors_fsrs7_memory_state -- --exact the_replay_holds_the_lean_claims_on_every_vector
+A5: cargo test -p deck-streak-engine-core --test formal_vectors_fsrs7_schedule
 ```
 
 A1's expected values are typed: the floor's bits and the store's four-place rounding of it, never read from the
@@ -93,7 +103,8 @@ the floor as the stock stability (R2), and whose Hard, Good and Easy rows are un
 | `changelog.d/formal-fsrs7-verify.md` | document | new: fragment |
 | `crates/fsrs7/src/stock.rs` | `deck-streak-fsrs7` | `STABILITY_MIN`, `stock_stability`; `project` floors its stability |
 | `crates/fsrs7/src/convert.rs` | `deck-streak-fsrs7` | the gap is `abs_diff`; `days` reads a `u64` |
-| `crates/engine-core/src/replay.rs` | `deck-streak-engine-core` | the comment on `CardReplay::stability` names the floor; no code changes |
+| `crates/engine-core/src/replay.rs` | `deck-streak-engine-core` | the comment on `CardReplay::stability` names the floor; after the merge of dev, the rounding step moves into the hidden pure seam `whole_days`, and the hidden seams `schedule_of` and `engine_day_of` call `scheduled` and `day_of` (R9, ADR-427 D6) |
+| `crates/engine-core/tests/formal_vectors_fsrs7_schedule.rs` | `deck-streak-engine-core` | new; A5 |
 | `crates/fsrs7/tests/stock.rs` | `deck-streak-fsrs7` | A1; SPEC-386 A7 and A8's Again row |
 | `crates/fsrs7/tests/convert.rs` | `deck-streak-fsrs7` | A2 |
 | `crates/fsrs7/tests/formal_vectors_fsrs7_stock.rs` | `deck-streak-fsrs7` | new (formal pass); A3's stability lines |
@@ -102,8 +113,8 @@ the floor as the stock stability (R2), and whose Hard, Good and Easy rows are un
 | `formal/lean/Formal/Fsrs7StockVectors.lean` | formal | new (formal pass); R4's stability lines |
 | `formal/lean/Formal/Fsrs7MemoryState.lean` | formal | new (formal pass) |
 | `formal/lean/Formal/Fsrs7MemoryStateVectors.lean` | formal | new (formal pass) |
-| `formal/lean/Formal/Fsrs7Schedule.lean` | formal | new (formal pass) |
-| `formal/lean/Formal/Fsrs7ScheduleVectors.lean` | formal | new (formal pass) |
+| `formal/lean/Formal/Fsrs7Schedule.lean` | formal | new (formal pass); re-ported over dev's two steps and stamped (R9) |
+| `formal/lean/Formal/Fsrs7ScheduleVectors.lean` | formal | new (formal pass); records each vector's whole days (R9) |
 | `formal/lean/Formal/ReplayHistory.lean` | formal | R6: the distance's port, the stamp |
 | `formal/lean/Formal/Vectors.lean` | formal | three writer arms (formal pass) |
 | `formal/lean/Formal.lean` | formal | three imports (formal pass) |
@@ -120,8 +131,8 @@ the floor as the stock stability (R2), and whose Hard, Good and Easy rows are un
   mixture, and a wrapper rule would invent a schedule the revision does not compute (#823).
 - It does not validate the preset's retention (M10): that is the caller's contract (ADR-400), and the scheduler
   switch that will call it validates its own input (#611).
-- It adds no test in the engine core: the replay of `lean/Fsrs7Schedule`'s vectors through `scheduled` and `day_of`
-  is owed by #823, which stays open for it.
+- It adds one test in the engine core, A5's replay of `lean/Fsrs7Schedule`'s vectors, and changes no engine
+  behaviour: the seams of R9 call the code the replay runs (#823).
 - It does not prove the interval monotone in desired retention: the revision's Newton and bisection search is not
   ported, and the property was measured clean, not proved (#823).
 - It writes nothing into a collection: the scheduler switch owns the write (#611).
