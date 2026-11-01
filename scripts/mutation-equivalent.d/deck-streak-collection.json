@@ -35,6 +35,15 @@
       "evidence": "rusqlite 0.39.0's OpenFlags (src/lib.rs) takes SQLITE_OPEN_READ_ONLY and SQLITE_OPEN_NO_MUTEX from the sqlite3.h of libsqlite3-sys 0.37.0, where they are 0x00000001 and 0x00008000, so 0x1 ^ 0x8000 and 0x1 | 0x8000 are both 0x8001: the bits sqlite3_open_v2 receives are equal, and the sibling mutant to & is caught by opener::a_foreign_file_opens_read_only_and_prepares_only_what_it_holds.",
       "reached_by": "opener::a_foreign_file_opens_read_only_and_prepares_only_what_it_holds",
       "issue": "#1060"
+    },
+    {
+      "file": "crates/collection/src/store.rs",
+      "mutant": "replace file_header -> Result<Option<Header>, StoreError> with Ok(Some(Default::default()))",
+      "anchor": "#[cfg(target_family = \"wasm\")]\n#[allow(clippy::unnecessary_wraps)]\nconst fn file_header(_path: &Path) -> Result<Option<Header>, StoreError> {\n    Ok(None)\n}",
+      "reason": "The mutated file_header is the wasm one, which #[cfg(target_family = \"wasm\")] removes from every native build, so the mutant compiles to the very program the original does, and on wasm it does not compile.",
+      "evidence": "store.rs gates this file_header on target_family = \"wasm\" and its native twin, which reads the file's first 100 bytes, on the opposite, so cargo mutants lists the mutant at the wasm body's line and builds it natively as the unchanged crate. On wasm the replacement cannot build: Header derives Clone, Copy, Debug, PartialEq and Eq but not Default, and Default::default() is not a const fn, inside this const fn. The native twin is reached by the opener's foreign-file refusal.",
+      "reached_by": "opener::the_store_opener_refuses_a_file_of_another_application_and_leaves_it_untouched",
+      "issue": "#1060"
     }
   ]
 }
