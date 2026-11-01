@@ -5,22 +5,35 @@ directory, and removes both when it ends (R11). No test imports the predecessor.
 """
 
 import contextlib
+import datetime as dt
 import hashlib
 import importlib.util
 import io
 import json
 import platform
+import re
 import subprocess
 import sys
 import tempfile
 import textwrap
 import unittest
 from pathlib import Path
+from unittest import mock
 
 HERE = Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location("parity_generate", HERE / "generate.py")
 generate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(generate)
+
+
+def examined(what, items):
+    """Print how many items a check examined and refuse zero (the tdd pack's contract)."""
+    items = list(items)
+    print(f"examined {len(items)} {what}")
+    if not items:
+        raise AssertionError(f"examined 0 {what}: the population is empty, so nothing was judged")
+    return items
+
 
 #: The stand-in predecessor: a package the tests reach through the registry, as the real one is.
 STAND_IN = {
@@ -112,6 +125,23 @@ INSTANT = """
 
     FUNCTIONS = {"instant": {"kind": "function", "function": "day.instant", "cases": cases}}
 """
+
+NEEDS = """
+    def cases(rng):
+        return [(None, {})]
+
+    FUNCTIONS = {"needs": {"kind": "function", "function": "needs.f", "cases": cases}}
+"""
+
+ONE_XP = """
+    def cases(rng):
+        return [(None, {"ease": 1.0, "maturity": 2.0})]
+
+    FUNCTIONS = {"one_xp": {"kind": "function", "function": "xp.review_xp", "cases": cases}}
+"""
+
+#: One NaN object, so a builder's two draws compare equal and only strict JSON can refuse it.
+NAN = float("nan")
 
 
 def sha256(path: Path) -> str:
@@ -326,6 +356,197 @@ class GeneratorWritesGoldensFromTheRegistry(unittest.TestCase):
         self.assertEqual(self.golden("review_xp")["function"], "xp.review_xp")
         # The stand-in's modules all live in its one package, so bytecode could land only there.
         self.assertFalse((self.checkout / "v9stand" / "__pycache__").exists())
+
+    def test_a_dependency_the_predecessor_lacks_is_raised_by_its_name(self):
+        """A11: a predecessor module that imports a module nobody has raises that module's name,
+        never the generator's own refusal that no module holds the path."""
+        (self.checkout / "v9stand" / "needs.py").write_text(
+            "import parity_missing_dependency\n\n\ndef f():\n    return 1\n", encoding="utf-8"
+        )
+        self.register("spec_001.py", NEEDS)
+        with self.assertRaises(ModuleNotFoundError) as raised:
+            self.generate()
+        self.assertEqual(
+            (raised.exception.name, str(raised.exception)),
+            ("parity_missing_dependency", "No module named 'parity_missing_dependency'"),
+        )
+
+    def test_the_checkout_is_imported_before_any_other_path_and_gets_no_bytecode(self):
+        """A16: a package of the stand-in's name ahead of every other path loses to the checkout,
+        whose `review_xp` the golden records; and with the bytecode prefix cleared and bytecode
+        on, the generator still writes nothing into the checkout's package."""
+        decoy = self.tmp / "decoy" / "v9stand"
+        decoy.mkdir(parents=True)
+        (decoy / "__init__.py").write_text("", encoding="utf-8")
+        (decoy / "xp.py").write_text(
+            "def review_xp(ease, maturity):\n    return -1\n", encoding="utf-8"
+        )
+        self.register("spec_001.py", ONE_XP)
+        with (
+            mock.patch.object(sys, "path", [str(decoy.parent), *sys.path]),
+            mock.patch.object(sys, "pycache_prefix", None),
+            mock.patch.object(sys, "dont_write_bytecode", False),
+        ):
+            code, _, _ = self.generate()
+        self.assertEqual(code, 0)
+        self.assertEqual(
+            self.golden("one_xp")["cases"],
+            [{"input": {"ease": 1.0, "maturity": 2.0}, "output": 20}],
+        )
+        self.assertEqual(
+            sorted(path.name for path in (self.checkout / "v9stand").iterdir()),
+            ["__init__.py", "constants.py", "day.py", "xp.py"],
+        )
+
+
+class EachOperandOfTheGeneratorIsHeld(unittest.TestCase):
+    """SPEC-437 R6 (A9, A10 and A12 to A15): the default registry, each refusal of a
+    registration, a date nested in a value, a case's class, a NaN input, and the two required
+    flags with every help text, each observed through what the generator returns, raises or
+    prints. No test reads the generator's own bytes."""
+
+    def test_the_default_registry_names_every_committed_golden(self):
+        """A9: the registry the generator reads by default registers exactly the goldens
+        committed beside it, one golden file per registered name."""
+        committed = sorted(path.stem for path in (HERE / "goldens").glob("*.json"))
+        registered = sorted(generate.load_registry(generate.REGISTRY))
+        self.assertEqual(registered, examined("committed goldens", committed))
+
+    def test_a_registration_is_refused_for_each_operand_alone(self):
+        """A10: each operand of `check`'s conditions alone refuses a registration that is whole
+        but for it, by the refusal's whole message; the whole registrations are the control."""
+        where = "registry/spec_001.py"
+
+        def build(rng):
+            return [(None, {})]
+
+        def glue(function, predecessor, **given):
+            return function(**given)
+
+        function = {"kind": "function", "function": "xp.review_xp", "cases": build}
+        adapter = {
+            "kind": "adapter",
+            "function": "day.local_day",
+            "adapter": glue,
+            "note": "Builds a Clock.",
+            "cases": build,
+        }
+        constants = {"kind": "constants", "names": ["constants.ROLLOVER_HOUR"]}
+        named = f"{where}: x names no attribute"
+        builder = f"{where}: x needs a predecessor function and a case builder"
+        glued = f"{where}: x needs a callable adapter and a note"
+        cases = (
+            (
+                "a bad name string",
+                "Not A Name",
+                function,
+                f"{where}: 'Not A Name' is not a golden name (a-z, 0-9, '_' and '.')",
+            ),
+            ("an empty names list", "x", {**constants, "names": []}, named),
+            ("a names list holding a non-string", "x", {**constants, "names": ["a", 1]}, named),
+            ("a names string", "x", {**constants, "names": "abc"}, named),
+            ("a function that is not a string", "x", {**function, "function": 5}, builder),
+            ("cases that are not callable", "x", {**function, "cases": 5}, builder),
+            ("an adapter that is not callable", "x", {**adapter, "adapter": 5}, glued),
+            ("a note that is not a string", "x", {**adapter, "note": 5}, glued),
+            ("a blank note", "x", {**adapter, "note": "   "}, glued),
+        )
+        for label, name, registration, refusal in examined("refused operands", cases):
+            with self.subTest(label):
+                with self.assertRaises(generate.RegistryError) as refused:
+                    generate.check(where, name, registration)
+                self.assertEqual(str(refused.exception), refusal)
+        for registration in (function, adapter, constants):
+            self.assertIsNone(generate.check(where, "x", registration))
+
+    def test_a_date_inside_a_dict_or_a_list_is_written_as_its_epoch_day(self):
+        """A12: a date is its epoch day wherever it sits, as a dict's value and as a list's or a
+        tuple's item, and the containers keep their keys and order."""
+        value = {
+            "day": dt.date(1970, 1, 2),
+            "days": [dt.date(1969, 12, 31), (dt.date(1970, 1, 1), 7)],
+        }
+        self.assertEqual(generate.plain(value), {"day": 1, "days": [-1, [0, 7]]})
+
+    def test_a_case_whose_class_is_the_empty_name_is_refused(self):
+        """A13: a case's class is a name or None; the empty name is refused by name, and a named
+        and an unnamed case are the control."""
+
+        def empty(rng):
+            return [("", {"ease": 1.0})]
+
+        def named(rng):
+            return [("tie", {"ease": 1.0}), (None, {"ease": 2.0})]
+
+        with self.assertRaises(ValueError) as refused:
+            generate.draw("x", empty)
+        self.assertEqual(str(refused.exception), "x: a case's class is '', not a name or None")
+        self.assertEqual(generate.draw("x", named), [("tie", {"ease": 1.0}), (None, {"ease": 2.0})])
+
+    def test_a_case_input_holding_nan_is_refused_before_the_predecessor_runs(self):
+        """A14: a NaN in a case's input is refused as strict JSON refuses it, after the
+        predecessor's function is resolved and before it is called."""
+        resolved, ran = [], []
+
+        def function(**given):
+            ran.append(given)
+            return 0
+
+        def predecessor(path):
+            resolved.append(path)
+            return function
+
+        def build(rng):
+            return [(None, {"value": NAN})]
+
+        registration = {"kind": "function", "function": "xp.bad", "cases": build}
+        with self.assertRaises(ValueError) as refused:
+            generate.cases_of("bad", registration, predecessor)
+        self.assertEqual(
+            (str(refused.exception).split(":")[0], resolved, ran),
+            ("Out of range float values are not JSON compliant", ["xp.bad"], []),
+        )
+
+    def test_main_requires_its_checkout_and_package_and_states_each_help_text(self):
+        """A15: without `--source-checkout`, and without `--package`, `main` exits 2 naming the
+        flag before it reads any registry; its help states each flag's help text."""
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        empty = Path(scratch.name)
+        rest = ["--registry", str(empty), "--out", str(empty / "goldens")]
+        cases = (
+            (["--package", "v9stand", *rest], "--source-checkout"),
+            (["--source-checkout", str(empty), *rest], "--package"),
+        )
+        for argv, flag in examined("required flags", cases):
+            with self.subTest(flag):
+                err = io.StringIO()
+                with contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as stopped:
+                    generate.main(argv)
+                said = err.getvalue().splitlines()[-1].split(": error: ", 1)[-1]
+                self.assertEqual(
+                    (stopped.exception.code, said),
+                    (2, f"the following arguments are required: {flag}"),
+                )
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), self.assertRaises(SystemExit) as helped:
+            generate.main(["--help"])
+        options = " ".join(out.getvalue().split()).split(" show this help message and exit ")[-1]
+        stated = re.fullmatch(
+            r"--source-checkout SOURCE_CHECKOUT (.+) --package PACKAGE (.+) "
+            r"--registry REGISTRY (.+) --out OUT (.+)",
+            options,
+        )
+        texts = (
+            "the predecessor's private checkout",
+            "the predecessor's top-level package, which registry paths are relative to",
+            "the registry directory (default: registry/)",
+            "the goldens directory",
+        )
+        self.assertEqual(
+            (helped.exception.code, stated and stated.groups()),
+            (0, tuple(examined("help texts", texts))),
+        )
 
 
 if __name__ == "__main__":

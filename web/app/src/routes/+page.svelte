@@ -1,8 +1,8 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { api, type Answer, type Me } from '$lib/api';
-  import { m } from '$lib/paraglide/messages.js';
-  import { getLocale } from '$lib/paraglide/runtime.js';
+  import { api, type Answer, type Me } from '#lib/api.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { getLocale } from '#lib/paraglide/runtime.js';
 
   // Today shows the study day the server answers (SPEC-028 R8). The day turns over at 04:00 on the
   // server's calendar, so the page never works one out from the phone's clock: it only writes the

@@ -5,9 +5,9 @@
   // status region with a way to ask again; a collection with no deck says so, and offers nothing
   // else (ruling 317 OQ4).
   import { onMount } from 'svelte';
-  import { EngineError } from '$lib/engine/client';
-  import type { Deck, ErrorCode } from '$lib/engine/protocol';
-  import { m } from '$lib/paraglide/messages.js';
+  import { EngineError } from '#lib/engine/client.js';
+  import type { Deck, ErrorCode } from '#lib/engine/protocol.js';
+  import { m } from '#lib/paraglide/messages.js';
   import { statusText } from './refusal';
 
   /** What the deck list asks of the engine: the deck tree, and the deck to study. */

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img">
+  <title>DeckStreak logo, small: a stick figure climbing a spiral staircase that never ends</title>
+  <style>.bg{fill:#f4f7fa}.halo{fill:#f4f7fa}.halo-line{fill:none;stroke:#f4f7fa}.ink{fill:#0f161d}.ink-line{fill:none;stroke:#0f161d}.accent{fill:#0b6a67}.accent-line{fill:none;stroke:#0b6a67}@media (prefers-color-scheme: dark){.bg{fill:#0f161d}.halo{fill:#0f161d}.halo-line{fill:none;stroke:#0f161d}.ink{fill:#f4f7fa}.ink-line{fill:none;stroke:#f4f7fa}.accent{fill:#34c6c0}.accent-line{fill:none;stroke:#34c6c0}}</style>
+  <rect class="bg" width="1024" height="1024"/>
+  <path class="ink" d="M704 512h192v64h-192ZM704 576h192v64h-192ZM512 640h320v64h-320ZM512 704h256v64h-256ZM320 768h384v64h-384ZM384 832h256v64h-256Z"/>
+  <path class="accent" d="M512 128h128v64h-128ZM512 192h128v64h-128ZM448 320h256v64h-256ZM448 384h128v64h-128ZM384 448h256v64h-256ZM384 512h64v64h-64ZM576 512h64v64h-64ZM384 576h64v64h-64ZM512 576h128v64h-128ZM384 640h64v64h-64ZM320 704h128v64h-128Z"/>
+</svg>

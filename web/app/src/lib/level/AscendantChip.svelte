@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
+  import { m } from '#lib/paraglide/messages.js';
 
   // The Ascendant chip (SPEC-072 R26): shown on an Ascendant day only, as text, never as colour
   // alone.

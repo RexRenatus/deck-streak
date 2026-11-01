@@ -2,13 +2,13 @@
   import './layout.css';
   import { onMount, untrack } from 'svelte';
   import { page } from '$app/state';
-  import { api, type Answer } from '$lib/api';
-  import WalletHeader from '$lib/economy/WalletHeader.svelte';
-  import type { WalletView } from '$lib/economy/wallet';
-  import TierAnimation from '$lib/ladder/TierAnimation.svelte';
-  import { celebrations, type FeedItem } from '$lib/ladder/feed';
-  import { m } from '$lib/paraglide/messages.js';
-  import { telegram } from '$lib/telegram.svelte';
+  import { api, type Answer } from '#lib/api.js';
+  import WalletHeader from '#lib/economy/WalletHeader.svelte';
+  import type { WalletView } from '#lib/economy/wallet.js';
+  import TierAnimation from '#lib/ladder/TierAnimation.svelte';
+  import { celebrations, type FeedItem } from '#lib/ladder/feed.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { telegram } from '#lib/telegram.svelte.js';
 
   let { children } = $props();
 

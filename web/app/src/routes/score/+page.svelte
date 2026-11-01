@@ -1,9 +1,9 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { api, type Answer } from '$lib/api';
-  import { m } from '$lib/paraglide/messages.js';
-  import ScoreBreakdown from '$lib/score/ScoreBreakdown.svelte';
-  import type { ScoreToday } from '$lib/score/score';
+  import { api, type Answer } from '#lib/api.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import ScoreBreakdown from '#lib/score/ScoreBreakdown.svelte';
+  import type { ScoreToday } from '#lib/score/score.js';
 
   // The score screen (SPEC-071 R22): the current study day's score as the server answers it, the
   // same numbers the bot's /score reports. A day no recompute has rolled up yet has no score, and

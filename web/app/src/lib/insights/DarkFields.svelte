@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
+  import { m } from '#lib/paraglide/messages.js';
   import type { DarkFieldsReport } from './insights';
 
   // SPEC-094 R19: Dark Fields' body. Zero dark fields is a checked result, stated with what was

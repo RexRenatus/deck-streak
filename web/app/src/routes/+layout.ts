@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
-import { routeFor } from '$lib/startapp';
-import { telegram } from '$lib/telegram.svelte';
+import { routeFor } from '#lib/startapp.js';
+import { telegram } from '#lib/telegram.svelte.js';
 import type { LayoutLoad } from './$types';
 
 // A single-page app: nothing is rendered on a server or prerendered. adapter-static writes one

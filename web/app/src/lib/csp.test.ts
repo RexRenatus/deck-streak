@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import config from '../../svelte.config.js';
+import config from '../../sveltekit.config.js';
 import { PAGE_FRAME_SRC } from './card/policy.js';
 
 // SPEC-028 R1, R14, A13; ADR-007. SvelteKit writes the page's policy into a meta element at build
-// and adds a sha256 hash for each inline script it generates (kit.csp in hash mode), so the only
+// and adds a sha256 hash for each inline script it generates (csp in hash mode), so the only
 // scripts that run are the app's own files, those hashed scripts and Telegram's. The directives a
 // meta element cannot carry (frame-ancestors) are the Caddy header's (SPEC-032).
 const TELEGRAM = 'https://telegram.org';
@@ -31,7 +31,7 @@ function unsafe(sources: readonly string[]): string[] {
 
 describe('the page policy', () => {
   it('the page policy admits scripts only from itself, its hashes and telegram.org', () => {
-    const csp = config.kit?.csp;
+    const csp = config.csp;
 
     expect(csp?.mode).toBe('hash');
     expect(csp?.directives).toEqual({
@@ -52,7 +52,7 @@ describe('the page policy', () => {
   });
 
   it('the page policy admits WebAssembly compilation and nothing else new', () => {
-    const directives = (config.kit?.csp?.directives ?? {}) as Record<string, readonly string[]>;
+    const directives = (config.csp?.directives ?? {}) as Record<string, readonly string[]>;
     const difference = (from: typeof BEFORE, to: typeof BEFORE) =>
       Object.entries(from).flatMap(([directive, sources]) =>
         sources
@@ -105,7 +105,7 @@ describe('the page policy', () => {
     // included, is checked against the embedding page's frame-src, so 'none' holds every frame to
     // the srcdoc document it was given; the value is the card module's, which the card harness
     // serves too.
-    const directives = config.kit?.csp?.directives;
+    const directives = config.csp?.directives;
 
     expect(directives?.['frame-src']).toEqual(['none']);
     expect(directives?.['frame-src']).toBe(PAGE_FRAME_SRC);

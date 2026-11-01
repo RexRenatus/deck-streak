@@ -166,11 +166,12 @@ fn hex_digit(byte: u8) -> Option<u8> {
 
 /// The bytes the hex digits of `text` spell, two digits to a byte, or `None` when it is not hex.
 fn hex_bytes(text: &str) -> Option<Vec<u8>> {
-    let pairs = text.as_bytes().chunks_exact(2);
-    if !pairs.remainder().is_empty() {
+    let (pairs, rest) = text.as_bytes().as_chunks::<2>();
+    if !rest.is_empty() {
         return None;
     }
     pairs
+        .iter()
         .map(|pair| Some((hex_digit(pair[0])? << 4) | hex_digit(pair[1])?))
         .collect()
 }

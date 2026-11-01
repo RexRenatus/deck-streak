@@ -1,0 +1,86 @@
+{
+  "total_count": 3,
+  "workflow_runs": [
+    {
+      "id": 400,
+      "name": "ci",
+      "path": ".github/workflows/ci.yml",
+      "event": "pull_request",
+      "head_branch": "dev",
+      "head_sha": "0000000000000000000000000000000000000190",
+      "status": "completed",
+      "conclusion": "failure",
+      "head_repository": {
+        "full_name": "RexRenatus/deck-streak"
+      },
+      "repository": {
+        "full_name": "RexRenatus/deck-streak"
+      },
+      "pull_requests": [
+        {
+          "number": 822,
+          "base": {
+            "ref": "main"
+          },
+          "head": {
+            "ref": "dev"
+          }
+        }
+      ]
+    },
+    {
+      "id": 300,
+      "name": "ci",
+      "path": ".github/workflows/ci.yml",
+      "event": "pull_request",
+      "head_branch": "dev",
+      "head_sha": "000000000000000000000000000000000000012c",
+      "status": "completed",
+      "conclusion": "success",
+      "head_repository": {
+        "full_name": "RexRenatus/deck-streak"
+      },
+      "repository": {
+        "full_name": "RexRenatus/deck-streak"
+      },
+      "pull_requests": [
+        {
+          "number": 822,
+          "base": {
+            "ref": "main"
+          },
+          "head": {
+            "ref": "dev"
+          }
+        }
+      ]
+    },
+    {
+      "id": 200,
+      "name": "ci",
+      "path": ".github/workflows/ci.yml",
+      "event": "pull_request",
+      "head_branch": "dev",
+      "head_sha": "00000000000000000000000000000000000000c8",
+      "status": "completed",
+      "conclusion": "failure",
+      "head_repository": {
+        "full_name": "RexRenatus/deck-streak"
+      },
+      "repository": {
+        "full_name": "RexRenatus/deck-streak"
+      },
+      "pull_requests": [
+        {
+          "number": 822,
+          "base": {
+            "ref": "main"
+          },
+          "head": {
+            "ref": "dev"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -36,8 +36,8 @@
       [
         "S39404-NODE-OUTSIDE-LAYERS",
         "docs/schematics/context-map.md",
-        "  subgraph foundations[no workspace dependency]\n    kernel\n",
-        "  kernel\n  subgraph foundations[no workspace dependency]\n",
+        "  subgraph foundations[no workspace dependency]\n    study_day[\"study-day\"]\n",
+        "  study_day[\"study-day\"]\n  subgraph foundations[no workspace dependency]\n",
         "a crate outside every layer is refused (SPEC-394 R3, A3)",
         "test_context_map_schematic.TheSchematicDrawsTheCrateGraph.test_every_arrow_points_down_through_declared_layers"
       ],

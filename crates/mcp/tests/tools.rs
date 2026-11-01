@@ -228,6 +228,23 @@ async fn each_served_tool_matches_its_roster_golden_entry() {
     }
 }
 
+/// The tools list is one page, and a peer before the 2026-07-28 protocol is sent no cache hints:
+/// the answer holds `tools` and nothing else, no `ttlMs`, `cacheScope` or `nextCursor`.
+#[tokio::test(flavor = "current_thread")]
+async fn the_tools_list_sends_an_earlier_peer_one_page_and_no_cache_hints() {
+    let served = Served::start(ScriptedLaw::answering(full_block())).await;
+    let reply = served.post("/mcp", Some(&law_token()), &list_tools()).await;
+    assert_eq!(reply.status, 200, "tools/list: {}", reply.text());
+    let result = reply.result();
+    let keys: Vec<&String> = result
+        .as_object()
+        .unwrap_or_else(|| panic!("the result is no object: {result}"))
+        .keys()
+        .collect();
+    println!("examined {} result key(s)", keys.len());
+    assert_eq!(keys, ["tools"], "tools/list: {result}");
+}
+
 /// Whether the JSON Schema `schema` admits `value` by its type: its `type`, one name or a list of
 /// them, or any branch of its `anyOf`. A schema that names no type admits nothing here, so a field
 /// the schema leaves blank cannot pass by saying nothing.

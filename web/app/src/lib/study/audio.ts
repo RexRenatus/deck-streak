@@ -2,7 +2,7 @@
 // the core gave, a sound from a page URL made from its bytes and the type the core named, and a
 // speech clip through the speaker. Nothing it plays reaches the card frame, and it decides no type,
 // cap or order of its own.
-import type { Clip } from '$lib/engine/protocol';
+import type { Clip } from '#lib/engine/protocol.js';
 
 /** A speech clip, as the core writes it. */
 export type SpeechClip = Extract<Clip, { kind: 'speech' }>;

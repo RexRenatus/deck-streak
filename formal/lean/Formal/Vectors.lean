@@ -6,12 +6,15 @@ import Formal.Fsrs7StockVectors
 import Formal.HabitWritingVectors
 import Formal.NextMilestoneVectors
 import Formal.OpenLapseVectors
+import Formal.RecordClassBindingVectors
+import Formal.ReleaseCarryVectors
 import Formal.ReplayHistoryVectors
 import Formal.RoadToC2Vectors
 import Formal.SensitiveDeckVectors
 import Formal.SkipTariffVectors
 import Formal.TableCensusReachVectors
 import Formal.TokenBonusVectors
+import Formal.TokenProgressVectors
 import Formal.WalletVectors
 import Formal.XpReconciliationVectors
 
@@ -39,12 +42,15 @@ def main (args : List String) : IO UInt32 := do
   | ["HabitWriting"] => Formal.HabitWritingVectors.run
   | ["NextMilestone"] => Formal.NextMilestoneVectors.run
   | ["OpenLapse"] => Formal.OpenLapseVectors.run
+  | ["RecordClassBinding"] => Formal.RecordClassBindingVectors.run
+  | ["ReleaseCarry"] => Formal.ReleaseCarryVectors.run
   | ["ReplayHistory"] => Formal.ReplayHistoryVectors.run
   | ["RoadToC2"] => Formal.RoadToC2Vectors.run
   | ["SensitiveDeck"] => Formal.SensitiveDeckVectors.run
   | ["SkipTariff"] => Formal.SkipTariffVectors.run
   | ["TableCensusReach"] => Formal.TableCensusReachVectors.run
   | ["TokenBonus"] => Formal.TokenBonusVectors.run
+  | ["TokenProgress"] => Formal.TokenProgressVectors.run
   | ["Wallet"] => Formal.WalletVectors.run
   | ["XpReconciliation"] => Formal.XpReconciliationVectors.run
   | _ =>

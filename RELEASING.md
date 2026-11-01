@@ -61,12 +61,70 @@ keeps being cancelled never releases. Hold every merge into `dev` until the rele
 request's do, in legs sized from the tool's own listing (SPEC-362, ADR-373). `mutation-plan`
 prints `legs N of ceiling C`, where C is the most legs the run holds beside its other jobs, and a
 plan that needs more than C is refused whole, by name, never capped.
+Only the release pull request may size past C, up to `RUST_RELEASE_CEILING` (SPEC-423).
+
+**The Python plan prints its headroom too.** The release's Python mutants run in the same run, at
+most 20 to a leg (SPEC-362 R14). `mutation-plan` prints `python legs N of ceiling S`, where S is
+the share `PYTHON_MAX_SHARDS` in `scripts/mutation-verdict.py`, and a listing that needs more than
+`PYTHON_MAX_SHARDS` Python legs is refused whole, by name, never capped (SPEC-415, ADR-429): the
+plan fails, no leg starts, and `mutation-verdict` reads the run VOID. A refused plan is not a shard
+that never reported: re-running its failed jobs refuses it again, and a range past the ceiling
+waits for the Python legs to be sized by a measured cost (#825). The share is the owner's one
+value, signed on its own line, and a share outside 1 to `PYTHON_SHARE_CAP` is refused before any
+deal, whoever signs it (SPEC-420, ADR-434).
+Only the release pull request may deal past the share, up to `PYTHON_RELEASE_CEILING` (SPEC-422).
+
+**A priced Python file is dealt by its cost (SPEC-418, ADR-432).** Once a file has a price,
+the Python legs are dealt by each file's measured cost: a leg holds what its files' control runs
+project within half the job, and `mutation-plan` prints the priced and unpriced legs, then the
+run's joint line after the Rust line. The price table is filled only from
+`mutation-verdict.py prices --costs <dir>` over a run's downloaded leg artifacts, never by hand;
+an unpriced file keeps the count rule of 20 a leg; and a listing the run cannot hold is refused
+whole, by name, never capped.
+
+**Each Python mutant runs the tests its line's trace names (SPEC-420, ADR-434).** In a pull
+request's legs, a mutant runs only the scoped test set: the tests whose processes executed its line
+in its file's traced sentinel run. It runs the whole suite on every gap, and a scoped pass is
+confirmed by the whole suite before it reads SURVIVED. The scheduled battery runs every mutant
+whole. Every leg runs the leg control first, three named mutants expected KILLED, KILLED and
+SURVIVED, and any other outcome voids every file of the leg by name.
+
+**A scoped leg is priced at what it runs (SPEC-421, ADR-435).** When the legs trace, the plan
+prices each Python file by its triple in `PYTHON_SCOPED_SECONDS` (`scripts/mutation-verdict.py`):
+its control, its traced sentinel and its mean scoped mutant, measured by one dispatched run of
+`.github/workflows/mutation-prices.yml`, each line naming its run, attempt and job. A file with no
+triple keeps its whole-suite price, else the count rule. A refresh is one dispatch of
+`mutation-prices.yml`; its legs' `costs.jsonl` files are committed as the fixture
+`scripts/tests/fixtures/mutation-scoped-prices-<run>/`, and the table is replaced by the output of
+`mutation-verdict.py prices --scoped --costs <dir>` over that fixture, never by hand. The fixture
+and the table change together, in one delivery.
+
+**The release run's Python legs pass the share only up to one signed ceiling (SPEC-422, ADR-436).**
+The release pull request, `dev` into `main` from this repository, may deal more Python legs than the
+share, up to `PYTHON_RELEASE_CEILING` in `scripts/mutation-verdict.py`, and every other run keeps
+the share. Until its ruling is signed the ceiling stands at `PYTHON_SHARE_CAP`, where the release
+run deals as any pull request's does. A matrix generates a bounded number of jobs, so the release
+legs are dealt over two matrices of at most `PYTHON_MATRIX_LEGS` each: `mutation-python` runs the
+first, and `mutation-python-release` runs the legs past it, each as a `mutation-python` leg runs.
+The second is not started on a run that deals it nothing, and `legs` judges that skip against the
+plan. A release listing past the ceiling is refused whole, by name, never capped. The ceiling is the
+one figure its signed ruling names, and a larger figure needs a new measurement and a new signature.
 
 **Cut a release before its range reaches the ceiling.** A release pull request's plan lists every
 mutant `dev` gained since the last release, so the range only grows until it ships, and a range past
 the ceiling cannot be judged by any run. The scheduled battery's plan of the whole tree, the largest
 range a release can carry, prints the same line: when its N nears the pull request run's ceiling,
 cut a release.
+
+**The release run's Rust legs pass the pull request ceiling only up to one signed ceiling (SPEC-423, ADR-437).**
+The release pull request may size more Rust legs than C, up to `RUST_RELEASE_CEILING` in
+`scripts/mutation-verdict.py`, read from the same release mark as the Python ceiling, and every
+other run keeps C. Until its ruling is signed the ceiling stands at the pull request ceiling, where
+the release run sizes its Rust legs as any pull request's. The release run's Rust legs run in the
+one `mutation-rust` matrix, of at most `RUST_MATRIX_LEGS` legs, and a ceiling below the pull
+request ceiling or past `RUST_MATRIX_LEGS` is refused before any deal. A release listing past the
+ceiling is refused whole, by name, never capped. The ceiling is the one figure its signed ruling
+names, and a larger figure needs a new measurement and a new owner-signed ruling.
 
 ## 3. Tag it on main
 

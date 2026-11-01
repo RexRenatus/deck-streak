@@ -5,8 +5,8 @@
   // saves at once; a change the server did not save is turned back and announced, and a failed load
   // is announced with a way to ask again.
   import { onMount } from 'svelte';
-  import type { Deck } from '$lib/engine/protocol';
-  import { m } from '$lib/paraglide/messages.js';
+  import type { Deck } from '#lib/engine/protocol.js';
+  import { m } from '#lib/paraglide/messages.js';
   import { save, switches, turned, type MarksClient, type Switch } from './ai-decks';
 
   /** What the screen asks of the engine: the deck tree. */

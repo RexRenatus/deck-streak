@@ -609,3 +609,31 @@ The retired criterion, why its subject is gone, and what judges it now:
   clamped to 1 to 32.
 - SPEC-362 A12, `test_the_matrix_takes_twenty_listed_mutants_a_shard_clamped_to_thirty_two`, pins
   the new rule: 20 listed read 1 shard, 21 read 2, 68 read 4, and 32 x 20 + 1 read 32.
+
+## 13. Amendment: past 32 legs the Python listing is refused (SPEC-415)
+
+Made by SPEC-415, insert-only: every earlier byte is kept in order, and R9's prose above, with
+section 12's, stays as written. R9's rule as SPEC-362 R14 sized it holds: the Python matrix takes
+at most 20 listed mutants a shard (`PYTHON_SHARD_MUTANTS`), and its count is at most 32
+(`PYTHON_MAX_SHARDS`). The clamp to 32 becomes a whole refusal, by name: a listing that needs more
+than 32 shards of 20 is no longer dealt into 32 larger shards. `shards --python-listed` prints
+`mutation: shards: REFUSED: <n> python mutant(s) need <legs> legs of at most 20, more than the pull
+request run's 32 python legs: split the change, since a run is never capped`, writes no step output
+and no byte of the plan, and exits 1 before any leg is dealt (SPEC-415 R1 to R3, ADR-429).
+
+- A listing of 32 x 20 or fewer is dealt exactly as before, round robin, and its plan line now ends
+  `; python legs <c> of ceiling 32` (SPEC-415 R4).
+- R11 is unchanged: a refused plan's file is the one `plan` wrote, which the verdict reads VOID,
+  since the plan names no python shards.
+- Section 12's last case of SPEC-362 A12, 32 x 20 + 1, now reads refused instead of 32 shards; the
+  test keeps its name, its command and its id, as SPEC-362's own amendment records.
+
+## Amendment: each Python plan leg runs its plan's names and records its costs (SPEC-418)
+
+Insert-only; every earlier byte is kept. When the plan carries a `python` matrix, a leg run with
+`--plan` and `--shard k/n` runs exactly the names the plan's shard k lists, and refuses before its
+first mutant, writing no report, when the plan's count is not n or its legs do not hold the
+runner's own listing exactly once each (SPEC-418 R5). With `--report`, the runner records each
+file's control seconds and each mutant's seconds in `costs.jsonl` beside the report as they are
+paid (SPEC-418 R6); the report and the standard output are unchanged. `--all` and `--file` keep
+`k::n`.

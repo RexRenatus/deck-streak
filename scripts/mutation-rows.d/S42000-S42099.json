@@ -1,0 +1,238 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S42000-THE-SHARES-CAP-IS-128",
+        "scripts/mutation-verdict.py",
+        "PYTHON_SHARE_CAP = 128\n",
+        "PYTHON_SHARE_CAP = 136\n",
+        "the cap no signed share may pass is 128 (SPEC-420 R2, A1)",
+        "test_mutation_python_shard_binding.ThePythonShareIsOneCappedValue.test_the_share_is_one_value_capped_at_128_in_the_tree"
+      ],
+      [
+        "S42001-THE-SHARE-IS-A-MULTIPLE-OF-EIGHT",
+        "scripts/mutation-verdict.py",
+        "PYTHON_MAX_SHARDS = 32\n",
+        "PYTHON_MAX_SHARDS = 36\n",
+        "the share is a multiple of 8 from 8 to the cap (SPEC-420 R3, A1)",
+        "test_mutation_python_shard_binding.ThePythonShareIsOneCappedValue.test_the_share_is_one_value_capped_at_128_in_the_tree"
+      ],
+      [
+        "S42002-THE-COUNT-RULE-IS-ITS-OWN-VALUE",
+        "scripts/mutation-verdict.py",
+        "PYTHON_SHARD_MUTANTS = 20\n",
+        "PYTHON_SHARD_MUTANTS = 21\n",
+        "the count rule holds 20 listed mutants a leg on a line of its own (SPEC-420 R1)",
+        "test_mutation_python_shard_binding.ThePythonMatrixIsSizedToTheHostedJob.test_the_matrix_takes_twenty_listed_mutants_a_shard_clamped_to_thirty_two"
+      ],
+      [
+        "S42003-A-SHARE-ABOVE-THE-CAP-IS-REFUSED",
+        "scripts/mutation-verdict.py",
+        "share > PYTHON_SHARE_CAP",
+        "share > PYTHON_SHARE_CAP + 8",
+        "a share above the cap is refused before any deal (SPEC-420 R2, A2)",
+        "test_mutation_python_shard_binding.ThePythonShareIsOneCappedValue.test_a_share_outside_the_cap_refuses_the_plan_whole_by_name"
+      ],
+      [
+        "S42004-A-SHARE-BELOW-ONE-IS-REFUSED",
+        "scripts/mutation-verdict.py",
+        "share < 1 ",
+        "share < 0 ",
+        "a share below 1 is refused before any deal (SPEC-420 R2, A2)",
+        "test_mutation_python_shard_binding.ThePythonShareIsOneCappedValue.test_a_share_outside_the_cap_refuses_the_plan_whole_by_name"
+      ],
+      [
+        "S42005-THE-SHARES-REFUSAL-FAILS-THE-PLAN",
+        "scripts/mutation-verdict.py",
+        "            print(refused)\n            return EXIT_FAIL\n",
+        "            print(refused)\n            return EXIT_OK\n",
+        "the share's refusal fails the plan (SPEC-420 R2, A2)",
+        "test_mutation_python_shard_binding.ThePythonShareIsOneCappedValue.test_a_share_outside_the_cap_refuses_the_plan_whole_by_name"
+      ],
+      [
+        "S42006-MAIN-ASKS-BEFORE-DEALING",
+        "scripts/mutation-verdict.py",
+        "refused = python_share_refused()",
+        "refused = None",
+        "the shards verb asks for the share's refusal before any deal (SPEC-420 R2, A2)",
+        "test_mutation_python_shard_binding.ThePythonShareIsOneCappedValue.test_a_share_outside_the_cap_refuses_the_plan_whole_by_name"
+      ],
+      [
+        "S42007-THE-PRICE-OF-AUDIT-WEB-VERDICT-IS-THE-RECORDED-RUNS",
+        "scripts/mutation-verdict.py",
+        "\"scripts/audit-web-verdict.py\": 3,",
+        "\"scripts/audit-web-verdict.py\": 4,",
+        "the price of scripts/audit-web-verdict.py is the prices verb's figure over the recorded run (SPEC-420 R4, A5)",
+        "test_mutation_python_shard_binding.ThePythonShareIsOneCappedValue.test_the_price_table_is_the_prices_verbs_output_over_the_recorded_run"
+      ],
+      [
+        "S42008-THE-PRICE-OF-CREATE-ISSUES-IS-THE-RECORDED-RUNS",
+        "scripts/mutation-verdict.py",
+        "\"scripts/create-issues.py\": 1,",
+        "\"scripts/create-issues.py\": 2,",
+        "the price of scripts/create-issues.py is the prices verb's figure over the recorded run (SPEC-420 R4, A5)",
+        "test_mutation_python_shard_binding.ThePythonShareIsOneCappedValue.test_the_price_table_is_the_prices_verbs_output_over_the_recorded_run"
+      ],
+      [
+        "S42009-THE-PRICE-OF-DYNAMIC-IMPORTS-CHECK-IS-THE-RECORDED-RUNS",
+        "scripts/mutation-verdict.py",
+        "\"scripts/dynamic-imports-check.py\": 2,",
+        "\"scripts/dynamic-imports-check.py\": 3,",
+        "the price of scripts/dynamic-imports-check.py is the prices verb's figure over the recorded run (SPEC-420 R4, A5)",
+        "test_mutation_python_shard_binding.ThePythonShareIsOneCappedValue.test_the_price_table_is_the_prices_verbs_output_over_the_recorded_run"
+      ],
+      [
+        "S42010-THE-PRICE-OF-IOS-ICON-IS-THE-RECORDED-RUNS",
+        "scripts/mutation-verdict.py",
+        "\"scripts/ios_icon.py\": 2,",
+        "\"scripts/ios_icon.py\": 3,",
+        "the price of scripts/ios_icon.py is the prices verb's figure over the recorded run (SPEC-420 R4, A5)",
+        "test_mutation_python_shard_binding.ThePythonShareIsOneCappedValue.test_the_price_table_is_the_prices_verbs_output_over_the_recorded_run"
+      ],
+      [
+        "S42011-THE-PRICE-OF-IOS-LANE-IS-THE-RECORDED-RUNS",
+        "scripts/mutation-verdict.py",
+        "\"scripts/ios_lane.py\": 13,",
+        "\"scripts/ios_lane.py\": 14,",
+        "the price of scripts/ios_lane.py is the prices verb's figure over the recorded run (SPEC-420 R4, A5)",
+        "test_mutation_python_shard_binding.ThePythonShareIsOneCappedValue.test_the_price_table_is_the_prices_verbs_output_over_the_recorded_run"
+      ],
+      [
+        "S42012-THE-PRICE-OF-MEMORY-SCOPE-IS-THE-RECORDED-RUNS",
+        "scripts/mutation-verdict.py",
+        "\"scripts/memory_scope.py\": 39,",
+        "\"scripts/memory_scope.py\": 40,",
+        "the price of scripts/memory_scope.py is the prices verb's figure over the recorded run (SPEC-420 R4, A5)",
+        "test_mutation_python_shard_binding.ThePythonShareIsOneCappedValue.test_the_price_table_is_the_prices_verbs_output_over_the_recorded_run"
+      ],
+      [
+        "S42013-THE-PRICE-OF-MUTATION-VERDICT-IS-THE-RECORDED-RUNS",
+        "scripts/mutation-verdict.py",
+        "\"scripts/mutation-verdict.py\": 224,",
+        "\"scripts/mutation-verdict.py\": 225,",
+        "the price of scripts/mutation-verdict.py is the prices verb's figure over the recorded run (SPEC-420 R4, A5)",
+        "test_mutation_python_shard_binding.ThePythonShareIsOneCappedValue.test_the_price_table_is_the_prices_verbs_output_over_the_recorded_run"
+      ],
+      [
+        "S42014-EVERY-CONTROL-COMES-BEFORE-ANY-MUTANT",
+        "scripts/mutation_python.py",
+        "        prepared = [judge.prepare(file, mutants, report) for file, mutants in selected.items()]\n        for state in prepared:\n            if state is not None:\n                judge.judge(state)\n",
+        "        for file, mutants in selected.items():\n            judge.file(file, mutants, report)\n",
+        "every file of a leg has its control recorded before any mutant of the leg runs (SPEC-420 R6, A7)",
+        "test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_every_files_control_is_recorded_before_any_mutant_of_the_leg"
+      ],
+      [
+        "S42015-A-MODULE-LEVEL-MUTANT-RUNS-WHOLE",
+        "scripts/mutation_python.py",
+        "    if m.function == \"<module>\":",
+        "    if m.function == \"<no module>\":",
+        "a mutant named in its module runs the whole suite, why module (SPEC-420 R7, A9)",
+        "test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_line_run_at_import_or_outside_a_test_runs_the_whole_suite"
+      ],
+      [
+        "S42016-A-LINE-RUN-AT-IMPORT-RUNS-WHOLE",
+        "scripts/mutation_python.py",
+        "    if any(number in scopes[\"outside\"] for number in span):",
+        "    if any(number in scopes[\"outside\"] for number in ()):",
+        "a line run at import or outside any test runs the whole suite, why import (SPEC-420 R7, A9)",
+        "test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_line_run_at_import_or_outside_a_test_runs_the_whole_suite"
+      ],
+      [
+        "S42017-AN-UNREACHED-LINE-RUNS-WHOLE",
+        "scripts/mutation_python.py",
+        "    if not traced:",
+        "    if not traced and not span:",
+        "a line no traced test executes runs the whole suite, why unreached (SPEC-420 R7, A10)",
+        "test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_line_no_traced_test_executes_runs_the_whole_suite"
+      ],
+      [
+        "S42018-CHILD-RECORDS-ARE-READ",
+        "scripts/mutation_python.py",
+        "        (outside if test is None else lines.setdefault(test, set())).update(record[\"lines\"])",
+        "        (outside if test is None else lines.setdefault(test, set())).update(())",
+        "a child process's record adds its lines to its test's scoped set (SPEC-420 R7, A11)",
+        "test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_line_only_a_child_process_executes_keeps_that_test"
+      ],
+      [
+        "S42019-AN-UNRECORDED-PROCESS-JOINS-EVERY-SET",
+        "scripts/mutation_python.py",
+        "        if spawned > direct[root[\"token\"], root[\"pid\"], test]:",
+        "        if spawned > direct[root[\"token\"], root[\"pid\"], test] + 1:",
+        "a test whose process left no record joins every scoped set (SPEC-420 R7, A12)",
+        "test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_test_whose_process_left_no_record_joins_every_scoped_set"
+      ],
+      [
+        "S42020-AN-EXEC-JOINS-EVERY-SET",
+        "scripts/mutation_python.py",
+        "        if record[\"exec\"]:",
+        "        if record[\"exec\"] and not record[\"exec\"]:",
+        "a test whose child replaced its image joins every scoped set (SPEC-420 R7, A12)",
+        "test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_test_whose_child_execs_joins_every_scoped_set"
+      ],
+      [
+        "S42021-A-RUNNING-THREAD-JOINS-EVERY-SET",
+        "scripts/mutation_python.py",
+        "    joiners = set(root[\"execs\"]) | set(root[\"threads\"])",
+        "    joiners = set(root[\"execs\"])",
+        "a test that left a thread running joins every scoped set (SPEC-420 R7, A12)",
+        "test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_test_that_leaves_a_thread_running_joins_every_scoped_set"
+      ],
+      [
+        "S42022-A-FAILED-TRACE-RUNS-THE-FILE-WHOLE",
+        "scripts/mutation_python.py",
+        "    if root[\"failed\"]:",
+        "    if root[\"failed\"] and not root[\"failed\"]:",
+        "a failed trace runs every mutant of its file whole, why trace (SPEC-420 R7, A13)",
+        "test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_failed_or_partial_trace_runs_every_mutant_of_its_file_whole"
+      ],
+      [
+        "S42023-A-SHORT-SCOPED-RUN-RERUNS-WHOLE",
+        "scripts/mutation_python.py",
+        "                    whole = ran.reported and ran.ran >= len(chosen)",
+        "                    whole = ran.reported",
+        "a scoped run that ran fewer tests than its set reruns whole, why ran (SPEC-420 R7, A14)",
+        "test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_scoped_run_that_ran_fewer_tests_than_its_set_reruns_whole"
+      ],
+      [
+        "S42024-A-SCOPED-SURVIVOR-IS-CONFIRMED-WHOLE",
+        "scripts/mutation_python.py",
+        "                    scope, why = \"whole\", \"survivor\" if whole else \"ran\"\n",
+        "                    scope, why = \"whole\", \"survivor\" if whole else \"ran\"\n                    return ran\n",
+        "a scoped pass is confirmed by the whole suite before it reads survived (SPEC-420 R7, A15)",
+        "test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_scoped_survivor_is_confirmed_by_the_whole_suite"
+      ],
+      [
+        "S42025-THE-BATTERY-STAYS-WHOLE",
+        "scripts/mutation_python.py",
+        "SCOPED_SELECTIONS = frozenset({\"plan\"})",
+        "SCOPED_SELECTIONS = frozenset({\"plan\", \"all\"})",
+        "run --all takes no trace and runs every mutant whole, why all (SPEC-420 R8, A16)",
+        "test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_the_battery_runs_every_mutant_against_the_whole_suite"
+      ],
+      [
+        "S42026-A-WRONG-CONTROL-VOIDS-EVERY-FILE",
+        "scripts/mutation_python.py",
+        "    for entry in report[\"files\"] if void else []:\n        entry[\"void\"] = void\n",
+        "    for entry in report[\"files\"] if void else []:\n        entry[\"void\"] = None\n",
+        "a leg control read otherwise than expected voids every file entry by name (SPEC-420 R9, A17)",
+        "test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_a_leg_whose_control_reads_wrong_voids_every_file_by_name"
+      ],
+      [
+        "S42027-THE-CONTROLS-SURVIVOR-ARM",
+        "scripts/mutation_python.py",
+        "CONTROL_EXPECTED = (\"killed\", \"killed\", \"survived\")",
+        "CONTROL_EXPECTED = (\"killed\", \"killed\", \"killed\")",
+        "the leg control's third mutant is expected to survive (SPEC-420 R9, A17)",
+        "test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_the_repository_holds_the_leg_control_and_its_three_mutants"
+      ],
+      [
+        "S42028-THE-RECORD-NAMES-ITS-SCOPE",
+        "scripts/mutation_python.py",
+        "            note: dict = {\"scope\": scope, \"tests\": counted[0]}",
+        "            note: dict = {\"tests\": counted[0]}",
+        "each mutant's cost record names its scope (SPEC-420 R10, A18)",
+        "test_mutation_python.EachMutantRunsTheTestsItsLineTraced.test_each_mutant_record_names_its_scope_and_its_tests"
+      ]
+    ]
+  }
+}

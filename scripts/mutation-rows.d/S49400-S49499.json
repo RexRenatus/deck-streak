@@ -1,0 +1,267 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S49400-RECALL-MIN",
+        "engine-core",
+        "src/scheduler.rs",
+        "pub const MIN: f32 = 1.0 / 8192.0;",
+        "pub const MIN: f32 = 1.0 / 4096.0;",
+        "scheduler_seam::predict_is_a_pure_probe_and_the_version_names_the_model",
+        "the least recall is 2^-13; at 2^-12 its bits read 0x3980_0000, not 0x3900_0000, and a recall between the two would be refused (SPEC-494 R1, A9)"
+      ],
+      [
+        "S49401-RECALL-MAX",
+        "engine-core",
+        "src/scheduler.rs",
+        "pub const MAX: f32 = 1.0 - 1.0 / 8192.0;",
+        "pub const MAX: f32 = 1.0 - 1.0 / 4096.0;",
+        "scheduler_seam::predict_is_a_pure_probe_and_the_version_names_the_model",
+        "the greatest recall is 1 - 2^-13; at 1 - 2^-12 its bits leave 0x3F7F_F800 and a clamped recall of 2.0 reads below the bound (SPEC-494 R1, A9)"
+      ],
+      [
+        "S49402-RECALL-RANGE",
+        "engine-core",
+        "src/scheduler.rs",
+        "if !(Self::MIN..=Self::MAX).contains(&value) {",
+        "if !(0.0..=1.0).contains(&value) {",
+        "scheduler_seam::predict_is_a_pure_probe_and_the_version_names_the_model",
+        "a recall is built only within its bounds; checked against 0 to 1 instead, a recall of 0.0 or of 1.0 would be admitted (SPEC-494 R1, A9)"
+      ],
+      [
+        "S49403-ANSWER-CAP",
+        "engine-core",
+        "src/scheduler.rs",
+        "pub const ANSWER_MS_CAP: u32 = 3_600_000;",
+        "pub const ANSWER_MS_CAP: u32 = 3_600_001;",
+        "scheduler_seam::a_fold_refuses_a_key_not_after_the_last_and_leaves_the_state_unchanged",
+        "the answer-time cap is one hour, 3,600,000 milliseconds; one millisecond more and an answer of 3,600,001 would be folded (SPEC-494 R8, A7)"
+      ],
+      [
+        "S49404-ANSWER-BOUND",
+        "engine-core",
+        "src/scheduler.rs",
+        "if ev.answer_ms > ANSWER_MS_CAP {",
+        "if ev.answer_ms >= ANSWER_MS_CAP {",
+        "scheduler_seam::a_fold_refuses_a_key_not_after_the_last_and_leaves_the_state_unchanged",
+        "an answer of exactly the cap is folded; refused at the cap, an answer of 3,600,000 milliseconds would be refused (SPEC-494 R8, A7)"
+      ],
+      [
+        "S49405-GRADE-HIGH",
+        "engine-core",
+        "src/scheduler.rs",
+        "if !(1..=4).contains(&ev.grade) {",
+        "if !(1..=5).contains(&ev.grade) {",
+        "scheduler_seam::a_fold_refuses_a_key_not_after_the_last_and_leaves_the_state_unchanged",
+        "a grade is 1 to 4; with 5 in the range a grade of 5 would be folded (SPEC-494 R8, A7)"
+      ],
+      [
+        "S49406-GRADE-LOW",
+        "engine-core",
+        "src/scheduler.rs",
+        "if !(1..=4).contains(&ev.grade) {",
+        "if !(0..=4).contains(&ev.grade) {",
+        "scheduler_seam::a_fold_refuses_a_key_not_after_the_last_and_leaves_the_state_unchanged",
+        "a grade is 1 to 4; with 0 in the range a grade of 0, an entry with no rating, would be folded (SPEC-494 R8, A7)"
+      ],
+      [
+        "S49407-KEY-EQUAL",
+        "engine-core",
+        "src/scheduler.rs",
+        "if let Some(last) = last.filter(|last| ev.key <= *last) {",
+        "if let Some(last) = last.filter(|last| ev.key < *last) {",
+        "scheduler_seam::a_fold_refuses_a_key_not_after_the_last_and_leaves_the_state_unchanged",
+        "a key equal to the last folded key is refused; refusing only an earlier one, the same review would be folded twice (SPEC-494 R8, A7)"
+      ],
+      [
+        "S49408-CHECK-FIRST",
+        "engine-core",
+        "src/replay.rs",
+        "port::check_event(st.last, ev)?;",
+        "let _ = port::check_event(st.last, ev);",
+        "scheduler_seam::a_fold_refuses_a_key_not_after_the_last_and_leaves_the_state_unchanged",
+        "the FSRS-7 fold makes the shared event check before it writes; with the check's refusal dropped, every refused event would be appended (SPEC-494 R8, A7)"
+      ],
+      [
+        "S49409-DUE-ON-DAY",
+        "engine-core",
+        "src/scheduler.rs",
+        ".filter(|card| card.due <= day)",
+        ".filter(|card| card.due < day)",
+        "scheduler_seam::two_cards_of_one_note_never_share_a_study_day",
+        "a card due on the study day is queued on it; filtered by an earlier due only, the day's own cards would never be queued (SPEC-494 R6, A3)"
+      ],
+      [
+        "S49410-QUEUE-ORDER",
+        "engine-core",
+        "src/scheduler.rs",
+        "candidates.sort_by_key(|card| (card.due, card.card));",
+        "candidates.sort_by_key(|card| (card.card, card.due));",
+        "scheduler_seam::two_cards_of_one_note_never_share_a_study_day",
+        "the day's order is by due day and then card; ordered by card first, an overdue sibling would lose its place to a later card of its note (SPEC-494 R6, A3)"
+      ],
+      [
+        "S49411-ONE-PER-NOTE",
+        "engine-core",
+        "src/scheduler.rs",
+        "} else if seen.insert(card.note) {",
+        "} else if seen.insert(card.note) || true {",
+        "scheduler_seam::two_cards_of_one_note_never_share_a_study_day",
+        "a note's second card in the day's order moves to the next day; admitted always, two cards of one note would share the study day (SPEC-494 R7, A3)"
+      ],
+      [
+        "S49412-NEXT-DAY",
+        "engine-core",
+        "src/scheduler.rs",
+        "self.day.saturating_add(1)",
+        "self.day.saturating_add(0)",
+        "scheduler_seam::two_cards_of_one_note_never_share_a_study_day",
+        "a moved card moves to the next day; moved to the same day, the sibling rule would move nothing (SPEC-494 R7, A3)"
+      ],
+      [
+        "S49413-NO-NOTE",
+        "engine-core",
+        "src/scheduler.rs",
+        "if card.note <= NO_NOTE {",
+        "if card.note < NO_NOTE {",
+        "scheduler_seam::a_card_with_no_note_id_turns_the_rule_off_and_is_counted",
+        "a card whose note id is 0 takes no part in the sibling rule; tested by a negative id only, two cards with no note would be held as siblings (SPEC-494 R7, A4)"
+      ],
+      [
+        "S49414-NO-NOTE-COUNT",
+        "engine-core",
+        "src/scheduler.rs",
+        "queue.unlinked = queue.unlinked.saturating_add(1);",
+        "queue.unlinked = queue.unlinked.saturating_add(0);",
+        "scheduler_seam::a_card_with_no_note_id_turns_the_rule_off_and_is_counted",
+        "each queued card with no note id is counted; with the count held, the queue would report 0 cards with no note (SPEC-494 R7, A4)"
+      ],
+      [
+        "S49415-WHOLE-DAYS",
+        "engine-core",
+        "src/replay.rs",
+        "let whole = interval.round() as u32;",
+        "let whole = interval.ceil() as u32;",
+        "scheduler_seam::fsrs7_whole_days_equal_todays_rounding_over_a_fixed_grid",
+        "FSRS-7's whole-day rule rounds to the nearest day; rounded up, every interval whose fraction is below one half would move its due day a day later (SPEC-494 R2, A2)"
+      ],
+      [
+        "S49416-MAGIC",
+        "engine-core",
+        "src/replay.rs",
+        "if bytes.get(..CHECKPOINT_MAGIC.len()) != Some(&CHECKPOINT_MAGIC[..]) {",
+        "if bytes.get(..CHECKPOINT_MAGIC.len()) == Some(&CHECKPOINT_MAGIC[..]) {",
+        "scheduler_seam::a_checkpoint_restores_to_equal_bytes_and_equal_intervals",
+        "a checkpoint is refused when it does not start with the magic; inverted, the port's own checkpoint would be refused as no checkpoint (SPEC-494 R9, A8)"
+      ],
+      [
+        "S49417-OTHER-MODEL",
+        "engine-core",
+        "src/replay.rs",
+        "if version != FSRS7_VERSION.as_slice() {",
+        "if version == FSRS7_VERSION.as_slice() {",
+        "scheduler_seam::a_checkpoint_restores_to_equal_bytes_and_equal_intervals",
+        "a checkpoint naming another implementation is refused; inverted, the port's own checkpoint would be refused as another model's (SPEC-494 R9, A8)"
+      ],
+      [
+        "S49418-CHECKPOINT-LENGTH",
+        "engine-core",
+        "src/replay.rs",
+        "if bytes.len() > expected {",
+        "if bytes.len() >= expected {",
+        "scheduler_seam::a_checkpoint_restores_to_equal_bytes_and_equal_intervals",
+        "a checkpoint of exactly its events' length restores; refused at that length, no checkpoint would restore (SPEC-494 R9, A8)"
+      ],
+      [
+        "S49419-PREDICT-LAST-DAY",
+        "engine-core",
+        "src/replay.rs",
+        ".filter(|days| *days >= 0)",
+        ".filter(|days| *days > 0)",
+        "scheduler_seam::predict_is_a_pure_probe_and_the_version_names_the_model",
+        "the probe answers on the card's last review day; refused there, a card reviewed today would have no recall (SPEC-494 R10, A9)"
+      ],
+      [
+        "S49420-CENSUS-ROUTE",
+        "engine-core",
+        "tests/scheduler_census.rs",
+        "|| (file == PORT_FILE && inside);",
+        "|| (file == PORT_FILE && (inside || true));",
+        "scheduler_census::the_due_days_come_only_through_the_port_and_no_new_file_asks_for_the_engine_queue",
+        "the route census admits a model call in the port's span alone; admitted anywhere in the replay's file, a producer that rounds the projection itself would pass (SPEC-494 R11, A5)"
+      ],
+      [
+        "S49421-CENSUS-CLOCK",
+        "engine-core",
+        "tests/scheduler_census.rs",
+        "|| (file == PORT_FILE && in_port);",
+        "|| (file == PORT_FILE && in_port && false);",
+        "scheduler_census::no_clock_or_timezone_read_sits_inside_the_port",
+        "the purity census judges the port's span of the replay's file; with the span unjudged, a port that reads the clock would pass (SPEC-494 R5, A6)"
+      ],
+      [
+        "S49422-VERSION-LITERAL",
+        "engine-core",
+        "src/replay.rs",
+        "pub const FSRS7_VERSION: [u8; 32] = *b\"deck-streak-fsrs7 rev 4bc0a097\\0\\0\";",
+        "pub const FSRS7_VERSION: [u8; 32] = *b\"deck-streak-fsrs7 rev 4bc0a098\\0\\0\";",
+        "scheduler_seam::predict_is_a_pure_probe_and_the_version_names_the_model",
+        "the implementation's fixed identifier names the pinned revision's 8-hex prefix; one digit off, it would name a revision the root manifest does not pin (SPEC-494 R10, A9)"
+      ],
+      [
+        "S49423-MAGIC-LITERAL",
+        "engine-core",
+        "src/replay.rs",
+        "const CHECKPOINT_MAGIC: [u8; 4] = *b\"DSSP\";",
+        "const CHECKPOINT_MAGIC: [u8; 4] = *b\"DSSQ\";",
+        "scheduler_seam::a_checkpoint_restores_to_equal_bytes_and_equal_intervals",
+        "a checkpoint starts with the four bytes DSSP; with another magic the checkpoint's first bytes would change (SPEC-494 R9, A8)"
+      ],
+      [
+        "S49424-NO-NOTE-VALUE",
+        "engine-core",
+        "src/scheduler.rs",
+        "pub const NO_NOTE: i64 = 0;",
+        "pub const NO_NOTE: i64 = 1;",
+        "scheduler_seam::the_sibling_rule_holds_over_every_small_queue",
+        "the note id of a card with no note is 0 or less; at 1, two cards of note 1 would both be queued as unlinked (SPEC-494 R7, A3)"
+      ],
+      [
+        "S49425-FORMAT-BYTE",
+        "engine-core",
+        "src/replay.rs",
+        "const CHECKPOINT_FORMAT: u8 = 1;",
+        "const CHECKPOINT_FORMAT: u8 = 2;",
+        "scheduler_seam::a_checkpoint_restores_to_equal_bytes_and_equal_intervals",
+        "a checkpoint's format byte is 1; with another format the checkpoint's fifth byte would change (SPEC-494 R9, A8)"
+      ],
+      [
+        "S49426-HEADER-LEN",
+        "engine-core",
+        "src/replay.rs",
+        "const HEADER_LEN: usize = 45;",
+        "const HEADER_LEN: usize = 46;",
+        "scheduler_seam::a_checkpoint_restores_to_equal_bytes_and_equal_intervals",
+        "a checkpoint's header is 45 bytes, the magic, the format, the identifier and the count; one more and the port's own checkpoint would read as truncated (SPEC-494 R9, A8)"
+      ],
+      [
+        "S49427-EVENT-LEN",
+        "engine-core",
+        "src/replay.rs",
+        "const EVENT_LEN: usize = 49;",
+        "const EVENT_LEN: usize = 50;",
+        "scheduler_seam::a_checkpoint_restores_to_equal_bytes_and_equal_intervals",
+        "an event in a checkpoint is 49 bytes; one more and the port's own checkpoint would read as truncated (SPEC-494 R9, A8)"
+      ],
+      [
+        "S49428-RETENTION-RECALL",
+        "engine-core",
+        "src/replay.rs",
+        "Recall::new(retention)",
+        "Recall::clamped(retention)",
+        "scheduler_seam::fsrs7_behind_the_port_gives_todays_due_days_on_the_replay_fixtures",
+        "the replay refuses a retention that is no recall; clamped instead, a retention of 1.0 would be replayed at the greatest recall (SPEC-494 R3, A1)"
+      ]
+    ]
+  }
+}

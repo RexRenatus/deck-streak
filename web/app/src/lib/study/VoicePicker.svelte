@@ -2,7 +2,7 @@
   // SPEC-350 R16, A27; ADR-361 D8, D13. The voice picker: for each language the shown card speaks,
   // the language's default voice, then the device's voices for it. A choice is stored per language;
   // the list follows the device's voices, which a browser may load after the page.
-  import { m } from '$lib/paraglide/messages.js';
+  import { m } from '#lib/paraglide/messages.js';
   import type { Voice, VoiceChoices } from './voice';
 
   /** Where the picker reads the device's voices: `speechSynthesis` is one. */

@@ -1,0 +1,78 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S42300-THE-RELEASE-REFUSAL-NAMES-ITS-CEILING",
+        "scripts/mutation-verdict.py",
+        "the release run's ceiling (RUST_RELEASE_CEILING): a larger figure needs a ",
+        "the pull request run's ceiling (RUST_RELEASE_CEILING): a larger figure needs a ",
+        "a release listing past its Rust ceiling is refused by the release run's own ceiling, never the pull request run's (SPEC-423 R4, A3)",
+        "test_release_rust_ceiling.TheReleaseRunSizesItsRustLegsToItsCeiling.test_the_release_run_sizes_up_to_its_ceiling_and_refuses_one_mutant_past_it"
+      ],
+      [
+        "S42301-A-RUST-CEILING-OUTSIDE-ITS-RANGE-IS-REFUSED",
+        "scripts/mutation-verdict.py",
+        "is outside {LEG_CEILING['ci']}..{RUST_MATRIX_LEGS}",
+        "is within {LEG_CEILING['ci']}..{RUST_MATRIX_LEGS}",
+        "a Rust release ceiling outside its range is refused as outside it, by name (SPEC-423 R5, A5)",
+        "test_release_rust_ceiling.TheReleaseRunSizesItsRustLegsToItsCeiling.test_a_rust_ceiling_outside_its_range_is_refused_by_name"
+      ],
+      [
+        "S42302-THE-RUST-RELEASE-LINE-NAMES-ITS-JOB",
+        "scripts/mutation-verdict.py",
+        "(RUST_RELEASE_CEILING): {count} in mutation-rust, at most",
+        "(RUST_RELEASE_CEILING): {count} in mutation-python, at most",
+        "the Rust release line names mutation-rust, the one Rust matrix (SPEC-423 R6, A7)",
+        "test_release_rust_ceiling.TheReleaseRunSizesItsRustLegsToItsCeiling.test_the_rust_release_line_stands_beside_the_python_release_line"
+      ],
+      [
+        "S42303-THE-RUST-SHARDS-LINE-READS-THE-RELEASE-CEILING",
+        "scripts/mutation-verdict.py",
+        "bound; legs {count} of ceiling {rust_ceiling}\"",
+        "bound; legs {count} of ceiling {LEG_CEILING['ci']}\"",
+        "the Rust shards line reads the release ceiling on the release run (SPEC-423 R6, A6)",
+        "test_release_rust_ceiling.TheReleaseRunSizesItsRustLegsToItsCeiling.test_the_rust_lines_read_the_release_ceiling_on_the_release_run_alone"
+      ],
+      [
+        "S42304-THE-RUN-LEGS-LINE-READS-THE-RELEASE-CEILING",
+        "scripts/mutation-verdict.py",
+        "rust {count} of {rust_ceiling}; \"",
+        "rust {count} of {LEG_CEILING['ci']}; \"",
+        "the run-legs line's Rust term reads the release ceiling on the release run (SPEC-423 R6, A6)",
+        "test_release_rust_ceiling.TheReleaseRunSizesItsRustLegsToItsCeiling.test_the_rust_lines_read_the_release_ceiling_on_the_release_run_alone"
+      ],
+      [
+        "S42305-THE-RUNBOOK-NAMES-THE-RUST-RELEASE-CEILING",
+        "RELEASING.md",
+        "up to `RUST_RELEASE_CEILING` (SPEC-423).",
+        "up to `LEG_CEILING` (SPEC-423).",
+        "the runbook names RUST_RELEASE_CEILING as the one bound the release pull request may size up to (SPEC-423 R12, A12)",
+        "test_release_rust_ceiling.TheRustCeilingIsSignedAndTheRunbookSaysTheMethod.test_the_runbook_names_the_rust_release_ceiling_its_matrix_and_its_refusal"
+      ],
+      [
+        "S42306-THE-RUNBOOK-SAYS-A-LARGER-RUST-FIGURE-NEEDS-A-RULING",
+        "RELEASING.md",
+        "a new measurement and a new owner-signed ruling",
+        "a new measurement",
+        "the runbook says a larger Rust figure needs a new measurement and a new owner-signed ruling (SPEC-423 R12, A12)",
+        "test_release_rust_ceiling.TheRustCeilingIsSignedAndTheRunbookSaysTheMethod.test_the_runbook_names_the_rust_release_ceiling_its_matrix_and_its_refusal"
+      ],
+      [
+        "S42307-THE-PYTHON-CEILING-TESTS-HOLD-THE-RUST-CEILING",
+        "scripts/tests/test_release_python_ceiling.py",
+        "\"RUST_RELEASE_CEILING\", module.LEG_CEILING[\"ci\"])",
+        "\"RUST_RELEASE_CEILING\", 200)",
+        "SPEC-422's helper holds the Rust ceiling at the pull request ceiling, so its criteria read the Python ceiling alone (SPEC-423 R10, A11)",
+        "test_release_rust_ceiling.WhatTheReleaseRunKeeps.test_the_python_ceiling_tests_read_the_rust_ceiling_at_its_placeholder"
+      ],
+      [
+        "S42308-THE-MAP-JUDGES-THE-VERDICT-SCRIPT-WITH-THE-RUST-TESTS",
+        "scripts/mutation-python.json",
+        "\"test_release_python_ceiling\",\n      \"test_release_rust_ceiling\"",
+        "\"test_release_python_ceiling\"",
+        "the map judges the verdict script's mutants with the Rust ceiling tests (SPEC-423 R11, A14)",
+        "test_release_rust_ceiling.WhatTheReleaseRunKeeps.test_the_map_judges_the_verdict_scripts_mutants_with_the_rust_ceiling_tests"
+      ]
+    ]
+  }
+}

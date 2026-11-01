@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { api } from '$lib/api';
-  import QuickCapture from '$lib/capture/QuickCapture.svelte';
-  import { m } from '$lib/paraglide/messages.js';
+  import { api } from '#lib/api.js';
+  import QuickCapture from '#lib/capture/QuickCapture.svelte';
+  import { m } from '#lib/paraglide/messages.js';
 
   // The quick capture screen (SPEC-118 R11): a note or a journal line, saved into the vault's
   // inbox through the app's one API client.

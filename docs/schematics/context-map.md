@@ -58,8 +58,11 @@ flowchart TB
   subgraph engine[the engine over the replay maths]
     engine_core["engine-core"]
   end
-  subgraph foundations[no workspace dependency]
+  subgraph shared[the shared kernel]
     kernel
+  end
+  subgraph foundations[no workspace dependency]
+    study_day["study-day"]
     xp
     fsrs7
   end
@@ -159,6 +162,8 @@ flowchart TB
   vault --> kernel
   identity --> kernel
   agent --> kernel
+
+  kernel --> study_day
 ```
 
 The daemon composes none of `ffi`, `web-engine` and `push`. A native client links `ffi` into its
@@ -166,6 +171,9 @@ own binary and the web client runs `web-engine`, each over `engine-core`; `push`
 when native push carries the one router (#640). The clients' edges to `xp` are #639's.
 
 `fsrs7` depends on no workspace crate, and `engine-core` alone depends on it.
+
+`study-day` depends on no workspace crate, and `kernel` alone depends on it: it holds the study day
+the kernel re-exports, so the kernel sits in a layer of its own above it (SPEC-497, ADR-515).
 
 `deck-streak-migration` is planned in the fence and has no directory under `crates/`, so it is not
 drawn until the delivery that builds it.

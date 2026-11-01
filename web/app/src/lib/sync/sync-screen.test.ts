@@ -4,11 +4,11 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { describe, expect, it, vi } from 'vitest';
-import type { ChoiceCounted, ChoiceConfirmed, Direction, StatusWord, Synced, Unsynced } from '$lib/engine/protocol';
-import type { BackupsListed } from '$lib/engine/protocol';
-import type { BackupsClient } from '$lib/engine/backups';
-import { REQUIRED, STATUS_WORDS } from '$lib/engine/protocol';
-import { m } from '$lib/paraglide/messages.js';
+import type { ChoiceCounted, ChoiceConfirmed, Direction, StatusWord, Synced, Unsynced } from '#lib/engine/protocol.js';
+import type { BackupsListed } from '#lib/engine/protocol.js';
+import type { BackupsClient } from '#lib/engine/backups.js';
+import { REQUIRED, STATUS_WORDS } from '#lib/engine/protocol.js';
+import { m } from '#lib/paraglide/messages.js';
 import SyncRoute from '../../routes/sync/+page.svelte';
 import SyncScreen from './SyncScreen.svelte';
 import { choosing, statusText, type SyncClient } from './status';
@@ -21,7 +21,7 @@ import { choosing, statusText, type SyncClient } from './status';
 // The route draws the screen over the app's one engine, which is replaced before the route's
 // import runs.
 const route = vi.hoisted(() => ({ client: vi.fn(), lost: vi.fn() }));
-vi.mock('$lib/study/engine', () => ({ studyEngine: () => ({ client: route.client, lost: route.lost }) }));
+vi.mock('#lib/study/engine.js', () => ({ studyEngine: () => ({ client: route.client, lost: route.lost }) }));
 
 /** The engine's client as the sync screen sees it: each call recorded, each answer set. */
 class FakeSync implements SyncClient {

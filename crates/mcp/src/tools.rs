@@ -14,8 +14,12 @@ use axum::http::request::Parts;
 use deck_streak_coordination::law::{LawBlock, law_block};
 use deck_streak_kernel::{Clock, Db, KernelError, StudyDayRule};
 use rmcp::handler::server::wrapper::Json;
-use rmcp::model::{CallToolResult, ContentBlock, Extensions};
-use rmcp::{ServerHandler, schemars, tool, tool_handler, tool_router};
+use rmcp::model::{
+    CacheScope, CallToolResult, ContentBlock, Extensions, ListToolsResult, PaginatedRequestParams,
+    ProtocolVersion, ResultType,
+};
+use rmcp::service::{MaybeSendFuture, RequestContext};
+use rmcp::{ErrorData, RoleServer, ServerHandler, schemars, tool, tool_handler, tool_router};
 use serde::Serialize;
 
 use crate::grants::Scope;
@@ -152,5 +156,28 @@ impl McpServer {
     }
 }
 
+/// The handler's protocol side. `#[tool_handler]` generates `call_tool`, `get_tool` and `get_info`
+/// from the router, and keeps a method the impl already has: `list_tools` is written here because
+/// the generated one is an `async fn` that awaits nothing. It answers what the generated one
+/// answers, at once: every routed tool in one complete page, with the 2026-07-28 cache hints for a
+/// peer on that protocol or later.
 #[tool_handler]
-impl ServerHandler for McpServer {}
+impl ServerHandler for McpServer {
+    fn list_tools(
+        &self,
+        _request: Option<PaginatedRequestParams>,
+        context: RequestContext<RoleServer>,
+    ) -> impl Future<Output = Result<ListToolsResult, ErrorData>> + MaybeSendFuture + '_ {
+        let cache_hints = context
+            .protocol_version()
+            .is_some_and(|version| version >= ProtocolVersion::V_2026_07_28);
+        std::future::ready(Ok(ListToolsResult {
+            result_type: Some(ResultType::COMPLETE),
+            tools: Self::tool_router().list_all(),
+            meta: None,
+            next_cursor: None,
+            ttl_ms: cache_hints.then_some(0),
+            cache_scope: cache_hints.then_some(CacheScope::Public),
+        }))
+    }
+}

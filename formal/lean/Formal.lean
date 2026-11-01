@@ -2,6 +2,7 @@ import Formal.Fsrs7MemoryState
 import Formal.Fsrs7Schedule
 import Formal.Fsrs7Stock
 import Formal.NextMilestone
+import Formal.ReleaseCarry
 import Formal.ReplayHistory
 import Formal.RoadToC2
 import Formal.SensitiveDeck

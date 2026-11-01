@@ -80,7 +80,8 @@ class ThePythonJobsRunInCi(unittest.TestCase):
         # The verdict waits on it and judges both Python classes over the downloaded reports.
         self.assertRegex(
             verdict,
-            r"(?m)^    needs: \[mutation-plan, mutation-rust, mutation-python, mutation-rows\]$",
+            r"(?m)^    needs: \[mutation-plan, mutation-rust, mutation-python, "
+            r"mutation-python-release, mutation-rows\]$",
         )
         for klass in examined("Python classes", ["scripts", "oracle"]):
             self.assertRegex(

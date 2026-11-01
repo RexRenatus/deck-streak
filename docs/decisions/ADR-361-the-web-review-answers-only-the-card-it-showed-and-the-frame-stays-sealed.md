@@ -496,3 +496,15 @@ ADR-397 amends D1, for undo only, after SPEC-371's amendment. The rest of D1 sta
   to the review's last bury or flag, through the same gesture, checked at the write by the record's
   kind (ADR-397 D3). Bury and flag themselves stay ordinary calls, as D1 decided.
 - **D2 (`:57-72`)** is unchanged in effect: a confirmed undo still clears the kept card.
+
+## Amendment: D16 is superseded by the brand source's icons (ADR-598)
+
+D16, "A plain generated icon (part 2)", is superseded by ADR-598 D4 and D5; its text above is kept
+as it was. Drawn art now exists: the DeckStreak logo's files come from the DeckStreak brand source,
+byte for byte, and are served from `web/app/static/`. The public scrub admits each listed binary by
+its path, sha256 and byte count (`scripts/brand-files.json`; SPEC-033's amendment for SPEC-579), so
+the reason D16 gave against committed PNG files no longer holds for these files and holds for every
+other binary. `web/app/src/lib/icon.ts` and the three icon endpoints are removed.
+
+- Chosen: the brand source's files at the static root, admitted by the pinned list, because the install criteria now take the product's own mark
+- Keeping the generated squares beside the logo: rejected because two icons at one path cannot both be served, and the square is not the product's mark

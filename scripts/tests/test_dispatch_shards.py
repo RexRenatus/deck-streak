@@ -28,7 +28,19 @@ from unittest import mock
 from _mutants_finder import BOUNDS, Refused, mutants_in, run_texts
 from _support import REPO, examined
 from test_mutation_verdict import verdict_module
-from test_mutation_workflows import CI, VERDICT, WEEKLY, WORKFLOWS, jobs, listed, shard, workflow
+from test_mutation_workflows import (
+    CI,
+    VERDICT,
+    WEEKLY,
+    WORKFLOWS,
+    jobs,
+    listed,
+    rows_constant,
+    shard,
+    workflow,
+)
+from test_release_python_ceiling import deal, mutants
+from test_release_rust_ceiling import release_refusal, rust_deal
 
 WHOLE = 32
 COUNT = "${{ needs.size.outputs.shards }}"
@@ -208,6 +220,10 @@ RELEASE_691 = (
 RUN_JOBS = 256
 #: The axis the pull request's Python matrix reads: the plan writes at most `PYTHON_MAX_SHARDS`.
 PYTHON_AXIS = "${{ fromJSON(needs.mutation-plan.outputs.python_matrix) }}"
+#: The axis the release run's second Python matrix reads: the legs past `PYTHON_MATRIX_LEGS`.
+PYTHON_RELEASE_AXIS = "${{ fromJSON(needs.mutation-plan.outputs.python_release_matrix) }}"
+#: The axis the pull request's rows matrix reads: the plan deals at most `ROWS_MAX_LEGS` legs.
+ROWS_AXIS = "${{ fromJSON(needs.mutation-plan.outputs.rows_matrix) }}"
 
 
 def plan_shards(listing):
@@ -231,10 +247,12 @@ def plan_shards(listing):
         return done.returncode, done.stdout + done.stderr, json.loads(plan.read_text("utf-8"))
 
 
-def generated(job, python_most):
+def generated(job, python_most, rows_most):
     """The most jobs one workflow job can generate: one, or the product of its matrix's axes, a
-    listed axis by its length and the Python plan's axis by the most shards the plan writes. An
-    axis this cannot count is refused, never counted as one."""
+    listed axis by its length, the Python plan's axis by the most shards the plan writes, the
+    release run's second Python axis by the shards past one matrix's `RUN_JOBS` (none on any run
+    the share holds) and the rows axis by the most legs the plan deals. An axis this cannot count
+    is refused, never counted as one."""
     block = re.search(r"(?ms)^      matrix:\n(.*?)(?=^      \S|^    \S|\Z)", job)
     if block is None:
         return 1
@@ -250,6 +268,10 @@ def generated(job, python_most):
             most *= len([each for each in value[1:-1].split(",") if each.strip()])
         elif value == PYTHON_AXIS:
             most *= python_most
+        elif value == PYTHON_RELEASE_AXIS:
+            most *= max(0, python_most - RUN_JOBS)
+        elif value == ROWS_AXIS:
+            most *= rows_most
         else:
             raise AssertionError(f"a matrix axis this cannot count: {line!r}")
     return most
@@ -264,12 +286,19 @@ class TheReleaseFitsOneRun(unittest.TestCase):
             entry for name, count in RELEASE_691 for entry in entries(f"deck-streak-{name}", count)
         ]
         self.assertEqual(len(examined("release mutants", listing)), 8367)
+        # The pull request's run counts the rows job at its most legs, so its ceiling is 189 and
+        # #691's 200 legs no longer fit it: its plan refuses the listing whole, by name, and the
+        # battery's ceiling of 234 still sizes it at 200 legs within the bound (SPEC-417 R14).
         code, out, planned = plan_shards(listing)
+        self.assertEqual(code, 1, out)
+        self.assertIn("need more than 189 legs", out)
+        self.assertNotIn("shards", planned)
+        code, out, written = size(listing)
         self.assertEqual(code, 0, out)
-        self.assertEqual(planned["shards"]["count"], 200, out)
-        self.assertLessEqual(planned["shards"]["count"], 209, out)
-        slowest = max(leg["projected_seconds"] for leg in planned["shards"]["shards"])
-        self.assertLessEqual(slowest, 10800, out)
+        self.assertEqual(written.get("shards"), "200", out)
+        slowest = re.search(r"the slowest at (\d+) s of its 10800 s bound", out)
+        self.assertIsNotNone(slowest, out)
+        self.assertLessEqual(int(slowest.group(1)), 10800, out)
 
     def test_the_bound_is_half_of_every_legs_timeout(self):
         minutes = {}
@@ -282,6 +311,16 @@ class TheReleaseFitsOneRun(unittest.TestCase):
         for leg, value in minutes.items():
             self.assertEqual(module.SHARD_BOUND_SECONDS, value * 60 // 2, leg)
 
+    def test_the_python_bound_is_half_of_the_python_legs_timeout(self):
+        """SPEC-418 A10 (R1): a Python leg's projection may reach half its job's limit, held
+        against the workflow as the Rust legs' bound is."""
+        job = jobs(workflow(CI)).get("mutation-python", "")
+        found = re.findall(r"(?m)^    timeout-minutes: (\d+)$", job)
+        self.assertEqual(found, ["60"])
+        module = verdict_module()
+        self.assertEqual(module.PYTHON_LEG_BOUND_SECONDS, int(found[0]) * 60 // 2)
+        examined("python leg jobs", found)
+
     def test_the_ceiling_is_the_runs_job_budget(self):
         module = verdict_module()
         derived = {}
@@ -291,17 +330,63 @@ class TheReleaseFitsOneRun(unittest.TestCase):
             found = jobs(workflow(path))
             self.assertIn(leg, found, key)
             others = [
-                generated(job, module.PYTHON_MAX_SHARDS)
+                generated(job, module.PYTHON_MAX_SHARDS, rows_constant("ROWS_MAX_LEGS"))
                 for name, job in found.items()
                 if name != leg
             ]
             derived[key] = RUN_JOBS - sum(others)
         self.assertEqual(getattr(module, "LEG_CEILING", None), derived)
-        self.assertEqual(derived, {"ci": 209, "battery": 234})
+        self.assertEqual(derived, {"ci": 189, "battery": 234})
+
+    def test_each_python_matrix_of_the_release_run_fits_the_run_jobs(self):
+        """SPEC-422 A15 (R12): at the most legs any release ceiling admits, two matrices of
+        `PYTHON_MATRIX_LEGS`, the release run's deal writes each Python matrix within the run's
+        jobs, and one matrix's legs are exactly the run's limit."""
+        module = verdict_module()
+        self.assertEqual(module.PYTHON_MATRIX_LEGS, RUN_JOBS)
+        most = module.PYTHON_MATRIX_LEGS * module.PYTHON_MATRICES
+        code, out, outputs, _plan = deal(self, mutants(1, 20 * (most - 1)), True, most)
+        self.assertEqual(code, 0, out)
+        axes = {PYTHON_AXIS: "python_matrix", PYTHON_RELEASE_AXIS: "python_release_matrix"}
+        matrices = {}
+        for name, job in jobs(workflow(CI)).items():
+            block = re.search(r"(?ms)^      matrix:\n(.*?)(?=^      \S|^    \S|\Z)", job)
+            lines = [
+                line for line in (block.group(1) if block else "").splitlines() if line.strip()
+            ]
+            read = [axes.get(line.removeprefix("        shard: ")) for line in lines]
+            if any(read):
+                self.assertEqual(len(lines), 1, f"{name} has an axis beside its Python one")
+                matrices[name] = len(json.loads(outputs[read[0]]))
+        for name, legs in examined("python matrices of the release run", matrices.items()):
+            self.assertLessEqual(legs, RUN_JOBS, name)
+        self.assertEqual(sum(matrices.values()), most)
+
+    def test_the_rust_matrix_of_the_release_run_fits_the_run_jobs(self):
+        """SPEC-423 A8 (R7): the release run's Rust legs are the one `mutation-rust` matrix, the one
+        job whose axis is the plan's `matrix`, and the range check's top is the jobs one matrix
+        generates: at that ceiling the release deal writes one matrix of exactly that many legs,
+        and one mutant more is refused whole."""
+        module = verdict_module()
+        self.assertEqual(module.RUST_MATRIX_LEGS, RUN_JOBS)
+        axis = "        shard: ${{ fromJSON(needs.mutation-plan.outputs.matrix) }}"
+        reading = [name for name, job in jobs(workflow(CI)).items() if axis in job.splitlines()]
+        self.assertEqual(examined("jobs on the plan's rust matrix", reading), ["mutation-rust"])
+        # 68 ingest mutants of 126 s fit a leg's 10800 s after its 2141 s baseline, so 256 legs
+        # hold 17408 of them.
+        fits = entries("deck-streak-ingest", 17408)
+        code, out, outputs, _plan = rust_deal(self, fits, None, True, 256, 128)
+        self.assertEqual((code, outputs.get("shards")), (0, "256"), out)
+        legs = json.loads(outputs["matrix"])
+        self.assertEqual(legs, list(range(256)))
+        self.assertLessEqual(len(legs), RUN_JOBS)
+        past = entries("deck-streak-ingest", 17409)
+        code, out, outputs, _plan = rust_deal(self, past, None, True, 256, 128)
+        self.assertEqual((code, out, outputs), (1, release_refusal(17409, 2193534, 256), {}))
 
     def test_a_listing_beyond_the_ceiling_is_refused_whole(self):
         # 68 ingest mutants of 126 s fit a leg's 10800 s after its 2141 s baseline, so the
-        # battery's 234 legs hold 15912 and the pull request's 209 legs hold 14212.
+        # battery's 234 legs hold 15912 and the pull request's 189 legs hold 12852.
         code, out, written = size(entries("deck-streak-ingest", 15913), "deck-streak-ingest")
         self.assertEqual(code, 1, out)
         self.assertIn(
@@ -311,16 +396,16 @@ class TheReleaseFitsOneRun(unittest.TestCase):
         self.assertEqual(written, {}, "a refused sizing wrote outputs")
         code, out, written = size(entries("deck-streak-ingest", 15912), "deck-streak-ingest")
         self.assertEqual((code, written.get("shards")), (0, "234"), out)
-        code, out, planned = plan_shards(entries("deck-streak-ingest", 14213))
+        code, out, planned = plan_shards(entries("deck-streak-ingest", 12853))
         self.assertEqual(code, 1, out)
         self.assertIn(
-            "REFUSED: 14213 mutant(s), projected at 1790838 s serially, need more than 209 legs",
+            "REFUSED: 12853 mutant(s), projected at 1619478 s serially, need more than 189 legs",
             out,
         )
         self.assertNotIn("shards", planned)
 
     def test_the_whole_tree_is_sized_from_its_listing(self):
-        # 14213 ingest mutants need 210 legs: one past the pull request's ceiling, within the
+        # 14213 ingest mutants need 210 legs: past the pull request's ceiling, within the
         # battery's, which sizes the whole tree as it sizes a package.
         cases = [(entries("deck-streak-kernel", 5), 1), (entries("deck-streak-ingest", 14213), 210)]
         for listing, expected in examined("whole-tree listings", cases):
@@ -343,7 +428,7 @@ class TheReleaseFitsOneRun(unittest.TestCase):
         self.assertIn("legs 1 of ceiling 234", out)
         code, out, _ = plan_shards(entries("deck-streak-daemon", 113))
         self.assertEqual(code, 0, out)
-        self.assertIn("legs 2 of ceiling 209", out)
+        self.assertIn("legs 2 of ceiling 189", out)
 
 
 class TheWorkflowReadsTheOneCount(unittest.TestCase):

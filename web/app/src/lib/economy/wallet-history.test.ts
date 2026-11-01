@@ -10,7 +10,7 @@ import { parseWallet, signed, walletPath, type WalletView } from './wallet';
 // server's order, newest first, and appends the older page the server names when the owner asks.
 // The client is replaced before the page's imports run; every movement is synthetic.
 const mocks = vi.hoisted(() => ({ wallet: vi.fn() }));
-vi.mock('$lib/api', () => ({ api: { wallet: mocks.wallet } }));
+vi.mock('#lib/api.js', () => ({ api: { wallet: mocks.wallet } }));
 
 const FIRST: WalletView = {
   studyDay: '2025-01-14',
@@ -237,7 +237,7 @@ describe('the wallet body', () => {
 
   it('the client reads the first page, then the page the cursor names', async () => {
     // the real client, past this file's stand-in, over a server that records what it was sent
-    const { createApi } = await vi.importActual<typeof import('$lib/api')>('$lib/api');
+    const { createApi } = await vi.importActual<typeof import('#lib/api.js')>('#lib/api.js');
     const sent: string[] = [];
     const fetch = vi.fn(async (input: RequestInfo | URL, init: RequestInit = {}) => {
       const url = String(input);

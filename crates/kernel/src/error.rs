@@ -4,6 +4,10 @@
 //! secret: a refusal names the setting, the shape it expects or the credential's id, and nothing a
 //! log line could leak.
 
+// The date error moved to the study day crate with the study day that returns it (ADR-515); the
+// kernel re-exports it, so this path names the crate's own type.
+pub use deck_streak_study_day::IsoDateError;
+
 /// Why the kernel could not do what was asked.
 #[derive(Debug, thiserror::Error)]
 pub enum KernelError {
@@ -124,8 +128,3 @@ pub enum DataRightsError {
         table: &'static str,
     },
 }
-
-/// A text that is not an ISO calendar date of the proleptic Gregorian calendar.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, thiserror::Error)]
-#[error("not an ISO calendar date (YYYY-MM-DD)")]
-pub struct IsoDateError;

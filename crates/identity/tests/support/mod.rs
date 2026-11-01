@@ -297,7 +297,7 @@ impl Authenticator {
     /// The COSE encoding of the credential's public key.
     #[must_use]
     pub fn cose_key(&self) -> Vec<u8> {
-        let point = self.key.verifying_key().to_encoded_point(false);
+        let point = self.key.verifying_key().to_sec1_point(false);
         Cbor::default()
             .map(5)
             .int(1)

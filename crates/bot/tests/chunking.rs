@@ -191,8 +191,8 @@ fn a_text_that_fits_is_one_chunk_as_given() {
 
 #[test]
 fn a_text_with_nothing_to_show_is_no_chunk() {
-    assert!(chunks("", 10).is_empty());
-    assert!(chunks(" \n <b> </b>\n", 10).is_empty());
+    assert_eq!(chunks("", 10), Vec::<String>::new());
+    assert_eq!(chunks(" \n <b> </b>\n", 10), Vec::<String>::new());
     // One character to show is enough to send the text as it is.
     assert_eq!(chunks(" \n <b>x</b>\n", 10), vec![" \n <b>x</b>\n"]);
 }

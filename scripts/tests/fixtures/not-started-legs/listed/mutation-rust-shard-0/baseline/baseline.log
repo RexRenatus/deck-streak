@@ -1,0 +1,4 @@
+
+*** baseline
+
+        PASS [   0.412s] (1/1) deck-streak-daemon wiring::tests::refused_names_its_reason

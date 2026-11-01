@@ -1,0 +1,46 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S57901-THE-SCRUB-ADMITS-A-LISTED-PATH-ONLY-WITH-ITS-BYTES",
+        "scripts/public-scrub.py",
+        "return (path, hashlib.sha256(data).hexdigest(), len(data)) in admitted",
+        "return any(entry[0] == path for entry in admitted)",
+        "a binary is admitted only at a listed path with the listed sha256 and size; admitted by path alone, any bytes there would pass (SPEC-579 A16)",
+        "test_public_scrub.AListedBrandBinaryIsAdmitted.test_a_listed_path_with_other_bytes_is_refused_as_binary"
+      ],
+      [
+        "S57902-THE-SCRUB-ADMITS-LISTED-BYTES-ONLY-AT-THEIR-PATH",
+        "scripts/public-scrub.py",
+        "return (path, hashlib.sha256(data).hexdigest(), len(data)) in admitted",
+        "return any(entry[1] == hashlib.sha256(data).hexdigest() for entry in admitted)",
+        "admitted by content alone, the listed bytes would pass at any path (SPEC-579 A17)",
+        "test_public_scrub.AListedBrandBinaryIsAdmitted.test_listed_bytes_at_an_unlisted_path_are_refused_as_binary"
+      ],
+      [
+        "S57903-AN-ADMITTED-BINARY-IS-STILL-SEARCHED",
+        "scripts/public-scrub.py",
+        "        # Admitted by the brand list: not refused for being binary, and still searched.\n        self.search_literals(shown, data)",
+        "        # Admitted by the brand list: not refused for being binary, and still searched.\n        return",
+        "an admitted binary is still searched for every private literal; skipping the search would admit a leak inside a listed file (SPEC-579 A18)",
+        "test_public_scrub.AListedBrandBinaryIsAdmitted.test_a_private_literal_inside_a_listed_binary_is_still_found"
+      ],
+      [
+        "S57904-THE-README-HERO-IS-THE-LISTED-FILE",
+        "README.md",
+        "![DeckStreak](docs/assets/deckstreak-hero-tide-light.gif)",
+        "![DeckStreak](docs/assets/deckstreak-hero.gif)",
+        "the README's hero is the listed committed file; an image at a path the tree does not hold would show nothing (SPEC-579 A7)",
+        "test_brand_files.TheReadmeHeaderShowsTheHero.test_the_readme_opens_with_the_title_then_the_hero"
+      ],
+      [
+        "S57905-THE-APP-TARGET-NAMES-ITS-ICON-SET",
+        "ios/app.yml",
+        "ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon",
+        "ASSETCATALOG_COMPILER_APPICON_NAME: AppIconSet",
+        "the app target names its icon set; another name ships the app with no icon (SPEC-579 A10)",
+        "test_brand_files.TheAppCarriesItsIconSet.test_the_app_target_names_the_catalog_and_its_icon_set"
+      ]
+    ]
+  }
+}
