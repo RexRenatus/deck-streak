@@ -215,3 +215,10 @@ fifth hygiene red, `test_the_journal_sender_reads_no_credential_and_makes_no_req
 `scripts/tests/test_alert_unit.py`, met an empty population, because the journal sender runs no
 command: c9efa4e0 holds exactly that, the sender's commands equal to none, and counts the planted
 reader's commands before its census.
+
+Push 3's ci run 41328829865 is the red of one test in the hygiene job,
+`test_a_key_off_its_units_list_is_refused_and_the_trees_units_hold_only_listed_keys` in
+`scripts/tests/test_deploy_templates.py`: the paging units' key list still named `ReadWritePaths`,
+a key only the deleted bot unit held, so the list was no longer exactly the pairs its units hold.
+e7e37468 drops that key from the paging units' key list and its value from their value table; no
+test, plant or assertion changes.
