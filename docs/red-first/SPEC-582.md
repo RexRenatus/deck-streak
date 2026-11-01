@@ -195,3 +195,23 @@ draft's numbers: ADR-347's `SPEC-582 A14` is A19 here, the stack-share test, and
 The changelog fragment's alert sentence states the line as 3fcff046 ships it: it names the failed
 unit and its result. The design's draft of the fragment, written before 3fcff046, also named the
 run's last error lines; that phrase alone is changed.
+
+Push 2's ci run 41291049219 is the red of six tests, each cured here. The census test
+`every_ai_call_site_passes_the_deck_gate_or_carries_no_deck_content` in
+`crates/agent/tests/deck_gate_census.rs`, red in the rust and release jobs, met a third job runner
+call where it declared two, because the held flush's one call became two match arms: 81547ac7 is
+SPEC-582 section 4's row for the census file, and de4588d6 declares the third call, its shape,
+class and reason unchanged. In the hygiene job, four tests of
+`scripts/tests/test_deploy_templates.py` took the alert template from the units that load a
+credential, or planted an id no table names any longer:
+`test_every_unit_that_loads_a_credential_fails_and_pages_on_a_refusal` and
+`test_a_key_off_its_units_list_is_refused_and_the_trees_units_hold_only_listed_keys`, and
+`test_every_credential_line_has_the_socket_form_and_encrypted_is_refused` and
+`test_a_credential_key_with_blanks_before_its_equals_sign_is_read_and_refused`. 1c4b986b is
+SPEC-582 section 4's row for `scripts/tests/_units.py`, 50ed9c36 drops the credential pair from the
+alert template's key list, and eb21e413 takes the alert template by name from the whole tree,
+leaves the credential line out of every alert plant and plants an id the tree still loads. The
+fifth hygiene red, `test_the_journal_sender_reads_no_credential_and_makes_no_request` in
+`scripts/tests/test_alert_unit.py`, met an empty population, because the journal sender runs no
+command: c9efa4e0 holds exactly that, the sender's commands equal to none, and counts the planted
+reader's commands before its census.
