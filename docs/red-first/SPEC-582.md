@@ -178,6 +178,7 @@ killer run again, green, on the restored tree.
 | S58215 | `crates/daemon/src/role_api.rs` | A2 | `crates/daemon/tests/lifecycle.rs:852:33`: `the api role refused start with no credentials: the api role did not serve` |
 | S58213 | `deploy/slo.json` | A16 | `AssertionError: {'unit': 'deck-streak-alert@.service', 'channel': 'telegram'} != {'unit': 'deck-streak-alert@.service', 'channel': 'journal'}` |
 | S04113 | `crates/notifications/tests/one_router.rs` | A9 | `crates/notifications/tests/one_router.rs:2684:5`: the census lacks the refusals `crates/api/src/notifications_routes.rs:3: names api.telegram.org` and `crates/api/src/notifications_routes.rs:3: names sendMessage` |
+| in-diff `crates/daemon/src/snapshot_lister.rs:119:9` (`configured_without_credentials` -> `Ok(None)`) | `crates/daemon/src/snapshot_lister.rs` | `the_lister_with_no_credentials_directory_refuses_a_malformed_command` in `crates/daemon/tests/snapshot_lister.rs`, added at 8ffa7d3c | `crates/daemon/tests/snapshot_lister.rs:331:5`: `with no credentials directory, a program that is not absolute refuses start by name` |
 
 S58207, S58210, S58211, S58212, S58214 and S58216 have killers in modules that run only in CI;
 CI's `mutation-rows` job reads each by its id at the second push. The mutants of the three shell
