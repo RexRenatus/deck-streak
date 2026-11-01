@@ -101,6 +101,10 @@ ENGINE_TIED = SYNC_MODELS + (
     "tla/RelightOrder",
     "tla/SensitiveDeckGate",
     "tla/SkipDayOnce",
+    "lean/Fsrs7MemoryState",
+    "lean/Fsrs7PortState",
+    "lean/Fsrs7Schedule",
+    "lean/Fsrs7Stock",
     "lean/ReplayHistory",
     "lean/SensitiveDeck",
 )
@@ -110,7 +114,34 @@ REPLAY_TIE = {
     "test": "crates/fsrs7/tests/formal_vectors_replay_history.rs"
     "::the_history_selection_matches_the_lean_vectors",
 }
-# The 43 existing entries' dispositions.
+# The FSRS-7 entries' vectors ties (SPEC-413), after the replay history's.
+FSRS7_TIES = [
+    {
+        "method": "vectors",
+        "for": "lean/Fsrs7Stock",
+        "test": "crates/fsrs7/tests/formal_vectors_fsrs7_stock.rs"
+        "::the_stock_projection_and_the_curve_hold_the_lean_claims_on_every_vector",
+    },
+    {
+        "method": "vectors",
+        "for": "lean/Fsrs7MemoryState",
+        "test": "crates/fsrs7/tests/formal_vectors_fsrs7_memory_state.rs"
+        "::the_replay_holds_the_lean_claims_on_every_vector",
+    },
+    {
+        "method": "vectors",
+        "for": "lean/Fsrs7Schedule",
+        "test": "crates/engine-core/tests/formal_vectors_fsrs7_schedule.rs"
+        "::the_engine_cores_schedule_gives_every_lean_vectors_output",
+    },
+    {
+        "method": "vectors",
+        "for": "lean/Fsrs7PortState",
+        "test": "crates/engine-core/tests/formal_vectors_fsrs7_port_state.rs"
+        "::the_engine_cores_port_state_gives_every_lean_vectors_output",
+    },
+]
+# The 47 existing entries' dispositions.
 DISPOSITIONS = {
     "retire": ("tla/FullSyncChoice", "tla/SyncSnapshotWindow"),
     "re-point": (
@@ -118,6 +149,8 @@ DISPOSITIONS = {
         "tla/SyncCredential",
         "tla/UndoOwnAnswer",
         "tla/SkipDayWrite",
+        "lean/Fsrs7PortState",
+        "lean/Fsrs7Schedule",
     ),
     "re-stamp": (
         "tla/AwardOnce",
@@ -153,6 +186,8 @@ DISPOSITIONS = {
         for name in (
             "Chest",
             "Exchange",
+            "Fsrs7MemoryState",
+            "Fsrs7Stock",
             "HabitWriting",
             "NextMilestone",
             "OpenLapse",
@@ -729,7 +764,9 @@ class TheFormalLedger(unittest.TestCase):
             names = present_names[identity]
             self.assertEqual(len(names), len(set(names)), f"{identity} names an artifact twice")
             self.assertEqual(set(names), {(e, p) for e in entries for p in headers[e]})
-        self.assertEqual([tie for item in obligations for tie in item["ties"]], [REPLAY_TIE])
+        self.assertEqual(
+            [tie for item in obligations for tie in item["ties"]], [REPLAY_TIE, *FSRS7_TIES]
+        )
         examined("planned entries", planned)
         examined("planned harnesses", harnesses)
         examined("present artifacts", present_names["O1a"] + present_names["O11"])
@@ -811,8 +848,8 @@ class TheFormalLedger(unittest.TestCase):
         expected = {
             entry: disposition for disposition, entries in DISPOSITIONS.items() for entry in entries
         }
-        self.assertEqual(len(expected), 43)
-        self.assertEqual(set(tree), set(expected), "the tree's entries are not the 43 designed")
+        self.assertEqual(len(expected), 47)
+        self.assertEqual(set(tree), set(expected), "the tree's entries are not the 47 designed")
         rows = {item["entry"]: item for item in examined("rows", document["entries"])}
         self.assertEqual(len(rows), len(document["entries"]), "an entry has two rows")
         self.assertEqual({entry: item["disposition"] for entry, item in rows.items()}, expected)
