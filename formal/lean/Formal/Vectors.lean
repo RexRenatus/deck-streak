@@ -1,4 +1,5 @@
 import Formal.ChestVectors
+import Formal.DueReorderVectors
 import Formal.ExchangeVectors
 import Formal.Fsrs7MemoryStateVectors
 import Formal.Fsrs7PortStateVectors
@@ -36,6 +37,7 @@ lists it as support.
 def main (args : List String) : IO UInt32 := do
   match args with
   | ["Chest"] => Formal.ChestVectors.run
+  | ["DueReorder"] => Formal.DueReorderVectors.run
   | ["Exchange"] => Formal.ExchangeVectors.run
   | ["Fsrs7MemoryState"] => Formal.Fsrs7MemoryStateVectors.run
   | ["Fsrs7PortState"] => Formal.Fsrs7PortStateVectors.run

@@ -101,6 +101,7 @@ ENGINE_TIED = SYNC_MODELS + (
     "tla/RelightOrder",
     "tla/SensitiveDeckGate",
     "tla/SkipDayOnce",
+    "tla/DueReorderInput",
     "lean/Fsrs7MemoryState",
     "lean/Fsrs7PortState",
     "lean/Fsrs7Schedule",
@@ -141,7 +142,7 @@ FSRS7_TIES = [
         "::the_engine_cores_port_state_gives_every_lean_vectors_output",
     },
 ]
-# The 47 existing entries' dispositions.
+# The 49 existing entries' dispositions.
 DISPOSITIONS = {
     "retire": ("tla/FullSyncChoice", "tla/SyncSnapshotWindow"),
     "re-point": (
@@ -149,6 +150,7 @@ DISPOSITIONS = {
         "tla/SyncCredential",
         "tla/UndoOwnAnswer",
         "tla/SkipDayWrite",
+        "tla/DueReorderInput",
         "lean/Fsrs7PortState",
         "lean/Fsrs7Schedule",
     ),
@@ -185,6 +187,7 @@ DISPOSITIONS = {
         f"lean/{name}"
         for name in (
             "Chest",
+            "DueReorder",
             "Exchange",
             "Fsrs7MemoryState",
             "Fsrs7Stock",
@@ -848,8 +851,8 @@ class TheFormalLedger(unittest.TestCase):
         expected = {
             entry: disposition for disposition, entries in DISPOSITIONS.items() for entry in entries
         }
-        self.assertEqual(len(expected), 47)
-        self.assertEqual(set(tree), set(expected), "the tree's entries are not the 47 designed")
+        self.assertEqual(len(expected), 49)
+        self.assertEqual(set(tree), set(expected), "the tree's entries are not the 49 designed")
         rows = {item["entry"]: item for item in examined("rows", document["entries"])}
         self.assertEqual(len(rows), len(document["entries"]), "an entry has two rows")
         self.assertEqual({entry: item["disposition"] for entry, item in rows.items()}, expected)
