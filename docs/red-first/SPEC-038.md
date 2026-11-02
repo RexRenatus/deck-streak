@@ -109,3 +109,17 @@ three test files at the red commit fails only the new tests, each by assertion.
 A22: red at adcf4179: AssertionError: 'planted.yaml:build:combined' not found in [] (the cache scan); Lists differ: [] != [('planted.yaml', '0123abcd')] (the protoc pins); Lists differ: [] != [('planted.yaml', 'cargo mutants --in-place')] (the mutants commands); Lists differ: [] != [('planted.yaml', 'shard')] (the mutants jobs); Lists differ: [] != [('planted.yaml', '43')] (the cron minutes)
 A22: green at 63412384
 ```
+
+## Addendum: A23 and A24, the dependency review
+
+The lines above stand. A23's test and A24's planted workflows were committed with no dependency
+review workflow (ce231144), and A23 read red by name in the pull request's own `hygiene` job. The
+workflow was added in 10821d9c with both tests unchanged, and A23 reads green there; the commit
+after 10821d9c changes only this record. A24 judges the census itself over planted workflows that
+hold every shape it reads, so it passes at the commit that adds it.
+
+```red-first
+A23: red at ce231144: AssertionError: Lists differ: ['0 steps run actions/dependency-review-action, not 1'] != [] (job 125606489895)
+A23: green at 10821d9c
+A24: not red: it judges the census over planted workflows of its own, which hold every shape it reads at the commit that adds them
+```
