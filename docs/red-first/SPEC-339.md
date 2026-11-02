@@ -52,6 +52,10 @@ A9: red at f8db32b7: AssertionError: 'harness' not found in ['xcframework']
 A9: green at 0a9ec800
 A10: red at f8db32b7: AssertionError: False is not true : ios/Harness/Info.plist is not in the tree
 A10: green at 0a9ec800
+A11: red at 0bebc711: AssertionError: Lists differ: ["harness: 0 steps named 'the tests, Debug[1283 chars]e")'] != []
+A11: green at cc287480
+A12: red at 18f00fc6: AssertionError: Lists differ: ["harness: 0 budget lines in the warm's sc[385 chars]e")'] != []
+A12: green at 9eec8252
 ```
 
 At 8bc14293, under the newer simulator runtime, M1 failed on the iPhone simulator in the Release
@@ -60,3 +64,14 @@ block's fourth run, `launch()` could not end the instance the third run had left
 that run's measured window. 62395e0b ends each pass's app after `stopMeasuring()` instead, so each
 measured window holds one launch and nothing to end. Both metrics, the five measured passes and
 each pass's wait for the deck list are unchanged, and M1 is still not red, a measurement.
+
+A11's test was committed alone (0bebc711), red in the pull request's own run: the `harness` job
+had no build for testing, no warm and no test step run without building. The builds for testing,
+the warms, the teed test steps and the report's rows came next (cc287480), with the test unchanged.
+
+A12's test was committed alone (18f00fc6), with two lines of A11's test and two of its comments
+changed: A11 now reads the phases' bound, `left = deadline - time.monotonic()`, where it read the
+one budget's line, and its "no budget" plant removes that bound; A11 passed in that run. A12 was
+red in it: the warm's script set one deadline for both simulators, and the report read no end.
+The budget for each simulator and the report's longest ends came next (9eec8252), with both
+tests unchanged.
