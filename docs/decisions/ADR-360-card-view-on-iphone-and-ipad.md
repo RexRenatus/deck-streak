@@ -166,3 +166,43 @@ SPEC-349's A1 to A9, on the macOS CI runner's host and its iPhone and iPad simul
 
 - ADR-335; ADR-352; SPEC-334 R6; SPEC-339 (#616's Swift harness) for the seam.
 - SEC01-F14 and SEC01-F15 are cited by id.
+
+## Amendment: each card load wait starts when the view's page first answers (SPEC-349 section 7), and the alternatives each decision was chosen against
+
+In attempts on pull requests that change no card view path, the planted suite read a card not
+loaded in the first simulator session and passed in the second (jobs 125417948615, 125379986494).
+Each card view miss followed a start of that view's own WebContent process longer than the whole
+10-second load wait: 21.8 seconds (job 125417948615); 11.8, 25.1 and 19.6 seconds (job 125379986494).
+D1 to D8 stand, and ADR-372 D11's warm-up and keeper stand.
+
+### D9. Each card load wait starts when the view's page first answers, under the warm-up's bound
+
+The load wait first asks the page a script of the app's own, again whenever an ask comes back
+without its answer, one ask at a time, under `Probe.warmUpSeconds`; once the page has answered, it
+polls whether the card has loaded under the unchanged `Probe.loadSeconds`. The answer comes from
+the view's own page process, so the 10-second wait starts once that process runs, every time, and
+judges the card's own load, as ADR-372 D11 meant it to. The wait takes the page as a function
+that asks it a script, so a stand-in page whose process starts late can be handed to it, and each
+load prints its page's answer time.
+
+Chosen against:
+
+- Raising `Probe.loadSeconds`: rejected because it lengthens every wait that runs to its bound, a card that never loads included, so a slower load would pass (ADR-372 D11).
+- A pause before each view: rejected because WebKit does not promise to start the process during it, so it buys nothing certain (ADR-372 D11).
+- WebKit's navigation commit as the signal: rejected because the card view's navigation delegate is the factory's gate, and a test that replaces it removes a layer under test.
+- A warm of the probe host in the planted step before its first test, as the Harness test steps have: rejected because the warm-up loaded in 3.37 and 5.58 seconds at the first session's start (job 125417948615) and the long starts came all through that session.
+- The keeper held across the planted tests: rejected because a GPU process exit preceded a start over 10 seconds no more often than the other starts (8 of 350 against 3 of 97, job 125417948615).
+- A retry of the test, the suite or the destination: rejected because it passes a red without curing it.
+
+### Consequences of this amendment
+
+- Good, because a card view's load wait now judges the card, not the start of its process, on both simulators.
+- Good, because each load prints its page's answer time, so a session's slow starts show on every run, red or green.
+- Bad, because a page whose process never starts holds its test for 60 seconds before it fails, not 10.
+- Bad, because the first session's slow process starts are measured, not cured.
+
+### What would make this amendment wrong
+
+- A card view still reads not loaded after its page answered: the load itself is then slow, and its cause needs its own design (#841).
+- The printed answer times reach 60 seconds: the start then needs its own measurement (#841).
+- SPEC-339's A6 reads red again in one session: the flow tests then need their own design, with the app's console kept (#796).

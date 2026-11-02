@@ -167,3 +167,97 @@ A9: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k tes
   `harness` job does (`SIM_OS`), `xcframework.yml` is a called workflow whose every job runs on the
   one admitted macOS runner, and the caller's `ios/**` path filter reaches `ios/CardIsolation/`.
   A move after the cut reads red in A4 or A9 by name.
+
+## 7. Amendment for #841 and #796: each card load wait starts when the view's page first answers
+
+Three `apple / harness` attempts, on two pull requests that change no card view path, failed in
+one simulator session and passed the same tests in the other. This section adds R11, which ADR-360
+D9 decides and A10 and A11 (section 9) hold. Sections 1 to 6, R1 to R10 and A1 to A9 stand as
+written.
+
+What failed, read from each job's steps and from its log cut to the failing step's window:
+
+- **A5's test read one card not loaded in the card view** (`PlantedCardTests.swift:639`),
+  `object`, in the first session, `iPhone 17`, and none in the second, `iPad (A16)` (job
+  125417948615).
+- **A5's test read two cards not loaded, and the scripted view's test one** (`:639`, `:862`):
+  `stylesheet`, `prefetch` and `form`, in the first session only (job 125379986494).
+- **SPEC-339's A6 read the card's web view empty when its wait ended**
+  (`HarnessFlowTests.swift:38`), in the first session only (job 125392932893).
+
+Why the planted suite read these cards not loaded:
+
+- **The load wait counts the start of the view's own page process.** `Probe.loadTime(_:)` polls
+  from the moment the card is handed to the view, and every card view, with its non-persistent
+  store, gets its own WebContent process, started at its first load (ADR-372 D11). These tests
+  hold one card view at a time.
+- **Each miss followed a process start longer than the whole wait.** The log names a WebContent
+  start of 21.8 seconds ending 3 seconds before the `object` miss (job 125417948615), and starts
+  of 11.8, 25.1 and 19.6 seconds, each ending 3 to 4 seconds before its miss (job 125379986494),
+  for `stylesheet`, `prefetch` and `form`.
+- **Starts that long came in the first session only.** Job 125417948615 had 11 starts over 10
+  seconds in its first session and none in its second; job 125379986494 had 8 and none.
+  The first sessions' starts averaged 2.06 and 2.66 seconds (jobs 125417948615, 125379986494),
+  the second sessions' 1.29 and 1.33 seconds (jobs 125417948615, 125379986494).
+- **No warm-up before the first test removes them.** At the first session's start the warm-up
+  loaded in 3.37 and 5.58 seconds (job 125417948615), and the long starts came all through that
+  session (job 125417948615).
+- **A held page does not remove them.** Of the first session's starts that followed a GPU process
+  exit, 8 of 350 ran over 10 seconds, and of the others 3 of 97 (job 125417948615).
+
+What this changes:
+
+- **R11. Each card load wait starts when the view's page first answers (#841, #796).**
+  `Probe.loadTime(_:)` first asks the view's page a script of the app's own,
+  `Probe.answerScript`, asking again whenever an ask comes back without its answer, one ask at a
+  time, under `Probe.warmUpSeconds`, the 60 seconds the suite already gives a start of WebKit
+  (ADR-372 D11). Only once the page has answered does it poll whether the card has loaded, under
+  `Probe.loadSeconds`, 10 seconds, unchanged. A page that never answers reads not loaded after the
+  whole answer bound; a card that never loads reads not loaded after its whole 10-second wait,
+  counted from the answer. Each load prints `card probe answer: took=` with its page's answer
+  time. `Probe.warmUp()`, `Probe.keeper(ruleList:)`, every planted card, the layer map,
+  `UNOBSERVABLE`, `DEPTH`, every window and every assertion are unchanged; no test is skipped,
+  retried or marked, and the harness job's bound does not move.
+- **The wait's seam.** `Probe.loadTime(asking:answerSeconds:loadSeconds:)` takes the page as a
+  function that asks it a script and hands back its string answer, so a test can hand it a
+  stand-in page; `Probe.loadTime(_:)` hands it the view's own `evaluateJavaScript`. A10 and A11
+  run the wait over `LatePage`, a stand-in page whose start and load each take a set time.
+- **Risks of the #841 amendment.** A page whose process takes longer than 10 seconds to start and
+  then loads within its wait now reads loaded where it read not loaded before: the wait judges the
+  card's load, and the start is printed and bounded by its own 60 seconds. A process that never
+  starts now holds its test for 60 seconds, not 10, before it fails. The first session's long
+  starts are measured, not cured, and their cause is not in the job log (#841). SPEC-339's A6 is a
+  UI test whose app console the job does not keep, so this amendment takes no measured cause for
+  its red and changes neither its wait nor its test (#796).
+- **The #841 amendment touches these paths:** `ios/CardProbeTests/PlantedCardTests.swift`,
+  `docs/specs/SPEC-349-card-view-on-iphone-and-ipad.md`,
+  `docs/decisions/ADR-360-card-view-on-iphone-and-ipad.md`, `docs/red-first/SPEC-349.md` and
+  `changelog.d/card-probe-load-wait.md`.
+
+## 8. What this does NOT do, in the #841 amendment
+
+- It raises no wait, bound or timeout: `Probe.loadSeconds` stays 10 seconds, `Probe.warmUpSeconds`
+  60, and the harness job's bound stays as it is (#841).
+- It retries, skips or removes no test, planted card or assertion, and adds no filter (#841).
+- It does not cure the first session's long process starts; it stops counting them as a card's
+  load (#841).
+- It changes neither SPEC-339's flow tests nor their wait: A6's red has no measured cause in
+  the job log (#796).
+- It does not name the simulator in a planted-suite failure, which #841 also asks for (#841).
+- It changes no workflow step (#841).
+
+## 9. Acceptance criteria of the #841 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A10 | a page whose process first answers after more than the load wait, then finishes loading within it, reads loaded within that wait, counted from its first answer | `xcodebuild test` `CardProbeTests/PlantedCardTests/test_the_load_wait_starts_when_the_page_first_answers` |
+| A11 | a page whose process never answers within the answer bound reads not loaded, and only after that whole bound | `.../test_a_page_that_never_answers_reads_not_loaded_after_the_answer_bound` |
+
+```acceptance
+A10: xcodebuild test -project ios/Harness.xcodeproj -scheme CardProbe -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:CardProbeTests/PlantedCardTests/test_the_load_wait_starts_when_the_page_first_answers
+A11: xcodebuild test -project ios/Harness.xcodeproj -scheme CardProbe -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:CardProbeTests/PlantedCardTests/test_a_page_that_never_answers_reads_not_loaded_after_the_answer_bound
+```
+
+A10's and A11's tests are committed with the wait's seam, the wait itself unchanged, and read
+red in the pull request's own run, by name, on both simulators, before the wait changes;
+`docs/red-first/SPEC-349.md` quotes each red and names the green.
