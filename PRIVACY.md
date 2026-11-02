@@ -111,7 +111,8 @@ You can also export and erase on the host that runs DeckStreak:
   when the service keeps one, is held in a second region. Each copy in it is deleted 4 days
   after it is written, so erased data leaves it within 7 days (`P7D`).
 - **The service journal** keeps its log lines for at most 14 days (`P14D`), and journald then
-  deletes them.
+  deletes them. When the monitoring service that pages the owner is set up, it receives a copy of
+  the lines of DeckStreak's own services and keeps that copy for at most 14 days (`P14D`) too.
 - **The edge's log of the sync route** records, for each request to the sync route, the client's
   address, the method, the path without its key and the status, and none of your Anki data. It is
   kept in the service journal for at most 14 days (`P14D`), and journald then deletes it.
@@ -140,3 +141,21 @@ default. Each run sends the cards that duty covers and a summary of your leeches
 practice, not your journal, as the context of that one run, and DeckStreak's database keeps neither
 the prompt nor the reply. A reply that passes its checks is written to your own vault. What the
 model's provider keeps is set by that provider's terms.
+
+## Measuring use
+
+- **The server counts its requests.** From its own request log lines, DeckStreak counts the
+  requests each of its services answered, by the route's pattern (such as `/api/me`, never the
+  address a request named), the method and the class of the status (such as 2xx or 5xx). A count
+  holds no account, no address, no device, no request id and no request's content, so no count
+  says who made a request. These counts need no choice of yours: nothing is read from your device
+  for them.
+- **The apps measure nothing about how you use them.** Neither the web app nor the iPhone and iPad
+  app sends an event about what you open, tap or study, and nothing in them tracks you.
+- **Any measurement of use the apps add is off until you turn it on.** It will be one switch, the
+  same in the web app and in the iPhone and iPad app, off by default at every age. When it is on,
+  the apps will send only a fixed list of events and coarse daily learning measures, under an id
+  your device makes anew each day and never links to your account; never your account, your
+  cards, your notes, your decks' names or your reviews one by one. Turning it off stops the
+  sending at once. Before the switch exists, this page will name each event, its lawful basis and
+  how long it is kept.

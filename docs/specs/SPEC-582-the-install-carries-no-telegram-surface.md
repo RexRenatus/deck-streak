@@ -100,7 +100,7 @@ R13. **The records.** ADR-601; the appended amendments to ADR-589, ADR-347, SPEC
 | A14 | the journal sender reads no credential and makes no request | `test_the_journal_sender_reads_no_credential_and_makes_no_request` |
 | A15 | the journal sender's line names the unit and its result and carries no line of the failed run | `test_the_alert_line_carries_no_line_of_the_failed_run` |
 | A16 | every SLO alert and the alert channel route to `journal` through the one template | `test_every_alert_routes_to_the_one_alert_path` |
-| A17 | the MCP server's SLO pages and tickets to `journal` with its exact burn rates | `test_the_mcp_slo_pages_and_tickets_to_the_journal_with_exact_burn_rates` |
+| A17 | the MCP server's SLO pages and tickets to `journal` with its exact burn rates | `test_the_mcp_slo_pages_and_tickets_on_the_one_alert_path_with_exact_burn_rates` |
 | A18 | a release with no bot unit deploys, and the deploy and its switch back restart the API alone | `test_a_release_with_no_bot_unit_deploys_and_restarts_the_api_alone` |
 | A19 | the daemons and the largest job fit inside the share, and the daemons' quotas inside its processors | `test_the_daemons_and_the_largest_job_fit_the_stack_share` |
 | A20 | the rail contract carries no row of the bot or the second route, and names the journal sender | `test_the_contract_carries_no_telegram_or_second_route_row` |
@@ -124,7 +124,7 @@ A13: python3 -m unittest discover -s scripts/tests -p test_alert_unit.py -k test
 A14: python3 -m unittest discover -s scripts/tests -p test_alert_unit.py -k test_the_journal_sender_reads_no_credential_and_makes_no_request
 A15: python3 -m unittest discover -s scripts/tests -p test_alert_unit.py -k test_the_alert_line_carries_no_line_of_the_failed_run
 A16: python3 -m unittest discover -s scripts/tests -p test_slo_declaration.py -k test_every_alert_routes_to_the_one_alert_path
-A17: python3 -m unittest discover -s scripts/tests -p test_slo_declaration.py -k test_the_mcp_slo_pages_and_tickets_to_the_journal_with_exact_burn_rates
+A17: python3 -m unittest discover -s scripts/tests -p test_slo_declaration.py -k test_the_mcp_slo_pages_and_tickets_on_the_one_alert_path_with_exact_burn_rates
 A18: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k test_a_release_with_no_bot_unit_deploys_and_restarts_the_api_alone
 A19: python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k test_the_daemons_and_the_largest_job_fit_the_stack_share
 A20: python3 -m unittest discover -s scripts/tests -p test_rail_contract.py -k test_the_contract_carries_no_telegram_or_second_route_row
