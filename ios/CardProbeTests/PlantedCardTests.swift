@@ -342,10 +342,40 @@ final class Probe {
     }
 
     /// The seconds the card document `view` was handed took to finish loading, or nil when it had
-    /// not finished within `loadSeconds` (SPEC-361 R16).
+    /// not finished within `loadSeconds` (SPEC-361 R16), asked through the view's own script.
     static func loadTime(_ view: WKWebView) async -> TimeInterval? {
-        await poll(Probe.loadSeconds) {
-            await reportsLoaded(view)
+        await loadTime(asking: { script, answer in
+            view.evaluateJavaScript(script) { result, _ in answer(result as? String) }
+        })
+    }
+
+    /// How the load wait asks a page a script: the page evaluates it and hands its string result,
+    /// or nil, to the answer it is given (SPEC-349 R11).
+    typealias Asking = @MainActor (String, @escaping @MainActor @Sendable (String?) -> Void) -> Void
+
+    /// The script the load wait reads a card's load by, the check `reportsLoaded` makes: the
+    /// document has finished loading and holds the planted-card `meta`.
+    static let readyScript =
+        "String(document.readyState === 'complete' && !!document.querySelector('meta[name=\"planted-card\"]'))"
+
+    /// The app's own script a page answers once its process runs, loaded or not (SPEC-349 R11).
+    static let answerScript = "'answered'"
+
+    /// The load wait over any page `ask` reaches: the seconds the card took to finish loading, or
+    /// nil when it had not finished within `loadSeconds` (SPEC-361 R16).
+    static func loadTime(
+        asking ask: @escaping Asking, answerSeconds: TimeInterval = Probe.warmUpSeconds,
+        loadSeconds: TimeInterval = Probe.loadSeconds
+    ) async -> TimeInterval? {
+        await poll(loadSeconds) {
+            await reply(ask, readyScript) == "true"
+        }
+    }
+
+    /// The page's string answer to `script`, asked once through `ask`.
+    private static func reply(_ ask: @escaping Asking, _ script: String) async -> String? {
+        await withCheckedContinuation { (continuation: CheckedContinuation<String?, Never>) in
+            ask(script) { continuation.resume(returning: $0) }
         }
     }
 
@@ -560,6 +590,37 @@ final class Probe {
             reading.record = state.record
         }
         return reading
+    }
+}
+
+/// A page the load wait asks, standing in for one whose process starts late: it answers nothing
+/// until `startSeconds` have passed since it was first asked, then answers `Probe.answerScript`,
+/// and any other script with whether it has finished loading, which it has `loadSeconds` after
+/// its start (SPEC-349 A10, A11).
+@MainActor
+final class LatePage {
+    private let startSeconds: TimeInterval
+    private let loadSeconds: TimeInterval
+    private var firstAsked: Date?
+
+    init(startSeconds: TimeInterval, loadSeconds: TimeInterval) {
+        self.startSeconds = startSeconds
+        self.loadSeconds = loadSeconds
+    }
+
+    /// Answers `script` through `answer` as such a page would, never before its start.
+    func ask(_ script: String, _ answer: @escaping @MainActor @Sendable (String?) -> Void) {
+        let first = firstAsked ?? Date()
+        firstAsked = first
+        let starts = first.addingTimeInterval(startSeconds)
+        let loads = starts.addingTimeInterval(loadSeconds)
+        Task { @MainActor in
+            let wait = starts.timeIntervalSinceNow
+            if wait > 0 {
+                try? await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000))
+            }
+            answer(script == Probe.answerScript ? "answered" : String(Date() >= loads))
+        }
     }
 }
 
@@ -1175,5 +1236,37 @@ final class PlantedCardTests: XCTestCase {
         let reference = try XCTUnwrap(readings["reference"], "the reference view was not shown")
         XCTAssertTrue(reference.all, "the reference read the permitted loads short: \(reference)")
         XCTAssertEqual(notLoaded, [], "views that never finished loading the card, so nothing was judged")
+    }
+
+    /// SPEC-349 A10 (R11): a page whose process first answers 4 seconds after it is asked, past
+    /// this wait's 3-second load bound, and then finishes loading 2 seconds later, reads loaded
+    /// within that bound: the load wait starts at the page's first answer.
+    @MainActor
+    func test_the_load_wait_starts_when_the_page_first_answers() async throws {
+        let page = LatePage(startSeconds: 4, loadSeconds: 2)
+        let start = Date()
+        let took = await Probe.loadTime(asking: { page.ask($0, $1) }, answerSeconds: 8, loadSeconds: 3)
+        let elapsed = Date().timeIntervalSince(start)
+        let line = "card probe late page: took=\(took.map { String(format: "%.2f", $0) } ?? "none")"
+            + " elapsed=\(String(format: "%.2f", elapsed))"
+        print(line)
+        XCTAssertNotNil(took, "a page that answered after 4 s and loaded 2 s later read not loaded: \(line)")
+        XCTAssertLessThan(took ?? .infinity, 3, "the load was not read within its own 3 s bound: \(line)")
+    }
+
+    /// SPEC-349 A11 (R11): a page whose process first answers 6 seconds after it is asked, past
+    /// this wait's 3-second answer bound, reads not loaded, and only after that whole bound.
+    @MainActor
+    func test_a_page_that_never_answers_reads_not_loaded_after_the_answer_bound() async throws {
+        let page = LatePage(startSeconds: 6, loadSeconds: 0)
+        let start = Date()
+        let took = await Probe.loadTime(asking: { page.ask($0, $1) }, answerSeconds: 3, loadSeconds: 1)
+        let elapsed = Date().timeIntervalSince(start)
+        let line = "card probe silent page: took=\(took.map { String(format: "%.2f", $0) } ?? "none")"
+            + " elapsed=\(String(format: "%.2f", elapsed))"
+        print(line)
+        XCTAssertNil(took, "a page that had not answered within its 3 s answer bound read loaded: \(line)")
+        XCTAssertGreaterThanOrEqual(
+            elapsed, 3, "the wait read the page not loaded before its whole answer bound: \(line)")
     }
 }
