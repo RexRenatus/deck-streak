@@ -6,7 +6,7 @@ upload fills the new server's empty store, and every other client takes a full d
 The old server's store is never copied and never written: it is the rollback.
 `docs/schematics/sync-server-packaging-and-cutover.md` draws the sequence, and this runbook holds
 one step per state of it, in its order, each marked as the schematic's table marks it. Every host
-step waits for the owner's go, and its exact command is the one the seat records in #161 before any
+step waits for the owner's go, and its exact command is the one recorded in #161 before any
 run; the host's names and addresses are in the maintainer's private gate packet, and this runbook
 names none.
 
