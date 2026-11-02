@@ -37,32 +37,6 @@
         "sync_request::the_bot_flushes_its_router_after_the_owners_sync_succeeds",
         "a requester that never flushes leaves the notifications the quiet hours and failed sends held undelivered after the owner's sync succeeded, which regresses SPEC-041 R7 for the owner's /sync; the killer counts the flush the requester makes once the job's run succeeded (SPEC-059 R8)"
       ]
-    ],
-    "SCRIPT_MUTATIONS": [
-      [
-        "S05903-THE-REQUEST-DIRECTORY-IS-THE-SERVICE-USERS-ALONE",
-        "deploy/tmpfiles.d/deck-streak-sync-request.conf",
-        "d /run/deck-streak-sync 0700 ",
-        "d /run/deck-streak-sync 0755 ",
-        "a directory other users can enter lets another process ring the doorbell; only the bot unit's ReadWritePaths= may write it (SPEC-059 R3)",
-        "test_sync_path.TheSyncPath.test_the_path_unit_and_its_request_directory"
-      ],
-      [
-        "S05904-THE-DOORBELL-IS-EDGE-TRIGGERED",
-        "deploy/systemd/deck-streak-job\u0040sync.path",
-        "\nPathChanged=/run/deck-streak-sync/request",
-        "\nPathExists=/run/deck-streak-sync/request",
-        "PathExists= is level triggered and, with a job that never consumes the file, starts the sync again and again; PathChanged= starts it once per change (SPEC-059 R4)",
-        "test_sync_path.TheSyncPath.test_the_path_unit_and_its_request_directory"
-      ],
-      [
-        "S05905-THE-BOT-MAY-WRITE-THE-REQUEST-DIRECTORY",
-        "deploy/systemd/deck-streak-bot.service",
-        "\nReadWritePaths=/run/deck-streak-sync",
-        "\nReadWritePaths=/run/deck-streak-syn",
-        "the bot's sandbox is read-only outside its paths, so without the directory it cannot ring the doorbell and the owner is never served (SPEC-059 R3)",
-        "test_sync_path.TheSyncPath.test_the_path_unit_and_its_request_directory"
-      ]
     ]
   }
 }

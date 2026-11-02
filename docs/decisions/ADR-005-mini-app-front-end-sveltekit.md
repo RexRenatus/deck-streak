@@ -100,3 +100,15 @@ declares, has no such release, so ADR-517 (SPEC-499) adds an override of another
 `@sveltejs/vite-plugin-svelte@7>deepmerge` takes our fixed copy in `vendor/deepmerge` until a
 release outside the advisory's range replaces it. The selector still names its parent's major,
 and the rest of this decision is unchanged.
+
+## Amendment: StrykerJS 10's core takes minimatch 11
+
+The amendments above move a development-only dependency to a release that fixes its advisory.
+StrykerJS 10's core, `@stryker-mutator/core` 10.1.1 (ADR-057), declares `minimatch ~10.2.4`,
+which no release inside its major moves past, and every minimatch release below 11.0.1 is open
+to GHSA-g3hv-75wg-m249, so `@stryker-mutator/core@10>minimatch` takes `>=11.0.1 <12`. The move
+crosses the major the core declares, and the web mutation run, which loads the core, passes on
+minimatch 11.0.3. The selector names the core's major, so it applies to no later major, and it
+is removed when the parent no longer matches. Rejected: a global `minimatch` override, which
+would also force any other consumer onto the newer line, and an audit ignore, which would leave
+the advisory unfixed.

@@ -1,0 +1,78 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S41400-AN-INPUT-MADE-FOR-ANOTHER-DAY-LEAVES-THE-STOCK-ORDER",
+        "engine-core",
+        "src/reorder.rs",
+        "        Some(input) if on && input.day == today && input.snapshot == snapshot => input,",
+        "        Some(input) if on && input.snapshot == snapshot => input,",
+        "reorder::scores_made_for_another_day_or_snapshot_leave_the_stock_order",
+        "scores made for another day leave the stock order; without the day's comparison, yesterday's score of 1 for card 12 puts it ahead of 11 in today's queue (SPEC-414 R3, A4; ADR-428 D1)"
+      ],
+      [
+        "S41401-AN-INPUT-MADE-FOR-ANOTHER-SNAPSHOT-LEAVES-THE-STOCK-ORDER",
+        "engine-core",
+        "src/reorder.rs",
+        "        Some(input) if on && input.day == today && input.snapshot == snapshot => input,",
+        "        Some(input) if on && input.day == today => input,",
+        "reorder::scores_made_for_another_day_or_snapshot_leave_the_stock_order",
+        "scores made for a replaced snapshot leave the stock order; without the snapshot's comparison, they reorder the queue of the collection that replaced it (SPEC-414 R3, A4; ADR-428 D1, D2)"
+      ],
+      [
+        "S41402-THE-SWITCH-OFF-LEAVES-THE-STOCK-ORDER",
+        "engine-core",
+        "src/reorder.rs",
+        "        Some(input) if on && input.day == today && input.snapshot == snapshot => input,",
+        "        Some(input) if input.day == today && input.snapshot == snapshot => input,",
+        "reorder::an_unused_input_presents_the_stock_queue_and_on_again_reorders",
+        "the switch off presents the stock queue exactly; without reading the switch, today's scores reorder it while it is off (SPEC-414 R3, A5; ADR-339)"
+      ],
+      [
+        "S41403-A-SCORE-ABOVE-ONE-COUNTS-AS-NO-SCORE",
+        "engine-core",
+        "src/reorder.rs",
+        "            Some(&score) if (0.0..=1.0).contains(&score) => scored.push((score, entry)),",
+        "            Some(&score) if (0.0..=f64::INFINITY).contains(&score) => scored.push((score, entry)),",
+        "reorder::an_invalid_score_counts_as_no_score",
+        "a score above 1 counts as no score; with the bound lifted, an infinite score puts card 11 at the head instead of behind the unscored 12 (SPEC-414 R4, A3; ADR-428 D4)"
+      ],
+      [
+        "S41404-A-SCORE-BELOW-ZERO-COUNTS-AS-NO-SCORE",
+        "engine-core",
+        "src/reorder.rs",
+        "            Some(&score) if (0.0..=1.0).contains(&score) => scored.push((score, entry)),",
+        "            Some(&score) if (f64::NEG_INFINITY..=1.0).contains(&score) => scored.push((score, entry)),",
+        "reorder::an_invalid_score_counts_as_no_score",
+        "a score below 0 counts as no score; with the bound lowered, card 11 scored -inf is placed among the scored, ahead of the unscored 12 that precedes it in stock order (SPEC-414 R4, A3; ADR-428 D4)"
+      ],
+      [
+        "S41405-THE-HIGHEST-SCORE-LEADS",
+        "engine-core",
+        "src/reorder.rs",
+        "    scored.sort_by(|(first, _), (second, _)| second.partial_cmp(first).unwrap_or(Ordering::Equal));",
+        "    scored.sort_by(|(first, _), (second, _)| first.partial_cmp(second).unwrap_or(Ordering::Equal));",
+        "reorder::scored_cards_lead_highest_first_and_the_stock_order_breaks_ties",
+        "the highest score leads; sorted lowest first, cards 12 and 14 at 0.5 lead card 13 at 1 (SPEC-414 R4, A2)"
+      ],
+      [
+        "S41406-EVERY-UNSCORED-ENTRY-IS-PRESENTED",
+        "engine-core",
+        "src/reorder.rs",
+        "            _ => unscored.push(entry),",
+        "            _ => {}",
+        "reorder::the_reorder_presents_the_same_entries_and_writes_no_field",
+        "the reorder presents every stock entry; dropping the unscored ones shows fewer entries than the stock queue holds (SPEC-414 R5, A1; ADR-339)"
+      ],
+      [
+        "S41407-ZERO-AND-NEGATIVE-ZERO-TIE-IN-STOCK-ORDER",
+        "engine-core",
+        "src/reorder.rs",
+        "    scored.sort_by(|(first, _), (second, _)| second.partial_cmp(first).unwrap_or(Ordering::Equal));",
+        "    scored.sort_by(|(first, _), (second, _)| second.total_cmp(first));",
+        "reorder::scored_cards_lead_highest_first_and_the_stock_order_breaks_ties",
+        "-0 and 0 tie and keep their stock order; under total_cmp, 0 sorts above -0, so card 11 at 0 jumps ahead of card 12 at -0 when the stock order has 12 first (SPEC-414 R4, A2; ADR-428 D4)"
+      ]
+    ]
+  }
+}

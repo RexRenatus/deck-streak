@@ -324,3 +324,34 @@ fn a_relative_program_is_refused_with_the_shape_spelled_out() {
     assert!(ListCommand::parse("lister ls").is_none());
     assert!(ListCommand::parse("").is_none());
 }
+
+#[test]
+fn the_lister_with_no_credentials_directory_refuses_a_malformed_command() {
+    let relative = Environment::from_vars([(ARCHIVE_LIST_COMMAND, "lister ls")]);
+    assert!(
+        matches!(
+            CommandLister::configured_without_credentials(&relative),
+            Err(SettingsError::Malformed {
+                setting: ARCHIVE_LIST_COMMAND,
+                ..
+            })
+        ),
+        "with no credentials directory, a program that is not absolute refuses start by name"
+    );
+    let set = Environment::from_vars([(ARCHIVE_LIST_COMMAND, "/usr/bin/lister ls")]);
+    assert!(
+        matches!(
+            CommandLister::configured_without_credentials(&set),
+            Ok(None)
+        ),
+        "a well-formed command with no credentials directory wires no lister"
+    );
+    let unset = Environment::from_vars([("DECKSTREAK_OTHER", "set")]);
+    assert!(
+        matches!(
+            CommandLister::configured_without_credentials(&unset),
+            Ok(None)
+        ),
+        "no setting, no lister"
+    );
+}

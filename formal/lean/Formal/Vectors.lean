@@ -1,6 +1,11 @@
 import Formal.ChestVectors
 import Formal.CompanionDecideVectors
+import Formal.DueReorderVectors
 import Formal.ExchangeVectors
+import Formal.Fsrs7MemoryStateVectors
+import Formal.Fsrs7PortStateVectors
+import Formal.Fsrs7ScheduleVectors
+import Formal.Fsrs7StockVectors
 import Formal.HabitWritingVectors
 import Formal.IdSlotVectors
 import Formal.MediaBindVectors
@@ -39,7 +44,12 @@ def main (args : List String) : IO UInt32 := do
   match args with
   | ["Chest"] => Formal.ChestVectors.run
   | ["CompanionDecide"] => Formal.CompanionDecideVectors.run
+  | ["DueReorder"] => Formal.DueReorderVectors.run
   | ["Exchange"] => Formal.ExchangeVectors.run
+  | ["Fsrs7MemoryState"] => Formal.Fsrs7MemoryStateVectors.run
+  | ["Fsrs7PortState"] => Formal.Fsrs7PortStateVectors.run
+  | ["Fsrs7Schedule"] => Formal.Fsrs7ScheduleVectors.run
+  | ["Fsrs7Stock"] => Formal.Fsrs7StockVectors.run
   | ["HabitWriting"] => Formal.HabitWritingVectors.run
   | ["IdSlot"] => Formal.IdSlotVectors.run
   | ["MediaBind"] => Formal.MediaBindVectors.run

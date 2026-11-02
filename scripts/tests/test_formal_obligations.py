@@ -100,6 +100,11 @@ ENGINE_TIED = SYNC_MODELS + (
     "tla/RelightOrder",
     "tla/SensitiveDeckGate",
     "tla/SkipDayOnce",
+    "tla/DueReorderInput",
+    "lean/Fsrs7MemoryState",
+    "lean/Fsrs7PortState",
+    "lean/Fsrs7Schedule",
+    "lean/Fsrs7Stock",
     "lean/ReplayHistory",
     "lean/SensitiveDeck",
 )
@@ -109,6 +114,33 @@ REPLAY_TIE = {
     "test": "crates/fsrs7/tests/formal_vectors_replay_history.rs"
     "::the_history_selection_matches_the_lean_vectors",
 }
+# The FSRS-7 entries' vectors ties (SPEC-413), after the replay history's.
+FSRS7_TIES = [
+    {
+        "method": "vectors",
+        "for": "lean/Fsrs7Stock",
+        "test": "crates/fsrs7/tests/formal_vectors_fsrs7_stock.rs"
+        "::the_stock_projection_and_the_curve_hold_the_lean_claims_on_every_vector",
+    },
+    {
+        "method": "vectors",
+        "for": "lean/Fsrs7MemoryState",
+        "test": "crates/fsrs7/tests/formal_vectors_fsrs7_memory_state.rs"
+        "::the_replay_holds_the_lean_claims_on_every_vector",
+    },
+    {
+        "method": "vectors",
+        "for": "lean/Fsrs7Schedule",
+        "test": "crates/engine-core/tests/formal_vectors_fsrs7_schedule.rs"
+        "::the_engine_cores_schedule_gives_every_lean_vectors_output",
+    },
+    {
+        "method": "vectors",
+        "for": "lean/Fsrs7PortState",
+        "test": "crates/engine-core/tests/formal_vectors_fsrs7_port_state.rs"
+        "::the_engine_cores_port_state_gives_every_lean_vectors_output",
+    },
+]
 # The release gates' entry (SPEC-502): present, and tied by the release lane's Python vectors test.
 RELEASE_GATES = "lean/ReleaseGates"
 RELEASE_GATES_TIE = {
@@ -182,8 +214,9 @@ NEW_ENTRIES = {
     "lean/MediaGc": ("keep", {"O13"}),
     "lean/IdSlot": ("keep", {"O12"}),
 }
-# The 49 dispositioned entries: the 43 that predate the sync entries, those five, and the
-# release gates' entry.
+# The 55 existing entries' dispositions.
+# They are the 43 that predate the sync entries, those five, the release gates' entry, and the
+# six due-reorder and FSRS-7 entries.
 DISPOSITIONS = {
     "retire": ("tla/FullSyncChoice", "tla/SyncSnapshotWindow"),
     "re-point": (
@@ -191,6 +224,9 @@ DISPOSITIONS = {
         "tla/SyncCredential",
         "tla/UndoOwnAnswer",
         "tla/SkipDayWrite",
+        "tla/DueReorderInput",
+        "lean/Fsrs7PortState",
+        "lean/Fsrs7Schedule",
     ),
     "re-stamp": (
         "tla/AwardOnce",
@@ -226,7 +262,10 @@ DISPOSITIONS = {
         f"lean/{name}"
         for name in (
             "Chest",
+            "DueReorder",
             "Exchange",
+            "Fsrs7MemoryState",
+            "Fsrs7Stock",
             "HabitWriting",
             "NextMilestone",
             "OpenLapse",
@@ -902,6 +941,7 @@ class TheFormalLedger(unittest.TestCase):
             [
                 COMPANION_TIE,
                 REPLAY_TIE,
+                *FSRS7_TIES,
                 ID_SLOT_TIE,
                 *MEDIA_TIES,
                 *SYNC_CORE_TIES,
@@ -997,11 +1037,11 @@ class TheFormalLedger(unittest.TestCase):
         expected = {
             entry: disposition for disposition, entries in DISPOSITIONS.items() for entry in entries
         }
-        self.assertEqual(len(expected), 49)
-        self.assertFalse(set(expected) & set(NEW_ENTRIES), "a new entry was among the 49")
+        self.assertEqual(len(expected), 55)
+        self.assertFalse(set(expected) & set(NEW_ENTRIES), "a new entry was among the 55")
         expected.update({entry: disposition for entry, (disposition, _) in NEW_ENTRIES.items()})
         self.assertEqual(
-            set(tree), set(expected), "the tree's entries are not the 49 designed and the new ones"
+            set(tree), set(expected), "the tree's entries are not the 55 designed and the new ones"
         )
         rows = {item["entry"]: item for item in examined("rows", document["entries"])}
         self.assertEqual(len(rows), len(document["entries"]), "an entry has two rows")

@@ -49,6 +49,9 @@
 //! - [`scheduler`]: the scheduling port the replay's due days come through, its review event,
 //!   key, recall and refusals, the event check and the day queue with its sibling rule (SPEC-494
 //!   R1, R5 to R8).
+//! - [`reorder`]: the reorder-only input of due-card scores and the one function that orders
+//!   today's stock queue by it, only on the input's own day and schema stamp; it moves entries and
+//!   writes nothing (SPEC-414 R1 to R6).
 //! - [`backup_now`]: back up now, the open collection written into one new file on the owner's
 //!   word by the core's fixed statement and read back from it (SPEC-516 R4, R5).
 //!
@@ -74,6 +77,7 @@ pub mod media;
 pub mod native_sync;
 pub mod native_undo;
 pub mod one_way;
+pub mod reorder;
 pub mod replay;
 pub mod retention;
 pub mod review;

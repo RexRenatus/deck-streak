@@ -134,7 +134,6 @@ ALERT_KEYS = {
         "Group",
         # The host's identity endpoint denied (SPEC-354 R1); A1's census table pins its value.
         "IPAddressDeny",
-        "LoadCredential",
         "LockPersonality",
         "MemoryDenyWriteExecute",
         "MemoryHigh",
@@ -215,7 +214,6 @@ PAGING_KEYS = {
         "ProtectKernelTunables",
         "ProtectProc",
         "ProtectSystem",
-        "ReadWritePaths",
         "Restart",
         "RestartSec",
         "RestrictAddressFamilies",
@@ -248,7 +246,6 @@ PAGING_VALUES = {
     ("Service", "RestartSec"): ("15",),
     ("Unit", "After"): ("network-online.target",),
     ("Unit", "Wants"): ("network-online.target",),
-    ("Service", "ReadWritePaths"): ("/run/deck-streak-sync",),
     # The sync server drains on an interrupt alone (SPEC-337 R2), so its stop signal is that one.
     ("Service", "KillSignal"): ("SIGINT",),
     # The sync server reaches loopback peers alone (SPEC-340 R8; ADR-351 D6), and every other

@@ -4,8 +4,10 @@
 //! It starts in the order `docs/schematics/service-lifecycle.md` draws. The settings are read, and
 //! a missing or malformed one refuses start by name. Identity's two credentials, the owner's user id
 //! and the bot token, are read through the kernel's loader with the redactor the log writer reads,
-//! so neither value can reach a later line; a missing or malformed one refuses start by its id
-//! (`docs/schematics/startup-settings-and-secrets.md`). The shutdown signal's handlers are
+//! so neither value can reach a later line (`docs/schematics/startup-settings-and-secrets.md`).
+//! With both held the role starts with the owner's gate; with neither held, or with no credentials
+//! directory set, it starts with Telegram off; one held without the other, or one malformed,
+//! refuses start by its id (SPEC-582 R3). The shutdown signal's handlers are
 //! installed. The loopback listener is bound; systemd hears `READY=1`, and the heartbeat starts. The
 //! database then opens under the open lock while the API already answers readiness with 503, and
 //! 200 once it is open. On SIGTERM the role says `STOPPING=1`, drains, closes the database and
@@ -159,6 +161,44 @@ pub fn with_snapshot_lister(state: ApiState, lister: Option<CommandLister>) -> A
     }
 }
 
+/// Identity's gate and the seal secret, read through `loader` when a credentials directory is
+/// set. The seal secret is read beside the other credentials, before anything is bound: an absent
+/// one turns the release off, and one that is held and malformed refuses start (SPEC-363 R5). With
+/// no directory neither is held: the gate is off and the release is off (SPEC-582 R3).
+fn held_credentials(
+    loader: Option<&CredentialLoader>,
+    freshness: Freshness,
+) -> Result<(Option<OwnerGate>, Option<SealSecret>), ApiRoleError> {
+    let Some(loader) = loader else {
+        tracing::info!(
+            role = wiring::SEAL_SECRET_ROLE,
+            "no seal secret is configured: the sync seal release is off"
+        );
+        return Ok((None, None));
+    };
+    Ok((
+        OwnerGate::load_held(loader, freshness)?,
+        wiring::seal_secret(loader)?,
+    ))
+}
+
+/// The owner's access over `gate`, and the owner linking serves; with no gate, Telegram is off
+/// and linking serves no owner (SPEC-582 R3, R4).
+fn owner_access(
+    gate: Option<OwnerGate>,
+    clock: &Arc<dyn Clock>,
+    rule: deck_streak_kernel::StudyDayRule,
+) -> (OwnerAccess, Option<deck_streak_identity::Owner>) {
+    let Some(gate) = gate else {
+        tracing::info!(
+            "neither Telegram credential is held: the Telegram launch and its link code are off"
+        );
+        return (OwnerAccess::telegram_off(Arc::clone(clock), rule), None);
+    };
+    let owner = gate.owner();
+    (OwnerAccess::new(gate, Arc::clone(clock), rule), Some(owner))
+}
+
 /// `state`, serving the owner's scheduling companion files from `directory` when the role's
 /// settings name one (SPEC-511 R4). With none the routes answer 404 to the owner, as every public
 /// deployment does, and the role still starts.
@@ -187,12 +227,14 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), ApiRoleEr
     let listen = ListenAddress::from_env(env)?;
     let state = StateDirectory::from_env(env)?;
     let freshness = Freshness::from_env(env)?;
-    let credentials = CredentialsDirectory::from_env(env)?;
-    let loader = CredentialLoader::new(credentials.clone(), redactor.clone());
-    let gate = OwnerGate::load(&loader, freshness)?;
-    // The seal secret is read beside the other credentials, before anything is bound: an absent one
-    // turns the release off, and one that is held and malformed refuses start (SPEC-363 R5).
-    let seal = wiring::seal_secret(&loader)?;
+    // The credentials directory is optional: unset, the role holds no credential and starts with
+    // Telegram off; set and malformed, it refuses start (SPEC-582 R3).
+    let credentials =
+        env.optional::<CredentialsDirectory>(deck_streak_kernel::settings::CREDENTIALS_DIRECTORY)?;
+    let loader = credentials
+        .clone()
+        .map(|directory| CredentialLoader::new(directory, redactor.clone()));
+    let (gate, seal) = held_credentials(loader.as_ref(), freshness)?;
     // The conventions refuse start here, before anything is bound (SPEC-094 R2).
     let _conventions = Conventions::load(env)?;
     // So does a public origin that is set and is not an https origin (SPEC-359 R1).
@@ -203,8 +245,12 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), ApiRoleEr
     // The archive's lister is read last of the settings and credentials, still before anything is
     // bound: a list command that is set and malformed refuses start, and an absent command or
     // credential turns it off with an INFO line, which comes after every other refusal so that a
-    // refusal is the role's first line (SPEC-377 R14).
-    let archive_lister = CommandLister::configured(env, &credentials)?;
+    // refusal is the role's first line (SPEC-377 R14). With no credentials directory there is no
+    // list-only credential (SPEC-582 R3).
+    let archive_lister = match &credentials {
+        Some(credentials) => CommandLister::configured(env, credentials)?,
+        None => CommandLister::configured_without_credentials(env)?,
+    };
     let notifier = Notifier::from_env(env);
     let shutdown = ShutdownSignal::install().map_err(ApiRoleError::Signals)?;
 
@@ -215,18 +261,17 @@ pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), ApiRoleEr
     })?;
     let clock: Arc<dyn Clock> = Arc::new(SystemClock);
     let readiness = Readiness::new();
-    let owner = gate.owner();
-    let access = OwnerAccess::new(gate, Arc::clone(&clock), kernel.study_day_rule);
+    let (access, owner) = owner_access(gate, &clock, kernel.study_day_rule);
     let late = wiring::LateInstruments::new();
     let offload = Offload::new(kernel.offload_workers, clock);
+    let composed = api_state(env, &offload, readiness.clone(), access);
+    let composed = match owner {
+        Some(owner) => composed.with_linking(linking, owner),
+        None => composed,
+    };
     let router = deck_streak_api::router(with_companion_directory(
         with_snapshot_lister(
-            with_seal_secret(
-                api_state(env, &offload, readiness.clone(), access)
-                    .with_linking(linking, owner)
-                    .with_instruments(Arc::new(late.clone())),
-                seal,
-            ),
+            with_seal_secret(composed.with_instruments(Arc::new(late.clone())), seal),
             archive_lister,
         ),
         companion,

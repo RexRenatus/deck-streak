@@ -14,7 +14,7 @@
       "unit": "deck-streak-alert@.service",
       "section": "Service",
       "key": "ExecStart",
-      "neutral": ["/usr/local/lib/deck-streak/current/deploy/scripts/alert-telegram.sh %i"]
+      "neutral": ["/usr/local/lib/deck-streak/current/deploy/scripts/alert-journal.sh %i"]
     },
     {
       "unit": "deck-streak-api.service",
@@ -61,18 +61,6 @@
       "section": "Timer",
       "key": "OnCalendar",
       "neutral": ["*-*-* 03:24:00 UTC"]
-    },
-    {
-      "unit": "deck-streak-bot.service",
-      "section": "Service",
-      "key": "ExecStart",
-      "neutral": ["/usr/local/lib/deck-streak/current/bin/deckstreakd bot"]
-    },
-    {
-      "unit": "deck-streak-bot.service",
-      "section": "Service",
-      "key": "EnvironmentFile",
-      "neutral": ["/etc/deck-streak/deck-streak.env"]
     },
     {
       "unit": "deck-streak-job@.service",
@@ -182,18 +170,6 @@
       "section": "Timer",
       "key": "OnCalendar",
       "neutral": ["Sun *-*-* 06:24:00 UTC"]
-    },
-    {
-      "unit": "deck-streak-second-route.service",
-      "section": "Service",
-      "key": "ExecStart",
-      "neutral": ["/usr/local/lib/deck-streak/current/deploy/scripts/second-route.sh"]
-    },
-    {
-      "unit": "deck-streak-second-route.timer",
-      "section": "Timer",
-      "key": "OnCalendar",
-      "neutral": ["*-*-* *:00/10:00 UTC"]
     },
     {
       "unit": "deck-streak-slo.service",

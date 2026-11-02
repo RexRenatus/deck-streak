@@ -35,7 +35,7 @@ HEADERS = (
     'X-Content-Type-Options "nosniff"',
     'Referrer-Policy "same-origin"',
     'X-Robots-Tag "noindex"',
-    "frame-ancestors https://web.telegram.org; object-src 'none'; base-uri 'self'",
+    "frame-ancestors 'none'; object-src 'none'; base-uri 'self'",
     "-Server",
 )
 

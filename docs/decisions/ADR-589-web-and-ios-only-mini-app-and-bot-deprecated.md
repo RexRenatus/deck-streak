@@ -105,3 +105,16 @@ Chosen option: deprecate, amend by note, and remove later.
 - `docs/rulings/OWNER-RULING-2026-10-29-web-and-ios-and-rex.md` (CHARTER mission, 2, 14, 19, 22).
 - `docs/rulings/OWNER-RULING-2026-10-04-app-surfaces.md`, `docs/rulings/OWNER-RULING-2026-10-18-rex-enters-deckstreak.md`.
 - SPEC-001, SPEC-334; ADR-131, ADR-132, ADR-335, ADR-336, ADR-339 and its amendment, ADR-341.
+
+## Amendment: the install drops the Telegram surfaces before the code leaves (ADR-601)
+
+ADR-601 amends this ADR's removal order. The install, every file under `deploy/`, drops every
+Telegram surface first: the bot's unit, the owner's `/sync` doorbell, the bot's credential lines
+in the API unit, the alert template and the held flush's instance, the Telegram alert sender, the
+edge's Telegram framing origin and the deploy's restarts of the bot. The code named under
+"Deprecated" above stays in the tree until the one removal delivery, after native push carries the
+router (#640).
+
+The driver "No surface may lose its owner gate while its code still runs" holds: with neither
+Telegram credential held, the gate is off and refuses every launch with `telegram_off`, so no
+session opens without it (ADR-601 D3).

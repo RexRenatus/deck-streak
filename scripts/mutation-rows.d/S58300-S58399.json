@@ -1,0 +1,118 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S58301-THE-KEY-TABLE-NAMES-EXACTLY-THE-FOUR-KEYS",
+        "scripts/tests/test_sealed_sync_records.py",
+        "    if names != KEYS:",
+        "    if False:",
+        "the key table names exactly the account key, the device key, the passkey PRF slot and the recovery key slot; with the names unchecked, a fifth key would pass (SPEC-583 A2, R1)",
+        "test_sealed_sync_records.TheKeyHierarchy.test_a_key_held_in_the_clear_by_the_server_is_refused"
+      ],
+      [
+        "S58302-THE-SERVER-HOLDS-A-SEALED-OR-PUBLIC-FORM-ONLY",
+        "scripts/tests/test_sealed_sync_records.py",
+        "        if not held.startswith(SERVER_FORMS):",
+        "        if False:",
+        "each server cell begins with a sealed form, a public half or nothing; with the form unchecked, a server cell holding the account key itself would pass (SPEC-583 A2, R2)",
+        "test_sealed_sync_records.TheKeyHierarchy.test_a_key_held_in_the_clear_by_the_server_is_refused"
+      ],
+      [
+        "S58303-NO-SERVER-CELL-HOLDS-A-KEY-IN-THE-CLEAR",
+        "scripts/tests/test_sealed_sync_records.py",
+        "        if any(word in held for word in CLEAR_WORDS):",
+        "        if False:",
+        "no server cell names a key in the clear; with the words unchecked, a sealed copy beside a plaintext copy would pass (SPEC-583 A2, R2)",
+        "test_sealed_sync_records.TheKeyHierarchy.test_a_key_held_in_the_clear_by_the_server_is_refused"
+      ],
+      [
+        "S58304-A-BODY-FIELD-IN-THE-HEAD-IS-REFUSED",
+        "scripts/tests/test_sealed_sync_records.py",
+        "    extra = [field for field in fields if field not in HEAD_FIELDS]",
+        "    extra = []",
+        "the clear head holds no field outside the judge's nine; with extras unread, a deck name in the head would pass (SPEC-583 A4, R5)",
+        "test_sealed_sync_records.TheClearHead.test_a_body_field_in_the_head_is_refused"
+      ],
+      [
+        "S58305-A-HEAD-FIELD-THE-JUDGE-NEEDS-IS-NOT-DROPPED",
+        "scripts/tests/test_sealed_sync_records.py",
+        "    missing = [field for field in HEAD_FIELDS if field not in fields]",
+        "    missing = []",
+        "the clear head keeps every field the judge reads; with omissions unread, a head without its nonce would pass (SPEC-583 A4, R5)",
+        "test_sealed_sync_records.TheClearHead.test_a_body_field_in_the_head_is_refused"
+      ],
+      [
+        "S58306-THE-DAILY-FIELDS-KEEP-THEIR-ORDER",
+        "scripts/tests/test_sealed_sync_records.py",
+        "    if fields == FACT_FIELDS:",
+        "    if sorted(fields) == sorted(FACT_FIELDS):",
+        "the daily record's four fields stand in their order; compared as sorted lists, a record with reviews and minutes swapped would pass (SPEC-583 A6, R7)",
+        "test_sealed_sync_records.TheDailyRecord.test_a_fifth_or_reordered_daily_field_is_refused"
+      ],
+      [
+        "S58307-THE-DAILY-RECORD-HOLDS-NO-FIFTH-FIELD",
+        "scripts/tests/test_sealed_sync_records.py",
+        "    if fields == FACT_FIELDS:",
+        "    if set(fields) >= set(FACT_FIELDS):",
+        "the daily record holds exactly four fields; read as a superset, a record carrying a due count would pass (SPEC-583 A6, R7)",
+        "test_sealed_sync_records.TheDailyRecord.test_a_fifth_or_reordered_daily_field_is_refused"
+      ],
+      [
+        "S58308-A-TABLE-THE-CENSUS-DROPS-IS-REFUSED",
+        "scripts/tests/test_sealed_sync_records.py",
+        "    missing = [name for name in owners if name not in names]",
+        "    missing = []",
+        "the census lists every register table; with dropped tables unread, a census without one would pass (SPEC-583 A9, R9)",
+        "test_sealed_sync_records.TheCensus.test_a_census_that_drops_adds_or_misjudges_a_table_is_refused"
+      ],
+      [
+        "S58309-A-TABLE-UNDER-ANOTHER-OWNER-IS-REFUSED",
+        "scripts/tests/test_sealed_sync_records.py",
+        "    misowned = [name for name, owner, _ in held if owners.get(name, owner) != owner]",
+        "    misowned = []",
+        "each census table names the owner the register gives it; with owners unread, a table under another context would pass (SPEC-583 A9, R9)",
+        "test_sealed_sync_records.TheCensus.test_a_census_that_drops_adds_or_misjudges_a_table_is_refused"
+      ],
+      [
+        "S58310-A-CONTEXT-THE-CENSUS-DROPS-IS-REFUSED",
+        "scripts/tests/test_sealed_sync_records.py",
+        "    absent = [name for name in wanted if name not in named]",
+        "    absent = []",
+        "the census lists every context that depends on ingest; with dropped contexts unread, a census without one would pass (SPEC-583 A9, R9)",
+        "test_sealed_sync_records.TheCensus.test_a_census_that_drops_adds_or_misjudges_a_table_is_refused"
+      ],
+      [
+        "S58311-THE-STAGED-TEXT-NAMES-EVERY-SEALED-CLASS",
+        "scripts/tests/test_sealed_sync_records.py",
+        "    unsealed = [name for name in SEALED_CLASSES if name not in never]",
+        "    unsealed = []",
+        "the staged privacy text names each sealed class as never read; with the classes unread, a text silent on reviews would pass (SPEC-583 A10, R11)",
+        "test_sealed_sync_records.ThePrivacyText.test_the_staged_privacy_text_names_what_is_sealed_and_what_is_kept"
+      ],
+      [
+        "S58312-THE-STAGED-TEXT-NAMES-WHAT-THE-SERVER-HOLDS",
+        "scripts/tests/test_sealed_sync_records.py",
+        "    unkept = [name for name in KEPT_WORDS + FACT_FIELDS if name not in holds]",
+        "    unkept = []",
+        "the staged privacy text names the heads, sizes, wrapped keys and the four daily fields as held; with them unread, a text silent on the XP granted would pass (SPEC-583 A10, R11)",
+        "test_sealed_sync_records.ThePrivacyText.test_the_staged_privacy_text_names_what_is_sealed_and_what_is_kept"
+      ],
+      [
+        "S58313-A-CLAIM-BEFORE-THE-CUT-OVER-IS-REFUSED",
+        "scripts/tests/test_sealed_sync_records.py",
+        "    if not (root / STOCK_PATH).is_file():",
+        "    if True:",
+        "the privacy page claims no sealed sync while the stock-app path is in the tree; with the guard always skipped, a claim before the cut-over would pass (SPEC-583 A11, R12)",
+        "test_sealed_sync_records.ThePrivacyText.test_privacy_md_claims_no_sealed_sync_while_the_stock_path_is_in_the_tree"
+      ],
+      [
+        "S58314-A-CLAIM-AFTER-THE-CUT-OVER-IS-ACCEPTED",
+        "scripts/tests/test_sealed_sync_records.py",
+        "    if not (root / STOCK_PATH).is_file():",
+        "    if False:",
+        "the guard applies only while the stock-app path is in the tree; never skipped, it would refuse the claim the cut-over makes true (SPEC-583 A11, R12)",
+        "test_sealed_sync_records.ThePrivacyText.test_privacy_md_claims_no_sealed_sync_while_the_stock_path_is_in_the_tree"
+      ]
+    ]
+  }
+}

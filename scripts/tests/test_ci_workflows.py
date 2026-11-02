@@ -8981,6 +8981,396 @@ class TheHarnessLinksItsOwnRunsFramework(unittest.TestCase):
                 self.assertEqual(harness_link_problems({"jobs": {"harness": job}}), wanted, name)
 
 
+# The harness's warm (SPEC-339 R12 as #1060 amends it, R15 and R16; ADR-350 D10 to D12): each
+# Harness test step is three steps, side by side: a build for testing; a warm that waits for each
+# simulator's boot, installs the build's app, launches it and ends it, inside its budget, recording
+# each phase; and the tests, run without building, their console teed under pipefail. The Debug
+# warm writes the warm's script once and the Release warm runs it; the report reads the warm's and
+# the consoles' rows.
+WARM_SCRIPT = '"$RUNNER_TEMP/simulator-warm.py"'
+WARM_STEPS = {
+    "debug": (
+        "the tests, Debug, built for testing",
+        "each simulator booted and the harness launched once, before its tests",
+        "the tests, Debug, on the iPhone and then the iPad",
+    ),
+    "release": (
+        "the measurements, Release, built for testing",
+        "each simulator booted and the harness launched once, before its measurements",
+        "the measurements, Release, on the iPhone and then the iPad",
+    ),
+}
+WARM_APPS = {
+    "debug": '"$RUNNER_TEMP/debug/Build/Products/Debug-iphonesimulator/Harness.app"',
+    "release": '"$RUNNER_TEMP/release/Build/Products/Release-iphonesimulator/Harness.app"',
+}
+WARM_DESTINATIONS = (
+    '-destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS"',
+    '-destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS"',
+)
+WARM_BUILD_NEEDS = {
+    "debug": (
+        "xcodebuild build-for-testing -project ios/Harness.xcodeproj -scheme Harness"
+        " -configuration Debug",
+        *WARM_DESTINATIONS,
+        '-derivedDataPath "$RUNNER_TEMP/debug"',
+        "CODE_SIGNING_ALLOWED=NO",
+    ),
+    "release": (
+        "xcodebuild build-for-testing -project ios/Harness.xcodeproj -scheme Harness"
+        " -configuration Release",
+        *WARM_DESTINATIONS,
+        '-derivedDataPath "$RUNNER_TEMP/release"',
+        "ONLY_ACTIVE_ARCH=YES",
+        "CODE_SIGNING_ALLOWED=NO",
+    ),
+}
+WARM_TEST_NEEDS = {
+    "debug": (
+        "set -o pipefail",
+        "xcodebuild test-without-building -project ios/Harness.xcodeproj -scheme Harness"
+        " -configuration Debug",
+        *WARM_DESTINATIONS,
+        "-disable-concurrent-destination-testing",
+        "-skip-testing:HarnessUITests/HarnessMeasureTests",
+        '-derivedDataPath "$RUNNER_TEMP/debug"',
+        '-resultBundlePath "$RESULTS/debug.xcresult"',
+        '2>&1 | tee "$REPORT/debug-console.log"',
+        '> "$REPORT/debug-seconds"',
+    ),
+    "release": (
+        "set -o pipefail",
+        "xcodebuild test-without-building -project ios/Harness.xcodeproj -scheme Harness"
+        " -configuration Release",
+        *WARM_DESTINATIONS,
+        "-disable-concurrent-destination-testing",
+        "-only-testing:HarnessUITests/HarnessMeasureTests",
+        '-derivedDataPath "$RUNNER_TEMP/release"',
+        '-resultBundlePath "$RESULTS/release.xcresult"',
+        '2>&1 | tee "$REPORT/release-console.log"',
+        '> "$REPORT/release-seconds"',
+    ),
+}
+# What the warm's script holds: both simulators, a boot wait, an install, a launch and an end of the
+# build's own app by its bundle id, each phase run without `check` inside its budget, a record per
+# step, and a failure only for a name that is not one simulator.
+WARM_SCRIPT_NEEDS = (
+    'for simulator in (os.environ["IPHONE_SIM"], os.environ["IPAD_SIM"]):',
+    '["xcrun", "simctl", "bootstatus", udid, "-b"]',
+    '["xcrun", "simctl", "install", udid, str(app)]',
+    '["xcrun", "simctl", "launch", udid, bundle]',
+    '["xcrun", "simctl", "terminate", udid, bundle]',
+    '["CFBundleIdentifier"]',
+    "left = deadline - time.monotonic()",
+    "done = subprocess.run(command, capture_output=True, text=True, timeout=left)",
+    'f"warm-{label}.json"',
+    "raise SystemExit(1 if problems else 0)",
+)
+# The report's rows for each step's session start: the warm's three, and the console's two.
+WARM_REPORT_NEEDS = (
+    'warm_rows("debug", "Debug")',
+    'warm_rows("release", "Release")',
+    'runner_rows("debug", "Debug")',
+    'runner_rows("release", "Release")',
+)
+
+
+def harness_warm_problems(workflow):
+    """Each way the `harness` job could test a simulator before its session is warmed, named
+    (SPEC-339 R12 as #1060 amends it, R15, R16): each Harness test step's build, warm and tests,
+    each named once and side by side in that order; the build for testing and the tests without
+    building, with the step's destinations, selection, derived data, result bundle and teed console
+    under pipefail, the tests building nothing again; the warm's script written once, by the Debug
+    warm, with what `WARM_SCRIPT_NEEDS` lists; each warm ending by running it on its own build's
+    app; and the report reading the warm's and the consoles' rows."""
+    steps = ((workflow.get("jobs") or {}).get("harness") or {}).get("steps") or []
+    names = [step.get("name") for step in steps]
+    problems = []
+    found = {}
+    for label, trio in WARM_STEPS.items():
+        for name in trio:
+            if names.count(name) != 1:
+                problems.append(f"harness: {names.count(name)} steps named {name!r}, not one")
+            else:
+                found[name] = steps[names.index(name)]
+        if all(name in found for name in trio):
+            at = [names.index(name) for name in trio]
+            if at != list(range(at[0], at[0] + len(trio))):
+                problems.append(
+                    f"harness: the {label} build, warm and tests are not side by side in order"
+                )
+        build, warm, tests = (found.get(name) for name in trio)
+        if build is not None:
+            run = run_joined(build)
+            problems += [
+                f"harness: the {label} build for testing lacks {n}"
+                for n in WARM_BUILD_NEEDS[label]
+                if n not in run
+            ]
+        if tests is not None:
+            run = run_joined(tests)
+            problems += [
+                f"harness: the {label} tests lack {n}"
+                for n in WARM_TEST_NEEDS[label]
+                if n not in run
+            ]
+            if "xcodebuild test " in run:
+                problems.append(f"harness: the {label} tests build again, with `xcodebuild test`")
+        if warm is not None:
+            lines = [line.strip() for line in str(warm.get("run", "")).splitlines() if line.strip()]
+            if lines[-1:] != [f"python3 {WARM_SCRIPT} {label} {WARM_APPS[label]}"]:
+                problems.append(
+                    f"harness: the {label} warm does not end by running the warm on its build's app"
+                )
+    writes = [s.get("name") for s in steps if f"cat > {WARM_SCRIPT} <<" in str(s.get("run", ""))]
+    if writes != [WARM_STEPS["debug"][1]]:
+        problems.append(f"harness: {len(writes)} steps write the warm's script, not the Debug warm")
+    else:
+        script = str(found[WARM_STEPS["debug"][1]].get("run", ""))
+        problems += [
+            f"harness: the warm's script lacks {n}" for n in WARM_SCRIPT_NEEDS if n not in script
+        ]
+    reports = [s for s in steps if s.get("name") == "the report"]
+    text = str(reports[0].get("run", "")) if len(reports) == 1 else ""
+    problems += [f"harness: the report lacks {n}" for n in WARM_REPORT_NEEDS if n not in text]
+    return problems
+
+
+# The warm's budget for each simulator and each session's longest end (SPEC-339 R15 and R16 as #1074
+# amends them; ADR-350 D13 and D14): each simulator's phases run inside a budget of their own, set
+# for each step, so the first simulator's slow boot cannot spend the second's warm; and the report
+# reads, per simulator and step, the longest time XCTest took to end an earlier instance.
+WARM_BUDGET = 'budget = {"debug": 480, "release": 120}[label]'
+WARM_DEADLINE = "deadline = time.monotonic() + budget"
+WARM_PHASES = "for phase, command in ("
+WARM_END_NEEDS = (
+    "def end_rows(label, title):",
+    'rows.append((f"{title} longest end, {simulator}", value))',
+    'end_rows("debug", "Debug")',
+    'end_rows("release", "Release")',
+)
+
+
+def harness_warm_budget_problems(workflow):
+    """Each way the `harness` job's warm could let one simulator spend another's budget, or its
+    report miss a session's longest end, named (SPEC-339 R15 and R16 as #1074 amends them): the
+    warm's script sets each step's budget once, and each simulator's deadline once, inside the
+    simulator loop and before its phases; and the report reads each step's longest ends."""
+    steps = ((workflow.get("jobs") or {}).get("harness") or {}).get("steps") or []
+    warms = [s for s in steps if s.get("name") == WARM_STEPS["debug"][1]]
+    lines = str(warms[0].get("run", "")).splitlines() if len(warms) == 1 else []
+    bare = [line.strip() for line in lines]
+    problems = []
+    if bare.count(WARM_BUDGET) != 1:
+        problems.append(
+            f"harness: {bare.count(WARM_BUDGET)} budget lines in the warm's script, not one"
+        )
+    deadlines = [at for at, line in enumerate(bare) if line.startswith("deadline = ")]
+    loops = [at for at, line in enumerate(bare) if line == WARM_SCRIPT_NEEDS[0]]
+    phases = [at for at, line in enumerate(bare) if line == WARM_PHASES]
+    if len(deadlines) != 1:
+        problems.append(f"harness: {len(deadlines)} deadline lines in the warm's script, not one")
+    elif bare[deadlines[0]] != WARM_DEADLINE:
+        problems.append(
+            f"harness: the warm's deadline is {bare[deadlines[0]]!r}, not {WARM_DEADLINE!r}"
+        )
+    elif len(loops) != 1 or len(phases) != 1:
+        problems.append("harness: the warm's script has not one simulator loop and one phase loop")
+    else:
+        at, loop, phase = deadlines[0], loops[0], phases[0]
+        depth = [len(lines[i]) - len(lines[i].lstrip()) for i in (loop, at, phase)]
+        if not (loop < at < phase and depth[0] < depth[1] == depth[2]):
+            problems.append("harness: the warm's deadline is not per simulator, before its phases")
+    reports = [s for s in steps if s.get("name") == "the report"]
+    text = str(reports[0].get("run", "")) if len(reports) == 1 else ""
+    problems += [f"harness: the report lacks {n}" for n in WARM_END_NEEDS if n not in text]
+    return problems
+
+
+class TheHarnessWarmsEachSimulatorBeforeItsTests(unittest.TestCase):
+    def test_the_harness_boots_and_launches_each_simulator_once_before_its_tests(self):
+        """SPEC-339 A11: each Harness test step is built for testing, each simulator warmed (a boot
+        wait, an install, a launch and an end) before it, and the step run without building, in
+        that order; the warm records each phase and fails only on a name that is not one simulator;
+        the teed steps keep xcodebuild's exit; and the report reads the warm's and the consoles'
+        rows."""
+        jobs = load("xcframework.yml")["jobs"]
+        examined("warmed harness steps", jobs["harness"].get("steps") or [])
+        self.assertEqual(harness_warm_problems({"jobs": jobs}), [])
+
+        # The controls: the good job is accepted, and each plant is refused by its rule's name.
+        script = f"cat > {WARM_SCRIPT} <<'PY'\n" + "\n".join(WARM_SCRIPT_NEEDS) + "\nPY\n"
+        good_steps = []
+        for label, (build, warm, tests) in WARM_STEPS.items():
+            warm_run = f"python3 {WARM_SCRIPT} {label} {WARM_APPS[label]}\n"
+            good_steps += [
+                {"name": build, "run": " \\\n  ".join(WARM_BUILD_NEEDS[label]) + "\n"},
+                {"name": warm, "run": (script if label == "debug" else "") + warm_run},
+                {"name": tests, "run": " \\\n  ".join(WARM_TEST_NEEDS[label]) + "\n"},
+            ]
+        good_steps.append({"name": "the report", "run": "\n".join(WARM_REPORT_NEEDS) + "\n"})
+        debug_build, debug_warm, debug_tests = WARM_STEPS["debug"]
+        release_build, release_warm, release_tests = WARM_STEPS["release"]
+        script_lacks = "harness: the warm's script lacks "
+        derived = WARM_BUILD_NEEDS["release"][3]
+
+        def harness(steps):
+            return {"jobs": {"harness": {"steps": steps}}}
+
+        def replaced(name, piece, instead):
+            step = next(s for s in good_steps if s.get("name") == name)
+            assert step["run"].count(piece) == 1, f"{piece!r} is not in the planted {name!r} once"
+            return harness(
+                [
+                    {**s, "run": s["run"].replace(piece, instead)} if s is step else s
+                    for s in good_steps
+                ]
+            )
+
+        def ordered(*names):
+            return harness([next(s for s in good_steps if s.get("name") == n) for n in names])
+
+        plants = {
+            "the good job": (harness(good_steps), []),
+            "no Debug build for testing": (
+                harness([s for s in good_steps if s.get("name") != debug_build]),
+                [f"harness: 0 steps named {debug_build!r}, not one"],
+            ),
+            "no Release warm": (
+                harness([s for s in good_steps if s.get("name") != release_warm]),
+                [f"harness: 0 steps named {release_warm!r}, not one"],
+            ),
+            "the Debug warm after its tests": (
+                ordered(
+                    debug_build,
+                    debug_tests,
+                    debug_warm,
+                    release_build,
+                    release_warm,
+                    release_tests,
+                    "the report",
+                ),
+                ["harness: the debug build, warm and tests are not side by side in order"],
+            ),
+            "the Debug tests built again": (
+                replaced(debug_tests, "xcodebuild test-without-building", "xcodebuild test"),
+                [
+                    f"harness: the debug tests lack {WARM_TEST_NEEDS['debug'][1]}",
+                    "harness: the debug tests build again, with `xcodebuild test`",
+                ],
+            ),
+            "a tee without pipefail": (
+                replaced(release_tests, "set -o pipefail", "set -e"),
+                ["harness: the release tests lack set -o pipefail"],
+            ),
+            "the Release build in the Debug derived data": (
+                replaced(release_build, '"$RUNNER_TEMP/release"', '"$RUNNER_TEMP/debug"'),
+                [f"harness: the release build for testing lacks {derived}"],
+            ),
+            "the iPhone simulator alone": (
+                replaced(debug_warm, ', os.environ["IPAD_SIM"]', ","),
+                [script_lacks + WARM_SCRIPT_NEEDS[0]],
+            ),
+            "no boot wait": (
+                replaced(debug_warm, '"bootstatus", udid, "-b"', '"list"'),
+                [script_lacks + WARM_SCRIPT_NEEDS[1]],
+            ),
+            "no launch": (
+                replaced(debug_warm, '"launch", udid, bundle', '"list"'),
+                [script_lacks + WARM_SCRIPT_NEEDS[3]],
+            ),
+            "no end": (
+                replaced(debug_warm, '"terminate", udid, bundle', '"list"'),
+                [script_lacks + WARM_SCRIPT_NEEDS[4]],
+            ),
+            "no budget": (
+                replaced(debug_warm, "left = deadline - time.monotonic()", "left = 10**9"),
+                [script_lacks + WARM_SCRIPT_NEEDS[6]],
+            ),
+            "a phase that fails the warm": (
+                replaced(debug_warm, "timeout=left)", "timeout=left, check=True)"),
+                [script_lacks + WARM_SCRIPT_NEEDS[7]],
+            ),
+            "the Release warm writing the script again": (
+                harness(
+                    [
+                        {**s, "run": script + s["run"]} if s.get("name") == release_warm else s
+                        for s in good_steps
+                    ]
+                ),
+                ["harness: 2 steps write the warm's script, not the Debug warm"],
+            ),
+            "the Release warm on the Debug app": (
+                replaced(release_warm, WARM_APPS["release"], WARM_APPS["debug"]),
+                ["harness: the release warm does not end by running the warm on its build's app"],
+            ),
+            "no Release console rows": (
+                replaced("the report", WARM_REPORT_NEEDS[3], ""),
+                [f"harness: the report lacks {WARM_REPORT_NEEDS[3]}"],
+            ),
+        }
+        for name, (workflow, wanted) in examined("planted warm jobs", list(plants.items())):
+            with self.subTest(plant=name):
+                self.assertEqual(harness_warm_problems(workflow), wanted, name)
+
+    def test_the_warm_budgets_each_simulator_and_the_report_reads_its_longest_end(self):
+        """SPEC-339 A12: the warm's script sets each step's budget, and each simulator's deadline
+        inside the simulator loop and before its phases, so one simulator cannot spend another's
+        warm; and the report reads, per simulator and step, the session's longest end."""
+        jobs = load("xcframework.yml")["jobs"]
+        read = (WARM_STEPS["debug"][1], "the report")
+        steps = [s for s in jobs["harness"].get("steps") or [] if s.get("name") in read]
+        examined("budget steps", steps)
+        self.assertEqual(harness_warm_budget_problems({"jobs": jobs}), [])
+
+        # The controls: the good job is accepted, and each plant is refused by its rule's name.
+        top = [f"cat > {WARM_SCRIPT} <<'PY'", WARM_BUDGET, WARM_SCRIPT_NEEDS[0]]
+        body = ['    udid = devices[0]["udid"]', "    " + WARM_DEADLINE, "    " + WARM_PHASES]
+        tail = ["        left = deadline - time.monotonic()", "PY"]
+        ends = "\n".join(WARM_END_NEEDS) + "\n"
+
+        def harness(script, report=ends):
+            warm = {"name": WARM_STEPS["debug"][1], "run": "\n".join(script) + "\n"}
+            return {"jobs": {"harness": {"steps": [warm, {"name": "the report", "run": report}]}}}
+
+        placed = "harness: the warm's deadline is not per simulator, before its phases"
+        shared = "deadline = time.monotonic() + 480"
+        plants = {
+            "the good job": (harness(top + body + tail), []),
+            "one deadline for both simulators": (
+                harness([*top[:2], WARM_DEADLINE, top[2], body[0], body[2], *tail]),
+                [placed],
+            ),
+            "a deadline per phase": (
+                harness([*top, body[0], body[2], "    " + body[1], *tail]),
+                [placed],
+            ),
+            "two deadlines": (
+                harness([*top, body[0], body[1], body[1], body[2], *tail]),
+                ["harness: 2 deadline lines in the warm's script, not one"],
+            ),
+            "the one budget's figure": (
+                harness([*top, body[0], "    " + shared, body[2], *tail]),
+                [f"harness: the warm's deadline is {shared!r}, not {WARM_DEADLINE!r}"],
+            ),
+            "one budget for both steps": (
+                harness([top[0], "budget = 480", top[2], *body, *tail]),
+                ["harness: 0 budget lines in the warm's script, not one"],
+            ),
+            "no Debug longest end": (
+                harness(top + body + tail, ends.replace(WARM_END_NEEDS[2] + "\n", "")),
+                [f"harness: the report lacks {WARM_END_NEEDS[2]}"],
+            ),
+            "no longest end row": (
+                harness(top + body + tail, ends.replace(WARM_END_NEEDS[1] + "\n", "")),
+                [f"harness: the report lacks {WARM_END_NEEDS[1]}"],
+            ),
+        }
+        for name, (workflow, wanted) in examined("planted budget jobs", list(plants.items())):
+            with self.subTest(plant=name):
+                self.assertEqual(harness_warm_budget_problems(workflow), wanted, name)
+
+
 # The app's steps in the `harness` job (SPEC-347 R13 and A14, ADR-358 D10; SPEC-348 R20, ADR-359
 # D8): its generate line opens its own test step, so the step "the project, generated", which each
 # TestFlight lane copies, keeps the harness's one line; the app's tests, the review screen's tests
