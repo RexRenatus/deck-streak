@@ -105,6 +105,25 @@ impl CommandLister {
         )))
     }
 
+    /// The lister when no credentials directory is set (SPEC-582 R3): none, since no list-only
+    /// credential can be held. The list command's setting is still read, and a malformed one
+    /// refuses start exactly as [`CommandLister::configured`] refuses it; then the missing
+    /// setting's or credential's INFO line is logged as there.
+    ///
+    /// # Errors
+    ///
+    /// [`SettingsError::Malformed`] when the setting is set and its program is not absolute.
+    pub fn configured_without_credentials(
+        env: &Environment,
+    ) -> Result<Option<Self>, SettingsError> {
+        if env.optional::<ListCommand>(ARCHIVE_LIST_COMMAND)?.is_none() {
+            tracing::info!("no list command is set, so the snapshot answers unknown");
+        } else {
+            tracing::info!("no list credential is held, so the snapshot answers unknown");
+        }
+        Ok(None)
+    }
+
     /// The command's lines, run now and waited for on this thread; none on any refusal.
     fn run(&self) -> Option<Vec<String>> {
         let mut child = Command::new(&self.command.program)

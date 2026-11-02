@@ -50,7 +50,7 @@ const MINUTE_MS: i64 = 60_000;
 /// and the handshake bound. A handle: every clone reads and writes the same sessions and bound.
 #[derive(Clone)]
 pub struct OwnerAccess {
-    gate: Arc<OwnerGate>,
+    gate: Arc<Gate>,
     sessions: Sessions,
     clock: Arc<dyn Clock>,
     rule: StudyDayRule,
@@ -63,7 +63,7 @@ impl OwnerAccess {
     #[must_use]
     pub fn new(gate: OwnerGate, clock: Arc<dyn Clock>, rule: StudyDayRule) -> Self {
         Self {
-            gate: Arc::new(gate),
+            gate: Arc::new(Gate::On(gate)),
             sessions: Sessions::new(Arc::clone(&clock)),
             clock,
             rule,
@@ -298,5 +298,55 @@ async fn validate_launch(
     match access.gate.admit(&init_data, access.clock.now()) {
         Ok(_) => StatusCode::NO_CONTENT.into_response(),
         Err(refusal) => refusal.into_response(),
+    }
+}
+
+/// The handshake's gate: identity's owner gate when both Telegram credentials are held, or off
+/// when neither is (SPEC-582 R3, R4).
+enum Gate {
+    /// The owner's gate over the two credentials.
+    On(OwnerGate),
+    /// Telegram is off: every well-formed handshake and launch is refused as `telegram_off`.
+    Off,
+}
+
+impl Gate {
+    /// The owner, when this gate is on and admits `init_data` at `now`. An off gate refuses with
+    /// `telegram_off` and logs the refusal by its reason alone, as the owner's gate logs its own.
+    fn admit(
+        &self,
+        init_data: &str,
+        now: UtcMillis,
+    ) -> Result<deck_streak_identity::Owner, Refusal> {
+        match self {
+            Gate::On(gate) => gate.admit(init_data, now),
+            Gate::Off => Err(Refusal::TelegramOff),
+        }
+        .inspect_err(|refusal| {
+            if matches!(self, Gate::Off) {
+                tracing::warn!(reason = refusal.reason(), "a handshake was refused");
+            }
+        })
+    }
+}
+
+impl OwnerAccess {
+    /// The routes' state with Telegram off (SPEC-582 R3, R4): no gate, so the handshake and the
+    /// launch refuse a well-formed body as `telegram_off`, with an empty session store aging by
+    /// `clock` and the study day read by `rule`.
+    #[must_use]
+    pub fn telegram_off(clock: Arc<dyn Clock>, rule: StudyDayRule) -> Self {
+        Self {
+            gate: Arc::new(Gate::Off),
+            sessions: Sessions::new(Arc::clone(&clock)),
+            clock,
+            rule,
+            bound: Arc::default(),
+        }
+    }
+
+    /// Whether Telegram is on: the owner's gate is held.
+    pub(crate) fn telegram_on(&self) -> bool {
+        matches!(*self.gate, Gate::On(_))
     }
 }

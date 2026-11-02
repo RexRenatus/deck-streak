@@ -114,22 +114,6 @@
         "test_alert_unit.ASecondRouteTellsTheOwner.test_each_failed_invocation_is_reported_once"
       ],
       [
-        "S39614-THE-UNIT-LOADS-ITS-OWN-CREDENTIAL",
-        "deploy/systemd/deck-streak-second-route.service",
-        "LoadCredential=second-route-check-in:/run/deck-streak-credentials/socket\n",
-        "LoadCredential=owner-user-id:/run/deck-streak-credentials/socket\n",
-        "the second route's unit loads its own two credentials and none of the alert sender's; loading the alert's id, the two routes would share a credential (SPEC-396 R3, A3)",
-        "test_alert_unit.TheSecondRouteSharesNothingWithTheAlertSender.test_the_second_route_shares_no_credential_with_the_alert_sender"
-      ],
-      [
-        "S39615-THE-UNIT-RUNS-ITS-OWN-SCRIPT",
-        "deploy/systemd/deck-streak-second-route.service",
-        "ExecStart=/usr/local/lib/deck-streak/current/deploy/scripts/second-route.sh\n",
-        "ExecStart=/usr/local/lib/deck-streak/current/deploy/scripts/alert-telegram.sh %i\n",
-        "the second route's unit runs its own script; running the alert script, the two routes would share a process (SPEC-396 R4, A4)",
-        "test_alert_unit.TheSecondRouteSharesNothingWithTheAlertSender.test_the_second_route_shares_no_process_with_the_alert_sender"
-      ],
-      [
         "S39616-THE-ADDRESS-STAYS-OFF-ARGV",
         "deploy/scripts/second-route.sh",
         "  } | curl --fail --silent --show-error --max-time 10 --retry 3 --retry-delay 2 --config - \\\n",

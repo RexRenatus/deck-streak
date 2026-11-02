@@ -101,6 +101,7 @@ ENGINE_TIED = SYNC_MODELS + (
     "tla/RelightOrder",
     "tla/SensitiveDeckGate",
     "tla/SkipDayOnce",
+    "tla/DueReorderInput",
     "lean/ReplayHistory",
     "lean/SensitiveDeck",
 )
@@ -110,7 +111,7 @@ REPLAY_TIE = {
     "test": "crates/fsrs7/tests/formal_vectors_replay_history.rs"
     "::the_history_selection_matches_the_lean_vectors",
 }
-# The 43 existing entries' dispositions.
+# The 45 existing entries' dispositions.
 DISPOSITIONS = {
     "retire": ("tla/FullSyncChoice", "tla/SyncSnapshotWindow"),
     "re-point": (
@@ -118,6 +119,7 @@ DISPOSITIONS = {
         "tla/SyncCredential",
         "tla/UndoOwnAnswer",
         "tla/SkipDayWrite",
+        "tla/DueReorderInput",
     ),
     "re-stamp": (
         "tla/AwardOnce",
@@ -152,6 +154,7 @@ DISPOSITIONS = {
         f"lean/{name}"
         for name in (
             "Chest",
+            "DueReorder",
             "Exchange",
             "HabitWriting",
             "NextMilestone",
@@ -811,8 +814,8 @@ class TheFormalLedger(unittest.TestCase):
         expected = {
             entry: disposition for disposition, entries in DISPOSITIONS.items() for entry in entries
         }
-        self.assertEqual(len(expected), 43)
-        self.assertEqual(set(tree), set(expected), "the tree's entries are not the 43 designed")
+        self.assertEqual(len(expected), 45)
+        self.assertEqual(set(tree), set(expected), "the tree's entries are not the 45 designed")
         rows = {item["entry"]: item for item in examined("rows", document["entries"])}
         self.assertEqual(len(rows), len(document["entries"]), "an entry has two rows")
         self.assertEqual({entry: item["disposition"] for entry, item in rows.items()}, expected)

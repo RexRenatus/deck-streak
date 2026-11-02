@@ -44,6 +44,9 @@
 //! - [`scheduler`]: the scheduling port the replay's due days come through, its review event,
 //!   key, recall and refusals, the event check and the day queue with its sibling rule (SPEC-494
 //!   R1, R5 to R8).
+//! - [`reorder`]: the reorder-only input of due-card scores and the one function that orders
+//!   today's stock queue by it, only on the input's own day and schema stamp; it moves entries and
+//!   writes nothing (SPEC-414 R1 to R6).
 //!
 //! The core depends on the engine and on one crate of this workspace, the isolated FSRS-7
 //! scheduler, which [`replay`] alone names; only the two client adapters depend on it (ADR-356 D4
@@ -63,6 +66,7 @@ pub mod late;
 pub mod login_guard;
 pub mod media;
 pub mod one_way;
+pub mod reorder;
 pub mod replay;
 pub mod retention;
 pub mod review;

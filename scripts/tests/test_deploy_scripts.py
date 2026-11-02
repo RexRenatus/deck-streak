@@ -279,7 +279,6 @@ def release_files(tag, marker):
             REPO / "deploy/scripts/effective-check.py"
         ).read_bytes(),
         f"{SYSTEMD}/{API}": unit_text(API, marker),
-        f"{SYSTEMD}/{BOT}": unit_text(BOT, marker),
         f"{SYSTEMD}/deck-streak-job@.service": unit_text("deck-streak-job@.service", marker),
         f"{SYSTEMD}/{JOB}@sync.service.d/20-sync-login.conf": (
             b"[Service]\nLoadCredential=anki-sync-username:/run/deck-streak-credentials/socket\n"
@@ -544,12 +543,12 @@ class TheDeploySwitches(Case):
             self.assertEqual((w.units / name).read_bytes(), data, f"{name} is not byte for byte")
         events = w.text("events.log").splitlines()
         self.assertEqual(
-            [e.split()[1] for e in events], [API, BOT], "the long-running units restart"
+            [e.split()[1] for e in events], [API], "the long-running unit restarts, and no bot"
         )
         self.assertTrue(all(e.endswith("current=v1.0.0") for e in events), events)
         calls = w.text("systemctl.log")
         self.assertLess(calls.index("daemon-reload"), calls.index("restart"))
-        for unit in (API, BOT, "deck-streak-job@.service"):
+        for unit in (API, "deck-streak-job@.service"):
             self.assertIn(f"cat {unit}", calls.replace("\n", " ").replace("cat ", "cat "))
         self.assertIn("http://127.0.0.1:8080/api/readyz", w.text("probes.log"))
         w.ship("v1.1.0", marker="second")
@@ -563,7 +562,7 @@ class TheDeploySwitches(Case):
         w.ship("v1.0.0")
         self.ok(w.deploy("v1.0.0"))
         w.ship("v2.0.0", marker="bad")
-        for unit in (BOT, API):
+        for unit in (API,):
             done = w.deploy("v2.0.0", STUB_BAD_UNIT=unit, STUB_BAD_TAG="v2.0.0")
             self.assertNotEqual(done.returncode, 0, f"{unit} never became ready")
             self.assertIn(unit, done.stderr, "the refusal names the unit that did not become ready")
@@ -594,10 +593,34 @@ class TheDeploySwitches(Case):
     def test_the_deploy_leaves_no_current_when_the_first_release_is_not_ready(self):
         w = self.world
         w.ship("v1.0.0")
-        done = w.deploy("v1.0.0", STUB_BAD_UNIT=BOT, STUB_BAD_TAG="v1.0.0")
+        done = w.deploy("v1.0.0", STUB_BAD_UNIT=API, STUB_BAD_TAG="v1.0.0")
         self.assertNotEqual(done.returncode, 0)
-        self.assertIn(BOT, done.stderr)
+        self.assertIn(API, done.stderr)
         self.assertIsNone(w.current(), "no release is current when none was ready")
+
+    def test_a_release_with_no_bot_unit_deploys_and_restarts_the_api_alone(self):
+        # SPEC-582 R5: the release ships no bot unit, and the deploy restarts the API, waits for
+        # its readiness and restarts no bot, so a host where a bot restart would fail still
+        # deploys; a switch back restarts the API alone.
+        w = self.world
+        w.ship("v1.0.0")
+        self.assertNotIn(BOT, unit_files("v1.0.0", "v1.0.0"), "the release ships a bot unit")
+        self.ok(w.deploy("v1.0.0", STUB_BAD_UNIT=BOT, STUB_BAD_TAG="v1.0.0"))
+        self.assertEqual(w.current(), "v1.0.0")
+        self.assertEqual(
+            w.text("events.log").splitlines(), [f"restart {API} current=v1.0.0"], "the restarts"
+        )
+        # A release whose API never becomes ready switches back, and the switch back restarts the
+        # API alone, on the kept release.
+        w.ship("v2.0.0", marker="bad")
+        before = len(w.text("events.log").splitlines())
+        done = w.deploy("v2.0.0", STUB_BAD_UNIT=API, STUB_BAD_TAG="v2.0.0")
+        self.assertNotEqual(done.returncode, 0, "a release whose API never became ready was kept")
+        self.assertEqual(w.current(), "v1.0.0", "current is switched back")
+        self.assertEqual(
+            w.text("events.log").splitlines()[before:],
+            [f"restart {API} current=v2.0.0", f"restart {API} current=v1.0.0"],
+        )
 
     def test_the_rollback_makes_a_kept_release_current_again(self):
         w = self.world
