@@ -146,6 +146,7 @@ declaration that carries every key with the values the journal-only install impl
 | `scripts/tests/test_privacy_policy.py` | tests | changed: A6 |
 | `scripts/mutation-rows.d/S58500-S58599.json` | rows | added |
 | `scripts/mutation-rows.d/S33300-S33399.json` | rows | changed: one killer renamed |
+| `scripts/mutation-rows.d/S58200-S58299.json` | rows | changed: one row re-anchored on the pager channel |
 | `docs/red-first/SPEC-585.md` | docs | added |
 | `docs/specs/SPEC-031-observability-foundation.md` | docs | appended |
 | `docs/specs/SPEC-396-a-second-route-tells-the-owner-when-the-alert-sender-fails-or-goes-silent.md` | docs | appended |
