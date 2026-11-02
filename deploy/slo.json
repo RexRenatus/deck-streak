@@ -22,7 +22,7 @@
           "short_window": "30m",
           "burn_rate": 5.6,
           "budget_consumed": 0.05,
-          "route": "journal"
+          "route": "pager"
         },
         {
           "severity": "ticket",
@@ -30,7 +30,7 @@
           "short_window": "6h",
           "burn_rate": 0.9333,
           "budget_consumed": 0.1,
-          "route": "journal"
+          "route": "pager"
         }
       ]
     },
@@ -54,7 +54,7 @@
           "short_window": "30m",
           "burn_rate": 5.6,
           "budget_consumed": 0.05,
-          "route": "journal"
+          "route": "pager"
         },
         {
           "severity": "ticket",
@@ -62,7 +62,7 @@
           "short_window": "6h",
           "burn_rate": 0.9333,
           "budget_consumed": 0.1,
-          "route": "journal"
+          "route": "pager"
         }
       ]
     }
@@ -76,7 +76,7 @@
   },
   "alerting": {
     "unit": "deck-streak-alert@.service",
-    "channel": "journal"
+    "channel": "pager"
   },
   "evaluator": {
     "unit": "deck-streak-slo.service",
@@ -87,5 +87,5 @@
     "timer": "deck-streak-memory-watch.timer",
     "units": "all"
   },
-  "note": "SPEC-031 R2 and ADR-031. Every burn rate is budget_consumed x 28 days in hours / the long window in hours; deploy/scripts/slo-evaluate.py reads this file on the host."
+  "note": "SPEC-031 R2 and ADR-031, with the route SPEC-585 gives it: every alert pages through the alert template's journal line, which the pager declared in docs/monitoring/pager.json reads off the host. Every burn rate is budget_consumed x 28 days in hours / the long window in hours; deploy/scripts/slo-evaluate.py reads this file on the host."
 }

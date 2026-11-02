@@ -7,6 +7,7 @@ against a number written here, and each census is paired with a planted policy i
 """
 
 import json
+import plistlib
 import re
 import tempfile
 import unittest
@@ -394,6 +395,69 @@ class ThePolicyStatesWhatDeckStreakFitsOnYourData(unittest.TestCase):
                 refuse_embeddings(embedding_lines(Path(tmp), ["crates/planted.rs"]))
         self.assertIn("crates/planted.rs", str(refused.exception))
         self.assertIn(MODELS, str(refused.exception))
+
+
+# SPEC-585 R10 to R12: the section that says how DeckStreak measures use, and the app's privacy
+# manifest it must agree with.
+MEASURING = "## Measuring use"
+NOTHING_MEASURED = "the apps measure nothing about how you use them"
+# What the section states: what the server counts and never counts, and the one switch.
+MEASURED = (
+    "route",
+    "method",
+    "status",
+    "no account",
+    "no request id",
+    NOTHING_MEASURED,
+    "off until you turn it on",
+    "one switch",
+    "off by default",
+)
+MANIFEST = REPO / "ios" / "App" / "PrivacyInfo.xcprivacy"
+ANALYTICS = "NSPrivacyCollectedDataTypePurposeAnalytics"
+
+
+def measuring(policy):
+    """The text under the measuring heading, up to the next heading, flattened, or empty when it is
+    absent."""
+    _, found, rest = policy.partition(MEASURING)
+    return flat(rest.split("\n## ", 1)[0]) if found else ""
+
+
+class ThePolicyStatesHowUseIsMeasured(unittest.TestCase):
+    def test_the_policy_bounds_the_monitoring_copy_of_the_journal(self):
+        window = in_words(inventory()["logs"]["retention"])
+        bullets = examined(
+            "unreached bullet(s)", unreached_bullets(POLICY.read_text(encoding="utf-8"))
+        )
+        bounded = [
+            bullet
+            for bullet in bullets
+            if "journal" in bullet
+            and "monitoring" in bullet
+            and f"keeps that copy for at most {window}" in bullet
+        ]
+        self.assertEqual(
+            len(bounded), 1, "one bullet bounds the monitoring service's copy of the journal"
+        )
+
+    def test_the_policy_states_how_use_is_measured(self):
+        section = measuring(POLICY.read_text(encoding="utf-8"))
+        self.assertEqual([words for words in MEASURED if words not in section], [])
+
+    def test_the_policy_and_the_privacy_manifest_agree_no_usage_is_collected(self):
+        self.assertIn(NOTHING_MEASURED, measuring(POLICY.read_text(encoding="utf-8")))
+        manifest = plistlib.loads(MANIFEST.read_bytes())
+        self.assertIs(manifest["NSPrivacyTracking"], False)
+        collected = manifest["NSPrivacyCollectedDataTypes"]
+        self.assertEqual(
+            [
+                entry
+                for entry in collected
+                if ANALYTICS in entry.get("NSPrivacyCollectedDataTypePurposes", [])
+            ],
+            [],
+        )
 
 
 # SPEC-516 R9 (B9): the policy states the iPhone and iPad backups, how many, where they are kept and

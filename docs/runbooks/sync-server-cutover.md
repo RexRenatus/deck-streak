@@ -50,9 +50,9 @@ to be the cutover's own.
 - The rail has created the system user and group `deck-streak-sync`, with no login shell, no home
   and no other group (the owner's go, #161).
 - The offsite bucket exists with no public access and no listing, and the host's identity may only
-  create objects in it. Its lifecycle rule deletes each object `P30D` after it is written, the
-  period `PRIVACY.md` states, and the owner checks the rule before the window (the owner's go,
-  #161).
+  create objects in it. Its lifecycle rule deletes each object 6 days after it is written, inside
+  the `P7D` period `PRIVACY.md` states, and the owner checks the rule before the window (the
+  owner's go, #161).
 - The settings file names `DECKSTREAK_SNAPSHOT_COPY` and `DECKSTREAK_SNAPSHOT_BUCKET`, and the copy
   command is checked under the archive unit's sandbox (the owner's go, #161).
 - The settings file names `DECKSTREAK_SNAPSHOT_SEAL`, the seal command with the owner's public

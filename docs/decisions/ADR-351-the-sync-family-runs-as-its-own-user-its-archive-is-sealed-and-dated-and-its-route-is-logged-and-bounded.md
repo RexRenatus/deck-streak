@@ -162,3 +162,19 @@ on the host (#161).
 
 SPEC-340; ADR-347 (its amendment D13 and the sentences this record replaces); ADR-340, ADR-336,
 ADR-058, ADR-064, ADR-032; #618, #628, #649, #161.
+
+## Amendment (SPEC-584): the offsite archives are gone within seven days
+
+ADR-603 D2 changes D9's period. The bucket's lifecycle rule deletes each archive six days after
+it is written, so no archive stays offsite longer than `P7D`, the period `PRIVACY.md` states and
+the runbook checks before the window. The host's identity keeps its create-only permission, and
+the bucket's soft delete stays off. D2's seal is unchanged: an archive still opens only with the
+owner's offline key, which is never on the host. When the key service is enabled, the bucket also
+carries DeckStreak's own key.
+
+Chosen against:
+
+- Keeping `P30D`: rejected because a thirty-day sealed archive outlives the seven days every other backup copy keeps, and it is the copy an attacker who stores ciphertext for later would target.
+- Deletion by the archive unit: rejected, as in D9, because the host's identity would need delete permission on the bucket.
+
+The rest of this record stands.

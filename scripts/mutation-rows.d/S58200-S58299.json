@@ -101,9 +101,9 @@
       [
         "S58213-THE-ALERTS-ROUTE-TO-THE-JOURNAL",
         "deploy/slo.json",
-        "\"channel\": \"journal\"",
+        "\"channel\": \"pager\"",
         "\"channel\": \"telegram\"",
-        "the alerting channel is the journal; named telegram, the declaration routes its alerts to a channel the install no longer has (SPEC-582 R8, A16)",
+        "the alerting channel is the pager; named telegram, the declaration routes its alerts to a channel the install no longer has (SPEC-582 R8, A16)",
         "test_slo_declaration.TheApiSloBurnsAsDeclared.test_every_alert_routes_to_the_one_alert_path"
       ],
       [
