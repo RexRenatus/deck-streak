@@ -99,3 +99,5 @@ failing assertion under its mutant:
 
 S33301 keeps its target and its mutant; its killer is the renamed A1 test, and CI's mutation verdict
 reads it by id.
+
+S58213 (the alerting channel is the pager) was re-anchored at 3cfc26a9 from the journal to the pager value, keeping its replacement, its id and its killer. Its killer `test_slo_declaration.TheApiSloBurnsAsDeclared.test_every_alert_routes_to_the_one_alert_path` read `ok` on the unmutated tree and, under the row's mutant, failed at `AssertionError: {'unit': 'deck-streak-alert@.service', 'channel': 'telegram'} != {'unit': 'deck-streak-alert@.service', 'channel': 'pager'}`; the file was restored by sha256.
