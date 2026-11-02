@@ -7466,6 +7466,15 @@ NOT_WORKFLOW_READS = {
             1,
         ),
     ),
+    **allowed(
+        "deny.toml, whose licence allow list the dependency review census compares with the one the workflow allows; never handed to the reader",
+        (
+            "test_dependency_review",
+            "deny_toml_licences",
+            "(REPO / 'deny.toml').read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
 }
 
 # Every site in the test directory that imports, runs code or reaches a namespace by a name held
