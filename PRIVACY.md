@@ -96,13 +96,20 @@ You can also export and erase on the host that runs DeckStreak:
 
 ## What an erase does not reach
 
-- **The backup replica** keeps erased data for at most 3 days (`P3D`): Litestream takes a
-  snapshot every 24 hours and keeps each for 48 hours, so an erased row leaves the replica within
-  72 hours.
-- **The daily copies of the database** keep erased data for at most 3 days (`P3D`): one copy is
-  made each day, the newest three are kept, and the oldest is removed when a fourth is in place, so
-  an erased row leaves them within 3 days. They hold the database and nothing else: not the
-  private copy of your collection.
+- **The backup replica** keeps erased data for at most 7 days (`P7D`), the backup window. Today
+  Litestream takes a snapshot every 24 hours and keeps each for 48 hours, so an erased row leaves
+  the replica within 72 hours.
+- **The daily copies of the database** keep erased data for at most 7 days (`P7D`), the backup
+  window. Today one copy is made each day, the newest three are kept, and the oldest is removed
+  when a fourth is in place, so an erased row leaves them within 3 days. They hold the database
+  and nothing else: not the private copy of your collection.
+- **Disk snapshots of the service's data disk**, when the service keeps them, are taken once a
+  day, and each is deleted 6 days after it is taken, so erased data leaves them within 7 days
+  (`P7D`). A snapshot holds everything on that disk, the database and its daily copies
+  included.
+- **The second-region copy** of the service's shared records and of its directory of accounts,
+  when the service keeps one, is held in a second region. Each copy in it is deleted 4 days
+  after it is written, so erased data leaves it within 7 days (`P7D`).
 - **The service journal** keeps its log lines for at most 14 days (`P14D`), and journald then
   deletes them.
 - **The edge's log of the sync route** records, for each request to the sync route, the client's
@@ -118,7 +125,7 @@ You can also export and erase on the host that runs DeckStreak:
   server's store. The host keeps the newest three archives and removes the oldest when a fourth is
   in place; each archive is also sealed to a key that is never on the host, and only the sealed
   copy goes to an offsite bucket that admits no public access and no listing. It is deleted there
-  30 days (`P30D`) after it is written, by a rule the owner sets on the bucket and the cutover
+  within 7 days (`P7D`) of being written, by a rule the owner sets on the bucket and the cutover
   runbook checks. Removing them is a step of the owner's setup.
 - **The cron-fire ledger** records which scheduled jobs ran, and none of your data. It is kept
   after an erase and pruned after 90 days, so an erase can never make a notification send twice.
