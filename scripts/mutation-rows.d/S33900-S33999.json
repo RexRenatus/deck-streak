@@ -10,6 +10,72 @@
         "render::a1_renders_the_queued_cards_question",
         "the allow-list's sixth pair is the engine's render call, (27, 6) as its generated dispatch numbers it, so a client can render the queued card and the call reaches the engine: the method index moved to the adjacent real call, RenderUncommittedCard, leaves the render pair refused. cargo-mutants mutates no literal in a const initializer, so this row is the proof that A1 observes the pair (SPEC-339 R10, A1)"
       ]
+    ],
+    "SCRIPT_MUTATIONS": [
+      [
+        "S33901-THE-WARM-WAITS-FOR-EACH-SIMULATORS-BOOT",
+        ".github/workflows/xcframework.yml",
+        "                  (\"bootstatus\", [\"xcrun\", \"simctl\", \"bootstatus\", udid, \"-b\"]),\n",
+        "                  (\"bootstatus\", [\"xcrun\", \"simctl\", \"list\", udid]),\n",
+        "the warm waits for each simulator's boot to finish before it installs and launches the build's app, so a session's boot is done before its first test (SPEC-339 R12, A11)",
+        "test_ci_workflows.TheHarnessWarmsEachSimulatorBeforeItsTests.test_the_harness_boots_and_launches_each_simulator_once_before_its_tests"
+      ],
+      [
+        "S33902-THE-WARM-LAUNCHES-THE-BUILDS-APP",
+        ".github/workflows/xcframework.yml",
+        "                  (\"launch\", [\"xcrun\", \"simctl\", \"launch\", udid, bundle]),\n",
+        "                  (\"launch\", [\"xcrun\", \"simctl\", \"list\", udid]),\n",
+        "the warm launches the app the step's build made on each simulator, so a session's first launch comes before its first test (SPEC-339 R12, A11)",
+        "test_ci_workflows.TheHarnessWarmsEachSimulatorBeforeItsTests.test_the_harness_boots_and_launches_each_simulator_once_before_its_tests"
+      ],
+      [
+        "S33903-THE-WARM-ENDS-THE-APP-IT-LAUNCHED",
+        ".github/workflows/xcframework.yml",
+        "                  (\"terminate\", [\"xcrun\", \"simctl\", \"terminate\", udid, bundle]),\n",
+        "                  (\"terminate\", [\"xcrun\", \"simctl\", \"list\", udid]),\n",
+        "the warm ends the app it launched, so a session's first end of the new install comes before its first test (SPEC-339 R12, A11)",
+        "test_ci_workflows.TheHarnessWarmsEachSimulatorBeforeItsTests.test_the_harness_boots_and_launches_each_simulator_once_before_its_tests"
+      ],
+      [
+        "S33904-THE-WARM-REACHES-BOTH-SIMULATORS",
+        ".github/workflows/xcframework.yml",
+        "          for simulator in (os.environ[\"IPHONE_SIM\"], os.environ[\"IPAD_SIM\"]):\n",
+        "          for simulator in (os.environ[\"IPHONE_SIM\"],):\n",
+        "the warm runs on the iPad simulator as well as the iPhone simulator, so both sessions start warmed (SPEC-339 R12, A11)",
+        "test_ci_workflows.TheHarnessWarmsEachSimulatorBeforeItsTests.test_the_harness_boots_and_launches_each_simulator_once_before_its_tests"
+      ],
+      [
+        "S33905-THE-DEBUG-TESTS-DO-NOT-BUILD-AGAIN",
+        ".github/workflows/xcframework.yml",
+        "          xcodebuild test-without-building -project ios/Harness.xcodeproj -scheme Harness -configuration Debug \\\n",
+        "          xcodebuild test -project ios/Harness.xcodeproj -scheme Harness -configuration Debug \\\n",
+        "the Debug tests run without building, over the build whose app the warm installed and launched (SPEC-339 R12, A11)",
+        "test_ci_workflows.TheHarnessWarmsEachSimulatorBeforeItsTests.test_the_harness_boots_and_launches_each_simulator_once_before_its_tests"
+      ],
+      [
+        "S33906-THE-RELEASE-MEASUREMENTS-ARE-WARMED",
+        ".github/workflows/xcframework.yml",
+        "          python3 \"$RUNNER_TEMP/simulator-warm.py\" release \"$RUNNER_TEMP/release/Build/Products/Release-iphonesimulator/Harness.app\"\n",
+        "          true\n",
+        "the Release warm runs the warm on the Release build's app before the measurements, where the ends that timed out were measured (SPEC-339 R12, A11)",
+        "test_ci_workflows.TheHarnessWarmsEachSimulatorBeforeItsTests.test_the_harness_boots_and_launches_each_simulator_once_before_its_tests"
+      ],
+      [
+        "S33907-THE-WARM-SETS-A-DEADLINE-FOR-EACH-SIMULATOR",
+        ".github/workflows/xcframework.yml",
+        "              deadline = time.monotonic() + budget\n",
+        "              deadline = deadline if records else time.monotonic() + budget\n",
+        "each simulator's warm runs inside a deadline of its own, set when the warm reaches it, so the first simulator's boot cannot spend the second simulator's budget (SPEC-339 R15 as #1074 amends it, A12)",
+        "test_ci_workflows.TheHarnessWarmsEachSimulatorBeforeItsTests.test_the_warm_budgets_each_simulator_and_the_report_reads_its_longest_end"
+      ],
+      [
+        "S33908-THE-RELEASE-WARM-HAS-ITS-OWN-BUDGET",
+        ".github/workflows/xcframework.yml",
+        "          budget = {\"debug\": 480, \"release\": 120}[label]\n",
+        "          budget = {\"debug\": 480, \"release\": 480}[label]\n",
+        "the Release warm gives each simulator 120 seconds, since the Debug warm booted both, so the four warm budgets stay inside the job's bound (SPEC-339 R15 as #1074 amends it, A12)",
+        "test_ci_workflows.TheHarnessWarmsEachSimulatorBeforeItsTests.test_the_warm_budgets_each_simulator_and_the_report_reads_its_longest_end"
+      ]
     ]
   }
 }

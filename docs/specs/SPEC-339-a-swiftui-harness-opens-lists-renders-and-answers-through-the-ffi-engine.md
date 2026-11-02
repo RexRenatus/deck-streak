@@ -257,3 +257,193 @@ Every launch and memory figure is read from the result bundle with `xcrun xcresu
 test-results metrics`, and a figure the bundle does not hold reads `not measured`, never zero. A
 simulator runs on the runner's own processor and memory, so these figures compare one commit with
 another on one runner image; they are not a device's.
+
+## 8. Amendments for #1060: each Harness test step is built once and each simulator warmed before it
+
+On #1060's branch the `harness` job failed in 11 of its 14 attempts; 2 were cancelled with their
+run and 1 passed, each attempt read from its run's own attempt job list. Each failure sits in one
+simulator session of one test step. This section amends R12 and adds R15 and R16, which ADR-350
+D10 to D12 decide and A11 (section 10) holds. R1 to R11, R13, R14, section 7 and A1 to A10 stand
+as written.
+
+What failed in the two Harness test steps, read from each job's steps and from its log cut to the
+failing step's window:
+
+- **A launch timed out** at the first UI test of the Debug step (A4, `HarnessFlowTests.swift:66`),
+  in 4 sessions: jobs 124741023204 and 124680855585, and both simulators of job 124751411198.
+  The failing launch tests ran from 152.681 seconds (job 124680855585)
+  to 327.577 seconds (job 124751411198).
+- **The UI test runner exited before its first test** ("operation never finished bootstrapping"),
+  in the Debug step, in 2 sessions: jobs 124741023204 and 124868223996. In job 124868223996 the
+  runner exited 227 seconds (job 124868223996) after its "Running tests..." line, on the iPhone simulator.
+- **An end timed out** ("Failed to terminate") in the Release step, in 4 sessions: M1 at
+  `HarnessMeasureTests.swift:33` in jobs 124596873613, 124566920296 and 124540842089, and M2 at
+  `:54` in job 124840259780, the one on #1060's head. XCTest waited 61.8 seconds on the end before
+  it failed (job 124540842089). Each of the four began within 6 minutes of its session's start, on
+  the fourth to eighth launch of the build the step installs (3.1 minutes in job 124540842089,
+  5.7 minutes in job 124840259780).
+- **Every session starts with a wait.** Before its first test process wrote a line, each session
+  of each test step waited 79 to 149 seconds in the one passing attempt (job 124780704116), and
+  the Debug step waited 211 and 360 seconds in job 124868223996.
+
+No assertion of A4 to A7, M1 or M2 failed in these sessions: each failure is a launch, a runner
+start-up or an end that ran out of time near a session's start. The app's review steps failed too,
+in 3 attempts at earlier heads; section 9 leaves them.
+
+- **R12, as #1060 amends it: each Harness test step is built once, warmed, then run without
+  building.** The Debug tests and the Release measurements each run as three steps. The first
+  builds the scheme for testing (`xcodebuild build-for-testing`) for both simulators, into the
+  step's derived data. The second warms each simulator in turn, `$IPHONE_SIM` and then
+  `$IPAD_SIM`: it waits for the simulator's boot to finish (`xcrun simctl bootstatus <udid> -b`),
+  installs the app the build made, launches it and ends it (`xcrun simctl install`, `launch` and
+  `terminate`), with the bundle id read from the built app's `Info.plist`. The third runs the
+  tests without building (`xcodebuild test-without-building`), with the destinations, the
+  selection, the derived data and the result bundle the step had before. The Debug warm writes
+  the warm's script to the runner's temporary directory once, and the Release warm runs that copy.
+- **R15. The warm records, and the tests decide.** Each phase's outcome and seconds go to
+  `harness-report/warm-debug.json` or `harness-report/warm-release.json`. The warm fails its step
+  only when a simulator name is not exactly one available simulator on the job's runtime, which
+  the destination would refuse too; a phase that fails or runs out of time is recorded, and the
+  tests run. One budget of 480 seconds bounds each warm step, both simulators together, and a
+  phase past it is recorded as skipped. No test, wait, retry, attempt count, destination or bound
+  changes: the job's `timeout-minutes` stays 150 (SPEC-361 A16).
+- **R16. The report records each simulator's session start.** For the Debug and the Release step
+  and each simulator, the report's measure table gains five rows: the warm's boot wait, with the
+  simulator's state before it, its launch and its end, from the warm's record; and the UI test
+  runner's bootstrap, from its "Running tests..." line to its first suite's start, and the
+  first-launch gap, from the first UI test's start to xcodebuild's launch parameters line, from
+  the step's console. Each test step writes its console to `harness-report/debug-console.log` or
+  `harness-report/release-console.log` through `tee`, under `set -o pipefail`, so the step's exit
+  stays xcodebuild's. A figure the report cannot read reads `not measured`, never zero.
+- **A11.** Section 10's test holds R12 as amended, R15's record-only warm and R16's rows; a
+  planted job missing each part is refused by its rule's name.
+- **A4 to A8, as #1060 runs them.** Their tests, destinations and selections are unchanged; CI runs
+  them without building, over the build the step before made. The commands section 3 names stay
+  the form a person runs, which builds and tests in one.
+- **Risks of the #1060 amendment.** The warm adds time to the job: its budget caps each warm step
+  at 480 seconds, so both add at most 16 minutes, and the slowest of the three passing attempts
+  took 127.7 minutes (job 123875777769), so a run that passes still ends inside its 150 minutes.
+  The build for testing spares the second simulator's rebuild (15 seconds in job 124780704116).
+  A launch or an end that fails in the warm is recorded and fails nothing, so the warm cannot turn
+  a passing run red; a name that matches two simulators fails the warm step by name. Without
+  `set -o pipefail`, `tee` would hide xcodebuild's exit; A11 refuses a teed step without it. If the
+  classes recur at the same rate after the warm, a session's start is not their cause, and R16's
+  rows show where each session spent its start (#1060).
+- **The #1060 amendment touches these paths:** `.github/workflows/xcframework.yml`,
+  `scripts/tests/test_ci_workflows.py`,
+  `scripts/mutation-rows.d/S33900-S33999.json` (rows S33901 to S33906, in this SPEC's band),
+  `docs/specs/SPEC-339-a-swiftui-harness-opens-lists-renders-and-answers-through-the-ffi-engine.md`,
+  `docs/decisions/ADR-350-the-swift-harness-is-a-generated-project-over-its-own-runs-framework.md`,
+  `docs/red-first/SPEC-339.md` and `changelog.d/ci-harness-warm.md`.
+
+## 9. What this does NOT do, in the #1060 amendment
+
+- It retries nothing, and removes, skips or loosens no test, wait or bound: a launch, an end or a
+  runner start-up that runs out of time still fails its test (#1060).
+- It warms neither the card view's planted suite, which failed in no attempt, nor the app's three
+  test steps, whose failures came at earlier heads (an end that timed out, a launch refused its
+  background assertion, and a UI query that timed out); SPEC-347 A14's test holds the app's step
+  order, and a later delivery decides whether those steps take a warm (#1060).
+- It does not decide which part of a session's start is slow: R16's rows measure it on every
+  run (#1060).
+- It takes no figure on a device (#629).
+
+## 10. Acceptance criteria of the #1060 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A11 | the `harness` job builds each Harness test step for testing, warms each simulator (boot wait, install, launch, end) before it and runs it without building, in that order; its warm records each phase and fails only on a name that is not one simulator; its teed test steps keep xcodebuild's exit; and its report reads the warm's and each step's console rows; a planted job missing each part is refused by name | `scripts/tests/test_ci_workflows.py` `TheHarnessWarmsEachSimulatorBeforeItsTests/test_the_harness_boots_and_launches_each_simulator_once_before_its_tests` |
+
+```acceptance
+A11: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_harness_boots_and_launches_each_simulator_once_before_its_tests
+```
+
+A11's test is committed alone and read red in the pull request's own run, by name, before the
+workflow changes; `docs/red-first/SPEC-339.md` quotes that red and names the green.
+
+## 11. Amendments for #1074: a warm budget for each simulator, and each session's longest end
+
+The warm's first run in the `harness` job (job 124927199265) stopped at the Debug tests. This
+section amends R15 and R16 as section 8 wrote them and adds A12, which ADR-350 D13 and D14 decide
+and section 13 holds. Every other requirement and criterion, those of section 8 included, stands.
+
+What the run measured, read from the job's steps and from its log cut to each step's window:
+
+- **The first simulator spent the warm's one budget.** Both simulators were shut down when the
+  Debug warm began. On the iPhone simulator the boot wait took 135.7 seconds (job 124927199265),
+  the install 215.0 seconds (job 124927199265), the launch 80.8 seconds (job 124927199265) and
+  the end 5.3 seconds (job 124927199265). The iPad simulator's boot wait had what was left of the
+  480 and ran out at 41.2 seconds (job 124927199265); its install, launch and end were skipped.
+- **An end timed out after the warm.** On the warmed iPhone simulator, A5's launch ended A4's
+  instance of the app, and XCTest waited 60.7 seconds (job 124927199265) before "Failed to
+  terminate"; the warm's own end there had taken 5.3 seconds (job 124927199265), and the step's
+  four other ends took 2.1 to 2.9 seconds (job 124927199265). On #1060's head the Release step
+  ended an earlier instance 18 times: 16 ends took 1.0 to 4.6 seconds (job 124840259780), one took
+  37.5 seconds and its test passed (job 124840259780), and one failed at 60.35 seconds (job
+  124840259780). An end that times out is the tail of XCTest's own ends, at a session's second UI
+  launch (job 124927199265) or its eighth (job 124840259780), warmed or not; no warm phase runs it.
+- **The iPad simulator's session passed every test.** Its boot, begun by the warm and cut by the
+  budget, had finished by its turn.
+  Its first test process wrote a line 35 seconds (job 124927199265) after the iPhone simulator's
+  session ended, against 360 seconds in job 124868223996.
+- **The Debug tests' session start grew.** From the step's start to the iPhone simulator's first
+  test process line took 772 seconds (job 124927199265), against 79 to 149 seconds in job
+  124780704116 and 211 seconds in job 124868223996. The iPad simulator's boot, which the warm had
+  begun and not finished, ran on through that start; whether it slowed the start is not measured.
+
+- **R15, as #1074 amends it: each simulator's warm has a budget of its own.** The warm sets each
+  simulator's deadline when it reaches that simulator, after it finds the simulator's device and
+  before its first phase: 480 seconds for each simulator in the Debug warm, which boots them, and
+  120 seconds for each in the Release warm, which finds them booted. A phase past its simulator's
+  deadline is recorded as skipped. The rest of R15 stands.
+- **R16, as #1074 amends it: the report records each session's longest end.** For the Debug and
+  the Release step and each simulator, the measure table gains a sixth row: the longest time
+  XCTest took to end an earlier instance of the app at a launch, with the count of ends it read,
+  from the step's console by XCTest's own seconds (a `Terminate` activity line to the next
+  activity line). A session with no end reads `no end in the session`, and a count of runner
+  sessions other than the simulators' reads `not measured`. The rest of R16 stands.
+- **A12.** Section 13's test holds R15 and R16 as this section amends them; a planted job with one
+  deadline for both simulators, a deadline per phase, two deadlines, the one budget's figure, one
+  budget for both steps, or a missing longest end is refused by its rule's name.
+- **A11's test, as this section changes it.** Its census reads the phases' bound, `left =
+  deadline - time.monotonic()`, where it read the one budget's line, and its "no budget" plant
+  removes that bound; A12's test reads the budget for each simulator. A11 stands as section 10
+  states it.
+- **Risks of the #1074 amendment.** The warm's budgets now add at most 20 minutes, not 16: two of
+  480 seconds before the Debug tests and two of 120 before the Release measurements. This run's
+  Debug build and tests took 1263 seconds (job 124927199265), 83 seconds more than the Debug step
+  of the slowest passing job (job 123875777769), which took 127.7 minutes in all (job
+  123875777769); with the 20 minutes, a run that passes ends near 149.1 minutes (job 123875777769),
+  before any change in the Release steps, which this run did not reach. A run as slow as this one
+  to the end of its Debug tests (job 124927199265) and as slow after them as job 124483818683
+  would pass 150 minutes, under one budget or four. A run past 150 minutes is cancelled red and
+  names no test; the bound does not move (SPEC-361 A16). A Release warm phase past its 120 seconds
+  is recorded, and the tests decide. The longest end rows measure the tail of the ends on every
+  run, red or green; they do not shorten it.
+- **The #1074 amendment touches these paths:** `.github/workflows/xcframework.yml`,
+  `scripts/tests/test_ci_workflows.py`,
+  `scripts/mutation-rows.d/S33900-S33999.json` (rows S33907 and S33908, in this SPEC's band),
+  `docs/specs/SPEC-339-a-swiftui-harness-opens-lists-renders-and-answers-through-the-ffi-engine.md`,
+  `docs/decisions/ADR-350-the-swift-harness-is-a-generated-project-over-its-own-runs-framework.md`,
+  `docs/red-first/SPEC-339.md` and `changelog.d/ci-harness-warm.md`.
+
+## 12. What this does NOT do, in the #1074 amendment
+
+- It does not cure an end that times out: no warm phase runs XCTest's own end, and a retry or a
+  longer wait stays refused; the longest end rows measure the ends on every run (#1074).
+- It does not decide why the Debug session's start grew after the warm (#1074).
+- It retries nothing, and removes, skips or loosens no test, wait or bound (#1074).
+
+## 13. Acceptance criteria of the #1074 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A12 | the `harness` job's warm sets each step's budget once (480 seconds a simulator before the Debug tests, 120 before the Release measurements) and each simulator's deadline inside its simulator loop, before its phases; and its report reads each step's longest end per simulator; a planted job missing each part is refused by name | `scripts/tests/test_ci_workflows.py` `TheHarnessWarmsEachSimulatorBeforeItsTests/test_the_warm_budgets_each_simulator_and_the_report_reads_its_longest_end` |
+
+```acceptance
+A12: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_warm_budgets_each_simulator_and_the_report_reads_its_longest_end
+```
+
+A12's test is committed with the docs, apart from the workflow, and read red in the pull
+request's own run, by name, before the workflow changes; `docs/red-first/SPEC-339.md` quotes that
+red and names the green.
