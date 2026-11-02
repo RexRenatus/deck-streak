@@ -62,6 +62,41 @@ function standIn(scheme: string, themeParams: Readonly<Record<string, string>>):
   })();`;
 }
 
+// SPEC-505 R9, A6; ADR-523 D6. The review route needs the engine, which this build does not carry,
+// so the audit serves a stand-in for the engine's bindings, at the bindings' own URL, with each
+// export the session calls. It opens a collection and shows one card whose note type's CSS ends its
+// own style element, so the review is audited in its refusal state: the frame empty and marked, the
+// status naming the reason, the controls kept.
+const REVIEW = '/study/review';
+const REFUSED_REASON = 'style-closed';
+const ENGINE_STAND_IN = `
+const card = {
+  id: '1', ordinal: 0, flag: 0, question: '<p>A card</p>', answer: '<p>Its answer</p>',
+  css: '.card { color: navy; }</style><base href="https://cards.example/">',
+  labels: ['<1m', '<6m', '<10m', '4d'], undo: null, late: false
+};
+const face = (text) => ({ text, css: card.css, autoplay: [], replay: [], omitted: [] });
+export default async function load() {}
+export async function install_storage() { return 0; }
+export function init() {}
+export function open() { return JSON.stringify({ existed: true, notes: 1 }); }
+export function close() {}
+export function seed() { return 0; }
+export function next_card() { return 1n; }
+export function undo() {}
+export function undo_offer() { return JSON.stringify({ offer: null, why: 'none' }); }
+export function snapshot() { return 'null'; }
+export function last_panic() { return undefined; }
+export function memory_pages() { return 1; }
+export function deck_tree() { return '[]'; }
+export function set_current_deck() {}
+export function current_card() { return JSON.stringify({ counts: { new: 1, learning: 0, review: 0 }, card }); }
+export function rate() {}
+export function bury() {}
+export function flag() { return 1; }
+export function faces() { return { question: face(card.question), answer: face(card.answer), wanted: [] }; }
+`;
+
 for (const [scheme, themeParams] of Object.entries(THEMES)) {
   test.describe(`${scheme} theme`, () => {
     test.beforeEach(async ({ page }) => {
@@ -302,6 +337,11 @@ for (const [scheme, themeParams] of Object.entries(THEMES)) {
 
     for (const route of ROUTES) {
       test(`${route} has no WCAG 2.2 AA violation axe can find`, async ({ page }) => {
+        if (route === REVIEW) {
+          await page.context().route('**/engine/deck_streak_web_engine.js', (intercepted) =>
+            intercepted.fulfill({ contentType: 'text/javascript', body: ENGINE_STAND_IN })
+          );
+        }
         await page.goto(route);
         // the stand-in ran: the root carries the palette's scheme it sets
         await expect
@@ -309,7 +349,13 @@ for (const [scheme, themeParams] of Object.entries(THEMES)) {
           .toBe(scheme);
         // the screen has settled: Today's study day has arrived, or the screen made no call
         await page.waitForLoadState('networkidle');
-        const results = await new AxeBuilder({ page }).withTags(WCAG_22_AA).analyze();
+        if (route === REVIEW) {
+          // the review shows the refused card: its frame marked with the reason, the status naming it
+          await expect(page.locator('iframe[data-card-refused]')).toHaveAttribute('data-card-refused', REFUSED_REASON);
+          await expect(page.locator('p[role="status"]')).toContainText("Its note type's CSS ends its own style block");
+        }
+        // the refused card's frame is sandboxed with no script, so the legacy mode audits the screen around it
+        const results = await new AxeBuilder({ page }).withTags(WCAG_22_AA).setLegacyMode().analyze();
         expect(results.violations).toEqual([]);
       });
     }

@@ -251,6 +251,14 @@ fn a_client_below_the_minimum_is_refused_every_sync_before_the_engine() {
                 &normal_sync(&endpoint),
             )),
         ),
+        (
+            "the native normal sync (SPEC-503 R3)",
+            refused(native.run(
+                SYNC_COLLECTION.0,
+                SYNC_COLLECTION.1,
+                &normal_sync(&endpoint),
+            )),
+        ),
     ];
     let expected: Vec<_> = calls
         .iter()

@@ -11,7 +11,7 @@ that amends this file in the same change. Never add an edge to make code compile
 
 ```context-map
 deck-streak-kernel        (shared kernel: ids, study day, track, verdict, errors, config, Db, data-rights port)  depends on: study-day
-deck-streak-ingest        (anti-corruption layer for Anki: sync, read, change gate, new-card queue, skip day)  depends on: kernel
+deck-streak-ingest        (anti-corruption layer for Anki: sync, read, change gate, new-card queue, skip day)  depends on: kernel, collection, search
 deck-streak-identity      (Telegram initData, the owner allow-list, sessions, linked sign-in)  depends on: kernel
 deck-streak-analytics     (daily rollup, per-language stats, five-pillar score, today snapshot)  depends on: kernel, ingest
 deck-streak-progression   (XP ledger and grant port, levels, tiers, badges, records, seasons)  depends on: kernel, ingest, xp
@@ -39,10 +39,16 @@ deck-streak-ffi           (the umbrella FFI crate, the app's one Rust static lib
 deck-streak-fsrs7         (the isolated FSRS-7 scheduler: review history replayed into memory state; ADR-338)  depends on: nothing
 deck-streak-daemon        (composition root: the deckstreakd binary)  depends on: kernel, ingest, identity, analytics, progression, streaks, curriculum, economy, quests, habits, focus, discipline, markets, notifications, readings, vault, agent, insights, publishing, privacy, coordination, api, bot, mcp
 deck-streak-migration     (one-off import of v9's schema 24, planned)  depends on: kernel, analytics, progression, streaks, curriculum, economy, quests, habits, focus, discipline, markets, notifications, readings, vault
-deck-streak-web-engine    (Anki's engine on wasm32 in the web client's Worker: the study calls over OPFS)  depends on: engine-core
+deck-streak-web-engine    (Anki's engine on wasm32 in the web client's Worker: the study calls over OPFS)  depends on: companion, engine-core
 deck-streak-push          (APNs and web push senders for a native or web client: provider and VAPID tokens, RFC 8291; ADR-354)  depends on: kernel
 deck-streak-xp            (the per-review XP rule, with no I/O, for the server and both clients; ADR-371)  depends on: nothing
 deck-streak-study-day     (the study day, its instant and its date error, with no I/O, for the server and both clients; ADR-515)  depends on: nothing
+deck-streak-search        (the product's own search: one typed query, a closed grammar and its profiles, an evaluator over rows, with no I/O; ADR-532)  depends on: study-day
+deck-streak-companion     (the scheduling companion's documented interface: schema v1, its codec, the handshake, the decision that fails closed, the Absent default; ADR-519)  depends on: nothing
+deck-streak-companion-slot  (the one substitutable companion body; the public body opens Absent; ADR-519)  depends on: companion
+deck-streak-collection    (the collection store, dormant: one file per user, its one opener, schema and migrations, the append-only review log and its erase gate, the read port and the store's data-rights port; ADR-530)  depends on: nothing
+deck-streak-media         (a media file known by its SHA-256, certified and imported names, write-once bindings, the one grammar of media names, the sweep plan, with no I/O; ADR-531)  depends on: nothing
+deck-streak-sync          (the sync core: typed operations, one encoding, the hybrid clock, the id allocator, the key, the field merge and the pending queue, with no I/O, for the server and both clients; ADR-527)  depends on: nothing
 miniapp   web/app/src     (the SvelteKit Mini App)  depends on: nothing internal
 ios-harness  ios/  (the SwiftUI harness over deck-streak-ffi's XCFramework; ADR-335)  depends on: nothing internal
 landing   web/site/src    (the Astro landing page, planned)  depends on: nothing internal
@@ -74,6 +80,48 @@ offset and its ISO calendar, the instant it is computed from and the error a mal
 (SPEC-497, ADR-515). It depends on nothing and does no I/O, so both clients can link it without the
 kernel. The kernel depends on it alone and re-exports each item at the path it always had;
 `SystemClock`, the one reader of the system time, stays in the kernel.
+
+`deck-streak-search` is the product's own reading of a search (SPEC-514, ADR-532): one typed query,
+a closed grammar with its profiles and limits, refusals by name that never carry the search, and an
+evaluator over a collection's rows held to the engine's goldens. It depends on `study-day` alone,
+for the engine's day, and does no I/O, so it has no edge to the kernel. Ingest depends on it: the
+skip search is parsed under its skip profile and its holds are joined by structure.
+
+`deck-streak-companion` is the scheduling companion's documented interface (SPEC-501, ADR-519): the
+integer-only schema v1 that crosses between the app and a scheduler outside its public code, the
+frames and their codec, the handshake, and the one decision whose `Ok` lets a due date be written.
+It is `no_std`, depends on nothing and does no I/O, so both clients can link it.
+`deck-streak-companion-slot` is the one body a build substitutes behind that interface, and it
+depends on the interface alone; its public body opens `Absent`, which refuses every request. The
+web engine depends on the interface on every target (SPEC-511, ADR-529 D4): its `companion` module
+decides over the frames of the owner's companion module in the Worker, as the native decision does.
+The engine core and the umbrella FFI crate gain their edges to them in the changes that first use
+them (#997, #998).
+
+`deck-streak-collection` is DeckStreak's own collection store (SPEC-512, ADR-530): one SQLite file
+per user, the same schema on the server and on each device, opened only by its one opener, whose
+pragmas follow the role and which refuses another application's file by its `application_id`. Its
+review log is append-only behind one erase gate, which only its data-rights port opens, and every
+statement it runs is a registered constant its census prepares. It declares `CollectionRead`, the
+read port the server's contexts read a collection through: the store answers it, and ingest's
+schema-18 adapter answers it over Anki's file. It depends on nothing and reads no clock, so both
+clients can link it. It is dormant: nothing live reads or writes the store, and ingest's live
+readers keep their drivers until the cut-over switches them to the port.
+
+`deck-streak-media` is the media core (SPEC-513, ADR-531): a file is known by the SHA-256 of its
+bytes, a certified `ds-` name carries that hash and an imported name is kept as written, a name is
+bound to one hash once, one grammar (the engine's own) finds every media name a note's text and a
+CSS write, and a sweep plan keeps every live, pinned, in-grace and imported file. It depends on the
+workspace's `sha2` alone and does no I/O, so it has no edge to the kernel. A collection implements
+its `MediaIndex` port, and the renderer reads names through its grammar; each gains its edge to it
+in the change that first uses it.
+
+`deck-streak-sync` is the sync core (SPEC-509, ADR-527): the typed operations every device and the
+server write in, their one byte encoding, the hybrid clock and the id allocator beside it, the key
+every party folds by, the rule for concurrent edits that keeps every loser, and a device's queue of
+operations the server has not judged. It depends on nothing and does no I/O: a caller hands in the
+wall clock and the bytes. The server's log, the umbrella FFI crate and the web engine gain their
+edges to it in the changes that first use it (#15).
 
 `deck-streak-push` is an outbound adapter: it builds APNs and web push requests and reports what
 each platform answered, and it depends on the kernel's clock alone (SPEC-343, ADR-354 D3). The
@@ -112,7 +160,7 @@ learns it:
 
 | context | foreign model it translates | what it publishes |
 |---|---|---|
-| `ingest` | Anki's collection schema, its sync protocol, its unicase and protobuf quirks | reviews, cards, notes, decks, the day's new-card queue |
+| `ingest` | Anki's collection schema (its 19 statements held by the schema-18 adapter of the collection's read port, `CollectionRead`), its sync protocol, its unicase and protobuf quirks | reviews, cards, notes, decks, the day's new-card queue |
 | `vault` | the second brain's file contract (paths, frontmatter, rails, temp names) | staged duty runs, reading archive writes, drill and inbox records |
 | `identity` | Telegram's `initData` and user object | the caller, and whether they are the owner |
 | `agent` | the headless Claude Code runner and its output | gated duty outputs, or a fail-closed verdict |
@@ -283,6 +331,25 @@ minutes log's queries run on the caller's connection (`sqlx`), an entry's refusa
 (`thiserror`), and its data-rights port writes its rows as JSON (`serde_json`). None of them is an
 edge to another context: the map's line for `deck-streak-habits` stays `depends on: kernel`
 (SPEC-078 R21).
+
+### The collection store's tables
+
+The collection store (SPEC-512) is a file of its own, one per user, apart from the service's
+database: its migrations live in `crates/collection/migrations/`, and `crates/collection` is the one
+writer of every table below. Its data-rights port is `crates/collection/src/data_rights.rs`; on the
+server an erase empties every table but the store's record, and on a device it removes the file.
+
+| table | owning context | created by | export and erase |
+|---|---|---|---|
+| `store_meta` | `collection` | `crates/collection/migrations/000001_collection_base.sql` (SPEC-512) | exported; anonymised: the import digest cleared, the role, writer id, slot and counters kept |
+| `study_rule` | `collection` | the same | exported and erased |
+| `erase_gate` | `collection` | the same | exempt: the switch an erase opens and closes, holding no personal data |
+| `notetypes`, `fields`, `templates` | `collection` | the same | exported and erased |
+| `notes`, `note_tags`, `note_field_history` | `collection` | the same | exported and erased |
+| `presets`, `decks`, `cards` | `collection` | the same | exported and erased |
+| `review_log`, `review_retraction` | `collection` | the same | exported and erased, through the open gate |
+| `review_client` | `collection` | the same | exported and erased, through the open gate; its own erase keeps every review |
+| `outbox`, `applied_ops`, `undo_journal`, `schedule`, `device_setting` | `collection` | the same | exported and erased |
 
 ## Overloaded words, held apart
 

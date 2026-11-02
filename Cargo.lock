@@ -1083,6 +1083,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "deck-streak-collection"
+version = "0.3.0"
+dependencies = [
+ "rusqlite",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "deck-streak-companion"
+version = "0.3.0"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
+name = "deck-streak-companion-slot"
+version = "0.3.0"
+dependencies = [
+ "deck-streak-companion",
+]
+
+[[package]]
 name = "deck-streak-coordination"
 version = "0.3.0"
 dependencies = [
@@ -1196,7 +1220,10 @@ dependencies = [
  "anki",
  "anki_proto",
  "base64 0.23.1",
+ "deck-streak-analytics",
  "deck-streak-fsrs7",
+ "deck-streak-ingest",
+ "deck-streak-kernel",
  "prost",
  "serde_json",
  "tokio",
@@ -1272,7 +1299,10 @@ version = "0.3.0"
 dependencies = [
  "anki",
  "chrono",
+ "deck-streak-collection",
  "deck-streak-kernel",
+ "deck-streak-search",
+ "rusqlite",
  "serde",
  "serde_json",
  "sha2",
@@ -1334,6 +1364,15 @@ dependencies = [
  "tower",
  "tower-http 0.7.1",
  "tracing",
+]
+
+[[package]]
+name = "deck-streak-media"
+version = "0.3.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sha2",
 ]
 
 [[package]]
@@ -1443,6 +1482,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "deck-streak-search"
+version = "0.3.0"
+dependencies = [
+ "deck-streak-study-day",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "deck-streak-streaks"
 version = "0.3.0"
 dependencies = [
@@ -1459,6 +1507,13 @@ name = "deck-streak-study-day"
 version = "0.3.0"
 dependencies = [
  "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "deck-streak-sync"
+version = "0.3.0"
+dependencies = [
  "serde_json",
 ]
 
@@ -1481,6 +1536,7 @@ name = "deck-streak-web-engine"
 version = "0.3.0"
 dependencies = [
  "anki_proto",
+ "deck-streak-companion",
  "deck-streak-engine-core",
  "js-sys",
  "prost",

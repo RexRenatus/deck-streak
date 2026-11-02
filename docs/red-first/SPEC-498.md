@@ -123,3 +123,47 @@ test the review named for it, then the three new test files whole when that test
 earlier tests killed are killed again, and each of the 43 is killed by the new case that names it and by no other
 test. The Python leg at 48b20789: `test_anki_driver.py` 39 tests, `test_anki_registry.py` 26, `test_anki_workspace.py` 5,
 `test_generate.py` 20 and `test_goldens.py` 9, each OK.
+
+## The second delivery: the engine writes the goldens
+
+Red at 036befdc, before the snapshot writer, the pin and the goldens existed.
+
+- Python, DeckStreak's own form from the checkout root, one line per file: `test_goldens.py` ran 18 tests, 8 failed,
+  each for its own reason: six read `examined 0 engine golden(s): the population is empty, so nothing was judged`,
+  `test_no_engine_golden_holds_a_stock_line` read `tools/parity-oracle/anki/stock-lines.sha256 is not committed`, and
+  `test_the_schema_snapshot_carries_its_pin_line` read `tools/parity-oracle/anki/snapshot.py is not committed`. The
+  ninth, `test_the_manifest_pins_one_engine_commit`, is the guard that the manifest's pin is the driver's, green at red.
+  `test_generate.py` 20, `test_anki_driver.py` 39, `test_anki_registry.py` 26, `test_anki_workspace.py` 5 and
+  `test_anki_hand_cases.py` 7 stayed OK.
+- Rust: `cargo test --locked --offline --no-fail-fast -p deck-streak-ingest --test engine_goldens --test
+  oracle_consumer` exited 101: `engine_goldens` 1 passed and 35 failed, the 33 per-golden tests, the on-disk census and
+  the snapshot test, each with `anki.<name>.json: cannot be read: No such file or directory`; the control
+  `an_answer_off_its_keys_or_a_worded_refusal_is_a_fault` passed, and `oracle_consumer` passed 3 of 3.
+
+The failing tests by name: `test_engine_golden_provenance`, `test_engine_goldens_are_synthetic_and_seeded`,
+`test_every_engine_golden_is_read_by_a_rust_test`, `test_every_registered_engine_function_has_its_golden`,
+`test_no_engine_golden_holds_a_date_an_id_or_a_clock`, `test_no_engine_golden_holds_a_stock_line`,
+`test_the_schema_snapshot_carries_its_pin_line`, `test_the_two_oracles_split_the_goldens_whole`; and in Rust each of
+the 33 tests named for its golden, `every_engine_golden_is_read_here` and
+`the_schema_snapshot_is_its_golden_under_one_pin_line`.
+
+Green waits for the one sandboxed run: the pin commit, the export, the run, then the goldens, the census and the
+snapshot in one commit.
+
+## The third delivery: each golden is a function of its input
+
+Red at 49595199 with only the two new tests added, the driver, the registry and their texts unchanged. Each test ran
+alone in DeckStreak's own form from the checkout root:
+
+- `python3 -m unittest discover -s tools/parity-oracle -p 'test_anki_registry.py' -k
+  test_a_note_the_package_shares_with_the_target_carries_a_mod_on_both_sides` failed: it printed `examined 72 import
+  case(s)` and read `40 import case(s) share a GUID without a mod on both sides`, cases 24 to 31 and 40 to 71.
+- `python3 -m unittest discover -s tools/parity-oracle -p 'test_anki_driver.py' -k
+  test_the_driver_starts_the_harness_in_utc` failed: `the harness env keys are ['LC_ALL', 'PATH']`, after `examined
+  2 harness environment key(s)`.
+
+Green after the fix, the same two commands: the first printed `examined 72 import case(s)` and read OK, the second
+`examined 3 harness environment key(s)` and OK. The registry's change moves the input of exactly those 40 import
+cases; every other drawn input, 11,777 of the 11,817 cases of 33 functions, equals the committed goldens' input.
+`test_engine_golden_provenance` reads the committed goldens, which still record the old pin, driver and registry; it
+turns green with the run that writes them under R19.

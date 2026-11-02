@@ -5,6 +5,7 @@
 //! carries its fields as data for a client that branches on them, and its text for a person who
 //! reads the error a client shows; each variant's text names what refused the call and why.
 
+use deck_streak_ffi::backups::BackupRefusal;
 use deck_streak_ffi::engine::{CollectionDirectoryRefusal, Engine, EngineRefusal, PressRefusal};
 
 /// `BackendCollectionService.CloseCollection`: a real engine call the allow-list leaves out.
@@ -77,6 +78,35 @@ fn each_press_refusal_reads_as_its_own_sentence() {
             "the answer names another card than the press",
             "the answer names another grade than the press",
             "the engine refused the answer (3 bytes)",
+        ]
+    );
+}
+
+/// MUTATION COVERAGE: each backup refusal reads as its own sentence and none is empty.
+#[test]
+fn each_backup_refusal_reads_as_its_own_sentence() {
+    assert_eq!(
+        [
+            BackupRefusal::StageHeld.to_string(),
+            BackupRefusal::NotListed.to_string(),
+            BackupRefusal::Unfillable.to_string(),
+            BackupRefusal::Unheld.to_string(),
+            BackupRefusal::Engine {
+                error: vec![8, 1, 18],
+            }
+            .to_string(),
+            BackupRefusal::Folder {
+                reason: "permission denied".to_owned(),
+            }
+            .to_string(),
+        ],
+        [
+            "a full sync's choice is open, so no backup was made",
+            "no listed backup has that id",
+            "the backup's file could not be used",
+            "the backup lacks a row of this device",
+            "the engine refused the backup (3 bytes)",
+            "the backups' folder refused: permission denied",
         ]
     );
 }

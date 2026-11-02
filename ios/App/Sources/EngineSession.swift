@@ -52,16 +52,26 @@ struct VoiceLanguage: Equatable, Sendable {
     var chosen: String?
 }
 
+/// One section of the card info panel as the adapter words it: its heading and its lines, which
+/// the sheet shows and VoiceOver reads as they are (SPEC-507 R13, R16).
+struct CardInfoSection: Equatable, Sendable {
+    var title: String
+    var lines: [String]
+}
+
 /// The one owner of the engine: every engine call runs here, off the main actor, one at a time
 /// (SPEC-347 R7, R8). The actor serialises the calls; the engine itself is `Sendable` because the
 /// adapter's Rust side is `Send + Sync`. The voice choices live here too, beside the collection
 /// and never inside it, because the engine's types stop at this file (SPEC-348 R6, R14).
-actor EngineSession {
+actor EngineSession: SyncEngine, DataEngine {
     /// The engine's red flag, read once from the adapter, so the app holds no copy of the
     /// core's rule (SPEC-358 R3, ADR-369 O4).
     nonisolated let red = redFlag()
     private var engine: Engine?
     private var choices = VoiceChoices.open(path: "")
+    /// The collection's directory, where the full-sync choice keeps its server copy and its backup
+    /// beside the collection (SPEC-503 R4).
+    private var folder = ""
 
     /// The adapter's voice qualities, in the order the app numbers them: 0 default, 1 enhanced,
     /// 2 premium.
@@ -78,6 +88,7 @@ actor EngineSession {
         let path = try collectionDirectory(
             fallback: fallback.path(percentEncoded: false), arguments: arguments)
         let directory = URL(filePath: path, directoryHint: .isDirectory)
+        folder = directory.path(percentEncoded: false)
         let media = directory.appending(path: "collection.media", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: media, withIntermediateDirectories: true)
         _ = try call(
@@ -130,10 +141,14 @@ actor EngineSession {
         }
     }
 
-    /// Buries `card` as the user's bury of one card, through the adapter (SPEC-358 R3).
+    /// Buries `card` as the user's bury of one card, through the adapter, with the states the card
+    /// was shown with, which the adapter keeps for the bury's undo (SPEC-358 R3, SPEC-515 R2).
     func bury(_ card: QueuedCard) throws {
         let engine = try started()
-        try refused { try engine.bury(cardId: card.cardID) }
+        try refused {
+            try engine.bury(
+                cardId: card.cardID, states: Data(Requests.describeNextStates(card)))
+        }
     }
 
     /// Toggles red on `card` from the flag it carries, through the adapter, and answers the
@@ -141,6 +156,39 @@ actor EngineSession {
     func flag(_ card: QueuedCard) throws -> UInt32 {
         let engine = try started()
         return try refused { try engine.flag(cardId: card.cardID, flag: card.flag) }
+    }
+
+    /// What the adapter would undo now, with its dialog's words, or none and the adapter's
+    /// sentence that says why (SPEC-515 R3, R5). It writes nothing.
+    func undoOffer() throws -> (dialog: UndoDialog?, said: String) {
+        let engine = try started()
+        let offered = try refused { try engine.undoOffer() }
+        return (offered.offer.map(Self.dialog), offered.said)
+    }
+
+    /// The owner's confirmation of `dialog`, which the adapter checks and the core judges at the
+    /// write; the adapter's sentence that says why it was not undone, or empty (SPEC-515 R4, R5).
+    func undo(_ dialog: UndoDialog) throws -> String {
+        let engine = try started()
+        return try refused { try engine.undo(card: dialog.card, step: dialog.step) }.said
+    }
+
+    /// An offer in the app's own terms, field for field.
+    private static func dialog(_ offer: UndoOffer) -> UndoDialog {
+        UndoDialog(
+            card: offer.card, step: offer.step, title: offer.title, lines: offer.lines,
+            keep: offer.keep, confirm: offer.confirm)
+    }
+
+    /// The card info panel's sections for `cardID` (SPEC-507 R12, R13): the adapter reads the
+    /// card's record by the core's two fixed reads and words it, and the app takes each section
+    /// as it is. A card the engine does not hold reads as the adapter's one unreadable line.
+    func cardHealth(_ cardID: Int64) throws -> [CardInfoSection] {
+        let engine = try started()
+        let record = try refused { try engine.cardHealth(cardId: cardID) }
+        return cardHealthLines(health: record).map {
+            CardInfoSection(title: $0.title, lines: $0.lines)
+        }
     }
 
     /// The face of `cardID`: its question, or its answer when `answer` is set, with the clips to
@@ -192,6 +240,93 @@ actor EngineSession {
             call(
                 EngineCall.syncLogin,
                 Requests.syncLogin(username: user, password: password, endpoint: endpoint)))
+    }
+
+    /// A normal sync with the host key the sync section read from the Keychain item, through the
+    /// adapter's sync facade, which reads the service's statement first and sends no media
+    /// (SPEC-503 R2, R3, R5). It answers what the server requires next, as the engine numbers it.
+    func sync(hostKey: String, endpoint: String) throws -> UInt32 {
+        let engine = try started()
+        return try refused { try engine.sync(hostKey: hostKey, endpoint: endpoint) }
+    }
+
+    /// What this device has not synced, read offline by the adapter (SPEC-503 R7).
+    func unsynced() throws -> Unsynced {
+        let engine = try started()
+        let read = try refused { try engine.unsynced() }
+        return Unsynced(reviews: read.reviews, changed: read.changed, schema: read.schema)
+    }
+
+    /// The full-sync choice's counts from what the normal sync required; the adapter keeps the
+    /// server copy in the collection's directory (SPEC-503 R4).
+    func countChoice(hostKey: String, endpoint: String, required: UInt32) throws -> FullSyncStep {
+        let engine = try started()
+        let folder = folder
+        return Self.step(
+            try refused {
+                try engine.fullSyncCount(
+                    hostKey: hostKey, endpoint: endpoint, required: required, folder: folder)
+            })
+    }
+
+    /// The owner's download, the adapter's direction 1, with no snapshot answer: the adapter backs
+    /// up this device's collection into its directory before the write (SPEC-503 R4).
+    func download(hostKey: String, endpoint: String) throws -> FullSyncStep {
+        let engine = try started()
+        let folder = folder
+        return Self.step(
+            try refused {
+                try engine.fullSyncConfirm(
+                    direction: 1, hostKey: hostKey, endpoint: endpoint, snapshotFound: false,
+                    folder: folder)
+            })
+    }
+
+    /// The owner's cancel: the adapter drops the choice's stage and writes nothing.
+    func cancelChoice() {
+        engine?.fullSyncCancel()
+    }
+
+    /// Backs this device's collection up now in the collection's directory, through the adapter
+    /// and the core, and answers the new backup's id; the adapter refuses while a full-sync
+    /// choice is open (SPEC-516 R5).
+    func backUpNow() throws -> String {
+        let engine = try started()
+        let folder = folder
+        return try engine.backUpNow(folder: folder)
+    }
+
+    /// The backups and server copies in the collection's directory, newest first, once the core's
+    /// retention kept three of each kind; while a full-sync choice is open, none is removed
+    /// (SPEC-516 R5).
+    func deviceBackups() throws -> [DeviceCopy] {
+        let engine = try started()
+        let folder = folder
+        return try engine.deviceBackups(folder: folder).map {
+            DeviceCopy(id: $0.id, serverCopy: $0.kind == .serverCopy, ageSeconds: $0.ageSeconds)
+        }
+    }
+
+    /// The bytes of the listed backup `id`; the adapter refuses any id it did not list
+    /// (SPEC-516 R5).
+    func backupBytes(_ id: String) throws -> Data {
+        let engine = try started()
+        let folder = folder
+        return try engine.backupBytes(folder: folder, id: id)
+    }
+
+    /// A choice step in the app's own terms, field for field.
+    private static func step(_ step: ChoiceStep) -> FullSyncStep {
+        FullSyncStep(
+            written: step.written, said: step.said,
+            counts: step.counts.map {
+                FullSyncCounts(upload: $0.upload.map(loss), download: $0.download.map(loss))
+            })
+    }
+
+    /// One direction's losses in the app's own terms.
+    private static func loss(_ loss: ChoiceLoss) -> Loss {
+        Loss(reviews: loss.reviews, cards: loss.cards, notes: loss.notes)
     }
 
     /// The engine, started from an empty init message by the first call that needs it.

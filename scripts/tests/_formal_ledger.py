@@ -8,9 +8,9 @@ parsed here. Both read files only and start no process.
 """
 
 import ast
+import collections
 import hashlib
 import re
-from collections import namedtuple
 from pathlib import Path
 
 SCHEMA = "formal-obligations.v1"
@@ -119,9 +119,12 @@ PRIVATE_NAME_DIGESTS = frozenset(
 )
 
 
-# One refusal: the arm that refused, where in the ledger, and why. A `collections` named tuple, from
-# a module the workflow files' read census reads through; `typing`'s is a site it cannot place.
-Refusal = namedtuple("Refusal", "arm where why")
+class Refusal(collections.namedtuple("Refusal", ("arm", "where", "why"))):
+    """One refusal: the arm that refused, where in the ledger, and why. A named tuple from
+    `collections`, a module the read census of the test modules reads through; that census counts
+    every use of `typing` as a dynamic site."""
+
+    __slots__ = ()
 
 
 def names(path, pattern):
@@ -183,8 +186,8 @@ def rust_definitions(text):
 
 
 def python_defines(text, name):
-    """Whether a Python source defines `name`: `<Class>.<method>`, a test method of a top-level
-    class, or a top-level test function."""
+    """Whether a Python source defines `name` as `<Class>.<method>`: a test method of a top-level
+    class. That is the one form a Python tie names; unittest runs no top-level function."""
     try:
         module = ast.parse(text)
     except SyntaxError:
@@ -198,9 +201,9 @@ def python_defines(text, name):
             and any(isinstance(item, functions) and item.name == method for item in node.body)
             for node in module.body
         )
-    return name.startswith("test") and any(
-        isinstance(node, functions) and node.name == name for node in module.body
-    )
+    # A top-level function is no tie, even when its name starts with `test`: no unittest run
+    # would ever fail it, so it could count a property that nothing checks.
+    return False
 
 
 class Tree:

@@ -1,0 +1,22 @@
+{
+  "records": [
+    {
+      "file": "crates/companion/src/codec.rs",
+      "mutant": "replace > with == in put_bytes",
+      "anchor": "if bytes.len() > FRAME_MAX {\n        return Err(EncodeError::OverCap);",
+      "reason": "Every frame put_bytes writes into is sealed by seal, which refuses any frame longer than FRAME_MAX, so a body of more than FRAME_MAX bytes that the mutant lets through is refused there with the same OverCap.",
+      "evidence": "put_bytes has two callers, encode_request's Restore arm and encode_reply's Checkpoint arm, and each writes into the Vec that header(..) began with its HEADER_LEN of 13 bytes and returns seal(out). After the mutant admits a body of n > FRAME_MAX bytes, put_count either refuses n above u32::MAX with EncodeError::OverCap or writes 4 bytes, so out holds at least 17 + n > FRAME_MAX bytes and seal's `if out.len() > FRAME_MAX` returns EncodeError::OverCap: both programs answer Err(OverCap) for every body, and differ only in the copy made before the refusal.",
+      "reached_by": "codec::a_frame_of_1_048_577_bytes_is_refused_by_the_encoder_and_the_decoder",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/companion/src/codec.rs",
+      "mutant": "replace > with >= in put_bytes",
+      "anchor": "if bytes.len() > FRAME_MAX {\n        return Err(EncodeError::OverCap);",
+      "reason": "A body of exactly FRAME_MAX bytes, the one length the mutant refuses early, cannot fit a frame beside its header and count, so seal refuses it with the same OverCap.",
+      "evidence": "put_bytes writes into the Vec that header(..) began with its HEADER_LEN of 13 bytes, and put_count adds 4, so a body of FRAME_MAX (1_048_576) bytes makes a frame of at least 1_048_593 bytes, and seal, which each caller's encode returns, refuses any frame longer than FRAME_MAX with EncodeError::OverCap. The mutant refuses that body in put_bytes with the same EncodeError::OverCap, and answers as the original for every other length.",
+      "reached_by": "codec::a_frame_of_1_048_577_bytes_is_refused_by_the_encoder_and_the_decoder",
+      "issue": "#1060"
+    }
+  ]
+}

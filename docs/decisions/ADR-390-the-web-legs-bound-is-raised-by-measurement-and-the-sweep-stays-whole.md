@@ -173,3 +173,71 @@ A1's red and green readings are recorded in `docs/red-first/SPEC-379.md`.
 D3 says the `harness` and `release` job bounds rose "each with no ruling" (line 72). Read it as
 "each with no ruling the owner signed": the line D3 draws is between those job bounds and the
 per-mutant budget raises, which the owner signed.
+
+## Addendum, 2026-10-31: the bound is re-derived from the sweep's two strata
+
+Decides SPEC-379's 2026-10-31 amendment. The weekly sweep of run 41190866281 was cut at 100 (job
+124507228303): 7188 of 8458 mutants tested 97.68 minutes after mutation testing began, no report
+written, the leg VOID. StrykerJS's planner named 1311 of its mutants static, each run against every
+test, and they came last: before them the sweep cost 0.7904 s a mutant, and over their first 39 it
+cost 5.3849 s (job 124507228303). D2 priced every mutant at one cost measured over a whole sweep.
+The static stratum's cost has grown with the suite since (795 tests at a net 41.35 s here, against
+696 at 21.57 s in the completed sweep of job 124507233465), and a cost read from a sweep cut before
+that stratum leaves it out.
+
+D5, the reading of a cut at 100:
+
+- Chosen: re-derive the bound by R1 with each stratum priced at its worst measured cost, because
+  the cut measures a stratum D2's one cost did not separate, and the product, 325 minutes, sits
+  under the hosted job's 360-minute limit, so D1's whole sweep stands. "What would make this
+  wrong" read a cut at 100 as evidence for #693's sharding; that reading now holds for a bound the
+  rule cannot keep under the hosted limit, and past 355 minutes the choice between sharding
+  against D1 and a smaller sweep is the owner's.
+- Shard the weekly sweep as ADR-433 sharded the pull request's: rejected because the battery's
+  `survivors` job reads one StrykerJS report through `battery` and `table` in
+  `scripts/mutation-verdict.py` (D1's option B), and the rule's bound fits the hosted job.
+- Price the sweep at the cut run's own cost, 0.8153 s a mutant (a bound of 180): rejected because
+  that cost was measured before the static stratum, which StrykerJS estimates takes 80% of the
+  tests' time, and 1270 mutants, nearly all of them static, were untested at 97.68 minutes.
+- Price every mutant at the static cost, 5.3849 s (759.1 minutes before the margin): rejected
+  because 7147 of the 8458 mutants are measured at 0.7904 s, and the product passes the hosted
+  job's limit for a cost only one stratum bears.
+- Take StrykerJS's own remaining estimate, 5 hours 40 minutes at the cut: rejected because it is
+  not a measurement; in the completed sweep of run 41190868264 it read 3 hours 38 minutes at 55
+  minutes, when 38.42 minutes remained (job 124507233465).
+
+D6, the band:
+
+- Chosen: 325 to 420, R2's floor and ceiling from the projected whole sweep of 211.81 minutes,
+  because each is the rule's product.
+- Cap the ceiling at the hosted job's 360 minutes: rejected because R2 ties the ceiling to the
+  measured sweep, and GitHub cancels any hosted job at 360 whatever its bound, so the cap would
+  restate the platform's limit, not a measurement.
+- Leave `ci.yml`'s `mutation-web`, now SPEC-419's verdict job, at 100 outside the band: rejected
+  because R2 holds both legs to one band (D1's row against raising the weekly leg alone), and a
+  change to the band's legs is not this addendum's.
+
+The arithmetic, each figure with its job:
+
+- non-static: 7147 x 0.7904 s = 5649.0 s (job 124507228303, over 0.5033 s in job 124507233465);
+- static: 1311 x 5.3849 s = 7059.6 s (job 124507228303, over 1.8488 s in job 124507233465);
+- 12708.6 s = 211.81 minutes, 1.5026 s a mutant over 8458; x 1.5 = 317.71 minutes;
+- plus 2.53 minutes of set-up (job 124507228303) and 0.18 minutes of tail (job 112096749167):
+  320.42 minutes, rounded up to the five: 325;
+- ceiling: 2 x (211.81 + 2.53 + 0.18) = 429.04, rounded down to the ten: 420.
+
+### Consequences of the addendum
+
+- Good: at its measured worst the weekly sweep, 211.81 minutes of mutation testing, completes
+  inside 325 with SPEC-327's margin, and no StrykerJS setting, verdict code or other job changes.
+- Bad: a hung test or job now holds a runner for up to 325 minutes on either leg before it is
+  cancelled, the verdict job included; StrykerJS's own per-test timeout still ends a mutant's hung
+  test.
+- Neutral: the band's ceiling passes the hosted job's limit, so GitHub's 360 minutes, not the band,
+  is the last bound on a hung job.
+
+### What would make the addendum wrong
+
+- A completed weekly web leg past two thirds of 325 (216:40): re-measure and re-derive by the rule.
+- A leg cut at 325, or a re-derived bound past 355: the owner's choice for #693, between sharding
+  against D1 and a smaller sweep.

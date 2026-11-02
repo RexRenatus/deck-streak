@@ -83,6 +83,13 @@ pub fn backup_of(name: &str) -> Option<(Kind, u32)> {
     Some((kind, minted))
 }
 
+/// The id of the backup or server copy the pool names `name`: its name's stem, `backup-3`, the id
+/// the list and the export name it by (SPEC-516 R4). Any other name is none.
+#[must_use]
+pub fn backup_id(name: &str) -> Option<String> {
+    backup_of(name).map(|(kind, number)| format!("{}-{number}", kind.word()))
+}
+
 /// The pool name of the record that says `name` was first listed at `made`, in milliseconds since
 /// the epoch: an empty pool entry beside it, since the pool keeps no file times (ADR-388 D17).
 #[must_use]

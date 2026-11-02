@@ -17,7 +17,7 @@ use std::ffi::OsString;
 use std::io::{self, Write};
 use std::sync::Arc;
 
-use deck_streak_coordination::data_rights_registry::{erase_all, export_all};
+use deck_streak_coordination::data_rights_registry::{erase_all, export_document};
 use deck_streak_daemon::wiring::{self, StateDirectory, WiringError};
 use deck_streak_kernel::{
     Db, Environment, KernelError, KernelSettings, Offload, SettingsError, SystemClock,
@@ -96,11 +96,10 @@ pub async fn run(env: &Environment, command: DataCommand) -> Result<u8, DataRole
     outcome.map(|()| 0)
 }
 
-/// Writes the export as one line of standard output, off the async runtime.
+/// Writes the export as one line of standard output, off the async runtime: the bytes the study
+/// clients' export route answers over the same database (SPEC-516 R2).
 async fn export(db: &Db, offload: &Offload) -> Result<(), DataRoleError> {
-    let exported = export_all(db).await.map_err(DataRoleError::Export)?;
-    let mut line = exported.to_line();
-    line.push('\n');
+    let line = export_document(db).await.map_err(DataRoleError::Export)?;
     offload
         .run("write the export to standard output", move || {
             let mut out = io::stdout().lock();

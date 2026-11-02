@@ -174,6 +174,25 @@ class Corpus(unittest.TestCase):
                     for imported in names:
                         self.assertNotIn(imported.split(".")[0], banned_imports, path.name)
 
+    def test_a_note_the_package_shares_with_the_target_carries_a_mod_on_both_sides(self):
+        """A14 (R18 (c)): every drawn import case whose package shares a GUID with the target
+        gives that note a `mod` on both sides, so the import's updated or duplicate count is
+        decided by the input and never by the clock that added the two notes."""
+        name = "anki.import.package"
+        _, registration = REGISTERED[name]
+        drawn = generate.covered(name, registration, corpus.SEED)
+        missing = []
+        for index, (_, case) in enumerate(examined("import case(s)", drawn)):
+            target = {note.get("guid"): note for note in case["collection"]["notes"]}
+            for note in case["package"]["notes"]:
+                twin = target.get(note.get("guid"))
+                if twin is not None and ("mod" not in note or "mod" not in twin):
+                    missing.append(index)
+                    break
+        self.assertEqual(
+            missing, [], f"{len(missing)} import case(s) share a GUID without a mod on both sides"
+        )
+
 
 class RolloverClocks(unittest.TestCase):
     def test_every_rollover_clock_is_one_second_before_the_local_rollover_hour(self):
@@ -193,6 +212,94 @@ class RolloverClocks(unittest.TestCase):
             self.assertEqual(local % corpus.DAY, (clock["rollover_hour"] * 3600 - 1) % corpus.DAY)
         moved = [c for c in clocks if c["utc_offset_minutes"] * 120 % corpus.DAY]
         examined("rollover clocks at an offset that is not a multiple of 12 hours", moved)
+
+
+#: A cloze replacement on a template, `{{cloze:Field}}`, with whitespace allowed inside it.
+CLOZE_REPLACEMENT = re.compile(r"\{\{\s*cloze\s*:\s*([^{}:]+?)\s*\}\}")
+#: A cloze reference in a field's text, `{{c1::...`, by its number.
+CLOZE_REFERENCE = re.compile(r"\{\{c(\d+)::")
+
+
+def occlusion_notes(value):
+    """Every (note type, fields) pair of the occlusion kind that `value` holds: a case's own
+    note type and fields, and each note of a collection whose note type is one."""
+    found = []
+    if isinstance(value, dict):
+        notetype = value.get("notetype")
+        if isinstance(notetype, dict) and notetype.get("kind") == "occlusion":
+            found.append((notetype, value.get("fields")))
+        notetypes = value.get("notetypes")
+        if isinstance(notetypes, list):
+            for note in value.get("notes", []):
+                if notetypes[note["notetype"]].get("kind") == "occlusion":
+                    found.append((notetypes[note["notetype"]], note["fields"]))
+        for inner in value.values():
+            found += occlusion_notes(inner)
+    elif isinstance(value, list):
+        for inner in value:
+            found += occlusion_notes(inner)
+    return found
+
+
+def cloze_field(notetype, side):
+    """The fields the template's `side` names in a cloze replacement, in order."""
+    return CLOZE_REPLACEMENT.findall(notetype["templates"][0][side])
+
+
+class OcclusionNoteType(unittest.TestCase):
+    """The corpus's image occlusion note type renders as a cloze-kind note. Anki's manual: an
+    Image Occlusion note "is a special case of cloze deletion" (Editing, Image Occlusion); a
+    cloze note type "has a single type which is shared by all cloze deletions on a note", and
+    "Anki looks on the front template for one or more cloze replacements, like
+    {{cloze:FieldName}}. It then looks in the FieldName field for all cloze references, like
+    {{c1::text}}. For each separate number, a card will be generated." (Card Generation, Cloze
+    Templates)."""
+
+    PAIRS = None
+
+    @classmethod
+    def pairs(cls):
+        """(note type, fields, function, class): the corpus's own note type, with no fields,
+        then each occlusion note of every registered function's drawn cases."""
+        if cls.PAIRS is None:
+            pairs = [(corpus.occlusion_type(), None, None, None)]
+            for name, (_, reg) in REGISTERED.items():
+                for edge, case in generate.covered(name, reg, corpus.SEED):
+                    pairs += [(nt, fields, name, edge) for nt, fields in occlusion_notes(case)]
+            cls.PAIRS = pairs
+        return cls.PAIRS
+
+    def test_the_occlusion_note_type_has_one_template_with_one_cloze_on_its_front(self):
+        """Each occlusion note type the corpus gives, alone or in a case, has one template whose
+        front carries exactly one `{{cloze:<field>}}` on a field the note type declares, and
+        whose back carries the same one."""
+        kinds = {}
+        for notetype, _, _, _ in self.pairs():
+            kinds[repr(notetype)] = notetype
+        for notetype in examined("occlusion note types", kinds.values()):
+            with self.subTest(name=notetype["name"]):
+                self.assertEqual(len(notetype["templates"]), 1)
+                front = cloze_field(notetype, "front")
+                self.assertEqual(len(front), 1, notetype["templates"][0]["front"])
+                self.assertIn(front[0], notetype["fields"])
+                self.assertEqual(cloze_field(notetype, "back"), front)
+
+    def test_every_occlusion_case_keeps_its_cloze_references_in_the_cloze_field(self):
+        """Every occlusion note a case holds keeps its cloze references in the field the front
+        names, and no other; a case of an occlusion class other than `empty` holds c1 there, so
+        the card of ordinal 0 exists."""
+        held = [pair for pair in self.pairs() if pair[1] is not None]
+        asked = []
+        for notetype, fields, name, edge in examined("occlusion notes in cases", held):
+            front = cloze_field(notetype, "front")
+            self.assertEqual(len(front), 1, f"{name} {edge}: no single cloze on the front")
+            at = notetype["fields"].index(front[0])
+            others = [text for i, text in enumerate(fields) if i != at]
+            self.assertEqual([t for t in others if CLOZE_REFERENCE.search(t)], [], name)
+            if edge is not None and edge != "empty" and name == "anki.render.occlusion_render":
+                asked.append((edge, fields[at]))
+        for edge, masks in examined("occlusion class cases asked for card 0", asked):
+            self.assertIn("1", CLOZE_REFERENCE.findall(masks), edge)
 
 
 class Refusals(unittest.TestCase):

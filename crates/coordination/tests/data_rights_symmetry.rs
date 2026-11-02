@@ -19,7 +19,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use deck_streak_coordination::data_rights::CRON_FIRES_TABLE;
-use deck_streak_coordination::data_rights_registry::{erase_all, export_all, ports};
+use deck_streak_coordination::data_rights_registry::{
+    erase_all, export_all, export_document, ports,
+};
 use deck_streak_coordination::jobs::FireDate;
 use deck_streak_coordination::ledger::{CronLedger, SqliteCronLedger};
 use deck_streak_ingest::data_rights::WRITE_CLASS_STOP_TABLE;
@@ -435,6 +437,28 @@ impl Probe {
 }
 
 #[tokio::test]
+async fn the_export_document_is_the_exports_one_compact_line_and_its_newline() {
+    let (_directory, db) = migrated().await;
+    let document = export_document(&db).await.expect("the export document");
+    let exported = export_all(&db).await.expect("the export");
+    let Some(line) = document.strip_suffix('\n') else {
+        panic!("the export document ends in no newline: {document:?}");
+    };
+    let read: Value = serde_json::from_str(line).expect("the document's line is JSON");
+    assert_eq!(
+        (line.contains('\n'), &read, line),
+        (
+            false,
+            exported.as_json(),
+            serde_json::to_string(exported.as_json())
+                .expect("compact")
+                .as_str()
+        ),
+        "the export document is the export's one compact line"
+    );
+}
+
+#[tokio::test]
 async fn the_exported_tables_equal_the_erased_tables_over_every_port() {
     let probe = Probe::run().await;
     let declarations = examined("port(s) in the registry", declarations());
@@ -652,12 +676,35 @@ fn named_tables(inventory: &Value) -> BTreeMap<String, Vec<&Value>> {
     named
 }
 
+/// Every table the collection store's migrations create (SPEC-512 R10): the store is a file of its
+/// own with its own data-rights port, so a category naming one of them is judged by the store's
+/// census (`crates/collection/tests/data_rights.rs`), not against the service database's ports.
+fn store_tables() -> BTreeSet<String> {
+    let dir = root().join("crates/collection/migrations");
+    let mut tables = BTreeSet::new();
+    for entry in fs::read_dir(dir).into_iter().flatten().flatten() {
+        let text = fs::read_to_string(entry.path()).unwrap_or_default();
+        for line in text.lines() {
+            if let Some(rest) = line.trim_start().strip_prefix("CREATE TABLE ") {
+                let name: String = rest
+                    .chars()
+                    .take_while(|character| character.is_ascii_alphanumeric() || *character == '_')
+                    .collect();
+                tables.insert(name);
+            }
+        }
+    }
+    tables
+}
+
 /// Every refusal of `privacy.json` against the ports: a table a port exports or erases that no
 /// category names, or more than one does, or whose category exports it not or erases it by another
-/// mode; and a table a category names that no port exports or erases.
+/// mode; and a table a category names that no port exports or erases, unless it is one of the
+/// collection store's, which the store's own census judges.
 fn judge(inventory: &Value, declarations: &[Declaration]) -> Vec<String> {
     let modes = erase_modes(declarations);
     let named = named_tables(inventory);
+    let store = store_tables();
     let mut refused = Vec::new();
     for (table, mode) in &modes {
         match named.get(*table).map(Vec::as_slice) {
@@ -681,7 +728,7 @@ fn judge(inventory: &Value, declarations: &[Declaration]) -> Vec<String> {
         }
     }
     for table in named.keys() {
-        if !modes.contains_key(table.as_str()) {
+        if !modes.contains_key(table.as_str()) && !store.contains(table) {
             refused.push(format!(
                 "{table} is named by a category, and no port exports or erases it"
             ));

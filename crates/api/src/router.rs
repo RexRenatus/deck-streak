@@ -54,6 +54,8 @@ use tracing::Level;
 
 use crate::analytics_routes;
 use crate::badges_routes;
+use crate::companion_routes::{self, CompanionDirectory};
+use crate::data_export_routes;
 use crate::drill_routes;
 use crate::health::{self, Readiness};
 use crate::inbox_capture_route;
@@ -96,6 +98,7 @@ pub struct ApiState {
     linking: Option<(LinkingConfig, Owner)>,
     seal: Option<Arc<SealSecret>>,
     snapshot: Option<Arc<dyn SnapshotLister>>,
+    companion: Option<CompanionDirectory>,
 }
 
 impl std::fmt::Debug for ApiState {
@@ -117,6 +120,10 @@ impl std::fmt::Debug for ApiState {
         if self.snapshot.is_some() {
             line.field("snapshot", &true);
         }
+        // The companion's directory is named only while one is set: off answers 404 (SPEC-511 R4).
+        if self.companion.is_some() {
+            line.field("companion", &true);
+        }
         line.finish()
     }
 }
@@ -136,6 +143,7 @@ impl ApiState {
             linking: None,
             seal: None,
             snapshot: None,
+            companion: None,
         }
     }
 
@@ -174,6 +182,14 @@ impl ApiState {
     #[must_use]
     pub fn with_snapshot(mut self, lister: Arc<dyn SnapshotLister>) -> Self {
         self.snapshot = Some(lister);
+        self
+    }
+
+    /// This state, serving the owner's scheduling companion files from `directory` (SPEC-511 R4).
+    /// Without it the companion routes answer 404 `companion_absent` to the owner.
+    #[must_use]
+    pub fn with_companion(mut self, directory: CompanionDirectory) -> Self {
+        self.companion = Some(directory);
         self
     }
 
@@ -231,6 +247,7 @@ pub fn router(state: ApiState) -> Router {
     let linking = state.linking.clone();
     let seal = state.seal.clone();
     let snapshot = state.snapshot.clone();
+    let companion = state.companion.clone();
     let routes = health::routes()
         .merge(minimum_client::routes())
         .with_state(state);
@@ -260,6 +277,11 @@ pub fn router(state: ApiState) -> Router {
                 .merge(session_routes::launch_routes(access.clone()))
                 .merge(sync_seal_routes::routes(access.clone(), seal))
                 .merge(snapshot_routes::routes(access.clone(), snapshot))
+                .merge(companion_routes::routes(access.clone(), companion))
+                .merge(data_export_routes::routes(
+                    access.clone(),
+                    readiness.clone(),
+                ))
                 .merge(drill_routes::routes(
                     access.clone(),
                     readiness.clone(),

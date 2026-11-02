@@ -24,6 +24,8 @@ const STEPS = [
   'undo returns the rated card',
   'bury and flag act on the shown card',
   'a key after a tap on the card still rates',
+  // SPEC-507 A6: the card health panel's dialog in both colour schemes
+  'the card info panel passes axe in both colour schemes',
   'axe passes on both screens'
 ];
 

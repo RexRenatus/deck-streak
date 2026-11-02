@@ -2,7 +2,8 @@
  * @vitest-environment jsdom
  */
 import { describe, expect, it } from 'vitest';
-import { frameDocument } from './frame-document';
+import { frameDocument, REFUSAL_REASONS, type FrameDocument, type RefusalReason } from './frame-document';
+import { frameCard } from './frame-host';
 
 // SPEC-341 R2 to R4, A3 to A5; ADR-352 D3, D4 (SEC01-F15). The card frame's document opens with
 // the frame policy, turns DNS prefetching off and holds the card's CSS in one style element; it
@@ -105,7 +106,7 @@ describe('the frame document', () => {
       `<html srcset="${ELSEWHERE}c.png">`
     ];
     for (const element of returns) {
-      expect(frameDocument(mutation + element, CSS), element).toStrictEqual({ refused: 'escaped' });
+      expect(frameDocument(mutation + element, CSS), element).toStrictEqual({ refused: 'reparse-srcset' });
     }
     examined('srcsets the re-parse brings back', returns);
   });
@@ -150,21 +151,25 @@ describe('the frame document', () => {
       '<html target="_blank">'
     ];
     for (const element of returns) {
-      expect(frameDocument(mutation + element, CSS), element).toStrictEqual({ refused: 'escaped' });
+      expect(frameDocument(mutation + element, CSS), element).toStrictEqual({ refused: 'reparse-target' });
     }
     examined('targets the re-parse brings back', returns);
   });
 
   it('a card whose markup escapes the frame document is refused', () => {
-    const escapes: [html: string, css: string][] = [
+    const escapes: [html: string, css: string, reason: RefusalReason][] = [
       // CSS that ends the style element and opens a link, then a refresh, in either case
-      [CARD, `</style><link rel="preconnect" href="${ELSEWHERE}">`],
-      [CARD, `</STYLE ><meta http-equiv="refresh" content="0; url=${ELSEWHERE}">`],
+      [CARD, `</style><link rel="preconnect" href="${ELSEWHERE}">`, 'style-closed'],
+      [CARD, `</STYLE ><meta http-equiv="refresh" content="0; url=${ELSEWHERE}">`, 'style-closed'],
       // markup the first parse reads as a style's text, and the frame's parse as a link: a mutation
-      [`<form><math><mtext></form><form><mglyph><style></math><link rel="preconnect" href="${ELSEWHERE}">`, CSS]
+      [
+        `<form><math><mtext></form><form><mglyph><style></math><link rel="preconnect" href="${ELSEWHERE}">`,
+        CSS,
+        'reparse-element'
+      ]
     ];
-    for (const [html, css] of escapes) {
-      expect(frameDocument(html, css), `${html} | ${css}`).toStrictEqual({ refused: 'escaped' });
+    for (const [html, css, reason] of escapes) {
+      expect(frameDocument(html, css), `${html} | ${css}`).toStrictEqual({ refused: reason });
     }
     examined('escaping cards', escapes);
 
@@ -204,7 +209,7 @@ describe('the frame document', () => {
       'CARD card1'
     ];
     for (const classes of outside) {
-      expect(frameDocument(CARD, CSS, classes), `"${classes}"`).toStrictEqual({ refused: 'escaped' });
+      expect(frameDocument(CARD, CSS, classes), `"${classes}"`).toStrictEqual({ refused: 'class-list' });
     }
     examined('admitted class lists', admitted);
     examined('refused class lists', outside);
@@ -217,7 +222,91 @@ describe('the frame document', () => {
       srcdoc: `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="${POLICY}"><meta http-equiv="x-dns-prefetch-control" content="off"><style>.a{}</style></head><body><p>x</p></body></html>`
     });
     const html = '<form><math><mtext></form><form><mglyph><style></math><body class="x">';
-    expect(frameDocument(html, '.a{}')).toStrictEqual({ refused: 'escaped' });
+    expect(frameDocument(html, '.a{}')).toStrictEqual({ refused: 'body-attributes' });
+  });
+
+  // SPEC-505 R1, R2, A1; ADR-523 D1, D2. Each check refuses with its own reason, and when a card
+  // breaks several, the first check that fails names it, so the reason is a function of the card.
+  // Each plant is the clean card with one fault, and the clean card itself is kept, so a refusal
+  // is the fault's and not the card's.
+  it('each frame check refuses with its own reason, the first failing check naming it', () => {
+    const mutation = '<form><math><mtext></form><form><mglyph><style></math>';
+    const clean = { html: CARD, css: CSS, title: 'The card', classes: 'card card1' };
+    const plants: [check: string, card: typeof clean][] = [
+      ['a class list outside the admitted set', { ...clean, classes: 'card card1 x' }],
+      ['CSS that ends its own style element', { ...clean, css: `${CSS}</style><base href="${ELSEWHERE}">` }],
+      ['a template the re-parse brings back', { ...clean, html: `${CARD}${mutation}<template></template>` }],
+      ['a srcset the re-parse brings back', { ...clean, html: `${CARD}${mutation}<img alt="" srcset="${ELSEWHERE}a.png 1x">` }],
+      ['a target the re-parse brings back', { ...clean, html: `${CARD}${mutation}<a target="_blank" href="${ELSEWHERE}a">a</a>` }],
+      ['a body attribute the re-parse brings', { ...clean, html: `${CARD}${mutation}<body data-plant="1">` }],
+      ['a host whose title does not read back', { ...clean, title: 'The\rcard' }]
+    ];
+
+    // the identity control: the clean card, with every field each plant starts from, is kept
+    const kept = frameCard(clean.html, clean.css, clean.title, clean.classes);
+    expect(kept.refused, 'the clean card').toBeUndefined();
+    expect(kept.srcdoc).toBeTypeOf('string');
+
+    const reasons = examined('frame checks', plants).map(([check, card]) => {
+      const framed = frameCard(card.html, card.css, card.title, card.classes);
+      expect(framed.srcdoc, check).toBeUndefined();
+      return framed.refused;
+    });
+    // each plant has its own reason, in the order the checks run, and they are the closed list
+    expect(reasons).toEqual([...REFUSAL_REASONS]);
+    expect(new Set(reasons).size).toBe(7);
+  });
+
+  // SPEC-505 R2; ADR-523 D2. A card that breaks two checks next to each other in the order is
+  // refused by the earlier one. Each pair's card holds both faults, and each fault alone is refused
+  // by its own check, so the card breaks both checks and only the order picks its reason.
+  const MUTATION = '<form><math><mtext></form><form><mglyph><style></math>';
+  const CLEAN = { html: CARD, css: CSS, title: 'The card', classes: 'card card1' };
+  /** Each check's fault: a field of the clean card it replaces, or markup after the mutation. */
+  const FAULTS: Record<RefusalReason, Partial<typeof CLEAN> & { markup?: string }> = {
+    'class-list': { classes: 'card card1 x' },
+    'style-closed': { css: `${CSS}</style><base href="${ELSEWHERE}">` },
+    'reparse-element': { markup: '<template></template>' },
+    'reparse-srcset': { markup: `<img alt="" srcset="${ELSEWHERE}a.png 1x">` },
+    'reparse-target': { markup: `<a target="_blank" href="${ELSEWHERE}a">a</a>` },
+    'body-attributes': { markup: '<body data-plant="1">' },
+    'host-readback': { title: 'The\rcard' }
+  };
+
+  /** The reason the frame gives the clean card with each named check's fault planted in it. */
+  function refusedWith(...faults: RefusalReason[]): RefusalReason | undefined {
+    const card = { ...CLEAN };
+    const markup: string[] = [];
+    for (const fault of faults) {
+      const { markup: planted, ...fields } = FAULTS[fault];
+      Object.assign(card, fields);
+      if (planted !== undefined) markup.push(planted);
+    }
+    if (markup.length > 0) card.html = `${CARD}${MUTATION}${markup.join('')}`;
+    return frameCard(card.html, card.css, card.title, card.classes).refused;
+  }
+
+  const PAIRS = REFUSAL_REASONS.slice(1).map((later, index) => [REFUSAL_REASONS[index], later] as const);
+  for (const [earlier, later] of PAIRS) {
+    it(`a card that breaks both ${earlier} and ${later} is refused by the earlier check, ${earlier}`, () => {
+      // each fault alone is refused by its own check, so the card below breaks both
+      expect([refusedWith(earlier), refusedWith(later)], 'each fault alone').toEqual([earlier, later]);
+      expect(refusedWith(earlier, later), 'both faults').toBe(earlier);
+    });
+  }
+
+  // SPEC-505 R1, R5; ADR-523 D1, D4. The types close the set: no word outside the seven is a
+  // reason, and a refusal is its reason alone, with no document to show. The app's check reads each
+  // directive below, and a type that opened would leave a directive unused, which it reports.
+  it('no other word is a refusal reason, and a refusal carries no document', () => {
+    // @ts-expect-error the one word every check used to answer is no reason (SPEC-505 R1)
+    const word: RefusalReason = 'escaped';
+    // @ts-expect-error a refusal carries no document, so no part of the card (ADR-523 D4)
+    const carrying: FrameDocument = { refused: 'class-list', srcdoc: CARD };
+    expect(examined('reasons', [...REFUSAL_REASONS])).not.toContain(word);
+    // the frame's own refusal holds its reason alone, where the planted one holds a document too
+    expect(Object.keys(frameDocument(CARD, CSS, 'card card1 x'))).toEqual(['refused']);
+    expect(Object.keys(carrying)).toEqual(['refused', 'srcdoc']);
   });
 
   it('a data: media source reaches the frame unchanged', () => {

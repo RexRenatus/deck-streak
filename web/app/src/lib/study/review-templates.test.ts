@@ -328,6 +328,6 @@ describe('the review frame shows the template cards as the engine rendered them'
     const client = new FakeClient([head(view(0, { css: GOLDEN.cards[0].card_css + ESCAPES })), head(null)]);
     render(ReviewScreen, { client: async () => client });
     await settle();
-    expect(frame().getAttribute('data-card-refused'), 'the control is refused').toBe('escaped');
+    expect(frame().getAttribute('data-card-refused'), 'the control is refused').toBe('style-closed');
   });
 });

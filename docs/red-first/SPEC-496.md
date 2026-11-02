@@ -44,3 +44,63 @@ A6: green at f31d2a8
   files read), `test_planned_specs.py` (`Ran 3 tests`, `OK`, 224 SPEC files) and the public scrub
   over the six new files of f31d2a8 (`examined 6 file(s) against public shapes only; 0
   finding(s)`).
+
+## Pre-push delta
+
+Two changes ride before the push, red first in the same way. 2f4f02a changes the test file alone.
+It adds thirteen planted shape faults, one for each shape refusal of the checker that no plant
+reached: a ledger, an obligation, an artifact, a tie or a row that is not an object; a planned
+harness whose `at` is not a path; a present artifact whose property is not a name, or that names no
+property; a blank mutant; phase sets that are not an object; a phase set that is not a list of ids;
+a row whose entry is not `<kind>/<Name>`; and a row naming an obligation twice. Each plant reaches
+its refusal alone. It also adds a tie naming a top-level function whose name starts with `test`,
+beside a fixture module that now defines one. SPEC R4 and ADR-514 D4 name a Python tie only as
+`<path>.py::<Class>.<method>`, and unittest runs no top-level function, so that tie must be refused
+as an undefined test. 616f31a makes the checker refuse it, rewriting its lines in place. The test
+file is byte-identical at 2f4f02a and 616f31a.
+
+The red is quoted from one run of the test file alone on the tree of 2f4f02a, whose checker is
+bba141b's (`Ran 9 tests`, `FAILED (failures=1)`, an assertion, no error), and the green from one
+run of it alone on the tree of 616f31a (`Ran 9 tests`, `OK`).
+
+```red-first
+A4: red at 2f4f02a: AssertionError: Items in the second set but not the first: 'undefined-test' : a tie naming a top-level test function, not <Class>.<method>: [] (test_a_tie_the_tree_does_not_define_or_that_cannot_count_is_refused)
+A4: green at 616f31a
+```
+
+- **Red:** the tie test alone fails, at that one plant. The thirteen new shape plants pass at
+  2f4f02a too, because the checker already refuses each of them; each is there so that a checker
+  that drops its refusal reads red at that plant.
+- **Green:** the planted faults read 33 (schema) and 24 (ties), and 2, 1, 4, 9, 6 and 7 as before;
+  `examined 1 committed ties`, and that tie names a Rust test, so no committed tie names a
+  top-level function.
+
+## Census fix
+
+The read census of the test modules (`test_ci_workflows.py`, SPEC-190 R12) counts every read and
+process site under `scripts/tests` and must place every builtin name a module uses. It found three
+problems in this delivery's two Python files, so its own tests failed on the tree of 862fac4:
+
+- `test_formal_obligations: TheFormalLedger: classmethod: a name the census cannot place`, twice:
+  the class fixture's `setUpClass` and `tearDownClass` were class methods, and `classmethod` is a
+  builtin name the census does not place.
+- `_formal_ledger: <module>: NamedTuple: 1 dynamic site(s), 0 listed`: `Refusal` was `typing`'s
+  `NamedTuple`, and the census counts every use of `typing`, a module it does not read through, as
+  a dynamic site.
+
+The fix changes those two files alone, and `test_ci_workflows.py` not at all. `setUpClass` is now
+a static method that hands its scratch tree's cleanup to `addClassCleanup`, as `test_ios_lane.py`
+does, and `tearDownClass` is gone. `Refusal` is a named tuple from `collections`, which the census
+reads through, with the same fields, repr and equality; every other line of the checker keeps its
+number. The red is the census test that already exists, so no test commit precedes the fix.
+
+- **Red, at 862fac4:** the census read `modules=118 population=15 sites=608 problems=3`, and its
+  tests (`-k WorkflowFilesAreReadAsBytes`) read `Ran 7 tests`, `FAILED (failures=4)`:
+  `test_every_file_read_in_the_test_modules_is_the_loader_or_a_named_non_workflow_read`, and three
+  controls of `test_the_census_is_red_on_every_planted_site` (no plant; a site through the loader
+  in a module that feeds the reader; a new module that feeds the reader through the loader), each
+  naming the three problems.
+- **Green, on the fixed tree:** the census reads `modules=118 population=15 sites=607
+  problems=0`, its tests read `Ran 7 tests`, `OK`, and the test file reads `Ran 9 tests`, `OK`.
+  The checker's 60 hand mutants, re-run unchanged on the fixed tree, are all killed, and the
+  unmutated control passes.

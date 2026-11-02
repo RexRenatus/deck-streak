@@ -10,6 +10,9 @@
 //! line is a file, its exact trimmed text, how many times the file holds it and why, so a new
 //! line, a held line with more text on it, a second copy and a line the tree no longer holds are
 //! each refused by name. Callers planted in a scratch tree prove the census sees each kind.
+//!
+//! SPEC-515 A4 (R9; ADR-533 D4) holds the gesture on the exempt Undo to one mint in each of the
+//! two review doors, and the native adapter's own undo tests to their held lines.
 
 #![allow(
     clippy::expect_used,
@@ -107,10 +110,13 @@ const ROUTER_LITERAL: &str =
 /// history in the test's own scratch collection, which no product path runs (ADR-376 D10).
 const ANSWER_FIXTURE: &str =
     "a fixture's review in the test's own scratch collection, which no product path runs";
+/// Why the native adapter's own tests may name `undo`: they confirm an offer through the adapter's
+/// undo entry, as the app's session does (SPEC-515 R9).
+const NATIVE_UNDO_TEST: &str = "the native adapter's own test of its undo entry (SPEC-515 A2, A3)";
 
 /// Each line outside the core that may name the engine or the gesture (SPEC-345 section 8): its
 /// file, its exact trimmed text, how many times the file holds it, and why.
-const HELD: [(&str, &str, usize, &str); 33] = [
+const HELD: [(&str, &str, usize, &str); 35] = [
     (
         "crates/ingest/src/engine.rs",
         "col.full_download(auth, engine_client())",
@@ -308,6 +314,18 @@ const HELD: [(&str, &str, usize, &str); 33] = [
         "\".answer_card(\",",
         1,
         SKIP_CENSUS_LITERAL,
+    ),
+    (
+        "crates/ffi/tests/undo.rs",
+        ".undo(card, step)",
+        1,
+        NATIVE_UNDO_TEST,
+    ),
+    (
+        "crates/ffi/tests/sync.rs",
+        ".undo(before.card, before.step)",
+        1,
+        NATIVE_UNDO_TEST,
     ),
 ];
 
@@ -907,14 +925,79 @@ fn a_planted_undo_outside_the_entry_files_is_refused_by_name() {
         undo,
         vec![
             "crates/bot/src/commands.rs: Some(\"undo\") => self.undo().await,",
+            "crates/ffi/tests/sync.rs: .undo(before.card, before.step)",
+            "crates/ffi/tests/undo.rs: .undo(card, step)",
             "crates/ingest/tests/undo_and_full_sync.rs: col.undo().expect(\"the answer is undone\");",
             "crates/ingest/tests/undo_and_full_sync.rs: col.undo().expect(\"the answer is undone\");",
             "crates/ingest/tests/undo_and_full_sync.rs: matches!(col.undo(), Err(AnkiError::UndoEmpty)),",
             "crates/notifications/tests/one_router.rs: (\"Commands::undo\", \"send\"),",
         ],
-        "outside the core, the census counts undo only at its four held entries"
+        "outside the core, the census counts undo only at its six held entries"
     );
     support::examined("undo line(s) outside the core", undo);
+}
+
+/// Each file outside the core whose code mints the owner's gesture on the exempt Undo, with how
+/// many times, read with comments stripped and every blank removed.
+fn undo_mints(root: &Path) -> Vec<(String, usize)> {
+    const MINT: &str = "OwnerGesture::from_tap(ExemptWrite::Undo,";
+    files(root)
+        .into_iter()
+        .filter(|file| !file.starts_with(CORE))
+        .filter_map(|file| {
+            let source = fs::read_to_string(root.join(&file))
+                .unwrap_or_else(|error| panic!("{file}: {error}"));
+            let stripped = strip(&source);
+            let code: String = stripped
+                .text
+                .iter()
+                .zip(&stripped.literal)
+                .filter(|(c, literal)| !**literal && !c.is_whitespace())
+                .map(|(c, _)| *c)
+                .collect();
+            let count = code.matches(MINT).count();
+            (count > 0).then_some((file, count))
+        })
+        .collect()
+}
+
+/// SPEC-515 A4 (R9; ADR-533 D4): outside the core, the owner's gesture on the exempt Undo is
+/// minted once in each of the two review doors, the web engine's and the native adapter's, and
+/// nowhere else; a second mint in a door, and a mint planted in a non-UI source, are each refused
+/// by name.
+#[test]
+fn the_undo_gesture_is_minted_only_in_the_two_review_doors() {
+    let doors = ENTRY_FILES.map(|file| (file.to_owned(), 1_usize)).to_vec();
+    let minted = undo_mints(&support::workspace());
+    assert_eq!(
+        minted, doors,
+        "the gesture on the exempt Undo is minted once in each review door, and nowhere else"
+    );
+    support::examined("Undo mint(s) outside the core", minted);
+
+    let root = support::scratch("engine-core-containment", "planted-undo-mint");
+    held_tree(&root);
+    let mint = "let gesture = OwnerGesture::from_tap(ExemptWrite::Undo, Target::Card(card));\n";
+    for file in ENTRY_FILES {
+        append(&root, file, mint);
+    }
+    append(&root, "crates/web-engine/src/wasm.rs", mint);
+    append(&root, "crates/daemon/src/main.rs", mint);
+    let planted = undo_mints(&root);
+    let refused: Vec<String> = planted
+        .iter()
+        .filter(|minted| !doors.contains(minted))
+        .map(|(file, count)| format!("{file}: the Undo gesture minted {count} time(s)"))
+        .collect();
+    assert_eq!(
+        refused,
+        vec![
+            "crates/daemon/src/main.rs: the Undo gesture minted 1 time(s)".to_owned(),
+            "crates/web-engine/src/wasm.rs: the Undo gesture minted 2 time(s)".to_owned(),
+        ],
+        "a mint outside the doors and a second mint in a door are each refused by name"
+    );
+    support::examined("planted Undo mint refusal(s)", refused);
 }
 
 /// Which of `Clone`, `Copy` and `Default` a type implements, read at compile time: an inherent

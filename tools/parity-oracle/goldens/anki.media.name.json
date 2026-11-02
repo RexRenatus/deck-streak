@@ -1,0 +1,633 @@
+{
+  "cases": [
+    {
+      "class": "nfd",
+      "input": {
+        "names": [
+          "ds_café.png",
+          "ds_über.mp3"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_café.png",
+          "ds_über.mp3"
+        ]
+      }
+    },
+    {
+      "class": "nfd",
+      "input": {
+        "names": [
+          "ds_résumé.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_résumé.png"
+        ]
+      }
+    },
+    {
+      "class": "nfd",
+      "input": {
+        "names": [
+          "ds_Ångström.mp3"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_ångström.mp3"
+        ]
+      }
+    },
+    {
+      "class": "nfd",
+      "input": {
+        "names": [
+          "ds_naïve.jpg",
+          "ds_crème.gif"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_naïve.jpg",
+          "ds_crème.gif"
+        ]
+      }
+    },
+    {
+      "class": "nfd",
+      "input": {
+        "names": [
+          "ds_piñata.webp"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_piñata.webp"
+        ]
+      }
+    },
+    {
+      "class": "nfd",
+      "input": {
+        "names": [
+          "ds_über.ogg",
+          "ds_plain.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_über.ogg",
+          "ds_plain.png"
+        ]
+      }
+    },
+    {
+      "class": "nfd",
+      "input": {
+        "names": [
+          "ds_é.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_é.png"
+        ]
+      }
+    },
+    {
+      "class": "nfd",
+      "input": {
+        "names": [
+          "ds_άλφα.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_άλφα.png"
+        ]
+      }
+    },
+    {
+      "class": "forbidden-chars",
+      "input": {
+        "names": [
+          "ds:a.png",
+          "ds/b.png",
+          "ds\"c?.png",
+          "ds<d>|e*.png",
+          "ds\\f.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "dsa.png",
+          "dsb.png",
+          "dsc.png",
+          "dsde.png",
+          "dsf.png"
+        ]
+      }
+    },
+    {
+      "class": "forbidden-chars",
+      "input": {
+        "names": [
+          "ds*star.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "dsstar.png"
+        ]
+      }
+    },
+    {
+      "class": "forbidden-chars",
+      "input": {
+        "names": [
+          "ds?ask.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "dsask.png"
+        ]
+      }
+    },
+    {
+      "class": "forbidden-chars",
+      "input": {
+        "names": [
+          "ds<angle>.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "dsangle.png"
+        ]
+      }
+    },
+    {
+      "class": "forbidden-chars",
+      "input": {
+        "names": [
+          "ds|pipe.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "dspipe.png"
+        ]
+      }
+    },
+    {
+      "class": "forbidden-chars",
+      "input": {
+        "names": [
+          "ds\"quote\".png"
+        ]
+      },
+      "output": {
+        "names": [
+          "dsquote.png"
+        ]
+      }
+    },
+    {
+      "class": "forbidden-chars",
+      "input": {
+        "names": [
+          "ds/slash/deep.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "dsslashdeep.png"
+        ]
+      }
+    },
+    {
+      "class": "forbidden-chars",
+      "input": {
+        "names": [
+          "ds\tTab.png",
+          "ds\nline.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "dstab.png",
+          "dsline.png"
+        ]
+      }
+    },
+    {
+      "class": "long-names",
+      "input": {
+        "names": [
+          "ds_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.png",
+          "ds_éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.png",
+          "ds_éééééééééééééééééééééééééééééééééééééééééééééééééééééééé.png"
+        ]
+      }
+    },
+    {
+      "class": "long-names",
+      "input": {
+        "names": [
+          "ds_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png"
+        ]
+      }
+    },
+    {
+      "class": "long-names",
+      "input": {
+        "names": [
+          "ds_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.mp3"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.mp3"
+        ]
+      }
+    },
+    {
+      "class": "long-names",
+      "input": {
+        "names": [
+          "ds_üüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüü.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_üüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüü.png"
+        ]
+      }
+    },
+    {
+      "class": "long-names",
+      "input": {
+        "names": [
+          "ds_山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山山.png"
+        ]
+      }
+    },
+    {
+      "class": "long-names",
+      "input": {
+        "names": [
+          "ds_cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.dddddddddd"
+        ]
+      }
+    },
+    {
+      "class": "long-names",
+      "input": {
+        "names": [
+          "ds_eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+        ]
+      }
+    },
+    {
+      "class": "long-names",
+      "input": {
+        "names": [
+          "ds_ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff.jpeg"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff.jpeg"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "ds_harbor.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_harbor.png"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "ds_garnet.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_garnet.png"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "ds_juniper.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_juniper.png"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "ds_dune.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_dune.png"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "ds_dune.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_dune.png"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "ds_fjord.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_fjord.png"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "ds_garnet.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_garnet.png"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "ds_amber.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_amber.png"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "ds_juniper.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_juniper.png"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "ds_harbor.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_harbor.png"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "ds_juniper.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_juniper.png"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "ds_ember.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_ember.png"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "ds_cobalt.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_cobalt.png"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "ds_juniper.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_juniper.png"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "ds_indigo.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_indigo.png"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "ds_harbor.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_harbor.png"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "ds_harbor.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_harbor.png"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "ds_harbor.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_harbor.png"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "ds_cobalt.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_cobalt.png"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "ds_fjord.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_fjord.png"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "ds_indigo.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_indigo.png"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "ds_cobalt.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_cobalt.png"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "ds_basil.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_basil.png"
+        ]
+      }
+    },
+    {
+      "input": {
+        "names": [
+          "ds_ember.png"
+        ]
+      },
+      "output": {
+        "names": [
+          "ds_ember.png"
+        ]
+      }
+    }
+  ],
+  "function": "anki.media.name",
+  "generator": "tools/parity-oracle/anki/generate.py",
+  "generator_sha256": "0298e56ecf2f716be2e27633b48a21c613edc478b8c9de7c43d3e0c3beb795b6",
+  "inputs": "synthetic",
+  "kind": "engine",
+  "note": "answers the name the engine stores for each file name (F7); cases drawn under CPython 3.12.3.",
+  "registry": "tools/parity-oracle/anki/registry/spec_498.py",
+  "registry_sha256": "a0ee26a7384b62d141919a7a5c1c95918b6a1881492f76863b17befd33e654bf",
+  "schema": "phx.parity-golden.v1",
+  "seed": 498,
+  "source_commit": "dca72f352730abb4222389cc148e46387c17f97f"
+}

@@ -159,8 +159,8 @@ fn refused<S>(state: S, reason: Reason) -> Refused<S> {
 }
 
 /// The engine's statement that writes the open collection, whole, into the empty file its one
-/// parameter names (SPEC-364 R5).
-const BACKUP_SQL: &str = "VACUUM INTO ?";
+/// parameter names (SPEC-364 R5): a download's backup, and back up now's (SPEC-516 R4).
+pub(crate) const BACKUP_SQL: &str = "VACUUM INTO ?";
 
 /// The server's collection fetched into the file `path` by a private engine, and its ids. The
 /// path is refused first unless it may be filled.
@@ -182,8 +182,9 @@ fn fetched(dispatcher: &Dispatcher, auth: &SyncAuth, path: &Path) -> Result<IdSe
 }
 
 /// Refuses a path the core must not write a collection into: the collection the dispatcher has
-/// open, however it is spelled, or a file whose collection already holds a row (SPEC-364 R4, R5).
-fn fillable(dispatcher: &Dispatcher, path: &Path) -> Result<(), Reason> {
+/// open, however it is spelled, or a file whose collection already holds a row (SPEC-364 R4, R5;
+/// back up now's file too, SPEC-516 R4).
+pub(crate) fn fillable(dispatcher: &Dispatcher, path: &Path) -> Result<(), Reason> {
     if dispatcher.opens(path) {
         return Err(Reason::OpenCollection);
     }
@@ -201,7 +202,7 @@ fn holds_a_row(ids: &IdSets) -> bool {
 }
 
 /// The ids a private engine reads from the file `path`.
-fn read(dispatcher: &Dispatcher, path: &Path) -> Result<IdSets, Reason> {
+pub(crate) fn read(dispatcher: &Dispatcher, path: &Path) -> Result<IdSets, Reason> {
     let private = dispatcher.private(path).map_err(Reason::Engine)?;
     let ids = private.id_sets();
     let closed = private.close();

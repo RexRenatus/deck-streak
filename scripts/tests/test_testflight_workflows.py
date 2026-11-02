@@ -41,6 +41,7 @@ INTERNAL_PATHS = [
     "crates/ffi/**",
     "crates/engine-core/**",
     "crates/fsrs7/**",
+    "crates/collection/**",
     "ios/**",
     "Cargo.lock",
     "Cargo.toml",

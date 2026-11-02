@@ -4,13 +4,32 @@
 // another's answers. The fixture's deck `Review` holds four new cards in order: a text card, an
 // image card, a sound card and a speech card. Beside it, `parity/` is the parity collection
 // (SPEC-393 R15), whose deck `Parity` opens with a card that speaks its front through a TTS tag
-// asking for the voices `Absent_Voice` and `Desk_Parity_Voice`; and `sound-video/` is the sound
+// asking for the voices `Absent_Voice` and `Desk_Parity_Voice`; `sound-video/` is the sound
 // video collection (SPEC-410 R8), whose deck `Sound video` holds one card whose question's sound
-// tags name two videos and a sound.
+// tags name two videos and a sound; and `health/` is the card health collection (SPEC-507 R17),
+// whose deck `Health` holds one review card with 207 review rows, counters apart from its log and a
+// stored FSRS memory state.
 import Foundation
 import XCTest
 
 @testable import DeckStreak
+
+/// The review fixture's text card, which its builder fixes at this id and its deck shows first.
+private let textCardID: Int64 = 1_000_007
+
+/// A clock a test moves by hand; the session reads it from its own actor.
+final class HandClock: @unchecked Sendable {
+    private let lock = NSLock()
+    private var instant = Date(timeIntervalSince1970: 1_800_000_000)
+
+    func now() -> Date {
+        lock.withLock { instant }
+    }
+
+    func advance(_ seconds: TimeInterval) {
+        lock.withLock { instant = instant.addingTimeInterval(seconds) }
+    }
+}
 
 /// A fresh copy of the review fixture: a directory holding `collection.anki2` and its
 /// `collection.media` folder. A missing fixture fails the test; it never skips it.
@@ -130,5 +149,108 @@ final class ReviewSessionTests: XCTestCase {
         XCTAssertEqual(
             first.face.replay, [.sound(name: "beep.mp3", bytes: Data("beep-sound".utf8))],
             "A6: the first face replays its one sound")
+    }
+
+    /// SPEC-507 B5 (T-SS-17; R13, R14, R17): the card health collection's card, shown by its
+    /// deck, reads its record in the panel's sections through the app's session: its counters
+    /// beside the log's counts, its capped times, where it came from, and the newest 200 of its
+    /// 207 rows newest first, the hour's answer at 60 seconds and the negative time at 0.
+    func test_the_card_info_panel_shows_the_health_cards_record() async throws {
+        let session = try await shownHealthCard()
+        let sections = try await session.health()
+        let history = sections.last?.lines ?? []
+        XCTAssertEqual(
+            sections.map(\.title),
+            ["Counts and times", "Recall", "Where it came from", "Newest reviews"],
+            "B5: the panel's four sections, in order")
+        XCTAssertEqual(
+            sections.dropLast().map(\.lines),
+            [
+                [
+                    "Reviews: 8", "Lapses: 1",
+                    "Time answering, each answer at most 60 s: 130.0 s",
+                    "Mean answer time: 21.7 s", "Median answer time: 16.0 s",
+                    "The review log holds 6 answers and 1 lapses.",
+                ],
+                ["Not available in this build."],
+                ["Came through your collection, created 2023-11-14."],
+            ],
+            "B5: the counts and the capped times, the recall line, and where the card came from")
+        XCTAssertEqual(
+            Array(history.prefix(8)) + [String(history.count)],
+            [
+                "The newest 200 of 207 reviews.", "2023-11-14, Good, 30.0 s",
+                "2023-11-14, Good, 20.0 s", "2023-11-14, Set by hand, 0.0 s",
+                "2023-11-14, Again, 12.0 s", "2023-11-14, Good, 60.0 s",
+                "2023-11-14, Again, 0.0 s", "2023-11-14, Good, 8.0 s", "201",
+            ],
+            "B5: the newest 200 of 207 rows, newest first, each with its capped time")
+    }
+
+    /// SPEC-507 B5 (T-SS-18; R6, R13): the card stores an FSRS memory state, stability 12.34 days
+    /// and difficulty 5.6. This build's scheduler gives no readout, so the recall section reads the
+    /// absent state's line alone, and no line of the panel carries the stored state's figures.
+    func test_no_figure_of_the_stored_state_reaches_the_recall_lines() async throws {
+        let session = try await shownHealthCard()
+        let sections = try await session.health()
+        let recall = sections.first { $0.title == "Recall" }?.lines ?? []
+        let stored = sections.flatMap(\.lines).filter { $0.contains("12.3") || $0.contains("5.6") }
+        XCTAssertEqual(
+            [recall, stored, [String(sections.flatMap(\.lines).count)]],
+            [["Not available in this build."], [], ["209"]],
+            "B5: the recall section reads the absent state's line alone, no line carries the "
+                + "stored stability or difficulty, and the panel's 209 lines were read")
+    }
+
+    /// SPEC-507 B6 (R15): the review fixture's text card shown, the card info panel held open 30
+    /// of the 40 seconds before Good, the engine records 10 seconds, which the card's panel then
+    /// shows in its newest row; a clock that ran through the panel would send 40.
+    @MainActor
+    func test_the_card_info_panel_pauses_the_answer_clock() async throws {
+        let (engine, review) = try await openedFixture(freshFixture())
+        let clock = HandClock()
+        let session = ReviewSession(engine: engine, now: { clock.now() })
+        let panel = CardHealthModel(session: session)
+        try await session.choose(review)
+        _ = try await session.next(autoplay: false, installed: [])
+        clock.advance(5)
+        await panel.open()
+        let opened = [String(panel.showing), panel.sections.first?.lines.first ?? "(no line)"]
+        clock.advance(30)
+        await panel.close()
+        clock.advance(5)
+        _ = try await session.reveal(autoplay: false, installed: [])
+        try await session.answer(.good)
+        let after = try await engine.cardHealth(textCardID)
+        let newest = after.last?.lines.last ?? "(no row)"
+        XCTAssertEqual(
+            opened + [
+                String(panel.showing), after.first?.lines.first ?? "(no line)",
+                String(newest.hasSuffix(", Good, 10.0 s")),
+            ],
+            ["true", "Reviews: 0", "false", "Reviews: 1", "true"],
+            "B6: the panel opened on the text card and closed, and Good after 40 seconds, 30 of "
+                + "them in the panel, records 10 seconds: the newest row reads \(newest)")
+    }
+
+    // MARK: - Steps
+
+    /// A session over a fresh copy of the card health collection, `health/` beside the review
+    /// fixture, with its deck `Health` chosen and its one card shown.
+    private func shownHealthCard() async throws -> ReviewSession {
+        let directory = try freshFixture().appending(path: "health", directoryHint: .isDirectory)
+        let engine = EngineSession()
+        try await engine.open(
+            arguments: ["DeckStreak", "-DSCollectionDirectory", directory.path(percentEncoded: false)])
+        let decks = try await engine.decks()
+        let health = try XCTUnwrap(
+            decks.first { $0.name == "Health" },
+            "the card health collection's deck Health is listed; the decks read "
+                + "\(decks.map(\.name))")
+        let session = ReviewSession(engine: engine)
+        try await session.choose(health)
+        let step = try await session.next(autoplay: false, installed: [])
+        XCTAssertEqual(step.phase, .question, "the deck's queue shows its one card")
+        return session
     }
 }

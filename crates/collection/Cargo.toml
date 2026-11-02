@@ -1,0 +1,23 @@
+[package]
+name = "deck-streak-collection"
+description = "DeckStreak's collection store: one file per user, its one opener, its schema and migrations, its read port and its data-rights port. See docs/CONTEXT-MAP.md."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# ADR-530 D1: the store's driver, with SQLite's own source bundled.
+rusqlite.workspace = true
+# ADR-530 D11: the data-rights port's export is JSON; the census reads privacy.json with it too.
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+# ADR-020: a temporary store in tests only.
+tempfile.workspace = true

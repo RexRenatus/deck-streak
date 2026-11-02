@@ -1,5 +1,5 @@
 //! The core's table, judged over every pair a transport can send (SPEC-345 A1, A2; SPEC-365 A1;
-//! SPEC-371 A1, A2).
+//! SPEC-371 A1, A2; SPEC-515 A1).
 //!
 //! The expected sets are literals written from the SPEC's measurement (M1, M4, M8), never read
 //! from the core, so a row the table loses, gains, renumbers or marks for the wrong transport fails
@@ -21,11 +21,15 @@ use deck_streak_engine_core::table::{
 
 /// The pairs the native adapter's allow-list holds (SPEC-345 M1), with the review screen's three
 /// (SPEC-348 R1), less `AnswerCard`, which only an owner's press records (SPEC-365 R4, R6), and
-/// less `Undo`, which only an owner's gesture runs (SPEC-371 R2), and with the review's bury and
-/// flag, which the native review runs as the web's does (SPEC-358 R1).
-const NATIVE: [(u32, u32); 10] = [
+/// less `Undo`, which only an owner's gesture runs (SPEC-371 R2), with the review's bury and
+/// flag, which the native review runs as the web's does (SPEC-358 R1), with the normal sync,
+/// which the native client syncs with as the web client does (SPEC-503 R1), and with the undo
+/// status, which the native review reads before and while it undoes (SPEC-515 R1).
+const NATIVE: [(u32, u32); 12] = [
     (1, 3),
+    (1, 5),
     (3, 0),
+    (3, 7),
     (5, 4),
     (7, 4),
     (7, 13),
@@ -209,8 +213,9 @@ fn each_exempt_write_names_its_engine_call_and_its_target_kind() {
 
 /// The review's eight pairs (SPEC-350 R1, M10), each with the engine's name for it and what the
 /// native transport decides for it, written from the engine's protos at the pin, never read from
-/// the core: two rows the web alone may call, and six both may (the card render, the three the
-/// native review screen also calls, SPEC-348 R1, and its bury and flag, SPEC-358 R1).
+/// the core: one row the web alone may call, and seven both may (the card render, the three the
+/// native review screen also calls, SPEC-348 R1, its bury and flag, SPEC-358 R1, and the undo
+/// status, SPEC-515 R1).
 const REVIEW: [(u32, u32, &str, Decision); 8] = [
     (7, 4, "DecksService.DeckTree", Decision::Admit),
     (7, 22, "DecksService.SetCurrentDeck", Decision::Admit),
@@ -232,12 +237,7 @@ const REVIEW: [(u32, u32, &str, Decision); 8] = [
         "SchedulerService.DescribeNextStates",
         Decision::Admit,
     ),
-    (
-        3,
-        7,
-        "CollectionService.GetUndoStatus",
-        Decision::NotAllowed,
-    ),
+    (3, 7, "CollectionService.GetUndoStatus", Decision::Admit),
     (
         13,
         14,
@@ -289,10 +289,10 @@ fn the_web_column_admits_the_sync_login_and_the_normal_sync() {
         decided,
         vec![
             ((1, 3), Decision::Admit, Decision::Admit),
-            ((1, 5), Decision::NotAllowed, Decision::Admit),
+            ((1, 5), Decision::Admit, Decision::Admit),
             ((1, 6), Decision::NeedsGesture, Decision::NeedsGesture),
         ],
-        "(native, web): both admit the login, the normal sync is the web's alone, and the one-way \
+        "(native, web): both admit the login and the normal sync (SPEC-503 R1), and the one-way \
          sync needs a gesture on both"
     );
     let one_way: Vec<(u32, u32, &str, TargetKind)> = EXEMPT
