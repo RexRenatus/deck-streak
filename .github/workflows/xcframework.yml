@@ -927,6 +927,41 @@ jobs:
         id: app-tests
         run: |
           "$RUNNER_TEMP/xcodegen/bin/xcodegen" generate --spec ios/app.yml
+          # The runner's memory, swap, load and booted simulators at this step's start and end, and,
+          # when its xcodebuild fails, the iPhone's unified log from the xcodebuild's start to the
+          # failure, each reading in a file of its own under runner-state/ that ends with its status
+          # (SPEC-591 R13). The readings run only as an if condition, where errexit is ignored, and
+          # the EXIT trap never exits, so the step's status stays the one its own commands set.
+          reading() {
+            out="$REPORT/runner-state/$1"
+            shift
+            {
+              echo "at $(date +%s): $*"
+              "$@"
+              echo "status $?"
+            } > "$out" 2>&1
+          }
+          runner_state() {
+            mkdir -p "$REPORT/runner-state"
+            reading "app-$1-vm_stat.txt" vm_stat
+            reading "app-$1-swapusage.txt" sysctl vm.swapusage
+            reading "app-$1-uptime.txt" uptime
+            reading "app-$1-booted.txt" xcrun simctl list devices booted
+          }
+          iphone_log() {
+            predicate='process == "testmanagerd" OR process == "runningboardd" OR process BEGINSWITH "DeckStreak" OR subsystem BEGINSWITH[c] "com.apple.accessibility" OR eventMessage CONTAINS[c] "deckstreak"'
+            iphone=$(xcrun simctl list devices booted | grep -F "    $IPHONE_SIM (" | grep -E -o '[0-9A-F]{8}(-[0-9A-F]{4}){3}-[0-9A-F]{12}')
+            reading "app-iphone-log.txt" xcrun simctl spawn "$iphone" log show --last "$(( $(date +%s) - started ))" --predicate "$predicate"
+          }
+          on_exit() {
+            step_status=$?
+            if runner_state end; then :; fi
+            if [ "$step_status" -ne 0 ] && [ -n "${started:-}" ]; then
+              if iphone_log; then :; fi
+            fi
+          }
+          trap on_exit EXIT
+          if runner_state start; then :; fi
           started=$(date +%s)
           xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -configuration Debug \
             -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" \
@@ -947,6 +982,41 @@ jobs:
         id: review-tests
         if: ${{ !cancelled() && steps.app-tests.outcome != 'skipped' }}
         run: |
+          # The runner's memory, swap, load and booted simulators at this step's start and end, and,
+          # when its xcodebuild fails, the iPhone's unified log from the xcodebuild's start to the
+          # failure, each reading in a file of its own under runner-state/ that ends with its status
+          # (SPEC-591 R13). The readings run only as an if condition, where errexit is ignored, and
+          # the EXIT trap never exits, so the step's status stays the one its own commands set.
+          reading() {
+            out="$REPORT/runner-state/$1"
+            shift
+            {
+              echo "at $(date +%s): $*"
+              "$@"
+              echo "status $?"
+            } > "$out" 2>&1
+          }
+          runner_state() {
+            mkdir -p "$REPORT/runner-state"
+            reading "review-$1-vm_stat.txt" vm_stat
+            reading "review-$1-swapusage.txt" sysctl vm.swapusage
+            reading "review-$1-uptime.txt" uptime
+            reading "review-$1-booted.txt" xcrun simctl list devices booted
+          }
+          iphone_log() {
+            predicate='process == "testmanagerd" OR process == "runningboardd" OR process BEGINSWITH "DeckStreak" OR subsystem BEGINSWITH[c] "com.apple.accessibility" OR eventMessage CONTAINS[c] "deckstreak"'
+            iphone=$(xcrun simctl list devices booted | grep -F "    $IPHONE_SIM (" | grep -E -o '[0-9A-F]{8}(-[0-9A-F]{4}){3}-[0-9A-F]{12}')
+            reading "review-iphone-log.txt" xcrun simctl spawn "$iphone" log show --last "$(( $(date +%s) - started ))" --predicate "$predicate"
+          }
+          on_exit() {
+            step_status=$?
+            if runner_state end; then :; fi
+            if [ "$step_status" -ne 0 ] && [ -n "${started:-}" ]; then
+              if iphone_log; then :; fi
+            fi
+          }
+          trap on_exit EXIT
+          if runner_state start; then :; fi
           cp -R engine-artifact/review-fixture "$RUNNER_TEMP/review-fixture"
           started=$(date +%s)
           TEST_RUNNER_DS_REVIEW_FIXTURE="$RUNNER_TEMP/review-fixture" xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -configuration Debug \
@@ -967,6 +1037,41 @@ jobs:
         id: review-actions-tests
         if: ${{ !cancelled() && steps.app-tests.outcome != 'skipped' }}
         run: |
+          # The runner's memory, swap, load and booted simulators at this step's start and end, and,
+          # when its xcodebuild fails, the iPhone's unified log from the xcodebuild's start to the
+          # failure, each reading in a file of its own under runner-state/ that ends with its status
+          # (SPEC-591 R13). The readings run only as an if condition, where errexit is ignored, and
+          # the EXIT trap never exits, so the step's status stays the one its own commands set.
+          reading() {
+            out="$REPORT/runner-state/$1"
+            shift
+            {
+              echo "at $(date +%s): $*"
+              "$@"
+              echo "status $?"
+            } > "$out" 2>&1
+          }
+          runner_state() {
+            mkdir -p "$REPORT/runner-state"
+            reading "review-actions-$1-vm_stat.txt" vm_stat
+            reading "review-actions-$1-swapusage.txt" sysctl vm.swapusage
+            reading "review-actions-$1-uptime.txt" uptime
+            reading "review-actions-$1-booted.txt" xcrun simctl list devices booted
+          }
+          iphone_log() {
+            predicate='process == "testmanagerd" OR process == "runningboardd" OR process BEGINSWITH "DeckStreak" OR subsystem BEGINSWITH[c] "com.apple.accessibility" OR eventMessage CONTAINS[c] "deckstreak"'
+            iphone=$(xcrun simctl list devices booted | grep -F "    $IPHONE_SIM (" | grep -E -o '[0-9A-F]{8}(-[0-9A-F]{4}){3}-[0-9A-F]{12}')
+            reading "review-actions-iphone-log.txt" xcrun simctl spawn "$iphone" log show --last "$(( $(date +%s) - started ))" --predicate "$predicate"
+          }
+          on_exit() {
+            step_status=$?
+            if runner_state end; then :; fi
+            if [ "$step_status" -ne 0 ] && [ -n "${started:-}" ]; then
+              if iphone_log; then :; fi
+            fi
+          }
+          trap on_exit EXIT
+          if runner_state start; then :; fi
           cp -R engine-artifact/review-fixture "$RUNNER_TEMP/review-actions-fixture"
           started=$(date +%s)
           TEST_RUNNER_DS_REVIEW_FIXTURE="$RUNNER_TEMP/review-actions-fixture" xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -configuration Debug \
