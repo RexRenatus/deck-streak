@@ -1,9 +1,9 @@
-"""The Ember palette's six role values and the app's colour sets that copy them (SPEC-578 A4 to A8;
+"""The Tide palette's six role values and the app's colour sets that copy them (SPEC-578 A4 to A8;
 ADR-597 D2, D3).
 
-The token file holds the six values once, as `modes.ember`: a background, an ink and an accent for a
-dark and a light mode, each an alias of a raw colour in `ref.ember`. The iPhone and iPad app copies
-them as three colour sets, `EmberBackground`, `EmberInk` and `EmberAccent`, each with a universal
+The token file holds the six values once, as `modes.tide`: a background, an ink and an accent for a
+dark and a light mode, each an alias of a raw colour in `ref.tide`. The iPhone and iPad app copies
+them as three colour sets, `TideBackground`, `TideInk` and `TideAccent`, each with a universal
 entry that carries the light value and an entry with the `luminosity` appearance `dark` that carries
 the dark value. `findings(root)` reads both and returns one `"<reason>: <path>: <detail>"` line for
 each role missing from the token file, colour set or entry missing, value that differs from its
@@ -28,7 +28,7 @@ STYLESHEET = Path("web/app/src/routes/layout.css")
 SWIFT_SOURCES = Path("ios/App/Sources")
 MODES = ("dark", "light")
 ROLES = ("background", "ink", "accent")
-SETS = {"EmberBackground": "background", "EmberInk": "ink", "EmberAccent": "accent"}
+SETS = {"TideBackground": "background", "TideInk": "ink", "TideAccent": "accent"}
 ALIAS = re.compile(r"^\{([\w.-]+)\}$")
 HEX = re.compile(r"^#[0-9a-f]{6}$")
 COMPONENT = re.compile(r"^0x[0-9A-F]{2}$")
@@ -78,7 +78,7 @@ def token_values(root):
     values = {}
     for mode in MODES:
         for role in ROLES:
-            where = f"modes.ember.{mode}.{role}"
+            where = f"modes.tide.{mode}.{role}"
             token = dig(document, where)
             found = hex_of(document, token.get("$value")) if isinstance(token, dict) else None
             if found is None:
@@ -165,7 +165,7 @@ def literal_findings(root):
 
 
 def findings(root):
-    """Every fault of the Ember copies under `root`, as `"<reason>: <path>: <detail>"` strings."""
+    """Every fault of the Tide copies under `root`, as `"<reason>: <path>: <detail>"` strings."""
     values, problems = token_values(root)
     entries, set_problems = set_entries(root)
     problems += set_problems
@@ -181,8 +181,8 @@ def findings(root):
 
 # The complete planted set, spelt here and never copied from the tree: four raw colours, the six
 # roles that alias them, and the three colour sets that copy the roles.
-NEUTRAL_50, NEUTRAL_950 = (0xFA, 0xF6, 0xF2), (0x15, 0x12, 0x10)
-ACCENT_400, ACCENT_700 = (0xFF, 0x9A, 0x3C), (0xA5, 0x4D, 0x06)
+NEUTRAL_50, NEUTRAL_950 = (0xF4, 0xF7, 0xFA), (0x0F, 0x16, 0x1D)
+ACCENT_400, ACCENT_700 = (0x34, 0xC6, 0xC0), (0x0B, 0x6A, 0x67)
 
 
 def raw_colour(rgb):
@@ -198,23 +198,23 @@ def raw_colour(rgb):
 def planted_tokens():
     return {
         "ref": {
-            "ember": {
+            "tide": {
                 "neutral": {"50": raw_colour(NEUTRAL_50), "950": raw_colour(NEUTRAL_950)},
                 "accent": {"400": raw_colour(ACCENT_400), "700": raw_colour(ACCENT_700)},
             }
         },
         "modes": {
             "$type": "color",
-            "ember": {
+            "tide": {
                 "dark": {
-                    "background": {"$value": "{ref.ember.neutral.950}"},
-                    "ink": {"$value": "{ref.ember.neutral.50}"},
-                    "accent": {"$value": "{ref.ember.accent.400}"},
+                    "background": {"$value": "{ref.tide.neutral.950}"},
+                    "ink": {"$value": "{ref.tide.neutral.50}"},
+                    "accent": {"$value": "{ref.tide.accent.400}"},
                 },
                 "light": {
-                    "background": {"$value": "{ref.ember.neutral.50}"},
-                    "ink": {"$value": "{ref.ember.neutral.950}"},
-                    "accent": {"$value": "{ref.ember.accent.700}"},
+                    "background": {"$value": "{ref.tide.neutral.50}"},
+                    "ink": {"$value": "{ref.tide.neutral.950}"},
+                    "accent": {"$value": "{ref.tide.accent.700}"},
                 },
             },
         },
@@ -241,9 +241,9 @@ def colour_entry(rgb, dark):
 
 def planted_sets():
     pairs = {
-        "EmberBackground": (NEUTRAL_50, NEUTRAL_950),
-        "EmberInk": (NEUTRAL_950, NEUTRAL_50),
-        "EmberAccent": (ACCENT_700, ACCENT_400),
+        "TideBackground": (NEUTRAL_50, NEUTRAL_950),
+        "TideInk": (NEUTRAL_950, NEUTRAL_50),
+        "TideAccent": (ACCENT_700, ACCENT_400),
     }
     return {
         name: {
@@ -280,7 +280,7 @@ class TheAppCopiesTheTokens(unittest.TestCase):
     def test_each_colour_set_holds_its_tokens_values(self):
         """A4: the repository's three colour sets hold their tokens' light and dark values."""
         values, _ = token_values(REPO)
-        examined("Ember roles", values)
+        examined("Tide roles", values)
         self.assertEqual(len(values), 6, "the token file holds six role values")
         entries, _ = set_entries(REPO)
         examined("colour-set entries", entries)
@@ -298,30 +298,30 @@ class TheAppCopiesTheTokens(unittest.TestCase):
             self.assertEqual(findings(tmp), [], "the control: the complete set reads green")
 
             off = planted_sets()
-            off["EmberInk"]["colors"][1]["color"]["components"]["red"] = "0xFB"
+            off["TideInk"]["colors"][1]["color"]["components"]["red"] = "0xF5"
             plant(tmp, sets=off)
             found = findings(tmp)
             self.assertEqual(len(found), 1, found)
             self.assertTrue(found[0].startswith("value-differs: "), found)
-            self.assertIn("EmberInk", found[0])
+            self.assertIn("TideInk", found[0])
             self.assertIn("dark", found[0])
 
             no_dark = planted_sets()
-            del no_dark["EmberInk"]["colors"][1]
+            del no_dark["TideInk"]["colors"][1]
             plant(tmp, sets=no_dark)
             found = findings(tmp)
             self.assertEqual(len(found), 1, found)
             self.assertTrue(found[0].startswith("entry-missing: "), found)
-            self.assertIn("EmberInk", found[0])
+            self.assertIn("TideInk", found[0])
             self.assertIn("dark", found[0])
 
             no_light = planted_sets()
-            del no_light["EmberAccent"]["colors"][0]
+            del no_light["TideAccent"]["colors"][0]
             plant(tmp, sets=no_light)
             found = findings(tmp)
             self.assertEqual(len(found), 1, found)
             self.assertTrue(found[0].startswith("entry-missing: "), found)
-            self.assertIn("EmberAccent", found[0])
+            self.assertIn("TideAccent", found[0])
             self.assertIn("light", found[0])
 
     def test_a_role_missing_from_either_mode_is_refused(self):
@@ -329,7 +329,7 @@ class TheAppCopiesTheTokens(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             for mode, role in (("light", "accent"), ("dark", "ink")):
                 tokens = planted_tokens()
-                del tokens["modes"]["ember"][mode][role]
+                del tokens["modes"]["tide"][mode][role]
                 plant(tmp, tokens=tokens)
                 found = findings(tmp)
                 self.assertEqual(len(found), 1, found)
@@ -375,7 +375,7 @@ class TheAppCopiesTheTokens(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             plant(tmp)
             values, _ = token_values(tmp)
-            examined("Ember roles", values)
+            examined("Tide roles", values)
             entries, _ = set_entries(tmp)
             examined("colour-set entries", entries)
             examined("files the literal scan reads", literal_files(tmp))
