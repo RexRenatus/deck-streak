@@ -33,6 +33,14 @@ class FakeEngine implements BackupsEngine {
     this.calls.push(`export_backup ${id}`);
     return this.bytes;
   }
+
+  /** What the web engine's back up now answers: the new backup's id, as JSON (SPEC-516 R4). */
+  made = JSON.stringify({ id: 'backup-3' });
+
+  async back_up_now() {
+    this.calls.push('back_up_now');
+    return this.made;
+  }
 }
 
 /** Three backups as the web engine answers them, newest first, and one retention removed. */
@@ -175,5 +183,46 @@ describe("the Worker's backups", () => {
       (error: unknown) => (error instanceof EngineError ? [error.code, error.message] : String(error))
     );
     expect(refused).toEqual(['engine-failed', 'no listed backup is named backup-9']);
+  });
+});
+
+// SPEC-516 R4, B4; ADR-534 D3. Back up now: the Worker asks the web engine's one export, which makes
+// a new Backup-kind pool file through the core and answers its id; the Worker carries that id alone
+// to the page, and the page lists again for the rest.
+describe("the Worker's back up now", () => {
+  it('back up now answers the id of the backup the web engine made, and lists nothing itself', async () => {
+    const engine = new FakeEngine();
+    expect(await new Backups(async () => engine).backUpNow()).toBe('backup-3');
+    engine.made = JSON.stringify({ id: 'backup-12' });
+    expect(await new Backups(async () => engine).backUpNow()).toBe('backup-12');
+    // no retention and no list of its own: the page lists again, which runs retention first
+    expect(engine.calls).toEqual(['back_up_now', 'back_up_now']);
+  });
+
+  it('back up now reaches the engine through the session, and its reply is copied, not moved', async () => {
+    const engine = new FakeEngine();
+    const { client, channel } = await opened(new Backups(async () => engine));
+    expect(await client.backUpNow()).toBe('backup-3');
+    expect(engine.calls).toEqual(['back_up_now']);
+    expect(channel.posted.map(([, transfer]) => transfer)).toEqual([[], []]);
+  });
+
+  it("back up now refused by the engine answers engine-failed with its reason, and a Worker with no backups refuses it by name", async () => {
+    const engine = new FakeEngine();
+    engine.back_up_now = async () => {
+      throw new Error('backup-refused: holds-rows');
+    };
+    const refusal = (sent: Promise<unknown>) =>
+      sent.then(
+        () => null,
+        (error: unknown) => (error instanceof EngineError ? [error.code, error.message] : String(error))
+      );
+    const { client } = await opened(new Backups(async () => engine));
+    expect(await refusal(client.backUpNow())).toEqual(['engine-failed', 'backup-refused: holds-rows']);
+    const bare = await opened(undefined);
+    expect(await refusal(bare.client.backUpNow())).toEqual([
+      'engine-failed',
+      'this Worker keeps no backups for backup-now'
+    ]);
   });
 });

@@ -1,0 +1,54 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S58401-THE-DECLARED-WINDOW-IS-THREE-DAYS-AGAIN",
+        "privacy.json",
+        "  \"backups\": {\"config\": \"deploy/litestream.yml\", \"retention\": \"P7D\"},",
+        "  \"backups\": {\"config\": \"deploy/litestream.yml\", \"retention\": \"P3D\"},",
+        "the inventory declares the seven-day backups window; read as three days again, the window the policy states would not be the one declared (SPEC-584 R1, A1)",
+        "test_backup_window.TheBackupWindow.test_the_declared_backup_window_is_seven_days"
+      ],
+      [
+        "S58402-THE-ARCHIVES-STAY-THIRTY-DAYS-AGAIN",
+        "PRIVACY.md",
+        "  within 7 days (`P7D`) of being written, by a rule the owner sets on the bucket and the cutover",
+        "  30 days (`P30D`) after it is written, by a rule the owner sets on the bucket and the cutover",
+        "the policy states the offsite archives period the bucket rule keeps; a thirty-day period again would outlive every other backup copy (SPEC-584 R5, A2)",
+        "test_privacy_policy.ThePolicyDisclosesWhatAnEraseLeaves.test_the_offsite_snapshot_has_a_stated_period"
+      ],
+      [
+        "S58403-THE-RUNBOOK-CHECKS-THIRTY-DAYS-AGAIN",
+        "docs/runbooks/sync-server-cutover.md",
+        "  the `P7D` period `PRIVACY.md` states, and the owner checks the rule before the window (the",
+        "  the `P30D` period `PRIVACY.md` states, and the owner checks the rule before the window (the",
+        "the runbook checks the bucket rule against the period the policy states; checking thirty days would pass a bucket that keeps archives past the window (SPEC-584 R5, A3)",
+        "test_sync_server_runbook.TheCutoverRunbook.test_the_runbook_names_the_hash_command_and_the_bucket_rule"
+      ],
+      [
+        "S58404-THE-DISK-SNAPSHOTS-GO-UNDISCLOSED",
+        "PRIVACY.md",
+        "- **Disk snapshots of the service's data disk**, when the service keeps them, are taken once a",
+        "- **Whole-disk copies of the service's data disk**, when the service keeps them, are taken once a",
+        "the policy names the disk snapshots as a backup copy with the window; renamed, no bullet discloses them (SPEC-584 R3, A4)",
+        "test_backup_window.TheBackupWindow.test_the_policy_discloses_the_disk_snapshots_and_the_second_region_copy"
+      ],
+      [
+        "S58405-AN-AMENDMENT-IS-NOT-AN-AMENDMENT",
+        "docs/decisions/ADR-351-the-sync-family-runs-as-its-own-user-its-archive-is-sealed-and-dated-and-its-route-is-logged-and-bounded.md",
+        "## Amendment (SPEC-584): the offsite archives are gone within seven days",
+        "## Note (SPEC-584): the offsite archives are gone within seven days",
+        "a record that states an older period ends with its SPEC-584 amendment; under another heading the census cannot tell it was amended (SPEC-584 R6, A5)",
+        "test_backup_window.TheBackupWindow.test_every_record_that_states_an_older_period_carries_its_amendment"
+      ],
+      [
+        "S58406-THE-PAGE-CLAIMS-CRYPTO-ERASE-BEFORE-THE-KEYS",
+        "PRIVACY.md",
+        "  the replica within 72 hours.",
+        "  the replica within 72 hours. An erase destroys the key your data is encrypted with first.",
+        "the page claims crypto-erase only once the key table exists; a claim with no key behind it would promise a protection no code gives (SPEC-584 R7, A6)",
+        "test_backup_window.TheBackupWindow.test_the_policy_claims_crypto_erase_exactly_when_the_keys_exist"
+      ]
+    ]
+  }
+}

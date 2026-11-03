@@ -226,3 +226,16 @@ argument while the leg is owed, reads VOID by name, so `ci` cannot pass with it.
 the argument while the leg is not owed prints nothing, so every earlier output of `legs` stays
 byte for byte. Every other result that is not `success` still fails `ci`. R8's rule is unchanged
 in kind: a skip is admitted only from a leg the listing can give nothing, once for each such leg.
+
+## 11. Amendment: on the release run `ci` admits every mutation result by value (SPEC-500)
+
+Made after the delivery, insert-only: every earlier byte is kept in order. R8 and section 10 hold
+on every run but one. On the release pull request's run, which `base-is-dev`'s `release` output
+names by `release_run`'s predicate (SPEC-500 R1), `ci` prints each of the 8 mutation jobs' results
+and admits, by value, one non-success result for each mutation job whose result is not `success`,
+which is R8's skip counter generalised from `skipped` to every value (ADR-518 D2). Every other need
+must still succeed, `mutation-verdict` is one of the 8, and the legs keep their conditions, so a
+skipped leg is still judged by `legs` and reported. When the output reads `false`, or is empty
+because `base-is-dev` refused, R8's rule runs as it did, its lines unchanged: A6's scenarios keep
+their expectations with the output `false`, and SPEC-500 A2 holds both rules over every need,
+every result and every output.

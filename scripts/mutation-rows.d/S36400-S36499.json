@@ -14,8 +14,8 @@
         "S36402-THE-NORMAL-SYNC-IS-THE-WEBS",
         "engine-core",
         "src/table.rs",
-        "        name: \"BackendSyncService.SyncCollection\",\n        native: false,\n        web: true,",
-        "        name: \"BackendSyncService.SyncCollection\",\n        native: false,\n        web: false,",
+        "        name: \"BackendSyncService.SyncCollection\",\n        native: true,\n        web: true,",
+        "        name: \"BackendSyncService.SyncCollection\",\n        native: true,\n        web: false,",
         "table::the_web_column_admits_the_sync_login_and_the_normal_sync",
         "the normal sync is admitted on the web transport; refused there, the web client could never sync its reviews (SPEC-364 A1)"
       ],

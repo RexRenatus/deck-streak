@@ -249,3 +249,13 @@ packs' and neutral names for their repository, binary and checkout under the pub
 
 Amendment (2026-09-28): passages describing another service's operations were replaced with the
 pattern DeckStreak's units carry under the public-text rule (ADR-059).
+
+## Amendment (SPEC-582): the templates carry no Telegram surface
+
+The templates no longer ship the bot's unit, the owner's `/sync` doorbell, the held flush's
+credentials drop-in or the second route's unit and timer, and the edge's `frame-ancestors` is
+`'none'` (ADR-601 D2). A4's test is renamed
+`test_the_caddy_policy_admits_no_framing_and_sends_the_security_headers`, and its command is now
+`python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k the_caddy_policy_admits_no_framing_and_sends_the_security_headers`
+(SPEC-582 A12). Every statement above that names the bot's unit or Telegram's web client as part
+of the templates is superseded by ADR-601's table.

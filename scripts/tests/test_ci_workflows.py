@@ -27,6 +27,7 @@ from pathlib import Path
 from unittest import mock
 
 from _support import REPO, examined
+from test_mutation_verdict import verdict_module
 from test_one_static_library import umbrella_closure
 
 WORKFLOWS = REPO / ".github" / "workflows"
@@ -1173,11 +1174,14 @@ class TheRequiredCiCheckIsThePullRequestsOwn(unittest.TestCase):
 
 
 def run_base_is_dev(context):
-    """Run base-is-dev's own step from ci.yml under `bash -e`, its env taken from `context`."""
+    """Run base-is-dev's own step from ci.yml under `bash -e`, its env taken from `context`. The
+    script is the job's first `run: |` block, read up to the next step, so the release step after
+    it (SPEC-500 R1) never runs as part of it."""
     ci = workflow_file_text(WORKFLOWS / "ci.yml")
     job = re.search(r"(?ms)^  base-is-dev:\n(.*?)(?=^  [a-z-]+:\n|\Z)", ci).group(1)
     names = re.findall(r"(?m)^          ([A-Z_]+): \$\{\{ ([a-z_.]+) \}\}$", job)
-    script = textwrap.dedent(re.search(r"(?ms)^        run: \|\n(.*?)(?=^\S|\Z)", job).group(1))
+    block = re.search(r"(?ms)^        run: \|\n(.*?)(?=^      - |\Z)", job)
+    script = textwrap.dedent(block.group(1))
     env = {"PATH": os.environ["PATH"]}
     for name, expression in names:
         if expression not in context:
@@ -1204,6 +1208,113 @@ class OnlyThisRepositorysDevReachesMain(unittest.TestCase):
         done = run_base_is_dev(dict(INTO_MAIN, **{"github.head_ref": "feature/probe"}))
         self.assertEqual(done.returncode, 1, done.stdout)
         self.assertIn("feature/probe", done.stdout)
+
+
+def run_release_step(context, output):
+    """Run base-is-dev's `id: release` step from ci.yml under `bash -e`, its env taken from
+    `context` and GITHUB_OUTPUT naming `output`; its script is read as run_base_is_dev reads the
+    first step's, up to the next step (SPEC-500 R1)."""
+    ci = workflow_file_text(WORKFLOWS / "ci.yml")
+    job = re.search(r"(?ms)^  base-is-dev:\n(.*?)(?=^  [a-z-]+:\n|\Z)", ci).group(1)
+    found = [
+        step
+        for step in re.split(r"(?m)^      - ", job)[1:]
+        if re.search(r"(?m)^        id: release$", step)
+    ]
+    if len(found) != 1:
+        raise AssertionError(
+            f"base-is-dev holds {len(found)} steps with `id: release`, so no step writes the "
+            "release output"
+        )
+    names = re.findall(r"(?m)^          ([A-Z_]+): \$\{\{ ([a-z_.]+) \}\}$", found[0])
+    block = re.search(r"(?ms)^        run: \|\n(.*?)(?=^      - |\Z)", found[0])
+    if block is None:
+        raise AssertionError("base-is-dev's release step runs no script block")
+    env = {"PATH": os.environ["PATH"], "GITHUB_OUTPUT": str(output)}
+    for name, expression in names:
+        if expression not in context:
+            raise AssertionError(f"the release step reads {expression}, which no scenario models")
+        env[name] = context[expression]
+    return subprocess.run(
+        ["bash", "-e", "-c", textwrap.dedent(block.group(1))],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+class TheReleaseRunIsNamedInBaseIsDev(unittest.TestCase):
+    def test_the_release_output_is_release_run(self):
+        """SPEC-500 R1: base-is-dev's second step writes `release=true` to GITHUB_OUTPUT exactly
+        where the plan's fail-closed predicate, `release_run`, holds, and `release=false` in every
+        other context: event, base, head, head repository and repository, each with its empty
+        value, 108 contexts, the one release run among them."""
+        release_run = verdict_module().release_run
+        contexts = [
+            (event, base, head, head_repo, repo)
+            for event in ("pull_request", "push")
+            for base in ("main", "dev", "")
+            for head in ("dev", "feature/x", "")
+            for head_repo in (THIS_REPOSITORY, "someone/fork", "")
+            for repo in (THIS_REPOSITORY, "")
+        ]
+        self.assertEqual(len(contexts), 108)
+        released = [inputs for inputs in contexts if release_run(*inputs)]
+        self.assertEqual(released, [tuple(INTO_MAIN.values())])
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        for index, inputs in enumerate(examined("release contexts", contexts)):
+            output = Path(scratch.name) / f"output-{index}"
+            context = dict(zip(INTO_MAIN, inputs))
+            done = run_release_step(context, output)
+            where = f"{inputs}: {done.stdout}{done.stderr}"
+            self.assertEqual(done.returncode, 0, where)
+            self.assertTrue(output.is_file(), f"{inputs}: the step wrote no output")
+            expected = "true" if release_run(*inputs) else "false"
+            self.assertEqual(output.read_text(encoding="utf-8"), f"release={expected}\n", where)
+
+    def test_the_job_output_reads_the_step_that_writes_release(self):
+        """SPEC-500 R1: `ci` reads the release run through base-is-dev's job output, so the wiring
+        is held closed: the job's `outputs` map holds exactly one key, `release`; its value is
+        exactly `${{ steps.<id>.outputs.release }}` for one step id; exactly one step of the job
+        carries that id; and that step's script writes `release=` to GITHUB_OUTPUT, on the one line
+        of it that names GITHUB_OUTPUT. Any other key, value, id or write is refused."""
+        job = load("ci.yml")["jobs"]["base-is-dev"]
+        outputs = job.get("outputs")
+        self.assertIsInstance(outputs, dict, "base-is-dev declares no outputs map")
+        self.assertEqual(
+            examined("base-is-dev outputs", outputs),
+            ["release"],
+            "base-is-dev's outputs hold exactly the key release",
+        )
+        value = outputs["release"]
+        wired = re.fullmatch(
+            r"\$\{\{ steps\.([A-Za-z_][A-Za-z0-9_-]*)\.outputs\.release \}\}",
+            value if isinstance(value, str) else "",
+        )
+        self.assertIsNotNone(
+            wired, f"base-is-dev's release output reads {value!r}, not a step's release output"
+        )
+        steps = examined("base-is-dev steps", job["steps"])
+        named = [step for step in steps if isinstance(step, dict) and step.get("id") == wired[1]]
+        self.assertEqual(
+            len(named),
+            1,
+            f"base-is-dev's release output reads step {wired[1]!r}, and {len(named)} of its "
+            "steps carry that id",
+        )
+        script = named[0].get("run")
+        self.assertIsInstance(script, str, f"step {wired[1]!r} runs no script")
+        writes = [line.strip() for line in script.splitlines() if "GITHUB_OUTPUT" in line]
+        self.assertEqual(
+            len(writes), 1, f"step {wired[1]!r} names GITHUB_OUTPUT on {len(writes)} lines"
+        )
+        self.assertRegex(
+            writes[0],
+            r'^echo "release=[^"]*" >> "\$GITHUB_OUTPUT"$',
+            f"step {wired[1]!r} does not write release= to GITHUB_OUTPUT",
+        )
 
 
 class TheReaderReadsOnlyItsNamedForms(unittest.TestCase):
@@ -2832,13 +2943,14 @@ HARNESS_TIMEOUT_MINUTES = range(150, 181)
 # after 60:26, so the band starts at one and a half times that run, rounded up to the minute, and
 # ends at twice it, rounded down to the ten, so a hung test still ends within two hours.
 RELEASE_TIMEOUT_MINUTES = range(91, 121)
-# The two web mutation legs' timeout (SPEC-379 R1, R2): the weekly battery's `web` job and the
-# pull request's `mutation-web` job each run StrykerJS over up to the whole Mini App. The band
-# starts at the bound its rule gives, the worst measured cost per mutant times the larger measured
-# count, one and a half times, plus the set-up and the report, rounded up to the five, so a leg set
-# back to 60 is refused; it ends at twice the projected whole sweep, rounded down to the ten, so a
-# hung test still ends within two hours.
-WEB_MUTATION_TIMEOUT_MINUTES = range(100, 121)
+# The two web mutation legs' timeout (SPEC-379 R1, R2, as amended on 2026-10-31): the weekly
+# battery's `web` job and the pull request's `mutation-web` job each hold StrykerJS over up to the
+# whole Mini App. The band starts at the bound its rule gives, the worst measured cost per mutant
+# over the whole sweep (its static mutants, which run every test, and the rest, each stratum at its
+# worst measured cost) times the sweep's count, one and a half times, plus the set-up and the
+# report, rounded up to the five, so a leg left at the old 100 is refused; it ends at twice the
+# projected whole sweep, rounded down to the ten, so a raise past it needs a new measurement.
+WEB_MUTATION_TIMEOUT_MINUTES = range(325, 421)
 
 
 def engine_job_problems(workflow):
@@ -4876,6 +4988,39 @@ NOT_WORKFLOW_READS = {
         ),
     ),
     **allowed(
+        "calls run_release_step, which runs base-is-dev's release step's shell and reads the output file it writes",
+        (
+            "test_ci_workflows",
+            "TheReleaseRunIsNamedInBaseIsDev.test_the_release_output_is_release_run",
+            "run_release_step(context, output)",
+            1,
+        ),
+    ),
+    **allowed(
+        "the GITHUB_OUTPUT file base-is-dev's release step wrote to a scratch directory; a step's output, never a workflow",
+        (
+            "test_ci_workflows",
+            "TheReleaseRunIsNamedInBaseIsDev.test_the_release_output_is_release_run",
+            "output.read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
+        "the mutation verdict script loaded as a module, read for its release_run predicate; a production script, never the reader",
+        (
+            "test_ci_workflows",
+            "TheReleaseRunIsNamedInBaseIsDev.test_the_release_output_is_release_run",
+            "release_run(*inputs)",
+            2,
+        ),
+        (
+            "test_ci_workflows",
+            "TheReleaseRunIsNamedInBaseIsDev.test_the_release_output_is_release_run",
+            "verdict_module()",
+            1,
+        ),
+    ),
+    **allowed(
         "calls required_contexts, whose one read is a ruleset's JSON",
         (
             "test_ci_workflows",
@@ -5017,6 +5162,15 @@ NOT_WORKFLOW_READS = {
             "test_ci_workflows",
             "run_base_is_dev",
             "subprocess.run(['bash', '-e', '-c', script], env=env, capture_output=True, text=True, check=False)",
+            1,
+        ),
+    ),
+    **allowed(
+        "runs base-is-dev's release step's own shell, cut from ci.yml's loader-read text, under bash with GITHUB_OUTPUT naming a scratch file; its output is the step's, never a workflow",
+        (
+            "test_ci_workflows",
+            "run_release_step",
+            "subprocess.run(['bash', '-e', '-c', textwrap.dedent(block.group(1))], env=env, capture_output=True, text=True, check=False)",
             1,
         ),
     ),
@@ -5914,6 +6068,12 @@ NOT_WORKFLOW_READS = {
         ),
         (
             "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_ci_admits_every_mutation_result_on_the_release_run_and_no_gating_one",
+            "bash(script, env, shell_of(step, aggregate, workflow(CI)))",
+            1,
+        ),
+        (
+            "test_not_started_legs",
             "ALegWithNothingToExamineIsNotStarted.test_the_plan_writes_how_many_rust_mutants_its_listing_holds",
             "run_shards(fixture, listed)",
             1,
@@ -6467,6 +6627,15 @@ NOT_WORKFLOW_READS = {
     **allowed(
         "a log the step's shim wrote to a scratch file; never handed to the reader",
         ("test_verdict_folds", "Driver.run", "log.read_text(encoding='utf-8')", 1),
+    ),
+    **allowed(
+        "the step summary ci's step wrote to a scratch file; a step's output, never handed to the reader",
+        (
+            "test_not_started_legs",
+            "ALegWithNothingToExamineIsNotStarted.test_ci_admits_every_mutation_result_on_the_release_run_and_no_gating_one",
+            "summary.read_text(encoding='utf-8')",
+            1,
+        ),
     ),
     **allowed(
         "calls Driver.run, which runs a step's shell over a planted script and shims, and reads the shim's log; outputs, never a workflow",
@@ -7294,6 +7463,15 @@ NOT_WORKFLOW_READS = {
             "test_mutation_workflows",
             "TheToolsConfigurationsAreValid.test_the_verb_returns_ok_in_process",
             "run('-c', VERB_IN_PROCESS, str(VERDICT), 'configs', str(root))",
+            1,
+        ),
+    ),
+    **allowed(
+        "deny.toml, whose licence allow list the dependency review census compares with the one the workflow allows; never handed to the reader",
+        (
+            "test_dependency_review",
+            "deny_toml_licences",
+            "(REPO / 'deny.toml').read_text(encoding='utf-8')",
             1,
         ),
     ),
@@ -8812,6 +8990,396 @@ class TheHarnessLinksItsOwnRunsFramework(unittest.TestCase):
                 self.assertEqual(harness_link_problems({"jobs": {"harness": job}}), wanted, name)
 
 
+# The harness's warm (SPEC-339 R12 as #1060 amends it, R15 and R16; ADR-350 D10 to D12): each
+# Harness test step is three steps, side by side: a build for testing; a warm that waits for each
+# simulator's boot, installs the build's app, launches it and ends it, inside its budget, recording
+# each phase; and the tests, run without building, their console teed under pipefail. The Debug
+# warm writes the warm's script once and the Release warm runs it; the report reads the warm's and
+# the consoles' rows.
+WARM_SCRIPT = '"$RUNNER_TEMP/simulator-warm.py"'
+WARM_STEPS = {
+    "debug": (
+        "the tests, Debug, built for testing",
+        "each simulator booted and the harness launched once, before its tests",
+        "the tests, Debug, on the iPhone and then the iPad",
+    ),
+    "release": (
+        "the measurements, Release, built for testing",
+        "each simulator booted and the harness launched once, before its measurements",
+        "the measurements, Release, on the iPhone and then the iPad",
+    ),
+}
+WARM_APPS = {
+    "debug": '"$RUNNER_TEMP/debug/Build/Products/Debug-iphonesimulator/Harness.app"',
+    "release": '"$RUNNER_TEMP/release/Build/Products/Release-iphonesimulator/Harness.app"',
+}
+WARM_DESTINATIONS = (
+    '-destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS"',
+    '-destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS"',
+)
+WARM_BUILD_NEEDS = {
+    "debug": (
+        "xcodebuild build-for-testing -project ios/Harness.xcodeproj -scheme Harness"
+        " -configuration Debug",
+        *WARM_DESTINATIONS,
+        '-derivedDataPath "$RUNNER_TEMP/debug"',
+        "CODE_SIGNING_ALLOWED=NO",
+    ),
+    "release": (
+        "xcodebuild build-for-testing -project ios/Harness.xcodeproj -scheme Harness"
+        " -configuration Release",
+        *WARM_DESTINATIONS,
+        '-derivedDataPath "$RUNNER_TEMP/release"',
+        "ONLY_ACTIVE_ARCH=YES",
+        "CODE_SIGNING_ALLOWED=NO",
+    ),
+}
+WARM_TEST_NEEDS = {
+    "debug": (
+        "set -o pipefail",
+        "xcodebuild test-without-building -project ios/Harness.xcodeproj -scheme Harness"
+        " -configuration Debug",
+        *WARM_DESTINATIONS,
+        "-disable-concurrent-destination-testing",
+        "-skip-testing:HarnessUITests/HarnessMeasureTests",
+        '-derivedDataPath "$RUNNER_TEMP/debug"',
+        '-resultBundlePath "$RESULTS/debug.xcresult"',
+        '2>&1 | tee "$REPORT/debug-console.log"',
+        '> "$REPORT/debug-seconds"',
+    ),
+    "release": (
+        "set -o pipefail",
+        "xcodebuild test-without-building -project ios/Harness.xcodeproj -scheme Harness"
+        " -configuration Release",
+        *WARM_DESTINATIONS,
+        "-disable-concurrent-destination-testing",
+        "-only-testing:HarnessUITests/HarnessMeasureTests",
+        '-derivedDataPath "$RUNNER_TEMP/release"',
+        '-resultBundlePath "$RESULTS/release.xcresult"',
+        '2>&1 | tee "$REPORT/release-console.log"',
+        '> "$REPORT/release-seconds"',
+    ),
+}
+# What the warm's script holds: both simulators, a boot wait, an install, a launch and an end of the
+# build's own app by its bundle id, each phase run without `check` inside its budget, a record per
+# step, and a failure only for a name that is not one simulator.
+WARM_SCRIPT_NEEDS = (
+    'for simulator in (os.environ["IPHONE_SIM"], os.environ["IPAD_SIM"]):',
+    '["xcrun", "simctl", "bootstatus", udid, "-b"]',
+    '["xcrun", "simctl", "install", udid, str(app)]',
+    '["xcrun", "simctl", "launch", udid, bundle]',
+    '["xcrun", "simctl", "terminate", udid, bundle]',
+    '["CFBundleIdentifier"]',
+    "left = deadline - time.monotonic()",
+    "done = subprocess.run(command, capture_output=True, text=True, timeout=left)",
+    'f"warm-{label}.json"',
+    "raise SystemExit(1 if problems else 0)",
+)
+# The report's rows for each step's session start: the warm's three, and the console's two.
+WARM_REPORT_NEEDS = (
+    'warm_rows("debug", "Debug")',
+    'warm_rows("release", "Release")',
+    'runner_rows("debug", "Debug")',
+    'runner_rows("release", "Release")',
+)
+
+
+def harness_warm_problems(workflow):
+    """Each way the `harness` job could test a simulator before its session is warmed, named
+    (SPEC-339 R12 as #1060 amends it, R15, R16): each Harness test step's build, warm and tests,
+    each named once and side by side in that order; the build for testing and the tests without
+    building, with the step's destinations, selection, derived data, result bundle and teed console
+    under pipefail, the tests building nothing again; the warm's script written once, by the Debug
+    warm, with what `WARM_SCRIPT_NEEDS` lists; each warm ending by running it on its own build's
+    app; and the report reading the warm's and the consoles' rows."""
+    steps = ((workflow.get("jobs") or {}).get("harness") or {}).get("steps") or []
+    names = [step.get("name") for step in steps]
+    problems = []
+    found = {}
+    for label, trio in WARM_STEPS.items():
+        for name in trio:
+            if names.count(name) != 1:
+                problems.append(f"harness: {names.count(name)} steps named {name!r}, not one")
+            else:
+                found[name] = steps[names.index(name)]
+        if all(name in found for name in trio):
+            at = [names.index(name) for name in trio]
+            if at != list(range(at[0], at[0] + len(trio))):
+                problems.append(
+                    f"harness: the {label} build, warm and tests are not side by side in order"
+                )
+        build, warm, tests = (found.get(name) for name in trio)
+        if build is not None:
+            run = run_joined(build)
+            problems += [
+                f"harness: the {label} build for testing lacks {n}"
+                for n in WARM_BUILD_NEEDS[label]
+                if n not in run
+            ]
+        if tests is not None:
+            run = run_joined(tests)
+            problems += [
+                f"harness: the {label} tests lack {n}"
+                for n in WARM_TEST_NEEDS[label]
+                if n not in run
+            ]
+            if "xcodebuild test " in run:
+                problems.append(f"harness: the {label} tests build again, with `xcodebuild test`")
+        if warm is not None:
+            lines = [line.strip() for line in str(warm.get("run", "")).splitlines() if line.strip()]
+            if lines[-1:] != [f"python3 {WARM_SCRIPT} {label} {WARM_APPS[label]}"]:
+                problems.append(
+                    f"harness: the {label} warm does not end by running the warm on its build's app"
+                )
+    writes = [s.get("name") for s in steps if f"cat > {WARM_SCRIPT} <<" in str(s.get("run", ""))]
+    if writes != [WARM_STEPS["debug"][1]]:
+        problems.append(f"harness: {len(writes)} steps write the warm's script, not the Debug warm")
+    else:
+        script = str(found[WARM_STEPS["debug"][1]].get("run", ""))
+        problems += [
+            f"harness: the warm's script lacks {n}" for n in WARM_SCRIPT_NEEDS if n not in script
+        ]
+    reports = [s for s in steps if s.get("name") == "the report"]
+    text = str(reports[0].get("run", "")) if len(reports) == 1 else ""
+    problems += [f"harness: the report lacks {n}" for n in WARM_REPORT_NEEDS if n not in text]
+    return problems
+
+
+# The warm's budget for each simulator and each session's longest end (SPEC-339 R15 and R16 as #1074
+# amends them; ADR-350 D13 and D14): each simulator's phases run inside a budget of their own, set
+# for each step, so the first simulator's slow boot cannot spend the second's warm; and the report
+# reads, per simulator and step, the longest time XCTest took to end an earlier instance.
+WARM_BUDGET = 'budget = {"debug": 480, "release": 120}[label]'
+WARM_DEADLINE = "deadline = time.monotonic() + budget"
+WARM_PHASES = "for phase, command in ("
+WARM_END_NEEDS = (
+    "def end_rows(label, title):",
+    'rows.append((f"{title} longest end, {simulator}", value))',
+    'end_rows("debug", "Debug")',
+    'end_rows("release", "Release")',
+)
+
+
+def harness_warm_budget_problems(workflow):
+    """Each way the `harness` job's warm could let one simulator spend another's budget, or its
+    report miss a session's longest end, named (SPEC-339 R15 and R16 as #1074 amends them): the
+    warm's script sets each step's budget once, and each simulator's deadline once, inside the
+    simulator loop and before its phases; and the report reads each step's longest ends."""
+    steps = ((workflow.get("jobs") or {}).get("harness") or {}).get("steps") or []
+    warms = [s for s in steps if s.get("name") == WARM_STEPS["debug"][1]]
+    lines = str(warms[0].get("run", "")).splitlines() if len(warms) == 1 else []
+    bare = [line.strip() for line in lines]
+    problems = []
+    if bare.count(WARM_BUDGET) != 1:
+        problems.append(
+            f"harness: {bare.count(WARM_BUDGET)} budget lines in the warm's script, not one"
+        )
+    deadlines = [at for at, line in enumerate(bare) if line.startswith("deadline = ")]
+    loops = [at for at, line in enumerate(bare) if line == WARM_SCRIPT_NEEDS[0]]
+    phases = [at for at, line in enumerate(bare) if line == WARM_PHASES]
+    if len(deadlines) != 1:
+        problems.append(f"harness: {len(deadlines)} deadline lines in the warm's script, not one")
+    elif bare[deadlines[0]] != WARM_DEADLINE:
+        problems.append(
+            f"harness: the warm's deadline is {bare[deadlines[0]]!r}, not {WARM_DEADLINE!r}"
+        )
+    elif len(loops) != 1 or len(phases) != 1:
+        problems.append("harness: the warm's script has not one simulator loop and one phase loop")
+    else:
+        at, loop, phase = deadlines[0], loops[0], phases[0]
+        depth = [len(lines[i]) - len(lines[i].lstrip()) for i in (loop, at, phase)]
+        if not (loop < at < phase and depth[0] < depth[1] == depth[2]):
+            problems.append("harness: the warm's deadline is not per simulator, before its phases")
+    reports = [s for s in steps if s.get("name") == "the report"]
+    text = str(reports[0].get("run", "")) if len(reports) == 1 else ""
+    problems += [f"harness: the report lacks {n}" for n in WARM_END_NEEDS if n not in text]
+    return problems
+
+
+class TheHarnessWarmsEachSimulatorBeforeItsTests(unittest.TestCase):
+    def test_the_harness_boots_and_launches_each_simulator_once_before_its_tests(self):
+        """SPEC-339 A11: each Harness test step is built for testing, each simulator warmed (a boot
+        wait, an install, a launch and an end) before it, and the step run without building, in
+        that order; the warm records each phase and fails only on a name that is not one simulator;
+        the teed steps keep xcodebuild's exit; and the report reads the warm's and the consoles'
+        rows."""
+        jobs = load("xcframework.yml")["jobs"]
+        examined("warmed harness steps", jobs["harness"].get("steps") or [])
+        self.assertEqual(harness_warm_problems({"jobs": jobs}), [])
+
+        # The controls: the good job is accepted, and each plant is refused by its rule's name.
+        script = f"cat > {WARM_SCRIPT} <<'PY'\n" + "\n".join(WARM_SCRIPT_NEEDS) + "\nPY\n"
+        good_steps = []
+        for label, (build, warm, tests) in WARM_STEPS.items():
+            warm_run = f"python3 {WARM_SCRIPT} {label} {WARM_APPS[label]}\n"
+            good_steps += [
+                {"name": build, "run": " \\\n  ".join(WARM_BUILD_NEEDS[label]) + "\n"},
+                {"name": warm, "run": (script if label == "debug" else "") + warm_run},
+                {"name": tests, "run": " \\\n  ".join(WARM_TEST_NEEDS[label]) + "\n"},
+            ]
+        good_steps.append({"name": "the report", "run": "\n".join(WARM_REPORT_NEEDS) + "\n"})
+        debug_build, debug_warm, debug_tests = WARM_STEPS["debug"]
+        release_build, release_warm, release_tests = WARM_STEPS["release"]
+        script_lacks = "harness: the warm's script lacks "
+        derived = WARM_BUILD_NEEDS["release"][3]
+
+        def harness(steps):
+            return {"jobs": {"harness": {"steps": steps}}}
+
+        def replaced(name, piece, instead):
+            step = next(s for s in good_steps if s.get("name") == name)
+            assert step["run"].count(piece) == 1, f"{piece!r} is not in the planted {name!r} once"
+            return harness(
+                [
+                    {**s, "run": s["run"].replace(piece, instead)} if s is step else s
+                    for s in good_steps
+                ]
+            )
+
+        def ordered(*names):
+            return harness([next(s for s in good_steps if s.get("name") == n) for n in names])
+
+        plants = {
+            "the good job": (harness(good_steps), []),
+            "no Debug build for testing": (
+                harness([s for s in good_steps if s.get("name") != debug_build]),
+                [f"harness: 0 steps named {debug_build!r}, not one"],
+            ),
+            "no Release warm": (
+                harness([s for s in good_steps if s.get("name") != release_warm]),
+                [f"harness: 0 steps named {release_warm!r}, not one"],
+            ),
+            "the Debug warm after its tests": (
+                ordered(
+                    debug_build,
+                    debug_tests,
+                    debug_warm,
+                    release_build,
+                    release_warm,
+                    release_tests,
+                    "the report",
+                ),
+                ["harness: the debug build, warm and tests are not side by side in order"],
+            ),
+            "the Debug tests built again": (
+                replaced(debug_tests, "xcodebuild test-without-building", "xcodebuild test"),
+                [
+                    f"harness: the debug tests lack {WARM_TEST_NEEDS['debug'][1]}",
+                    "harness: the debug tests build again, with `xcodebuild test`",
+                ],
+            ),
+            "a tee without pipefail": (
+                replaced(release_tests, "set -o pipefail", "set -e"),
+                ["harness: the release tests lack set -o pipefail"],
+            ),
+            "the Release build in the Debug derived data": (
+                replaced(release_build, '"$RUNNER_TEMP/release"', '"$RUNNER_TEMP/debug"'),
+                [f"harness: the release build for testing lacks {derived}"],
+            ),
+            "the iPhone simulator alone": (
+                replaced(debug_warm, ', os.environ["IPAD_SIM"]', ","),
+                [script_lacks + WARM_SCRIPT_NEEDS[0]],
+            ),
+            "no boot wait": (
+                replaced(debug_warm, '"bootstatus", udid, "-b"', '"list"'),
+                [script_lacks + WARM_SCRIPT_NEEDS[1]],
+            ),
+            "no launch": (
+                replaced(debug_warm, '"launch", udid, bundle', '"list"'),
+                [script_lacks + WARM_SCRIPT_NEEDS[3]],
+            ),
+            "no end": (
+                replaced(debug_warm, '"terminate", udid, bundle', '"list"'),
+                [script_lacks + WARM_SCRIPT_NEEDS[4]],
+            ),
+            "no budget": (
+                replaced(debug_warm, "left = deadline - time.monotonic()", "left = 10**9"),
+                [script_lacks + WARM_SCRIPT_NEEDS[6]],
+            ),
+            "a phase that fails the warm": (
+                replaced(debug_warm, "timeout=left)", "timeout=left, check=True)"),
+                [script_lacks + WARM_SCRIPT_NEEDS[7]],
+            ),
+            "the Release warm writing the script again": (
+                harness(
+                    [
+                        {**s, "run": script + s["run"]} if s.get("name") == release_warm else s
+                        for s in good_steps
+                    ]
+                ),
+                ["harness: 2 steps write the warm's script, not the Debug warm"],
+            ),
+            "the Release warm on the Debug app": (
+                replaced(release_warm, WARM_APPS["release"], WARM_APPS["debug"]),
+                ["harness: the release warm does not end by running the warm on its build's app"],
+            ),
+            "no Release console rows": (
+                replaced("the report", WARM_REPORT_NEEDS[3], ""),
+                [f"harness: the report lacks {WARM_REPORT_NEEDS[3]}"],
+            ),
+        }
+        for name, (workflow, wanted) in examined("planted warm jobs", list(plants.items())):
+            with self.subTest(plant=name):
+                self.assertEqual(harness_warm_problems(workflow), wanted, name)
+
+    def test_the_warm_budgets_each_simulator_and_the_report_reads_its_longest_end(self):
+        """SPEC-339 A12: the warm's script sets each step's budget, and each simulator's deadline
+        inside the simulator loop and before its phases, so one simulator cannot spend another's
+        warm; and the report reads, per simulator and step, the session's longest end."""
+        jobs = load("xcframework.yml")["jobs"]
+        read = (WARM_STEPS["debug"][1], "the report")
+        steps = [s for s in jobs["harness"].get("steps") or [] if s.get("name") in read]
+        examined("budget steps", steps)
+        self.assertEqual(harness_warm_budget_problems({"jobs": jobs}), [])
+
+        # The controls: the good job is accepted, and each plant is refused by its rule's name.
+        top = [f"cat > {WARM_SCRIPT} <<'PY'", WARM_BUDGET, WARM_SCRIPT_NEEDS[0]]
+        body = ['    udid = devices[0]["udid"]', "    " + WARM_DEADLINE, "    " + WARM_PHASES]
+        tail = ["        left = deadline - time.monotonic()", "PY"]
+        ends = "\n".join(WARM_END_NEEDS) + "\n"
+
+        def harness(script, report=ends):
+            warm = {"name": WARM_STEPS["debug"][1], "run": "\n".join(script) + "\n"}
+            return {"jobs": {"harness": {"steps": [warm, {"name": "the report", "run": report}]}}}
+
+        placed = "harness: the warm's deadline is not per simulator, before its phases"
+        shared = "deadline = time.monotonic() + 480"
+        plants = {
+            "the good job": (harness(top + body + tail), []),
+            "one deadline for both simulators": (
+                harness([*top[:2], WARM_DEADLINE, top[2], body[0], body[2], *tail]),
+                [placed],
+            ),
+            "a deadline per phase": (
+                harness([*top, body[0], body[2], "    " + body[1], *tail]),
+                [placed],
+            ),
+            "two deadlines": (
+                harness([*top, body[0], body[1], body[1], body[2], *tail]),
+                ["harness: 2 deadline lines in the warm's script, not one"],
+            ),
+            "the one budget's figure": (
+                harness([*top, body[0], "    " + shared, body[2], *tail]),
+                [f"harness: the warm's deadline is {shared!r}, not {WARM_DEADLINE!r}"],
+            ),
+            "one budget for both steps": (
+                harness([top[0], "budget = 480", top[2], *body, *tail]),
+                ["harness: 0 budget lines in the warm's script, not one"],
+            ),
+            "no Debug longest end": (
+                harness(top + body + tail, ends.replace(WARM_END_NEEDS[2] + "\n", "")),
+                [f"harness: the report lacks {WARM_END_NEEDS[2]}"],
+            ),
+            "no longest end row": (
+                harness(top + body + tail, ends.replace(WARM_END_NEEDS[1] + "\n", "")),
+                [f"harness: the report lacks {WARM_END_NEEDS[1]}"],
+            ),
+        }
+        for name, (workflow, wanted) in examined("planted budget jobs", list(plants.items())):
+            with self.subTest(plant=name):
+                self.assertEqual(harness_warm_budget_problems(workflow), wanted, name)
+
+
 # The app's steps in the `harness` job (SPEC-347 R13 and A14, ADR-358 D10; SPEC-348 R20, ADR-359
 # D8): its generate line opens its own test step, so the step "the project, generated", which each
 # TestFlight lane copies, keeps the harness's one line; the app's tests, the review screen's tests
@@ -9991,9 +10559,9 @@ class TheWebMutationLegsHoldTheWholeSweep(unittest.TestCase):
 
     def test_a_web_leg_bound_outside_the_band_is_refused_by_its_leg(self):
         """SPEC-379 A2: the checker accepts both legs at the band's floor and at its ceiling, and
-        refuses each leg's bound set back to 60, set one past the ceiling, or removed, naming that
-        leg alone. Every copy is planted from the workflow files with both bounds set here, so the
-        test pins the checker, not the tree's own bounds."""
+        refuses each leg's bound set back to 60, set one under the floor, set one past the
+        ceiling, or removed, naming that leg alone. Every copy is planted from the workflow files
+        with both bounds set here, so the test pins the checker, not the tree's own bounds."""
         texts = {name: workflow_file_text(WORKFLOWS / name) for name, _ in WEB_MUTATION_LEGS}
         live = {
             name: load(name)["jobs"][job_id].get("timeout-minutes")
@@ -10020,7 +10588,12 @@ class TheWebMutationLegsHoldTheWholeSweep(unittest.TestCase):
                 f"{name}: the {job_id} job's timeout is {shown}, not {band} minutes",
             )
             for name, job_id in WEB_MUTATION_LEGS
-            for minutes, shown in ((60, "60"), (ceiling + 1, str(ceiling + 1)), (None, "unset"))
+            for minutes, shown in (
+                (60, "60"),
+                (floor - 1, str(floor - 1)),
+                (ceiling + 1, str(ceiling + 1)),
+                (None, "unset"),
+            )
         ]
         for name, job_id, minutes, refusal in examined("planted web leg bounds", plants):
             with self.subTest(leg=f"{name} {job_id}", minutes=minutes):

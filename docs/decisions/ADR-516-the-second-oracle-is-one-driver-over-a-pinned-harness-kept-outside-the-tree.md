@@ -11,7 +11,7 @@
 
 DeckStreak's parity oracle calls its predecessor's Python functions over seeded synthetic inputs and commits what they
 return (ADR-012, ADR-029). The engine DeckStreak ingests through today is a second old system, written in Rust and
-pinned in the root manifest at `65e053b829825f534803b2b772c507a73ba936a3`. Replacing its import, export, rendering,
+pinned in the root manifest at `a078820fd4fec3068ed7863344cd50effddabc6b`. Replacing its import, export, rendering,
 media, search and review history needs the engine's own outputs, captured once, over inputs nobody owns. This ADR
 decides how that capture is driven, where its pieces live, and what keeps it honest.
 
@@ -92,18 +92,60 @@ case is reported; ingest is where the engine's goldens are first consumed.
 Chosen against: **each consumer comparing on its own.** Each would need its own non-vacuity control; one comparison
 in the shared reader is proved once.
 
+## D7. A held clock, and a read before the one write, and what it was chosen against
+
+The harness's engine reads the process's clock and zone: an import of a note both sides share by GUID, with no `mod`
+on either, decides its updated or duplicate count by which note the clock stamped later, and a due date is counted
+from the run's day rather than the case's. Two runs of the same driver, registry and pin could then write different
+answers. The harness holds the process's real-time clock at each case's own recorded instant instead: it defines the
+C library's real-time entry points itself (`clock_gettime`, `gettimeofday`, `time` and `timespec_get`), which answer
+the held instant plus 1 microsecond a read, and it sets that instant before each call from the case's
+`collection.now`, else `timing.now`, else `now`. The k-th engine collection a call opens, counted from 0, starts k
+held seconds later, so two collections of one call never share the ids the engine takes from its clock. At its hello
+the harness refuses to answer unless the standard library, the date library and SQLite each read the held instant
+and the local zone is UTC. The driver starts the harness with `TZ=UTC`, and the registry gives a note the package
+shares with the target one explicit `mod` on both sides. A run that writes goldens after the first reads before it
+writes (SPEC-498 R19): two non-writing passes at the pin, one under a planted host instant, must be byte-equal, and a
+semantic gate fixed before the run reads the previous pin's pass against the committed goldens and the new pin's pass
+against the previous pin's; a reading off the gate's rule writes nothing.
+
+Chosen against:
+- **An LD_PRELOAD shim in production.** It reaches only the symbols a binary imports, and a run that forgets to load
+  it answers with the run's clock without a sign. The shim is kept as a test plant only: under it, the harness's own
+  definitions must still answer.
+- **A third-party fake-time library.** One more dependency to pin, loaded the same way as the shim.
+- **One process per case.** About twelve thousand process starts in one run, and the clock would still move inside a
+  case.
+- **Matching the shift.** Correcting a host-clock answer after the fact needs a model of each engine function; holding
+  the clock needs none.
+- **Harness arithmetic.** Recomputing dates in the harness re-derives the engine's answers instead of recording them.
+- **A per-case zone.** It needs one process per case; one zone for the whole run, UTC, keeps the zone in the driver's
+  bytes.
+- **No per-collection phase.** Under a 1 microsecond tick a second collection opened in the same call could take the
+  first one's clock ids, a regime no earlier run exercised.
+
 ## Consequences
 
 - The run that writes the goldens pins the harness in the driver and commits the goldens, the census digests and the
   driver together.
 - Every golden of the second old system is read by a Rust test through `mismatches` or `assert_parity`.
+- Each engine golden is a function of its input: the harness pin covers the held clock, the driver's bytes the zone,
+  and the registry's bytes the explicit mods.
+- A run after the first writes goldens only after its non-writing passes and the semantic gate read as the rule
+  fixed before it.
 
 ## Confirmation
 
 SPEC-498's acceptance fence: the three Python test files beside `test_generate.py` and `test_goldens.py`, and
 `cargo test -p deck-streak-ingest --test oracle_consumer`.
 
+A14 in the same fence (the shared-GUID test in `test_anki_registry.py`, the UTC test in `test_anki_driver.py` and
+the run-clock test in `test_goldens.py`) confirms D7's input half; A15's run record confirms the read before the
+write.
+
 ## What would make this wrong
 
-- A harness that answers with ids or clocks of the run: the goldens would not be reproducible.
+- A harness that answers with ids or clocks of the run: the goldens would not be reproducible. D7 answers it: the
+  clock is held at each case's own instant and a re-run reads two passes before it writes. A clock read that
+  bypasses the C library would still see the run's clock; R15's test bounds what it could put in a golden.
 - An engine pin move without a new run: the goldens would record an engine DeckStreak no longer pins.

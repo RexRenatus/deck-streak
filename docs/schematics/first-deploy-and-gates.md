@@ -21,7 +21,7 @@ maintainer's private gate packet; this page names each step only. What each step
 | the route's drop-in | the route setting, the base URL and the key's credential line | `docs/specs/planned/SPEC-053-readings-jobs.md:87-92` |
 | one writer | the vault archive switch stays off until the owner's go makes DeckStreak the readings folder's one writer; SPEC-053 R8 cites ADR-065, which decides how | `docs/decisions/ADR-053-readings-slots-settle-after-sync-and-one-writer.md:49-51`, `docs/specs/planned/SPEC-053-readings-jobs.md:80-84` |
 | the folder | the adapter refuses a missing or unwritable readings folder and never creates it | `docs/specs/SPEC-042-vault-adapter-core-and-readings-date-tree.md:40-44` |
-| the replica | Litestream 0.5, 24 h interval, 48 h retention, inside `P3D` | `docs/specs/SPEC-021-data-rights-export-and-erase.md:67-69` |
+| the replica | Litestream 0.5, 24 h interval, 48 h retention, inside `P7D` (SPEC-021 as SPEC-584 amends it) | `docs/specs/SPEC-021-data-rights-export-and-erase.md:67-69` |
 | the drill's debt | the restore drill proves the replica | `docs/specs/SPEC-027-scheduler-and-cron-fire-ledger.md:222-223` |
 | the disk's debt | the headroom a full download needs is the inventory's to measure | `docs/specs/SPEC-022-ingest-sync-engine-spike-and-sync.md:258-260` |
 | the runner's live proof | the agent's path is the runner's live proof | `docs/decisions/ADR-043-shell-runner-pack-gate-and-duty-caps.md:58-59` |

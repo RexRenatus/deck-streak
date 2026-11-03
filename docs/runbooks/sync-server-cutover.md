@@ -6,7 +6,7 @@ upload fills the new server's empty store, and every other client takes a full d
 The old server's store is never copied and never written: it is the rollback.
 `docs/schematics/sync-server-packaging-and-cutover.md` draws the sequence, and this runbook holds
 one step per state of it, in its order, each marked as the schematic's table marks it. Every host
-step waits for the owner's go, and its exact command is the one the seat records in #161 before any
+step waits for the owner's go, and its exact command is the one recorded in #161 before any
 run; the host's names and addresses are in the maintainer's private gate packet, and this runbook
 names none.
 
@@ -50,9 +50,9 @@ to be the cutover's own.
 - The rail has created the system user and group `deck-streak-sync`, with no login shell, no home
   and no other group (the owner's go, #161).
 - The offsite bucket exists with no public access and no listing, and the host's identity may only
-  create objects in it. Its lifecycle rule deletes each object `P30D` after it is written, the
-  period `PRIVACY.md` states, and the owner checks the rule before the window (the owner's go,
-  #161).
+  create objects in it. Its lifecycle rule deletes each object 6 days after it is written, inside
+  the `P7D` period `PRIVACY.md` states, and the owner checks the rule before the window (the
+  owner's go, #161).
 - The settings file names `DECKSTREAK_SNAPSHOT_COPY` and `DECKSTREAK_SNAPSHOT_BUCKET`, and the copy
   command is checked under the archive unit's sandbox (the owner's go, #161).
 - The settings file names `DECKSTREAK_SNAPSHOT_SEAL`, the seal command with the owner's public

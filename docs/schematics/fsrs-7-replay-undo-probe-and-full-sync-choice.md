@@ -196,8 +196,10 @@ flowchart TD
 ```
 
 The pin: the crate's one dependency is the upstream scheduler at the revision the workspace manifest pins
-(`Cargo.toml:141`), held by `scripts/tests/test_fsrs7_pin.py:121`. The stock stability and every interval come from that
-revision's own interval function, cited by the build at the pin by file and line.
+(`Cargo.toml:143`), held by `scripts/tests/test_fsrs7_pin.py:121`. The stock stability and every interval come from that
+revision's own interval function, cited by the build at the pin by file and line. These two citations were re-read at
+`formal/fsrs7-verify` `6df94b36`, the merge of dev `e25c0c45`; since SPEC-494 the replay runs through the scheduling
+port, drawn in section 10.
 
 ## 7. The refusal paths
 
@@ -254,3 +256,71 @@ flowchart LR
   `the_context_map_declares_the_core_and_its_two_edges` (A10).
 - The read is one statement, so it adds no interleaving: the native engine object is shared without a lock of its own
   (`crates/ffi/src/engine.rs:69-70`), and the engine runs each statement under its own collection lock.
+
+## 9. The stock floor and the whole gap (SPEC-413, ADR-427)
+
+Read at dev `c74b6b96`. Kind: data flow. Section 6's `fsrs7 stock` step, and the gap inside `fsrs7 convert`, as they
+are after SPEC-413. The 90-percent interval passes through one floor before it is a stock stability; the distance
+between two kept reviews is the unsigned distance of their ids.
+
+```mermaid
+flowchart TD
+  ids["two kept reviews of one card, in id order: ids in milliseconds, each an i64"] --> dist["abs_diff: their distance, a u64, exact for every pair"]
+  dist --> days["days: the distance over 86400000, an f32 number of days"]
+  days --> item["the review's delta_t in the card's item"]
+  item --> replay["fsrs7 replay: the pinned revision's memory state"]
+  replay --> ninety["the revision's interval at 0.9"]
+  ninety --> floor["stock_stability: the interval, or STABILITY_MIN 0.0001 when it is lower or NaN"]
+  floor --> stab["Stock stability"]
+  replay --> diff["Stock difficulty: clamped 1 to 10"]
+  replay --> ivl["Stock interval: the revision's interval at the retention, unfloored"]
+  ivl --> sched["engine core: rounded, at least 1 day, at most the preset's maximum"]
+  stab --> fields["engine core: stock_fields writes the memory state"]
+  diff --> fields
+  sched --> fields
+  fields --> store["the engine's store: the stability at four decimal places, never 0"]
+```
+
+- **The floor.** `STABILITY_MIN` is the pinned revision's least stability. The engine stores a stability rounded to
+  four decimal places, so the floor is also the least value it keeps above zero; an Again on a first review, whose
+  90-percent interval is `3.827_562_6e-5` days, is written as the floor (SPEC-413 A1).
+- **The interval is not floored here.** The schedule's floor of 1 day already holds it (`lean/Fsrs7Schedule`).
+- **The gap.** Section 6's rows are sorted by id before the distances are taken, so `abs_diff` is the difference
+  itself; a pair whose difference passes the signed range is read whole (SPEC-413 A2).
+- **Proved.** `lean/Fsrs7Stock` proves the floor over every `f32` the interval can be, NaN and the infinities
+  included, and `lean/ReplayHistory` ports the distance as the natural distance of the two ids.
+
+## 10. The replay through the scheduling port, and what is proved of it (SPEC-413 R9 to R11, ADR-427 D6 and D7)
+
+Read at `formal/fsrs7-verify` `6df94b36`, the merge of dev `e25c0c45` plus SPEC-413's seams. Kind: data flow. Since
+SPEC-494 (ADR-512), section 6's replay reaches its values through the scheduling port: `Dispatcher::replay`
+(`crates/engine-core/src/replay.rs:421`) selects each card's kept reviews (`kept_events` :485), folds them one event
+at a time into a state the port makes per call (`new_state` :256, `fold` :265, which runs `same_model` :175 and
+`check_event`, `crates/engine-core/src/scheduler.rs:225`, before its first write), and reads the stock values
+(`stock_values` :163, over the memo `replayed` :200) and the whole days (`interval_days` :301, whose rounding is the
+hidden seam `whole_days` :237) that `scheduled` (:556) holds to the preset's maximum and to one day, due after
+`day_of` (:570) of the last review. `stock_fields` (:76) writes them. The port's `checkpoint` (:312) and `restore`
+(:333) carry a state as bytes; no production caller uses them yet.
+
+```mermaid
+flowchart TD
+  rows["review rows, one fixed statement"] --> kept["kept_events: the selection, each event with its engine day"]
+  kept --> fold["port fold: same_model, then check_event, then the write"]
+  fold --> state["Fsrs7State: events in key order, the last key, the parameter bits; a memo reset by every fold"]
+  state --> values["stock_values: stability and difficulty from the projection"]
+  state --> whole["interval_days: whole_days, interval.round() as u32"]
+  whole --> sched["scheduled: at most the maximum, at least 1 day, due after day_of of the last review"]
+  values --> fields["stock_fields writes memory, interval and due"]
+  sched --> fields
+  state -.-> cp["checkpoint: magic, format, identifier, count, events, little-endian"]
+  cp -.-> rs["restore: the checks in order, then each event folded into the model's own new state"]
+  rs -.-> state
+```
+
+- **Proved.** `lean/Fsrs7Schedule` proves the two schedule steps (L8 to L10), `lean/Fsrs7MemoryState` the replay's
+  bounds and the update's success and lapse bounds (L5 to L7, L12), and `lean/Fsrs7PortState` the state: a refused
+  event leaves it unchanged, its keys strictly increase, and a checkpoint restores as the state under the same model
+  (L13). Each is replayed by a Rust vectors test, the port's through `Fsrs7`'s public port methods.
+- **Not proved.** The interval's derivation inside the pinned revision (its Newton and bisection search), so the
+  interval is not proved monotone in desired retention (L14, a recorded gap). `scheduler.rs::day_queue`, a second
+  builder of the stock queue with no production caller, is not ported.

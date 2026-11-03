@@ -1,7 +1,9 @@
 <script lang="ts">
   // SPEC-350 R16, A27; ADR-361 D8, D13. The voice picker: for each language the shown card speaks,
   // the language's default voice, then the device's voices for it. A choice is stored per language;
-  // the list follows the device's voices, which a browser may load after the page.
+  // the list follows the device's voices, which a browser may load after the page. SPEC-506 R2, R3;
+  // ADR-524: it lists only the voices the device runs, and shows the stored choice while it is one
+  // of them, else the default.
   import { m } from '#lib/paraglide/messages.js';
   import type { Voice, VoiceChoices } from './voice';
 
@@ -35,7 +37,7 @@
     {m.study_voice({ language })}
     <select
       class="min-h-11 min-w-11 rounded-md border px-3"
-      value={choices.voiceFor(voices, language)?.voiceURI ?? ''}
+      value={choices.chosen(voices, language)?.voiceURI ?? ''}
       onchange={(event) => choices.choose(language, event.currentTarget.value)}
     >
       <option value="">{m.study_voice_default()}</option>

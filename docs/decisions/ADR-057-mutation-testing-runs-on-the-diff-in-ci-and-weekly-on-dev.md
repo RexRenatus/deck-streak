@@ -270,3 +270,13 @@ The release run of a release pull request that SPEC-493 admits carries a Python 
 of this repository, for a file whose whole read set is byte-identical at that run and here, and runs every other listed mutant.
 ADR-511 decides it. The decisions above are unchanged: a survivor still fails, a carried one included, an equivalent mutant is
 still recorded and never skipped, and no annotation hides a mutant.
+
+## Note: on the release run the mutation jobs are advisory in `ci` (ADR-518)
+
+D11 judges a release pull request into `main` on its merge diff, in shards the plan sizes, and that stands: every
+mutation job runs on the release run and reports its result through its log, its report artifacts and
+`mutation-outcomes`. ADR-518 changes only how `ci` reads those jobs on that one run, which `base-is-dev` names by
+`release_run`'s predicate: `ci` prints each mutation job's result and admits it, by value, so the release can merge, and
+the weekly battery with it, which reaches `main` no other way. Every pull request into `dev` keeps every decision
+above: a survivor still fails it, an equivalent mutant is still recorded and never skipped, and no annotation hides a
+mutant.

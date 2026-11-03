@@ -25,14 +25,14 @@ use deck_streak_coordination::instruments::Instruments;
 use deck_streak_coordination::jobs::{DRILL_POSTBACK, HELD_FLUSH, Job, SYNC};
 use deck_streak_coordination::ledger::SqliteCronLedger;
 use deck_streak_coordination::obligations::Obligations;
-use deck_streak_coordination::runner::{Reason, Runner, SyncCycle};
+use deck_streak_coordination::runner::{Done, Fire, Reason, Runner, SyncCycle, Work};
 use deck_streak_coordination::sync_cycle::{CycleError, CycleParts, sync_cycle};
 use deck_streak_daemon::sync_request::owner_request_pending;
 use deck_streak_daemon::wiring::{
     self, OwnerSyncCycle, RecomputeSetup, StateDirectory, WiringError,
 };
-use deck_streak_identity::owner::TELEGRAM_BOT_TOKEN;
-use deck_streak_identity::{IdentityError, Owner};
+use deck_streak_identity::IdentityError;
+use deck_streak_identity::owner::telegram_pair;
 use deck_streak_ingest::engine::RslibEngine;
 use deck_streak_ingest::gate::ChangeGate;
 use deck_streak_ingest::settings::{ScopeSettings, SyncSettings};
@@ -43,7 +43,7 @@ use deck_streak_kernel::{
     Clock, ConventionsError, CredentialLoader, CredentialsDirectory, Db, Environment, KernelError,
     KernelSettings, Offload, Redactor, SettingsError, StudyDayRule, SystemClock,
 };
-use deck_streak_notifications::{Policy, PolicyError};
+use deck_streak_notifications::{Flushed, Policy, PolicyError};
 use deck_streak_progression::ledger::SqliteXpLedger;
 use deck_streak_vault::{Rails, RailsError, VaultSettings};
 
@@ -127,9 +127,13 @@ pub async fn run(env: &Environment, redactor: &Redactor, job: &Job) -> Result<u8
             .await
     } else if job.id == HELD_FLUSH.id {
         // The held flush joins the table without a sync cycle (#291): its work is the router's
-        // flush, which delivers what quiet hours held now that the window has ended.
-        let router = held_flush_router(env, redactor, &db, rule)?;
-        runner.run(job, &HeldFlushWork::new(&router)).await
+        // flush, which delivers what quiet hours held now that the window has ended. With no
+        // Telegram credential held it flushes the holding router, which keeps every held item
+        // and is done (SPEC-582 R9).
+        match held_flush_router(env, redactor, &db, rule)? {
+            HeldFlushRouter::Joined(router) => runner.run(job, &HeldFlushWork::new(&router)).await,
+            HeldFlushRouter::Holding(router) => runner.run(job, &KeptHeld(&router)).await,
+        }
     } else {
         runner.run_job(job.id, &cycle, &db).await
     };
@@ -137,36 +141,58 @@ pub async fn run(env: &Environment, redactor: &Redactor, job: &Job) -> Result<u8
     Ok(report.map_err(JobRoleError::Ledger)?.exit_code())
 }
 
-/// The router the held flush delivers through: the bot's own wiring, over the credentials the job's
-/// unit loads (#291).
+/// The router the held flush runs: joined to the bot's transport, or holding with none.
+enum HeldFlushRouter {
+    /// Both Telegram credentials are held: the bot's own wiring delivers (#291).
+    Joined(deck_streak_notifications::Router),
+    /// Neither is held: nothing is delivered and every held item is kept (SPEC-582 R9).
+    Holding(deck_streak_notifications::Router),
+}
+
+/// The held flush's work with no Telegram credential held (SPEC-582 R9): the holding router's
+/// flush, which has no transport, so it delivers nothing and leaves the queue. That is the job
+/// done, not a failure, so the unit does not page; anything else is a failure.
+struct KeptHeld<'a>(&'a deck_streak_notifications::Router);
+
+impl Work for KeptHeld<'_> {
+    async fn perform(&self, _fire: &Fire) -> Result<Done, Reason> {
+        match self.0.flush().await {
+            Ok(Flushed::NoNotifier) => Ok(Done::Done),
+            _ => Err(Reason::new("flush_failed")),
+        }
+    }
+}
+
+/// The router the held flush delivers through: the bot's own wiring over the credentials the job's
+/// unit loads when both Telegram credentials are held (#291), or the holding router, with no
+/// transport, when neither is held or no credentials directory is set (SPEC-582 R9). One held
+/// without the other, or one malformed, refuses start by its id.
 fn held_flush_router(
     env: &Environment,
     redactor: &Redactor,
     db: &Db,
     rule: StudyDayRule,
-) -> Result<deck_streak_notifications::Router, JobRoleError> {
+) -> Result<HeldFlushRouter, JobRoleError> {
     let api = ApiUrl::from_env(env)?;
-    let credentials = CredentialsDirectory::from_env(env)?;
-    let loader = CredentialLoader::new(credentials, redactor.clone());
-    let owner = Owner::load(&loader)?;
-    let token = loader
-        .load(TELEGRAM_BOT_TOKEN)
-        .map_err(IdentityError::from)?;
-    if token.expose().trim().is_empty() {
-        return Err(IdentityError::Malformed {
-            id: TELEGRAM_BOT_TOKEN,
-            expected: "the bot's token, not blank",
-        }
-        .into());
-    }
+    let credentials =
+        env.optional::<CredentialsDirectory>(deck_streak_kernel::settings::CREDENTIALS_DIRECTORY)?;
+    let pair = match credentials {
+        Some(credentials) => telegram_pair(&CredentialLoader::new(credentials, redactor.clone()))?,
+        None => None,
+    };
+    let Some((owner, token)) = pair else {
+        tracing::info!("neither Telegram credential is held: the held flush keeps what it holds");
+        let holding = wiring::holding_router(Arc::new(Policy::compiled()?), db.clone(), rule);
+        return Ok(HeldFlushRouter::Holding(holding));
+    };
     let transport = Arc::new(Transport::new(&api, &token)?);
-    Ok(wiring::router(
+    Ok(HeldFlushRouter::Joined(wiring::router(
         Policy::compiled()?,
         db.clone(),
         rule,
         transport,
         owner,
-    ))
+    )))
 }
 
 /// Serves the owner's stored request, when there is one (SPEC-059; ADR-066): one owner cycle, with

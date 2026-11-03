@@ -177,6 +177,20 @@ fn clips(tags: &[AvTag], budget: &mut Budget<'_>, videos: &mut Vec<String>) -> V
         .collect()
 }
 
+/// `card`'s question as one line of text, as the web engine's undo offer reads a card (SPEC-371
+/// R8; SPEC-515 R3): the question's nodes of the engine's full render joined, its AV tags stripped,
+/// and its HTML made one line with media file names kept. It writes nothing.
+pub(crate) fn question_line(backend: &Backend, card: i64) -> Result<String, Refusal> {
+    let request = RenderExistingCardRequest {
+        card_id: card,
+        browser: false,
+        partial_render: false,
+    };
+    let rendered: RenderCardResponse = call(backend, RENDER_EXISTING_CARD, &request)?;
+    let question = strip_av_tags(join(&rendered.question_nodes, None));
+    Ok(html_to_text_line(&question, true).into_owned())
+}
+
 /// Completes `card`'s face for `side` as the engine's own reviewer does (SPEC-348 R2 to R4).
 pub(crate) fn complete(
     backend: &Backend,

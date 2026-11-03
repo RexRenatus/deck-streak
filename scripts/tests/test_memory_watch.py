@@ -23,7 +23,7 @@ SCRIPT = REPO / "deploy" / "scripts" / "memory-watch.sh"
 FIXTURE = REPO / "scripts" / "tests" / "fixtures" / "cgroup"
 BUDGET = REPO / "deploy" / "host-budget.json"
 API = "deck-streak-api.service"
-BOT = "deck-streak-bot.service"
+MCP = "deck-streak-mcp.service"
 UNRELATED = "unrelated.service"
 JOB_TEMPLATE = "deck-streak-job"
 # systemd escapes the template's dashes in the slice it makes for the template's instances.
@@ -120,13 +120,13 @@ class TheWatchPagesOncePerEvent(unittest.TestCase):
             code, lines = watch.run()
             self.assertEqual(code, 0, lines)
             self.assertEqual(paged(lines, API), [], lines)
-            # A new high event in the bot is MemoryHigh throttling it: logged, and paging no one.
-            watch.bump(BOT, "high", by=3)
+            # A new high event in the MCP server is MemoryHigh throttling it: logged, paging no one.
+            watch.bump(MCP, "high", by=3)
             code, lines = watch.run()
             self.assertEqual(code, 0, lines)
-            bot = logged(lines, BOT)
-            self.assertEqual(len(bot), 1, lines)
-            self.assertIn("high", bot[0])
+            mcp = logged(lines, MCP)
+            self.assertEqual(len(mcp), 1, lines)
+            self.assertIn("high", mcp[0])
             self.assertEqual([line for line in lines if line.startswith("<3>")], [], lines)
             # A unit that is not DeckStreak's was never read, whatever its counters did.
             self.assertEqual([line for line in lines if UNRELATED in line], [])
@@ -172,7 +172,7 @@ class TheWatchPagesOncePerEvent(unittest.TestCase):
             # its next run's cgroup new.
             job = f"{JOB_TEMPLATE}@sync.service"
             cgroup = watch.slice / JOB_SLICE / job
-            shutil.copytree(watch.cgroup(BOT), cgroup)
+            shutil.copytree(watch.cgroup(MCP), cgroup)
             watch.bump(job, "max")
             code, lines = watch.run()
             self.assertEqual((code, paged(lines, job)), (0, []), lines)
@@ -202,7 +202,7 @@ class TheWatchPagesOncePerEvent(unittest.TestCase):
             watch = Watch(scratch)
             kept = Path(scratch) / "kept"
             kept.mkdir()
-            for unit in (API, BOT):
+            for unit in (API, MCP):
                 watch.cgroup(unit).rename(kept / unit)
             # Only a unit that is not DeckStreak's: the watch sees nothing, and says so once.
             code, lines = watch.run()
@@ -241,11 +241,11 @@ class TheWatchPagesOncePerEvent(unittest.TestCase):
             (watch.cgroup(API) / "memory.max").write_text("max\n", encoding="utf-8")
             watch.use(API, 10**12)
             # Events it cannot read: said once per run, and the other units are still watched.
-            (watch.cgroup(BOT) / "memory.events").unlink()
+            (watch.cgroup(MCP) / "memory.events").unlink()
             code, lines = watch.run()
             self.assertEqual(code, 0, lines)
             self.assertEqual(logged(lines, API), [], lines)
-            self.assertEqual(logged(lines, BOT), [f"<4>{BOT}: its memory.events cannot be read"])
+            self.assertEqual(logged(lines, MCP), [f"<4>{MCP}: its memory.events cannot be read"])
             watch.bump(API, "oom_kill")
             code, lines = watch.run()
             self.assertEqual((code, len(paged(lines, API))), (1, 1), lines)

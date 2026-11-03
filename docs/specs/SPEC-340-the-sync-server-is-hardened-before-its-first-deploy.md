@@ -226,3 +226,13 @@ release workflow in this band.
 
 SPEC-337, ADR-347, ADR-351, ADR-340, ADR-058, ADR-336, ADR-064, ADR-038, ADR-032;
 `docs/schematics/sync-server-hardening.md`; #618, #628, #647, #649, #161.
+
+## 10. Amendments (SPEC-584): the offsite archives' period is seven days
+
+- **R11.** `PRIVACY.md` states the offsite archives' period as `P7D`. The bucket's lifecycle
+  rule deletes each archive six days after it is written, inside that period, and the runbook
+  checks the rule before the window (ADR-351's amendment; ADR-603 D2).
+- **A13 and A14** read the period from the one constant in
+  `scripts/tests/test_sync_server_runbook.py`, which is now `P7D`.
+- `PRIVACY.md`, `docs/runbooks/sync-server-cutover.md`, `docs/schematics/sync-server-hardening.md`
+  and `scripts/tests/test_sync_server_runbook.py`: changed by SPEC-584.

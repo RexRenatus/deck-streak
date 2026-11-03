@@ -269,3 +269,36 @@ is deployed; the timer is enabled; the receiver is set to tell the owner on a re
 check-in missing past its grace. The verify: one run with the path whole, and the check-in seen at
 the receiver; one alert instance failed on purpose, and the report seen by the owner; that instance
 reset, and the check-ins seen again. The record: the operator's deploy record names each observation.
+
+## Amendment (SPEC-582): the second route is not installed
+
+R1, R2, R3 and R10: the unit and its timer leave `deploy/systemd/` with their rail-contract rows
+and the unit's host-budget entry, since the two addresses off the host do not exist (ADR-601 D6).
+The script, R4 to R9, R11 and R12's model stay in the tree for the monitoring delivery to keep or
+retire.
+
+- A1, A2 and A5 to A8 keep their commands: they run the script.
+- A3 and A4 keep their test names and are read over the script and a planted unit text in a
+  scratch directory, since no unit file ships; the alert sender they compare with loads no
+  credential.
+- A9's test is renamed `test_the_install_ships_no_second_route_unit_and_keeps_its_script`, and its
+  command is now
+  `python3 -m unittest discover -s scripts/tests -p test_deploy_templates.py -k the_install_ships_no_second_route_unit_and_keeps_its_script`
+  (SPEC-582 A15).
+
+## Amendment (SPEC-585): superseded by the pager
+
+SPEC-585 and ADR-604 supersede this SPEC. The second route's unit and timer left the install with
+SPEC-582, so R1 to R11 and R13 no longer describe the install. What the second route told the
+owner is now the pager's (ADR-604 D3):
+
+- a failed alert instance, whatever made it fail, is the page `an-alert-instance-failed`, matched
+  on the service manager's own record of the failure;
+- an absent or silent alert path, a host, a service manager, a timer or a log shipper gone quiet,
+  is the page `the-evaluator-is-silent`, the silence of the SLO evaluator's recorded runs;
+- a host or an edge that stops answering is the uptime checks' page, made outside this repository
+  with the pager's channels.
+
+`deploy/scripts/second-route.sh`, its model `formal/tla/SecondRoute` (R12), its rows and the tests
+of A1 to A8 stay as SPEC-582 leaves them, with no unit that runs them, until their retirement
+(#1103). §8's hand-run verify is replaced by SPEC-585's section 8.

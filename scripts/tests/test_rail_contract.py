@@ -383,6 +383,26 @@ class TheRailContract(unittest.TestCase):
         self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
         self.assertIn("REFUSE: deck-streak-gone.service: no template carries", done.stdout)
 
+    def test_the_contract_carries_no_telegram_or_second_route_row(self):
+        # SPEC-582 R11: the install ships neither the bot nor the second route, so the contract
+        # holds no row of either, and the alert template's ExecStart row names the journal sender.
+        contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
+        rows = examined("contract row(s)", contract["values"])
+        gone = (
+            "deck-streak-bot.service",
+            "deck-streak-second-route.service",
+            "deck-streak-second-route.timer",
+        )
+        self.assertEqual([row for row in rows if row["unit"] in gone], [])
+        sender = [
+            row["neutral"]
+            for row in rows
+            if (row["unit"], row["section"], row["key"])
+            == ("deck-streak-alert@.service", "Service", "ExecStart")
+        ]
+        self.assertEqual(sender, [[f"{RELEASE_ROOT}/deploy/scripts/alert-journal.sh %i"]])
+        self.assertEqual((len(rows), len({row["unit"] for row in rows})), (29, 18))
+
 
 class TheEffectiveCheck(unittest.TestCase):
     API = f"{UNIT_DIR}/deck-streak-api.service"

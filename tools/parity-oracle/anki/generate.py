@@ -14,8 +14,9 @@ The registry is one module per SPEC, `registry/spec_NNN.py`, loaded in path orde
     {"id": "F4", "classes": ["rollover", ...], "note": "...", "cases": build}
 
 `build(rng)` receives only a `random.Random` seeded with the corpus's SEED and returns
-`(class or None, input)` pairs. Every declared class must have a case, and every case's class
-must be declared, or the registry is refused before anything runs (exit 2).
+`(class or None, input)` pairs. Every declared class must have a case, every case's class must
+be declared, and no class may hold one input twice, or the registry is refused before anything
+runs (exit 2).
 
 The harness is a small program on the engine's API, kept outside this repository and outside
 its workspace. This driver pins the sha256 of the harness's source, so a golden's
@@ -62,16 +63,18 @@ GENERATOR = "tools/parity-oracle/anki/generate.py"
 #: Where a registry module is published, whichever directory the driver loaded it from.
 PUBLISHED_REGISTRY = "tools/parity-oracle/anki/registry"
 #: The engine commit DeckStreak's root manifest pins: the engine every golden records.
-ENGINE_COMMIT = "65e053b829825f534803b2b772c507a73ba936a3"
+ENGINE_COMMIT = "dca72f352730abb4222389cc148e46387c17f97f"
 #: The harness's package name. Its manifest has an empty `[workspace]` table, so no lock but its
 #: own ever names it.
 HARNESS_PACKAGE = "parity-oracle-anki-harness"
 #: Paths the harness and the render generator may be built from. No workflow names one.
 HARNESS_PATHS = ("tools/parity-oracle/anki/harness", "tools/render-oracle")
-#: The sha256 of the harness's source tree (`tree_digest`). The run that adds the goldens pins
-#: it here, in the same commit, so every golden's `generator_sha256` covers the harness. Until
-#: then the driver refuses to start (exit 2).
-HARNESS_SOURCE_SHA256: str | None = None
+#: The sha256 of the harness's source tree (`tree_digest`), pinned before the run that adds the
+#: goldens, so every golden's `generator_sha256` covers the harness. Unpinned, the driver
+#: refuses to start (exit 2).
+HARNESS_SOURCE_SHA256: str | None = (
+    "db3d7e25bb4f1e2c9d4e0f08b796172eb994d108db774bb6301d6a1c83c53f32"
+)
 PROTOCOL = 1
 MODULE_NAME = re.compile(r"spec_\d{3}\.py")
 GOLDEN_NAME = re.compile(r"anki(?:[_.][a-z0-9]+)+")
@@ -230,7 +233,8 @@ def draw(name: str, build: Callable[[random.Random], list[Case]], seed: int) -> 
 
 def covered(name: str, registration: dict, seed: int) -> list[Case]:
     """The registration's cases, refused unless every declared class has a case and every
-    case's class is declared (edge-class coverage)."""
+    case's class is declared (edge-class coverage), and refused if a class holds one hand case
+    twice, which would count a copy as a case."""
     cases = draw(name, registration["cases"], seed)
     declared = registration["classes"]
     drawn = {edge for edge, _ in cases if edge is not None}
@@ -240,6 +244,16 @@ def covered(name: str, registration: dict, seed: int) -> list[Case]:
     stray = sorted(drawn - set(declared))
     if stray:
         raise Refused(f"{name}: case class(es) it does not declare: {', '.join(stray)}")
+    seen = set()
+    for edge, arguments in cases:
+        if edge is None:
+            continue
+        key = (edge, json.dumps(arguments, sort_keys=True, ensure_ascii=False))
+        if key in seen:
+            raise Refused(
+                f"{name}: class {edge} holds one input twice; a repeated case adds nothing"
+            )
+        seen.add(key)
     return cases
 
 
@@ -394,7 +408,7 @@ class Harness:
                 stdout=subprocess.PIPE,
                 text=True,
                 encoding="utf-8",
-                env={"PATH": os.environ.get("PATH", ""), "LC_ALL": "C.UTF-8"},
+                env={"PATH": os.environ.get("PATH", ""), "LC_ALL": "C.UTF-8", "TZ": "UTC"},
             )
         except OSError as error:
             raise RunFailed(f"the harness cannot start: {error.strerror}") from error

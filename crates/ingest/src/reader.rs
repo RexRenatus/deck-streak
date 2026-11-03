@@ -25,32 +25,13 @@ use tokio::runtime::Handle;
 
 use crate::lock::CollectionLock;
 use crate::memory_state::{MemoryState, parse as parse_memory};
+use crate::schema18::{CARDS, CREATED, DECK_NAMES, REVIEWS};
 use crate::settings::{DECK_SEPARATOR, ScopeSettings, SyncSettings};
 use crate::tier::{Tier, parse_tier};
 
 /// `SQLite`'s primary result code for a write refused because the database is read-only
 /// (`SQLITE_READONLY`); every extended code of it keeps this in its low byte.
 const SQLITE_READONLY: i32 = 8;
-
-/// Every deck's id and stored name. The name is only ever read, by id: it is never compared,
-/// ordered or aggregated in SQL (R4).
-const DECK_NAMES: &str = "SELECT id, name FROM decks ORDER BY id";
-/// The cards whose home deck (the original deck while a filtered deck borrows the card) is one of
-/// the ids in `?1`, a JSON array: [`Card::home_deck_id`] in SQL, as the predecessor's recount
-/// wrote it.
-const CARDS: &str = "SELECT id, nid, did, odid, queue, type, due, ivl, factor, reps, lapses, \
-     (SELECT n.tags FROM notes n WHERE n.id = cards.nid), cards.data \
-     FROM cards WHERE (CASE WHEN odid != 0 THEN odid ELSE did END) IN (SELECT value FROM json_each(?1)) \
-     ORDER BY id";
-/// The revlog rows newer than the floor `?1` of the cards whose home deck is one of the ids in
-/// `?2`, oldest first. The study-event rule is applied to them here, not in SQL.
-const REVIEWS: &str = "SELECT r.id, r.cid, r.ease, r.ivl, r.lastIvl, r.factor, r.time, r.type \
-     FROM revlog r JOIN cards c ON c.id = r.cid \
-     WHERE r.id > ?1 AND (CASE WHEN c.odid != 0 THEN c.odid ELSE c.did END) \
-     IN (SELECT value FROM json_each(?2)) ORDER BY r.id";
-/// The collection's creation stamp, in epoch seconds (the predecessor's `read_config` reads
-/// `col.crt`); no rollover hour is read with it (R7).
-const CREATED: &str = "SELECT crt FROM col ORDER BY id LIMIT 1";
 
 /// A card row as [`CARDS`] selects it.
 type CardRow = (

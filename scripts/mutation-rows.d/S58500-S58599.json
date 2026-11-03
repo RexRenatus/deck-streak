@@ -1,0 +1,134 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S58500-THE-ALERT-CHANNEL-IS-THE-PAGER",
+        "deploy/slo.json",
+        "\"channel\": \"pager\"",
+        "\"channel\": \"journal\"",
+        "the SLO declaration's alert channel is the pager; left at the journal, no page is told off the host (SPEC-585 R1, A1)",
+        "test_slo_declaration.TheApiSloBurnsAsDeclared.test_every_alert_routes_to_the_one_alert_path"
+      ],
+      [
+        "S58501-THE-API-TICKET-ROUTES-TO-THE-PAGER",
+        "deploy/slo.json",
+        "\"route\": \"pager\"\n        }\n      ]\n    },",
+        "\"route\": \"journal\"\n        }\n      ]\n    },",
+        "the API's ticket routes to the pager like every alert; routed to the journal, a slow burn of the API's budget is never told (SPEC-585 R1, A1)",
+        "test_slo_declaration.TheApiSloBurnsAsDeclared.test_every_alert_routes_to_the_one_alert_path"
+      ],
+      [
+        "S58502-THE-MCP-TICKET-ROUTES-TO-THE-PAGER",
+        "deploy/slo.json",
+        "\"route\": \"pager\"\n        }\n      ]\n    }\n  ],",
+        "\"route\": \"journal\"\n        }\n      ]\n    }\n  ],",
+        "the MCP server's ticket routes to the pager with its exact burn rate; routed to the journal, its slow burn is never told (SPEC-585 R1, A1)",
+        "test_slo_declaration.TheMcpSloBurnsAsDeclared.test_the_mcp_slo_pages_and_tickets_on_the_one_alert_path_with_exact_burn_rates"
+      ],
+      [
+        "S58503-THE-PAGER-CARRIES-THE-SLO-ROUTE",
+        "docs/monitoring/pager.json",
+        "\"route\": \"pager\",",
+        "\"route\": \"journal\",",
+        "the pager's declaration names the route every SLO alert takes; another route leaves the alerts with no declared reader (SPEC-585 R2, A2)",
+        "test_pager_declaration.ThePagerIsDeclared.test_the_pager_carries_the_route_every_slo_alert_names"
+      ],
+      [
+        "S58504-THE-ALERT-LINE-IS-MATCHED-AT-ERROR-PRIORITY",
+        "docs/monitoring/pager.json",
+        "\"priority_at_most\": 3,",
+        "\"priority_at_most\": 2,",
+        "the alert line is matched at priority 3, the priority the journal sender writes; matched only above it, no page is told (SPEC-585 R3, A2)",
+        "test_pager_declaration.ThePagerIsDeclared.test_the_pager_matches_the_alert_templates_line_at_error_priority"
+      ],
+      [
+        "S58505-THE-ALERT-LINE-IS-MATCHED-BY-THE-TEMPLATES-IDENTIFIER",
+        "docs/monitoring/pager.json",
+        "\"identifier_prefix\": \"deck-streak-alert@\",",
+        "\"identifier_prefix\": \"deck-streak-slo\",",
+        "the alert line is matched by the alert template's identifier; matched by another unit's, the template's pages are never told (SPEC-585 R3, A2)",
+        "test_pager_declaration.ThePagerIsDeclared.test_the_pager_matches_the_alert_templates_line_at_error_priority"
+      ],
+      [
+        "S58506-A-FAILED-ALERT-INSTANCE-PAGES",
+        "docs/monitoring/pager.json",
+        "\"kind\": \"unit-failed\",",
+        "\"kind\": \"line\",",
+        "a failed alert instance pages on the service manager's record; matched as a line of its own, a sender that wrote nothing is never told (SPEC-585 R4, A2)",
+        "test_pager_declaration.ThePagerIsDeclared.test_a_failed_alert_instance_pages_without_its_own_line"
+      ],
+      [
+        "S58507-THE-EVALUATORS-SILENCE-PAGES-WITHIN-FOUR-PERIODS",
+        "docs/monitoring/pager.json",
+        "\"minutes\": 20,",
+        "\"minutes\": 60,",
+        "the evaluator's silence pages within four of its five-minute periods; at an hour, a host gone quiet is told late (SPEC-585 R5, A3)",
+        "test_pager_declaration.ThePagerHearsSilence.test_the_evaluators_silence_pages_within_four_of_its_periods"
+      ],
+      [
+        "S58508-A-LATE-BACKUP-PAGES-WITHIN-TWO-HOURS",
+        "docs/monitoring/pager.json",
+        "\"minutes\": 1560,",
+        "\"minutes\": 2880,",
+        "a daily backup two hours late pages; at two days, a day's backup is lost before anyone is told (SPEC-585 R6, A3)",
+        "test_pager_declaration.ThePagerHearsSilence.test_a_daily_backup_two_hours_late_pages"
+      ],
+      [
+        "S58509-ONLY-DECKSTREAKS-LINES-SHIP",
+        "docs/monitoring/pager.json",
+        "\"units\": \"deck-streak-*\",",
+        "\"units\": \"*\",",
+        "only the lines of DeckStreak's own units ship; every unit's lines would carry what DeckStreak never declared (SPEC-585 R7, A4)",
+        "test_pager_declaration.TheShippedLinesAreBounded.test_only_deck_streak_lines_ship_and_none_outlives_the_journal"
+      ],
+      [
+        "S58510-NO-SHIPPED-LINE-OUTLIVES-THE-JOURNAL",
+        "docs/monitoring/pager.json",
+        "\"period\": \"P14D\",",
+        "\"period\": \"P30D\",",
+        "the log store keeps a line no longer than the journal's 14 days; at 30 days the privacy page's window is false (SPEC-585 R7, A4)",
+        "test_pager_declaration.TheShippedLinesAreBounded.test_only_deck_streak_lines_ship_and_none_outlives_the_journal"
+      ],
+      [
+        "S58511-A-PAGE-REACHES-TWO-CHANNELS",
+        "docs/monitoring/pager.json",
+        "\"channels_at_least\": 2,",
+        "\"channels_at_least\": 1,",
+        "a page reaches two channels; with one, that channel's outage loses every page (SPEC-585 R8, A4)",
+        "test_pager_declaration.TheShippedLinesAreBounded.test_a_page_reaches_a_person_by_two_channels_of_two_kinds"
+      ],
+      [
+        "S58512-NO-COUNTER-CARRIES-THE-REQUEST-ID",
+        "docs/monitoring/pager.json",
+        "\"status_class\": \"status\"}",
+        "\"status_class\": \"status\", \"request_id\": \"span.request_id\"}",
+        "no request counter carries the request id; as a label it makes one series per request (SPEC-585 R9, A5)",
+        "test_pager_declaration.TheRequestCountersCarryNoIdentity.test_the_request_counters_carry_no_request_id_and_no_identity"
+      ],
+      [
+        "S58513-THE-POLICY-BOUNDS-THE-MONITORING-COPY",
+        "PRIVACY.md",
+        "keeps that copy for at most 14 days",
+        "keeps that copy for at most 30 days",
+        "the privacy page bounds the monitoring service's copy of the journal by the journal's window; a longer period says the copy outlives it (SPEC-585 R10, A6)",
+        "test_privacy_policy.ThePolicyStatesHowUseIsMeasured.test_the_policy_bounds_the_monitoring_copy_of_the_journal"
+      ],
+      [
+        "S58514-ANY-MEASUREMENT-OF-USE-IS-OFF-UNTIL-TURNED-ON",
+        "PRIVACY.md",
+        "is off until you turn it on",
+        "is on until you turn it off",
+        "the privacy page says any measurement of use is off until the learner turns it on; on by default would break the switch's rule (SPEC-585 R11, A6)",
+        "test_privacy_policy.ThePolicyStatesHowUseIsMeasured.test_the_policy_states_how_use_is_measured"
+      ],
+      [
+        "S58515-THE-APPS-MEASURE-NOTHING",
+        "PRIVACY.md",
+        "The apps measure nothing about how you use them",
+        "The apps measure how you use them",
+        "the privacy page says the apps measure nothing about how they are used, as the privacy manifest declares; the opposite disagrees with the manifest (SPEC-585 R12, A6)",
+        "test_privacy_policy.ThePolicyStatesHowUseIsMeasured.test_the_policy_and_the_privacy_manifest_agree_no_usage_is_collected"
+      ]
+    ]
+  }
+}

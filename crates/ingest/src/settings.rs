@@ -11,8 +11,9 @@ use std::fmt;
 use std::path::PathBuf;
 
 use deck_streak_kernel::{Environment, Setting, SettingsError};
+use deck_streak_search::Profile;
 
-use crate::skip::{SKIP_DEFAULT_SEARCH, is_one_expression};
+use crate::skip::SKIP_DEFAULT_SEARCH;
 
 /// The sync server's URL (required).
 pub const SYNC_ENDPOINT: &str = "DECKSTREAK_SYNC_ENDPOINT";
@@ -299,12 +300,13 @@ impl SkipSearch {
     }
 
     /// Reads the search from `env`: unset or empty is [`SKIP_DEFAULT_SEARCH`]; a search that is not
-    /// one expression refuses start, and nothing else is checked here (the zone is checked at each
-    /// preview, take and undo).
+    /// one expression of the skip profile refuses start (SPEC-514 R3), and nothing else is checked
+    /// here (the zone is checked at each preview, take and undo).
     ///
     /// # Errors
     ///
-    /// [`SettingsError::Malformed`] naming [`SKIP_SEARCH`] when the search is not one expression.
+    /// [`SettingsError::Malformed`] naming [`SKIP_SEARCH`], and never its value, when the search is
+    /// not one expression or uses a key the skip profile does not know.
     pub fn from_env(env: &Environment) -> Result<Self, SettingsError> {
         Ok(env
             .optional(SKIP_SEARCH)?
@@ -321,7 +323,12 @@ impl fmt::Debug for SkipSearch {
 impl Setting for SkipSearch {
     const SHAPE: &'static str = "one Anki search expression";
 
+    /// One expression of the skip profile (SPEC-514 R3, A2): a key, an operator or a value the
+    /// profile does not admit refuses start as a malformed search does, naming the setting only.
     fn parse(text: &str) -> Option<Self> {
-        is_one_expression(text).then(|| Self(text.to_owned()))
+        Profile::SKIP
+            .parse(text)
+            .is_ok()
+            .then(|| Self(text.to_owned()))
     }
 }

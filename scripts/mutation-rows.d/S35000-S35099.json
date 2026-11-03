@@ -176,8 +176,8 @@
         "S35019-GET-UNDO-STATUS-IS-ON-THE-WEB",
         "engine-core",
         "src/table.rs",
-        "        name: \"CollectionService.GetUndoStatus\",\n        native: false,\n        web: true,",
-        "        name: \"CollectionService.GetUndoStatus\",\n        native: false,\n        web: false,",
+        "        name: \"CollectionService.GetUndoStatus\",\n        native: true,\n        web: true,",
+        "        name: \"CollectionService.GetUndoStatus\",\n        native: true,\n        web: false,",
         "table::the_review_pairs_are_ordinary_on_the_web",
         "CollectionService.GetUndoStatus is a review pair, ordinary on the web; with its web column off, the core would refuse the web engine's call and the review could not run (SPEC-350 A2)"
       ],

@@ -3,6 +3,7 @@
 import { parseRequest } from './protocol';
 import type {
   BackupsListed,
+  CardHealth,
   CardView,
   ChoiceConfirmed,
   ChoiceCounted,
@@ -11,6 +12,8 @@ import type {
   ErrorCode,
   Faces,
   Head,
+  HealthReadout,
+  HealthReview,
   MediaAsk,
   Opened,
   Reply,
@@ -45,6 +48,8 @@ export interface EngineModule {
    * decimal string. It writes nothing (SPEC-371 R7). */
   undo_offer(): string;
   snapshot(card: bigint): string;
+  /** One card's health as JSON, or `null` for an id no card has (SPEC-507 R1). */
+  card_health(card: bigint): string;
   last_panic(): string | undefined;
   memory_pages(): number;
   /** The review's exports (SPEC-350 R2, R3): JSON, with each id as a decimal string. */
@@ -87,9 +92,14 @@ export interface SessionDeps {
     cancel(): Promise<void>;
     unsynced(): Promise<Unsynced>;
   };
-  /** The Worker's backups, which the two backup operations reach; typed by its shape, so this
-   * module never imports it (SPEC-377 R15, R16). A Worker without one refuses each by name. */
-  backups?: { list(): Promise<BackupsListed>; export(backup: string): Promise<Uint8Array> };
+  /** The Worker's backups, which the three backup operations reach; typed by its shape, so this
+   * module never imports it (SPEC-377 R15, R16; SPEC-516 R4). A Worker without one refuses each by
+   * name. */
+  backups?: {
+    list(): Promise<BackupsListed>;
+    export(backup: string): Promise<Uint8Array>;
+    backUpNow(): Promise<string>;
+  };
 }
 
 /** A media file the Worker read for the core: its name and its first bytes. */
@@ -112,6 +122,53 @@ function toSnapshot(row: string): Snapshot | null {
   if (fields === null) return null;
   const [id, queue, type, due, interval, reps, lapses] = fields;
   return { id: BigInt(id), queue, type, due, interval, reps, lapses };
+}
+
+/** A card's health as the core writes it (SPEC-507 R2). */
+interface CardHealthJson {
+  card: number;
+  reps: number;
+  lapses: number;
+  logged: { answers: number; lapses: number };
+  rows: number;
+  reviews: HealthReview[];
+  total_ms: number;
+  mean_ms: number | null;
+  median_ms: number | null;
+  scheduler: { state: string; recall_ppm?: number; days_to_90?: number };
+  provenance: { source: 'collection'; created_ms: number };
+}
+
+/** The states in which the scheduler gives no readout. */
+const NOT_READY = ['absent', 'fixture', 'unready', 'stale'] as const;
+
+/** The scheduler's part: Ready only with both of its figures; any other answer reads as a state with
+ * no number, the absent one when the word is unknown, so no figure is made up (SPEC-507 R6). */
+function toReadout(part: CardHealthJson['scheduler']): HealthReadout {
+  const { state, recall_ppm: recallPpm, days_to_90: daysTo90 } = part;
+  if (state === 'ready' && Number.isInteger(recallPpm) && Number.isInteger(daysTo90)) {
+    return { state: 'ready', recallPpm: recallPpm as number, daysTo90: daysTo90 as number };
+  }
+  return { state: NOT_READY.find((word) => word === state) ?? 'absent' };
+}
+
+/** The record `card_health` answers, its card as a bigint, or `null` for an id no card has. */
+function toCardHealth(json: string): CardHealth | null {
+  const record = JSON.parse(json) as CardHealthJson | null;
+  if (record === null) return null;
+  return {
+    card: BigInt(record.card),
+    reps: record.reps,
+    lapses: record.lapses,
+    logged: record.logged,
+    rows: record.rows,
+    reviews: record.reviews,
+    totalMs: record.total_ms,
+    meanMs: record.mean_ms,
+    medianMs: record.median_ms,
+    scheduler: toReadout(record.scheduler),
+    provenance: { source: 'collection', createdMs: record.provenance.created_ms }
+  };
 }
 
 /** A deck as the engine writes it: its id as a decimal string, so no id loses a digit. */
@@ -199,7 +256,9 @@ export class Session {
     ) {
       return this.#choice(request);
     }
-    if (request.op === 'backups' || request.op === 'backup-export') return this.#backups(request);
+    if (request.op === 'backups' || request.op === 'backup-export' || request.op === 'backup-now') {
+      return this.#backups(request);
+    }
     if (request.op === 'faces') return this.#faces(request.id, request.card);
     return this.#run(request.id, (engine) => this.#call(engine, request));
   }
@@ -313,14 +372,18 @@ export class Session {
     }
   }
 
-  /** A backup operation's answer (SPEC-377 R15, R16), on the session's queue like a choice: the
-   * list after retention, or one listed backup's bytes. A Worker with no backups refuses each by
-   * name; a trap ends the session, and any other throw answers `engine-failed`. */
-  async #backups(request: Extract<Request, { op: 'backups' | 'backup-export' }>): Promise<Reply> {
+  /** A backup operation's answer (SPEC-377 R15, R16; SPEC-516 R4), on the session's queue like a
+   * choice: the list after retention, one listed backup's bytes, or the id of a backup made now. A
+   * Worker with no backups refuses each by name; a trap ends the session, and any other throw
+   * answers `engine-failed`. */
+  async #backups(
+    request: Extract<Request, { op: 'backups' | 'backup-export' | 'backup-now' }>
+  ): Promise<Reply> {
     const backups = this.#deps.backups;
     if (backups === undefined) return refuse(request.id, 'engine-failed', `this Worker keeps no backups for ${request.op}`);
     try {
       if (request.op === 'backups') return { id: request.id, ok: true, value: await backups.list() };
+      if (request.op === 'backup-now') return { id: request.id, ok: true, value: await backups.backUpNow() };
       return { id: request.id, ok: true, value: await backups.export(request.backup) };
     } catch (error) {
       return this.#failed(request.id, error);
@@ -376,6 +439,8 @@ export class Session {
         return engine.next_card() ?? null;
       case 'snapshot':
         return toSnapshot(engine.snapshot(request.card));
+      case 'card-health':
+        return toCardHealth(engine.card_health(request.card));
       case 'undo':
         engine.undo(request.card, request.step);
         return null;

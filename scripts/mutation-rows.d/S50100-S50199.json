@@ -1,0 +1,15 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S50100-THE-INTERFACE-CRATE-LEAVES-NO-STD",
+        "companion",
+        "src/lib.rs",
+        "#![no_std]",
+        "",
+        "wire_integers::the_interface_crate_is_no_std_and_a_root_without_it_is_refused",
+        "the interface crate is no_std with alloc, so the server and both clients link one interface that reaches no clock, file or thread through std; deleted, std is in reach of every module of the interface (ADR-519 D5)"
+      ]
+    ]
+  }
+}

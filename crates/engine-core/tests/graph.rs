@@ -455,7 +455,11 @@ fn the_context_map_declares_the_core_and_its_two_edges() {
         vec![
             ("deck-streak-engine-core", Some("fsrs7".to_owned())),
             ("deck-streak-ffi", Some("engine-core".to_owned())),
-            ("deck-streak-web-engine", Some("engine-core".to_owned())),
+            // SPEC-511 R13 (ADR-529 D4): the web engine also names the companion's interface.
+            (
+                "deck-streak-web-engine",
+                Some("companion, engine-core".to_owned())
+            ),
         ],
         "docs/CONTEXT-MAP.md's fence"
     );

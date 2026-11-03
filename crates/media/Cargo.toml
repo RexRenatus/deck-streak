@@ -1,0 +1,30 @@
+[package]
+name = "deck-streak-media"
+description = "DeckStreak's media core: a file known by the SHA-256 of its bytes, certified ds- names, write-once bindings, the one grammar that finds every media name a note writes, and the sweep plan, with no I/O. See docs/CONTEXT-MAP.md."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+# ADR-531 D1 and D6: the pure core needs SHA-256 alone. sha2 is the workspace's own (ADR-024), at
+# the version the lock already holds, so it adds no package. The crate has no workspace edge.
+[dependencies]
+sha2.workspace = true
+
+[dev-dependencies]
+# ADR-029: the parity oracle's golden reader, compiled into the crate's golden tests by path.
+serde.workspace = true
+serde_json.workspace = true
+
+# ADR-531 D7: each Kani harness's witness, a mutant of the shipped code behind a feature. Every one
+# is off, no default list names it, and no other manifest names it, so no build ships a mutant.
+[features]
+kani-witness-blob-path = []
+kani-witness-bind = []
+kani-witness-sweep = []
+kani-witness-scan = []

@@ -6,14 +6,14 @@
   // inherits from its creation, and a host that does not read back as written is a refusal too.
   // SPEC-350 R7; ADR-361: the card's classes reach the frame's body through its document, and the
   // frame gains no attribute and no style of its own, so its size is the parent's to give.
-  import { frameDocument } from './frame-document';
-  import { frameHost } from './frame-host';
+  // SPEC-505 R3, R4; ADR-523 D1, D2: the mark is the first failing check's reason, from the one
+  // composition the review's status reads too.
+  import { frameCard } from './frame-host';
   import { FRAME_SANDBOX } from './policy.js';
 
   let { html, css, title, classes }: { html: string; css: string; title: string; classes?: string } =
     $props();
-  const doc = $derived(frameDocument(html, css, classes));
-  const framed = $derived(doc.srcdoc === undefined ? doc : frameHost(doc.srcdoc, title));
+  const framed = $derived(frameCard(html, css, title, classes));
 </script>
 
 <iframe sandbox={FRAME_SANDBOX} {title} srcdoc={framed.srcdoc} data-card-refused={framed.refused}></iframe>

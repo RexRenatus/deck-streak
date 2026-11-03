@@ -16,6 +16,7 @@ use crate::reader::{
     CollectionData, CollectionReader, ReadError, allowed_deck_ids, deck_names, read_failed,
     scope_ids,
 };
+use crate::schema18::STUDY_EVENTS_BEFORE;
 use crate::state::SqliteIngestState;
 
 /// The days of reviews each cycle reads (`constants.py:INGEST_WINDOW_DAYS`).
@@ -25,15 +26,6 @@ pub const INGEST_WINDOW_DAYS: i64 = 400;
 pub const INGEST_REBASE_DAYS: i64 = 7;
 
 const DAY_MS: i64 = 86_400_000;
-
-/// The study events at or before the floor `?1` of the cards whose home deck is one of the ids in
-/// `?2`: the SQL mirror of `reader::is_study_event` and `reader::Card::home_deck_id`, as the
-/// predecessor's `anki_reader.py:count_study_reviews_before` wrote it. A card deleted since takes its
-/// reviews out of the count, which is what the self-check sees. `r.id <= ?1` is the exact complement
-/// of the read's `r.id > ?1`, so a read above the floor and this count partition the log.
-const STUDY_EVENTS_BEFORE: &str = "SELECT count(*) FROM revlog r JOIN cards c ON c.id = r.cid \
-     WHERE r.id <= ?1 AND r.type IN (0, 1, 2, 3) AND r.ease >= 1 \
-     AND (CASE WHEN c.odid != 0 THEN c.odid ELSE c.did END) IN (SELECT value FROM json_each(?2))";
 
 /// The window's base: the floor, a review id (which is epoch milliseconds), and the count of study
 /// events of the cards in scope at or before it.

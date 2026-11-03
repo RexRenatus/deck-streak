@@ -708,3 +708,70 @@ green commit.
 | the verdict step | `.github/workflows/ci.yml:767` |
 | the Timeouts step and `scripts/mutation-timeouts.sh` | after the verdict step, `.github/workflows/ci.yml:785` (new) |
 | the derive of the budget | `tools/rust-baseline-budget/size_budget.py` (new) |
+
+## 13. On the release run, `ci` reads the mutation jobs as advisory (SPEC-500, ADR-518)
+
+Schematic for SPEC-500 and ADR-518 (band S50000-S50099, no row). It draws how `ci` reads its 17 needs before and after
+the delivery, read at the branch's base `d3b09d5e`: the release run is named once, in `base-is-dev`, by the predicate
+the plan already uses, and on that run alone each of the 8 mutation jobs' results is printed and admitted by value.
+Every job of sections 1 to 12 runs and reports as drawn there; only the aggregate's reading changes.
+
+### 13.1 Before: every run's mutation results gate `ci`
+
+```mermaid
+flowchart TD
+    NEEDS["ci, if always: RESULTS = join(needs.*.result), 17 needs, 8 of them mutation jobs"] --> SKIP["admit one skipped each from mutation-rust,<br/>mutation-rows and mutation-python-release (SPEC-290 R8, SPEC-422 R11)"]
+    SKIP --> EACH{"every other result success?"}
+    EACH -- "no: a mutation job failed or was cancelled, on any run" --> RED(["ci fails, the release pull request's run included"])
+    EACH -- "yes" --> GREEN(["ci passes"])
+```
+
+### 13.2 After: the release run is named once, and its mutation results are advisory
+
+```mermaid
+flowchart TD
+    BID["base-is-dev step 1: a pull request into main comes from this repository's dev<br/>(byte-identical)"] -- "refused: exit 1" --> EMPTY["step 2 skipped: output release is empty"]
+    BID -- "ok" --> REL["step 2, id release: release_run's predicate over EVENT, BASE, HEAD, HEAD_REPO, REPO<br/>writes release=true or release=false to GITHUB_OUTPUT"]
+    REL --> OUT["job output release"]
+    EMPTY --> OUT
+    OUT --> CI{"ci: RELEASE = needs.base-is-dev.outputs.release, is it true?"}
+    CI -- "no: false or empty" --> TODAY["today's rule: a skip admitted from the three legs, once each;<br/>every other result success"]
+    CI -- "yes" --> ADV["for each of the 8 mutation jobs, in needs order:<br/>print ci: job reads result; advisory on the release run (SPEC-500)<br/>and append it to GITHUB_STEP_SUMMARY when set"]
+    ADV --> BYVAL["admit, by value, one non-success result of RESULTS<br/>for each mutation job whose result is not success"]
+    BYVAL --> GATE{"every result left success?<br/>exactly the 9 other needs', and any need added later"}
+    TODAY --> GATE2{"every result left success?"}
+    GATE -- "no" --> RED(["ci fails"])
+    GATE -- "yes" --> GREEN(["ci passes"])
+    GATE2 -- "no" --> RED
+    GATE2 -- "yes" --> GREEN
+```
+
+- The first step of `base-is-dev` is unchanged, so a fork's head or any other branch into `main` still fails `ci`, and
+  its refusal leaves the output empty: the run is not the release run.
+- The release step writes only the literal `true` or `false`; no input reaches `$GITHUB_OUTPUT`.
+- No mutation job, condition, matrix or upload changes, and no job is added: `LEG_CEILING`'s derivation reads the same
+  jobs (SPEC-362 R3).
+
+### 13.3 What crosses each step
+
+| from | to | what | guard |
+|---|---|---|---|
+| the event | `base-is-dev`'s release step | `EVENT`, `BASE`, `HEAD`, `HEAD_REPO`, `REPO`, the first step's five expressions | `release=true` exactly where `release_run` holds (SPEC-500 A1, 108 contexts) |
+| `base-is-dev` | `ci` | the job output `release`: `true`, `false`, or empty when the first step refused | anything but `true` keeps today's rule |
+| each need | `ci` | its result, in `RESULTS` and, for the 8 mutation jobs, in one env each | on the release run, one non-success admitted by value per non-success mutation result (SPEC-500 A2) |
+| `ci` | the log and the step summary | 8 advisory lines on the release run, none on any other | the summary is written only when `GITHUB_STEP_SUMMARY` is set |
+
+### 13.4 Where each step lives
+
+Read at the branch's base `d3b09d5e`; the new lines are cited by name, and the build re-reads every line at its green
+commit.
+
+| step | where |
+|---|---|
+| `base-is-dev`, its first step | `.github/workflows/ci.yml:1102-1120` |
+| `base-is-dev`'s `outputs: release` and the step `id: release` | after `timeout-minutes` and after the first step, `.github/workflows/ci.yml:1102` (new) |
+| `ci`'s step, its env and script | `.github/workflows/ci.yml:1134-1154` |
+| `release_run`, the predicate the step evaluates | `scripts/mutation-verdict.py:232-243` |
+| the step's runner and A1 | `scripts/tests/test_ci_workflows.py`, `run_release_step` and `test_the_release_output_is_release_run` (new) |
+| the first step's runner, its cut bounded at the next step | `scripts/tests/test_ci_workflows.py:1175-1189`, `run_base_is_dev` |
+| `rendered_env` and A2 | `scripts/tests/test_not_started_legs.py:115-126`, and `test_ci_admits_every_mutation_result_on_the_release_run_and_no_gating_one` (new) |

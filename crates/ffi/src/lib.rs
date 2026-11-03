@@ -11,8 +11,16 @@
 //! - [`face`]: a card's face as a native client shows and plays it: one closed page whose media
 //!   are `data:` URLs read from the opened collection's media folder, its clips and the names it
 //!   left out (SPEC-348 R5). [`engine::Engine::face`] completes it through the core, beside `run`.
+//! - [`health`]: one card's health as the core reads it, field for field, and the card health
+//!   panel's sections in the words the app shows as they are (SPEC-507 R12, R13).
+//!   [`engine::Engine::card_health`] reads it through the core's two fixed reads.
+//! - [`review_undo`]: the review's undo as the app shows it, the offer of its last answer, bury or
+//!   flag with the dialog's words, and the answer to the owner's confirmation (SPEC-515 R3 to R5).
+//!   [`engine::Engine::undo_offer`] and [`engine::Engine::undo`] answer them.
 //! - [`voices`]: the voice a learner chose for each language, kept in one file on the device and
 //!   never synced, and the installed voices a picker offers (SPEC-348 R6).
+//! - [`backups`]: the device's backups in the collection's folder: back up now through the core,
+//!   the list kept by the core's retention, and one listed backup's bytes (SPEC-516 R5).
 //!
 //! Of this workspace's crates the adapter depends on the engine core (`deck-streak-engine-core`)
 //! alone (ADR-345 D1), and reaches the engine only through the core's dispatcher started on the
@@ -23,6 +31,9 @@
 uniffi::setup_scaffolding!();
 
 pub mod allow_list;
+pub mod backups;
 pub mod engine;
 pub mod face;
+pub mod health;
+pub mod review_undo;
 pub mod voices;

@@ -3,6 +3,7 @@
 import type {
   BackupsListed,
   Body,
+  CardHealth,
   ChoiceConfirmed,
   ChoiceCounted,
   Deck,
@@ -137,6 +138,12 @@ export class EngineClient {
     return this.#send({ op: 'bury', card }) as Promise<null>;
   }
 
+  /** The shown card's health, by the core's two fixed reads, or `null` for an id no card has; it
+   * writes nothing (SPEC-507 R1). */
+  cardHealth(card: bigint): Promise<CardHealth | null> {
+    return this.#send({ op: 'card-health', card }) as Promise<CardHealth | null>;
+  }
+
   /** Both faces of the shown card, completed by the core with the media the Worker read; the page
    * names the card alone, so no media file, limit or type is the page's to decide (SPEC-350 R14). */
   faces(card: bigint): Promise<Faces> {
@@ -203,5 +210,11 @@ export class EngineClient {
    * transfer (SPEC-377 R16). */
   backupExport(backup: string): Promise<Uint8Array<ArrayBuffer>> {
     return this.#send({ op: 'backup-export', backup }) as Promise<Uint8Array<ArrayBuffer>>;
+  }
+
+  /** Back up now: the Worker's engine writes the open collection into a new backup and answers its
+   * id; the page lists again to see it (SPEC-516 R4). */
+  backUpNow(): Promise<string> {
+    return this.#send({ op: 'backup-now' }) as Promise<string>;
   }
 }

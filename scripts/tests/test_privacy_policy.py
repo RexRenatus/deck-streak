@@ -7,6 +7,7 @@ against a number written here, and each census is paired with a planted policy i
 """
 
 import json
+import plistlib
 import re
 import tempfile
 import unittest
@@ -394,6 +395,128 @@ class ThePolicyStatesWhatDeckStreakFitsOnYourData(unittest.TestCase):
                 refuse_embeddings(embedding_lines(Path(tmp), ["crates/planted.rs"]))
         self.assertIn("crates/planted.rs", str(refused.exception))
         self.assertIn(MODELS, str(refused.exception))
+
+
+# SPEC-585 R10 to R12: the section that says how DeckStreak measures use, and the app's privacy
+# manifest it must agree with.
+MEASURING = "## Measuring use"
+NOTHING_MEASURED = "the apps measure nothing about how you use them"
+# What the section states: what the server counts and never counts, and the one switch.
+MEASURED = (
+    "route",
+    "method",
+    "status",
+    "no account",
+    "no request id",
+    NOTHING_MEASURED,
+    "off until you turn it on",
+    "one switch",
+    "off by default",
+)
+MANIFEST = REPO / "ios" / "App" / "PrivacyInfo.xcprivacy"
+ANALYTICS = "NSPrivacyCollectedDataTypePurposeAnalytics"
+
+
+def measuring(policy):
+    """The text under the measuring heading, up to the next heading, flattened, or empty when it is
+    absent."""
+    _, found, rest = policy.partition(MEASURING)
+    return flat(rest.split("\n## ", 1)[0]) if found else ""
+
+
+class ThePolicyStatesHowUseIsMeasured(unittest.TestCase):
+    def test_the_policy_bounds_the_monitoring_copy_of_the_journal(self):
+        window = in_words(inventory()["logs"]["retention"])
+        bullets = examined(
+            "unreached bullet(s)", unreached_bullets(POLICY.read_text(encoding="utf-8"))
+        )
+        bounded = [
+            bullet
+            for bullet in bullets
+            if "journal" in bullet
+            and "monitoring" in bullet
+            and f"keeps that copy for at most {window}" in bullet
+        ]
+        self.assertEqual(
+            len(bounded), 1, "one bullet bounds the monitoring service's copy of the journal"
+        )
+
+    def test_the_policy_states_how_use_is_measured(self):
+        section = measuring(POLICY.read_text(encoding="utf-8"))
+        self.assertEqual([words for words in MEASURED if words not in section], [])
+
+    def test_the_policy_and_the_privacy_manifest_agree_no_usage_is_collected(self):
+        self.assertIn(NOTHING_MEASURED, measuring(POLICY.read_text(encoding="utf-8")))
+        manifest = plistlib.loads(MANIFEST.read_bytes())
+        self.assertIs(manifest["NSPrivacyTracking"], False)
+        collected = manifest["NSPrivacyCollectedDataTypes"]
+        self.assertEqual(
+            [
+                entry
+                for entry in collected
+                if ANALYTICS in entry.get("NSPrivacyCollectedDataTypePurposes", [])
+            ],
+            [],
+        )
+
+
+# SPEC-516 R9 (B9): the policy states the iPhone and iPad backups, how many, where they are kept and
+# how they leave the device, and the web data screen's JSON copy, which is the bot's `/export`
+# document fetched in the owner's own session. Each statement is a paragraph or bullet of the policy
+# that holds all its words; the words are the statement's facts, not its prose.
+DEVICE_STATEMENTS = {
+    "the iPhone and iPad backups": (
+        "iphone and ipad app",
+        "backups",
+        "at most three of each kind",
+        "in the app's own folder on your device",
+        "never sent to the service",
+        "the system's save dialog",
+    ),
+    "the web data screen's json copy": (
+        "data screen",
+        "json copy",
+        "the same document `/export` sends",
+        "your own signed-in session",
+    ),
+}
+
+
+def policy_blocks(policy):
+    """Each paragraph and each bullet of the policy, flattened."""
+    blocks = []
+    for paragraph in re.split(r"\n\s*\n", policy):
+        blocks.extend(flat(part) for part in re.split(r"\n(?=- )", paragraph) if part.strip())
+    return blocks
+
+
+def unstated_device_copies(policy):
+    """Every statement of DEVICE_STATEMENTS no one paragraph or bullet of the policy holds whole."""
+    blocks = policy_blocks(policy)
+    return [
+        name
+        for name, words in DEVICE_STATEMENTS.items()
+        if not any(all(word in block for word in words) for block in blocks)
+    ]
+
+
+class ThePolicyStatesTheDeviceCopies(unittest.TestCase):
+    def test_the_policy_states_the_iphone_backups_and_the_json_copy(self):
+        policy = POLICY.read_text(encoding="utf-8")
+        statements = examined("device statement(s)", list(DEVICE_STATEMENTS))
+        words = sum(len(owed) for owed in DEVICE_STATEMENTS.values())
+        print(f"examined {words} owed word group(s) over {len(policy_blocks(policy))} block(s)")
+        self.assertEqual(unstated_device_copies(policy), [])
+        self.assertEqual(len(statements), 2)
+        # A policy that drops a statement, or one of its facts, is refused by the statement's name.
+        without_iphone = "\n".join(
+            line for line in policy.splitlines() if "iphone" not in line.casefold()
+        )
+        self.assertEqual(unstated_device_copies(without_iphone), ["the iPhone and iPad backups"])
+        uncounted = policy.replace("at most three of each kind", "some of each kind")
+        self.assertIn("the iPhone and iPad backups", unstated_device_copies(uncounted))
+        unsent = policy.replace("`/export` sends", "the bot sends")
+        self.assertEqual(unstated_device_copies(unsent), ["the web data screen's json copy"])
 
 
 if __name__ == "__main__":
