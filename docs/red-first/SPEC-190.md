@@ -163,3 +163,22 @@ passed as a pin. The census's derivation of the classes by their value, and the 
 A12: red at 70ccd8c: 56 builtin exception classes the census cannot place
 A12: green at 5d471ab
 ```
+
+## Addendum: A13 to A18, a Dependabot pull request that changes only dependency files (#1020)
+
+The tests of A13 to A18 were committed alone (3ba1eabb), with `changelog.yml` unchanged, and the run
+of the pull request read A13, A14 and A18 red by assertion and A15, A16 and A17 green (job
+125718372820). The step changed in cc6eaeec, with the tests unchanged, and the run at the head of this
+delivery reads all six green. The commits after cc6eaeec change only documents.
+
+```red-first
+A13: red at 3ba1eabb: AssertionError: 1 != 0 : Add a fragment under changelog.d/ (see changelog.d/README.md). (job 125718372820)
+A13: green at cc6eaeec
+A14: red at 3ba1eabb: AssertionError: 1 != 0 : Add a fragment under changelog.d/ (see changelog.d/README.md). (job 125718372820)
+A14: green at cc6eaeec
+A15: not red: each pull request it names read this verdict and message before R13; the criterion holds that R13 changes none of them
+A16: not red: the step refused each of these Dependabot pull requests before R13; the criterion holds that the arm admits none of them
+A17: not red: the step refused each of these logins before R13; the criterion holds that the arm admits none of them
+A18: red at 3ba1eabb: AssertionError: {'BAS[28 chars]st.base.sha'} != {'BAS[28 chars]st.base.sha', 'AUTHOR': 'github.event.pull_request.user.login'} (job 125718372820)
+A18: green at cc6eaeec
+```
