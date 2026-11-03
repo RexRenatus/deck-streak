@@ -102,6 +102,15 @@ function contrast(a: string, b: string): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
+/** The roles every Tide mode holds, and the two modes (SPEC-578 R2). */
+const TIDE_MODES = ['dark', 'light'] as const;
+const TIDE_ROLES = ['background', 'ink', 'accent'] as const;
+
+/** An Tide mode of a token document, or undefined when the document holds none. */
+function tideMode(document: unknown, mode: string): Record<string, unknown> | undefined {
+  return member(member(member(document, 'modes'), 'tide'), mode) as Record<string, unknown> | undefined;
+}
+
 describe('the design tokens', () => {
   it('every colour token resolves to a Telegram theme variable with a fallback', () => {
     const tokens = examined('colour tokens', colourTokens());
@@ -163,5 +172,137 @@ describe('the design tokens', () => {
     // and the judgement refuses what Telegram's own palettes get wrong: the link colour as text
     expect(contrast(THEMES.light.link_color, THEMES.light.bg_color)).toBeLessThan(AA_NORMAL_TEXT);
     expect(contrast(THEMES.dark.link_color, THEMES.dark.bg_color)).toBeLessThan(AA_NORMAL_TEXT);
+  });
+
+  it('the Tide palette compiles to six custom properties in both modes', () => {
+    // SPEC-578 A1: the expected hex comes from the token file's modes.tide, never from the compile
+    const roles = examined(
+      'Tide roles',
+      TIDE_MODES.flatMap((mode) =>
+        TIDE_ROLES.map((role) => ({ mode, role, hex: hexOf(member(tideMode(TOKENS, mode)?.[role], '$value')) }))
+      )
+    );
+    const css = compileTokens(TOKENS);
+    const properties = rootProperties(css);
+    const theme = /@theme inline\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+
+    for (const { mode, role, hex } of roles) {
+      const name = `--tide-${mode}-${role}`;
+      expect(properties.has(name), `${name} is not declared`).toBe(true);
+      expect(properties.get(name), name).toBe(hex);
+      expect(hex, `${name}'s token`).toMatch(/^#[0-9a-f]{6}$/);
+      expect(theme, `${name} is not mapped into the theme`).toContain(
+        `  --color-tide-${mode}-${role}: var(${name});`
+      );
+    }
+    expect([...properties.keys()].filter((name) => name.startsWith('--tide-')).sort()).toEqual(
+      roles.map(({ mode, role }) => `--tide-${mode}-${role}`).sort()
+    );
+  });
+
+  it('a role missing from either Tide mode fails the compile by name', () => {
+    // SPEC-578 A2
+    const planted = () => structuredClone(TOKENS);
+
+    const withoutLightAccent = planted();
+    delete tideMode(withoutLightAccent, 'light')?.accent;
+    expect(() => compileTokens(withoutLightAccent)).toThrow(/modes\.tide\.light\.accent/);
+
+    const withoutDarkInk = planted();
+    delete tideMode(withoutDarkInk, 'dark')?.ink;
+    expect(() => compileTokens(withoutDarkInk)).toThrow(/modes\.tide\.dark\.ink/);
+
+    const withFourthRole = planted();
+    const dark = tideMode(withFourthRole, 'dark');
+    if (dark !== undefined) dark.muted = structuredClone(dark.ink);
+    expect(() => compileTokens(withFourthRole)).toThrow(/modes\.tide\.dark\.muted/);
+
+    const withoutDark = planted();
+    delete (member(member(withoutDark, 'modes'), 'tide') as Record<string, unknown> | undefined)?.dark;
+    expect(() => compileTokens(withoutDark)).toThrow(/modes\.tide\.dark/);
+
+    // the control: the unmodified file compiles, and holds both modes
+    expect(() => compileTokens(TOKENS)).not.toThrow();
+    examined(
+      'Tide modes',
+      TIDE_MODES.filter((mode) => tideMode(TOKENS, mode) !== undefined)
+    );
+  });
+
+  it('ink and accent on the background meet AA in both Tide modes', () => {
+    // SPEC-578 A3: the formula refuses a pair it should refuse, #767676 on #808080
+    expect(contrast('#767676', '#808080')).toBeLessThan(AA_NORMAL_TEXT);
+
+    const modes = examined(
+      'Tide modes',
+      TIDE_MODES.filter((mode) => tideMode(TOKENS, mode) !== undefined)
+    );
+    const hexFor = (mode: string, role: string) => hexOf(member(tideMode(TOKENS, mode)?.[role], '$value'));
+    const judged = modes.flatMap((mode) =>
+      (['ink', 'accent'] as const).map((role) => {
+        const ratio = contrast(hexFor(mode, role), hexFor(mode, 'background'));
+        return `${role} on background (${mode}): ${ratio >= AA_NORMAL_TEXT ? 'AA' : ratio.toFixed(2)}`;
+      })
+    );
+    examined('Tide text pairs', judged);
+
+    expect(judged).toEqual(
+      modes.flatMap((mode) => [`ink on background (${mode}): AA`, `accent on background (${mode}): AA`])
+    );
+  });
+
+  it('the modes tier refuses what it cannot compile by the exact message naming it', () => {
+    // SPEC-578 A2, the compile's own messages: each planted document breaks one thing
+    // the planted tree, typed to the depth the cases reach: tier, group, mode, role
+    type PlantedTree = Record<string, Record<string, Record<string, Record<string, unknown>>>>;
+    const planted = () => structuredClone(TOKENS) as PlantedTree;
+    const messageOf = (document: unknown): string => {
+      try {
+        compileTokens(document);
+      } catch (error) {
+        return (error as Error).message;
+      }
+      return 'compiled';
+    };
+
+    // a mode outside dark and light, beside the two known ones
+    const withDusk = planted();
+    withDusk.modes.tide.dusk = structuredClone(withDusk.modes.tide.dark);
+    expect(messageOf(withDusk)).toBe('tokens: modes.tide.dusk is not a mode (dark or light)');
+
+    // a role outside the three, in the exact words
+    const withMuted = planted();
+    withMuted.modes.tide.dark.muted = structuredClone(withMuted.modes.tide.dark.ink);
+    expect(messageOf(withMuted)).toBe(
+      'tokens: modes.tide.dark.muted is not a role (background, ink or accent)'
+    );
+
+    // a role absent, in the exact words (not the message of a role that is no token)
+    const withoutInk = planted();
+    delete withoutInk.modes.tide.dark.ink;
+    expect(messageOf(withoutInk)).toBe('tokens: modes.tide.dark.ink is missing');
+
+    // a role that is no token (the group reader names it), and a role token whose value is no colour
+    const inkNotAToken = planted();
+    inkNotAToken.modes.tide.light.ink = 5;
+    expect(messageOf(inkNotAToken)).toBe('tokens: ink is not a token or a group');
+    const accentNotAColour = planted();
+    accentNotAColour.modes.tide.dark.accent = { $type: 'color', $value: { colorSpace: 'srgb', hex: 'red' } };
+    expect(messageOf(accentNotAColour)).toBe(
+      'tokens: modes.tide.dark.accent is not an sRGB colour with a six-digit lowercase hex'
+    );
+
+    // a modes tier that is no group
+    const modesNotAGroup = planted() as Record<string, unknown>;
+    modesNotAGroup.modes = 5;
+    expect(messageOf(modesNotAGroup)).toBe('tokens: modes is not a token or a group');
+
+    // the control: no modes tier at all compiles, and emits no Tide property
+    const withoutModes = planted() as Record<string, unknown>;
+    delete withoutModes.modes;
+    expect(messageOf(withoutModes)).toBe('compiled');
+    const css = compileTokens(withoutModes);
+    expect(css).not.toContain('--tide-');
+    expect(css).toContain('--radius:');
   });
 });
