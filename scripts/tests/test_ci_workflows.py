@@ -9084,64 +9084,67 @@ WARM_REPORT_NEEDS = (
 )
 
 
-def harness_warm_problems(workflow):
+def harness_warm_problems(workflow, job_id="harness", labels=tuple(WARM_STEPS)):
     """Each way the `harness` job could test a simulator before its session is warmed, named
     (SPEC-339 R12 as #1060 amends it, R15, R16): each Harness test step's build, warm and tests,
     each named once and side by side in that order; the build for testing and the tests without
     building, with the step's destinations, selection, derived data, result bundle and teed console
     under pipefail, the tests building nothing again; the warm's script written once, by the Debug
     warm, with what `WARM_SCRIPT_NEEDS` lists; each warm ending by running it on its own build's
-    app; and the report reading the warm's and the consoles' rows."""
-    steps = ((workflow.get("jobs") or {}).get("harness") or {}).get("steps") or []
+    app; and the report reading the warm's and the consoles' rows, as SPEC-591 R10 re-points it."""
+    steps = ((workflow.get("jobs") or {}).get(job_id) or {}).get("steps") or []
     names = [step.get("name") for step in steps]
     problems = []
     found = {}
-    for label, trio in WARM_STEPS.items():
+    for label in labels:
+        trio = WARM_STEPS[label]
         for name in trio:
             if names.count(name) != 1:
-                problems.append(f"harness: {names.count(name)} steps named {name!r}, not one")
+                problems.append(f"{job_id}: {names.count(name)} steps named {name!r}, not one")
             else:
                 found[name] = steps[names.index(name)]
         if all(name in found for name in trio):
             at = [names.index(name) for name in trio]
             if at != list(range(at[0], at[0] + len(trio))):
                 problems.append(
-                    f"harness: the {label} build, warm and tests are not side by side in order"
+                    f"{job_id}: the {label} build, warm and tests are not side by side in order"
                 )
         build, warm, tests = (found.get(name) for name in trio)
         if build is not None:
             run = run_joined(build)
             problems += [
-                f"harness: the {label} build for testing lacks {n}"
+                f"{job_id}: the {label} build for testing lacks {n}"
                 for n in WARM_BUILD_NEEDS[label]
                 if n not in run
             ]
         if tests is not None:
             run = run_joined(tests)
             problems += [
-                f"harness: the {label} tests lack {n}"
+                f"{job_id}: the {label} tests lack {n}"
                 for n in WARM_TEST_NEEDS[label]
                 if n not in run
             ]
             if "xcodebuild test " in run:
-                problems.append(f"harness: the {label} tests build again, with `xcodebuild test`")
+                problems.append(f"{job_id}: the {label} tests build again, with `xcodebuild test`")
         if warm is not None:
             lines = [line.strip() for line in str(warm.get("run", "")).splitlines() if line.strip()]
             if lines[-1:] != [f"python3 {WARM_SCRIPT} {label} {WARM_APPS[label]}"]:
                 problems.append(
-                    f"harness: the {label} warm does not end by running the warm on its build's app"
+                    f"{job_id}: the {label} warm does not end by running the warm on its build's app"
                 )
     writes = [s.get("name") for s in steps if f"cat > {WARM_SCRIPT} <<" in str(s.get("run", ""))]
     if writes != [WARM_STEPS["debug"][1]]:
-        problems.append(f"harness: {len(writes)} steps write the warm's script, not the Debug warm")
+        problems.append(
+            f"{job_id}: {len(writes)} steps write the warm's script, not the Debug warm"
+        )
     else:
-        script = str(found[WARM_STEPS["debug"][1]].get("run", ""))
+        script = str(steps[names.index(WARM_STEPS["debug"][1])].get("run", ""))
         problems += [
-            f"harness: the warm's script lacks {n}" for n in WARM_SCRIPT_NEEDS if n not in script
+            f"{job_id}: the warm's script lacks {n}" for n in WARM_SCRIPT_NEEDS if n not in script
         ]
     reports = [s for s in steps if s.get("name") == "the report"]
     text = str(reports[0].get("run", "")) if len(reports) == 1 else ""
-    problems += [f"harness: the report lacks {n}" for n in WARM_REPORT_NEEDS if n not in text]
+    problems += [f"{job_id}: the report lacks {n}" for n in WARM_REPORT_NEEDS if n not in text]
     return problems
 
 
@@ -9204,8 +9207,9 @@ class TheHarnessWarmsEachSimulatorBeforeItsTests(unittest.TestCase):
         the teed steps keep xcodebuild's exit; and the report reads the warm's and the consoles'
         rows."""
         jobs = load("xcframework.yml")["jobs"]
-        examined("warmed harness steps", jobs["harness"].get("steps") or [])
-        self.assertEqual(harness_warm_problems({"jobs": jobs}), [])
+        for job_id, labels in (("harness", ("debug",)), (SPLIT_JOB, ("release",))):
+            examined(f"warmed {job_id} steps", jobs[job_id].get("steps") or [])
+            self.assertEqual(harness_warm_problems({"jobs": jobs}, job_id, labels), [])
 
         # The controls: the good job is accepted, and each plant is refused by its rule's name.
         script = f"cat > {WARM_SCRIPT} <<'PY'\n" + "\n".join(WARM_SCRIPT_NEEDS) + "\nPY\n"
@@ -9429,7 +9433,7 @@ def run_joined(step):
     return re.sub(r"\\\n\s*", " ", str(step.get("run", "")))
 
 
-def app_steps_problems(workflow):
+def app_steps_problems(workflow, job_id="harness"):
     """Each way the Apple job body could fail to build and prove the app, named (SPEC-347 R13,
     A14): the `harness` job, on the admitted runner, holds one step of each name; the harness's
     generate step keeps its one line; the app's test step opens with the app's generate line and
@@ -9438,14 +9442,14 @@ def app_steps_problems(workflow):
     executable's imports against the app's manifest; the app's tests, the review screen's tests
     (SPEC-348 R20) and the archive sit, in order, between the harness's last step and the report,
     which carries their rows; no env of the job or of those steps names a signing setting; and no
-    other job of the workflow names the app's spec or scheme."""
+    other job of the workflow names the app's spec or scheme, as SPEC-591 R10 re-points it."""
     jobs = workflow.get("jobs") or {}
-    job = jobs.get("harness") or {}
+    job = jobs.get(job_id) or {}
     steps = job.get("steps") or []
     names = [step.get("name") for step in steps]
     problems = []
     if job.get("runs-on") != ADMITTED_RUNNERS["xcframework.yml"]:
-        problems.append(f"harness: it runs on {job.get('runs-on')!r}, not the admitted runner")
+        problems.append(f"{job_id}: it runs on {job.get('runs-on')!r}, not the admitted runner")
     found = {}
     for name in (
         HARNESS_PROJECT,
@@ -9457,7 +9461,7 @@ def app_steps_problems(workflow):
         HARNESS_REPORT,
     ):
         if names.count(name) != 1:
-            problems.append(f"harness: {names.count(name)} steps named {name!r}, not one")
+            problems.append(f"{job_id}: {names.count(name)} steps named {name!r}, not one")
         else:
             found[name] = steps[names.index(name)]
     project = found.get(HARNESS_PROJECT)
@@ -9469,7 +9473,7 @@ def app_steps_problems(workflow):
         ]
         if generates != [HARNESS_GENERATE]:
             problems.append(
-                f"harness: the step {HARNESS_PROJECT!r} does not hold the harness's one generate "
+                f"{job_id}: the step {HARNESS_PROJECT!r} does not hold the harness's one generate "
                 "line alone"
             )
     tests = found.get(APP_TESTS)
@@ -9477,26 +9481,26 @@ def app_steps_problems(workflow):
         lines = [line.strip() for line in str(tests.get("run", "")).splitlines() if line.strip()]
         if lines[:1] != [APP_GENERATE]:
             problems.append(
-                "harness: the app's test step does not open with the app's generate line"
+                f"{job_id}: the app's test step does not open with the app's generate line"
             )
         run = run_joined(tests)
         problems += [
-            f"harness: the app's test step lacks {n}" for n in APP_TEST_NEEDS if n not in run
+            f"{job_id}: the app's test step lacks {n}" for n in APP_TEST_NEEDS if n not in run
         ]
     archive = found.get(APP_ARCHIVE)
     if archive is not None:
         run = run_joined(archive)
         problems += [
-            f"harness: the app's archive lacks {n}" for n in APP_ARCHIVE_NEEDS if n not in run
+            f"{job_id}: the app's archive lacks {n}" for n in APP_ARCHIVE_NEEDS if n not in run
         ]
         if "CODE_SIGNING_ALLOWED=NO" not in run:
             problems.append(
-                "harness: the app's archive does not turn code signing off on its command line"
+                f"{job_id}: the app's archive does not turn code signing off on its command line"
             )
     report = found.get(HARNESS_REPORT)
     if report is not None:
         text = str(report.get("run", ""))
-        problems += [f"harness: the report lacks {n}" for n in APP_REPORT_NEEDS if n not in text]
+        problems += [f"{job_id}: the report lacks {n}" for n in APP_REPORT_NEEDS if n not in text]
     if len(found) == 7:
         order = (HARNESS_LAST, APP_TESTS, REVIEW_TESTS, APP_ARCHIVE, HARNESS_REPORT)
         # The bury and flag step sits right after the review screen's step (SPEC-358 R8).
@@ -9504,7 +9508,7 @@ def app_steps_problems(workflow):
         at = [names.index(name) for name in order]
         if at != list(range(at[0], at[0] + len(order))):
             problems.append(
-                "harness: the app's three steps do not sit, in order, between the harness's last "
+                f"{job_id}: the app's three steps do not sit, in order, between the harness's last "
                 "step and the report"
             )
     envs = [("its env", job.get("env"))] + [
@@ -9514,11 +9518,11 @@ def app_steps_problems(workflow):
     ]
     for where, env in envs:
         problems += [
-            f"harness: {where} names {name}, which only a command line may set"
+            f"{job_id}: {where} names {name}, which only a command line may set"
             for name in SIGNING_NAMES
             if name in str(env or {})
         ]
-    for other in sorted(set(jobs) - {"harness"}):
+    for other in sorted(set(jobs) - {job_id}):
         text = str(jobs[other])
         problems += [
             f"{other}: it names {name}, which only the harness job may"
@@ -9534,8 +9538,8 @@ class TheAppIsGeneratedTestedAndArchived(unittest.TestCase):
         app's tests on both simulators and archives the app for a generic device with code signing
         off, after the harness's steps and before the report, and nothing else changes."""
         jobs = load("xcframework.yml")["jobs"]
-        self.assertEqual(app_steps_problems({"jobs": jobs}), [])
-        examined("harness steps", jobs["harness"].get("steps") or [])
+        self.assertEqual(app_steps_problems({"jobs": jobs}, SPLIT_JOB), [])
+        examined(f"{SPLIT_JOB} steps", jobs[SPLIT_JOB].get("steps") or [])
         examined("jobs", list(jobs))
 
         # The controls: the good job is accepted, and each plant is refused by its rule's name.
@@ -9797,32 +9801,32 @@ REVIEW_REPORT_NEEDS = (
 )
 
 
-def review_step_problems(workflow):
+def review_step_problems(workflow, job_id="harness"):
     """Each way the `harness` job could fail to run the review screen's tests, named (SPEC-348
     R20, ADR-359 D8): one step of its name, with its id and its condition, runs the app's scheme
     on both simulators limited to the three review classes, over the app's derived data into its
     own result bundle, signed ad hoc on its command line, with the review fixture copied into the
     runner's temporary directory and named on the test command's line, never in an env; the app's
     step skips those classes and names no fixture; and the report carries the step's cases and
-    time."""
-    job = (workflow.get("jobs") or {}).get("harness") or {}
+    time, as SPEC-591 R10 re-points it."""
+    job = (workflow.get("jobs") or {}).get(job_id) or {}
     steps = job.get("steps") or []
     names = [step.get("name") for step in steps]
     problems = []
     if names.count(REVIEW_TESTS) != 1:
         problems.append(
-            f"harness: {names.count(REVIEW_TESTS)} steps named {REVIEW_TESTS!r}, not one"
+            f"{job_id}: {names.count(REVIEW_TESTS)} steps named {REVIEW_TESTS!r}, not one"
         )
     review = steps[names.index(REVIEW_TESTS)] if names.count(REVIEW_TESTS) == 1 else None
     if review is not None:
         for key, wanted in (("id", REVIEW_ID), ("if", REVIEW_IF)):
             if review.get(key) != wanted:
                 problems.append(
-                    f"harness: the review step's {key} is {review.get(key)!r}, not {wanted!r}"
+                    f"{job_id}: the review step's {key} is {review.get(key)!r}, not {wanted!r}"
                 )
         run = run_joined(review)
         problems += [
-            f"harness: the review step lacks {n}"
+            f"{job_id}: the review step lacks {n}"
             for n in (*REVIEW_FIXTURE_NEEDS, *REVIEW_TEST_NEEDS)
             if n not in run
         ]
@@ -9830,20 +9834,22 @@ def review_step_problems(workflow):
     if review is not None:
         envs.append((f"the env of {REVIEW_TESTS!r}", review.get("env")))
     problems += [
-        f"harness: {where} names {REVIEW_FIXTURE}, which only the review step's command line may set"
+        f"{job_id}: {where} names {REVIEW_FIXTURE}, which only the review step's command line may set"
         for where, env in envs
         if REVIEW_FIXTURE in str(env or {})
     ]
     if names.count(APP_TESTS) == 1:
         run = run_joined(steps[names.index(APP_TESTS)])
         problems += [
-            f"harness: the app's test step lacks {n}" for n in REVIEW_SKIPS if n not in run
+            f"{job_id}: the app's test step lacks {n}" for n in REVIEW_SKIPS if n not in run
         ]
         if REVIEW_FIXTURE in run:
-            problems.append(f"harness: the app's test step names {REVIEW_FIXTURE}")
+            problems.append(f"{job_id}: the app's test step names {REVIEW_FIXTURE}")
     if names.count(HARNESS_REPORT) == 1:
         text = str(steps[names.index(HARNESS_REPORT)].get("run", ""))
-        problems += [f"harness: the report lacks {n}" for n in REVIEW_REPORT_NEEDS if n not in text]
+        problems += [
+            f"{job_id}: the report lacks {n}" for n in REVIEW_REPORT_NEEDS if n not in text
+        ]
     return problems
 
 
@@ -9853,8 +9859,8 @@ class TheReviewScreenIsTestedOnBothSimulators(unittest.TestCase):
         step of their own, over the review fixture named on its command line, after the app's
         tests, whose step skips them, and the report carries the step's cases and time."""
         jobs = load("xcframework.yml")["jobs"]
-        self.assertEqual(review_step_problems({"jobs": jobs}), [])
-        examined("harness steps", jobs["harness"].get("steps") or [])
+        self.assertEqual(review_step_problems({"jobs": jobs}, SPLIT_JOB), [])
+        examined(f"{SPLIT_JOB} steps", jobs[SPLIT_JOB].get("steps") or [])
 
         # The controls: the good job is accepted, and each plant is refused by its rule's name.
         review_run = (
@@ -10032,48 +10038,48 @@ REVIEW_ACTIONS_REPORT_NEEDS = (
 )
 
 
-def review_actions_step_problems(workflow):
+def review_actions_step_problems(workflow, job_id="harness"):
     """Each way the `harness` job could fail to run the review's bury and flag tests, named
     (SPEC-358 R8, A14): one step of its name, with its id and its condition, runs the app's scheme
     on the iPhone and then the iPad, one after the other, limited to the bury and flag class, over
     the app's derived data into its own result bundle, signed ad hoc on its command line, with a
     copy of the review fixture of its own named on the test command's line, never in its env; the
-    app's step skips the class; and the report carries the step's cases and time."""
-    job = (workflow.get("jobs") or {}).get("harness") or {}
+    app's step skips the class; and the report carries the step's cases and time, as SPEC-591 R10 re-points it."""
+    job = (workflow.get("jobs") or {}).get(job_id) or {}
     steps = job.get("steps") or []
     names = [step.get("name") for step in steps]
     problems = []
     count = names.count(REVIEW_ACTIONS_TESTS)
     if count != 1:
-        problems.append(f"harness: {count} steps named {REVIEW_ACTIONS_TESTS!r}, not one")
+        problems.append(f"{job_id}: {count} steps named {REVIEW_ACTIONS_TESTS!r}, not one")
     step = steps[names.index(REVIEW_ACTIONS_TESTS)] if count == 1 else None
     if step is not None:
         for key, wanted in (("id", REVIEW_ACTIONS_ID), ("if", REVIEW_IF)):
             if step.get(key) != wanted:
                 problems.append(
-                    f"harness: the bury and flag step's {key} is {step.get(key)!r}, not {wanted!r}"
+                    f"{job_id}: the bury and flag step's {key} is {step.get(key)!r}, not {wanted!r}"
                 )
         run = run_joined(step)
         problems += [
-            f"harness: the bury and flag step lacks {n}"
+            f"{job_id}: the bury and flag step lacks {n}"
             for n in (*REVIEW_ACTIONS_FIXTURE_NEEDS, *REVIEW_ACTIONS_TEST_NEEDS)
             if n not in run
         ]
         iphone, ipad = (run.find(n) for n in REVIEW_ACTIONS_TEST_NEEDS[1:3])
         if -1 < ipad < iphone:
-            problems.append("harness: the bury and flag step names the iPad before the iPhone")
+            problems.append(f"{job_id}: the bury and flag step names the iPad before the iPhone")
         if REVIEW_FIXTURE in str(step.get("env") or {}):
             problems.append(
-                f"harness: the env of {REVIEW_ACTIONS_TESTS!r} names {REVIEW_FIXTURE}, which only "
+                f"{job_id}: the env of {REVIEW_ACTIONS_TESTS!r} names {REVIEW_FIXTURE}, which only "
                 "its command line may set"
             )
     if names.count(APP_TESTS) == 1:
         if REVIEW_ACTIONS_SKIP not in run_joined(steps[names.index(APP_TESTS)]):
-            problems.append(f"harness: the app's test step lacks {REVIEW_ACTIONS_SKIP}")
+            problems.append(f"{job_id}: the app's test step lacks {REVIEW_ACTIONS_SKIP}")
     if names.count(HARNESS_REPORT) == 1:
         text = str(steps[names.index(HARNESS_REPORT)].get("run", ""))
         problems += [
-            f"harness: the report lacks {n}" for n in REVIEW_ACTIONS_REPORT_NEEDS if n not in text
+            f"{job_id}: the report lacks {n}" for n in REVIEW_ACTIONS_REPORT_NEEDS if n not in text
         ]
     return problems
 
@@ -10085,8 +10091,8 @@ class TheReviewActionsStepRunsOnTheIphoneAndThenTheIpad(unittest.TestCase):
         its command line, after the app's tests, whose step skips them, and the report carries the
         step's cases and time."""
         jobs = load("xcframework.yml")["jobs"]
-        self.assertEqual(review_actions_step_problems({"jobs": jobs}), [])
-        examined("harness steps", jobs["harness"].get("steps") or [])
+        self.assertEqual(review_actions_step_problems({"jobs": jobs}, SPLIT_JOB), [])
+        examined(f"{SPLIT_JOB} steps", jobs[SPLIT_JOB].get("steps") or [])
 
         # The controls: the good job is accepted, and each plant is refused by its rule's name.
         def actions_run(needs):
