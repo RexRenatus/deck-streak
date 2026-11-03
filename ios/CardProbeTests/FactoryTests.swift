@@ -41,10 +41,14 @@ extension Probe {
         return "(document.URL === '\(quoted)' ? 'answered' : 'waiting')"
     }
 
-    /// `ask`, the way the load wait asks a page, unchanged: any document's answer to
-    /// `answerScript` starts the load clock (the seam of SPEC-349 R12).
+    /// `ask`, the way the load wait asks a page, with the wait's first question put to the
+    /// document at `url`: `answerScript` is asked as `handedAnswerScript(url)`, so only that
+    /// document's answer starts the load clock (SPEC-349 R12).
     static func asking(_ ask: @escaping Asking, handed url: URL) -> Asking {
-        ask
+        let handedScript = handedAnswerScript(url)
+        return { script, answer in
+            ask(script == Probe.answerScript ? handedScript : script, answer)
+        }
     }
 
     /// The seconds the card document `view` was handed at `url` took to finish loading, counted
