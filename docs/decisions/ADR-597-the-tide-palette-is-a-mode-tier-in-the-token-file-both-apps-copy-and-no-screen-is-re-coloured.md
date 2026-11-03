@@ -2,7 +2,7 @@
 status: "accepted"
 ---
 
-# ADR-597: the Ember palette's six role values live in the token file as a mode tier both apps copy, and no screen is re-coloured by it
+# ADR-597: the Tide palette's six role values live in the token file as a mode tier both apps copy, and no screen is re-coloured by it
 
 Decides SPEC-578. It builds on ADR-028 (the token file and its in-repo compile), keeps SPEC-028's
 Telegram mapping of the `color` tier unchanged, and adds the colour sets to the iPhone and iPad
@@ -10,9 +10,11 @@ app's asset catalog that ADR-598 creates.
 
 ## Context and Problem Statement
 
-DeckStreak's product palette is Ember: warm charcoal with an amber accent, as six role values, a
+DeckStreak's product palette is Tide: a deep blue-black with a teal accent, as six role values, a
 background, an ink and an accent for each of a dark and a light mode. The values come from the
-DeckStreak brand source. The design system's first principle, as amended (`docs/DESIGN_SYSTEM.md`
+DeckStreak brand source, whose logo is drawn in the same palette. The owner chose Tide in place of
+Ember, the palette this record first named (`docs/rulings/OWNER-RULING-2026-11-03-tide-palette.md`).
+The design system's first principle, as amended (`docs/DESIGN_SYSTEM.md`
 lines 78 to 80), asks for "a dark-first, colour-rich palette with its own reference tier and role
 mappings, WCAG 2.2 AA in both modes", and says the Mini App keeps its Telegram mapping until it
 retires. Measured at dev `57cbb5e1`:
@@ -39,14 +41,14 @@ retires. Measured at dev `57cbb5e1`:
   `App/Sources` and the privacy manifest); the only catalog in the tree,
   `ios/Harness/Assets.xcassets`, belongs to the test harness.
 
-The Ember values, from the brand source: dark background `#151210`, ink `#faf6f2`, accent
-`#ff9a3c`; light background `#faf6f2`, ink `#151210`, accent `#a54d06`. Four distinct colours make
+The Tide values, from the brand source: dark background `#0f161d`, ink `#f4f7fa`, accent
+`#34c6c0`; light background `#f4f7fa`, ink `#0f161d`, accent `#0b6a67`. Four distinct colours make
 the six roles.
 
 Contrast, computed by the WCAG 2.2 relative-luminance formula `tokens.test.ts` already uses
-(lines 91 to 103): ink on background 17.35:1 in both modes; accent on background 5.33:1 light and
-8.83:1 dark. All four pass AA for normal text (4.5:1). The token file's own grey, `#707579`, on the
-Ember light background measures 4.33:1, under 4.5:1.
+(lines 91 to 103): ink on background 16.94:1 in both modes; accent on background 5.97:1 light and
+8.66:1 dark. All four pass AA for normal text (4.5:1). The token file's own grey, `#707579`, on the
+Tide light background measures 4.33:1, under 4.5:1.
 
 What a device shows (a colour on a real screen, an appearance switch) is not measured here.
 
@@ -69,11 +71,11 @@ What a device shows (a colour on a real screen, an appearance switch) is not mea
 The six values land in `web/app/src/lib/design/tokens.json`, the file SPEC-028 R5 already names as
 the one source of design tokens, in two additions:
 
-- `ref.ember`, the raw colours, by the brand source's own scale names: `neutral.50` `#faf6f2`,
-  `neutral.950` `#151210`, `accent.400` `#ff9a3c`, `accent.700` `#a54d06`, each a DTCG sRGB colour
+- `ref.tide`, the raw colours, under four scale names: `neutral.50` `#f4f7fa`,
+  `neutral.950` `#0f161d`, `accent.400` `#34c6c0`, `accent.700` `#0b6a67`, each a DTCG sRGB colour
   whose components agree with its hex (the compile's existing check, `build-tokens.ts:90-112`).
-- `modes`, a new tier: `modes.ember.dark` and `modes.ember.light`, each holding exactly
-  `background`, `ink` and `accent`, each an alias of a `ref.ember` colour (dark: 950, 50, 400;
+- `modes`, a new tier: `modes.tide.dark` and `modes.tide.light`, each holding exactly
+  `background`, `ink` and `accent`, each an alias of a `ref.tide` colour (dark: 950, 50, 400;
   light: 50, 950, 700).
 
 `build-tokens.ts` compiles the tier: for each palette under `modes`, each of `dark` and `light`, and
@@ -81,38 +83,38 @@ each of the three roles, `--<palette>-<mode>-<role>: <hex>;` in `:root` and
 `--color-<palette>-<mode>-<role>: var(--<palette>-<mode>-<role>);` in `@theme inline`. A palette
 missing either mode, a mode missing a role, or a role outside the three fails the compile, naming
 the token. The `color` tier, its Telegram mapping and its fallbacks are byte-unchanged, so no page
-pixel moves: no role reads the Ember tier in this delivery.
+pixel moves: no role reads the Tide tier in this delivery.
 
-The census, `scripts/tests/test_ember_tokens.py`, refuses a role missing from either mode, an app
+The census, `scripts/tests/test_tide_tokens.py`, refuses a role missing from either mode, an app
 colour set whose value differs from the token's, and a raw colour literal outside the token route
 in the files this delivery changes (`build-tokens.ts`, `layout.css`) and in every Swift file of
 `ios/App/Sources/`.
 
 - Chosen: a `modes` tier beside `color` in the one token file, compiled to its own six custom properties, because it keeps SPEC-028's single source, adds no value beyond the six, and moves no pixel
-- Re-pointing the web roles' fallbacks at Ember now: rejected because `muted-foreground` (`#707579`) on the Ember light background measures 4.33:1, which A9 refuses, so it needs a seventh value or a role remap, and either is the screens round's decision
+- Re-pointing the web roles' fallbacks at Tide now: rejected because `muted-foreground` (`#707579`) on the Tide light background measures 4.33:1, which A9 refuses, so it needs a seventh value or a role remap, and either is the screens round's decision
 - A second token file at the repository root for the shared palette: rejected because SPEC-028 R5 makes one DTCG file the source, and two sources are what ADR-028 rejected ("two sources of truth drift")
-- Ember roles inside the `color` tier with Telegram parameters: rejected because inside Telegram the chat's theme would paint them, so they would not be Ember there, and the deprecated Mini App gains no colour
+- Tide roles inside the `color` tier with Telegram parameters: rejected because inside Telegram the chat's theme would paint them, so they would not be Tide there, and the deprecated Mini App gains no colour
 - DTCG `$extends` to derive the light mode from the dark: rejected because the compile's alias resolver does not read it and every role differs between the modes anyway
 - A transform tool such as a token build library: rejected because it is a new dependency for six values, and ADR-028 keeps the in-repo compile until the set outgrows one file
 
 ## D3, the colour sets in the app's asset catalog: what it was chosen against
 
 Three colour sets join `ios/App/Assets.xcassets`, the catalog ADR-598 creates and wires into the
-product target: `EmberBackground.colorset`, `EmberInk.colorset` and `EmberAccent.colorset`. Each
+product target: `TideBackground.colorset`, `TideInk.colorset` and `TideAccent.colorset`. Each
 `Contents.json` holds two entries: the universal entry with no appearance carries the light value,
 and the entry with the `luminosity` appearance `dark` carries the dark value, each as sRGB
-components written as 8-bit hex strings (`"red" : "0xFA"`) with alpha `1.000`, so no float rounds.
+components written as 8-bit hex strings (`"red" : "0xF4"`) with alpha `1.000`, so no float rounds.
 No Swift file changes, and the target sets no global accent colour: no screen reads the sets in
 this delivery.
 
 - Chosen: three colour sets with a light and a dark entry in the one catalog the logo delivery creates, because the system picks the appearance, the app's mode choice stays the system's, and the native screens copy them later by name
 - One catalog per delivery: rejected because two catalogs in one target collide on the compiled `Assets.car` and split the app's assets
 - Setting the colour sets as the target's global accent colour: rejected because it re-tints every control, which is applying the palette to screens
-- Float components such as `0.980`: rejected because a float may round to a neighbouring byte; the hex form is the byte
+- Float components such as `0.957`: rejected because a float may round to a neighbouring byte; the hex form is the byte
 
 ## D5, the copy route and production or test: what it was chosen against
 
-The six values are typed once, into `tokens.json`, by the builder from the brand source's
+The six values are entered once, into `tokens.json`, by the builder from the brand source's
 measured values; the three colour sets are written by a program the delivery runs once, which reads
 `tokens.json` and writes each `Contents.json`, and the census then holds them equal. Byte-unchanged:
 every screen's layout and behaviour, the `color` tier and its Telegram mapping, `layout.css`, the
@@ -141,7 +143,7 @@ Red first per criterion, every red run locally: Vitest over `tokens.test.ts` (A1
 census module run by name (A4 to A7), each with a planted red over a fixture and a planted complete
 set as the green control. `build-tokens.ts` is web code with no rows table: StrykerJS proves it
 whole at `thresholds.break` 100, run locally before the push and again in CI's `mutation-web`. The
-band S57800-S57899 holds script rows on the data a Python killer reads: an Ember hex in
+band S57800-S57899 holds script rows on the data a Python killer reads: an Tide hex in
 `tokens.json`, a colour set's light value and a colour set's dark value. One push: no red needs CI.
 FORMAL: not applicable (no interleaving; the census is an equality of two finite maps, and the
 compile is a web surface no `covers` line can name).
@@ -186,5 +188,5 @@ StrykerJS's report over `build-tokens.ts`.
 
 ## More Information
 
-Built by SPEC-578; drawn in `docs/schematics/ember-tokens.md`. ADR-028 (the compile), SPEC-028 R5,
+Built by SPEC-578; drawn in `docs/schematics/tide-tokens.md`. ADR-028 (the compile), SPEC-028 R5,
 A8 and A9 (the Telegram mapping and its proof), ADR-598 (the catalog this delivery adds to).
