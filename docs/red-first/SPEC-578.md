@@ -59,3 +59,27 @@ to `node()` at line 160 of the file and is equivalent: `members(roles)` at line 
 whose name does not start with `$` and throws there first, the three role names hold no `$`, and line 159 refuses an
 undefined role, so the call at line 160 never throws and its `where` argument is never read. No exclusion, filter,
 register or configuration was changed for it.
+
+## The Tide round
+
+Merge commit `81b2f553` brought dev into this branch before the palette moved to Tide; the Ember lines above
+record the earlier palette, and the lines below record Tide's, each run locally for the test its command here
+selects, on a tree byte-identical to the commit it names.
+
+```text
+A1: pnpm exec vitest run web/app/src/lib/design/tokens.test.ts -t "the Tide palette compiles to six custom properties in both modes"
+A2: pnpm exec vitest run web/app/src/lib/design/tokens.test.ts -t "a role missing from either Tide mode fails the compile by name"
+A3: pnpm exec vitest run web/app/src/lib/design/tokens.test.ts -t "ink and accent on the background meet AA in both Tide modes"
+A4: python3 -m unittest discover -s scripts/tests -p test_tide_tokens.py -k test_each_colour_set_holds_its_tokens_values
+```
+
+```red-first
+A1: red at c5d08c0f7e7c2f73aafbf86433e73f7733b095ee: AssertionError: --tide-dark-background is not declared: expected false to be true // Object.is equality
+A1: green at 40da018d39e81e847353b13df2fd7842fecc3bcf
+A2: red at c5d08c0f7e7c2f73aafbf86433e73f7733b095ee: AssertionError: expected [Function] to throw an error
+A2: green at 40da018d39e81e847353b13df2fd7842fecc3bcf
+A3: red at c5d08c0f7e7c2f73aafbf86433e73f7733b095ee: AssertionError: examined 0 Tide modes: the population is empty, so nothing was judged: expected 0 to be greater than 0
+A3: green at 40da018d39e81e847353b13df2fd7842fecc3bcf
+A4: red at c5d08c0f7e7c2f73aafbf86433e73f7733b095ee: AssertionError: examined 0 Tide roles: the population is empty, so nothing was judged
+A4: green at 40da018d39e81e847353b13df2fd7842fecc3bcf
+```
