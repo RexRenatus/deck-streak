@@ -37,13 +37,14 @@ class TheCommittedRulesetsAreTheReleaseWorkflow(unittest.TestCase):
         self.assertEqual(checks(main), ["ci", "fragment"])
         self.assertLessEqual({"deletion", "non_fast_forward"}, set(found))
 
-    def test_dev_takes_pull_requests_only_after_ci_and_fragment(self):
+    def test_dev_takes_pull_requests_only_after_ci_fragment_and_dependency_review(self):
         dev = load("dev")
         self.assertEqual((dev["target"], dev["enforcement"]), ("branch", "active"))
         self.assertEqual(dev["conditions"]["ref_name"]["include"], ["refs/heads/dev"])
         found = rules(dev)
         self.assertIn("pull_request", found)
-        self.assertEqual(checks(dev), ["ci", "fragment"])
+        # SPEC-038 section 17: the dependency review is a required check on dev, not on main.
+        self.assertEqual(checks(dev), ["ci", "dependency-review", "fragment"])
         self.assertLessEqual({"deletion", "non_fast_forward"}, set(found))
 
     def test_release_tags_block_deletion_update_and_force(self):
