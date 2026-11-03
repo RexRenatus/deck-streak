@@ -322,7 +322,7 @@ final class Probe {
     }
 
     /// The bound of every measured load wait: how long a card is given to report that it has
-    /// loaded. It is the wait the planted suite has always measured (SPEC-361 R16).
+    /// loaded, counted from its page's first answer (SPEC-361 R16, SPEC-349 R11).
     static let loadSeconds: TimeInterval = 10
 
     /// The bound of each of the warm-up's two loads: they hold the host's first start of WebKit on
@@ -361,15 +361,40 @@ final class Probe {
     /// The app's own script a page answers once its process runs, loaded or not (SPEC-349 R11).
     static let answerScript = "'answered'"
 
-    /// The load wait over any page `ask` reaches: the seconds the card took to finish loading, or
-    /// nil when it had not finished within `loadSeconds` (SPEC-361 R16).
+    /// The load wait over any page `ask` reaches: it first asks the page `answerScript`, again
+    /// whenever an ask comes back without its answer, one ask at a time, under `answerSeconds`;
+    /// once the page has answered, it returns the seconds the card then took to finish loading, or
+    /// nil when the page never answered or the card had not finished within `loadSeconds`
+    /// (SPEC-361 R16, SPEC-349 R11). It prints the seconds the page took to answer.
     static func loadTime(
         asking ask: @escaping Asking, answerSeconds: TimeInterval = Probe.warmUpSeconds,
         loadSeconds: TimeInterval = Probe.loadSeconds
     ) async -> TimeInterval? {
-        await poll(loadSeconds) {
+        let state = AnswerState()
+        let answered = await poll(answerSeconds) {
+            await askOnce(ask, state)
+        }
+        print("card probe answer: took=\(answered.map { String(format: "%.2f", $0) } ?? "none")")
+        guard answered != nil else {
+            return nil
+        }
+        return await poll(loadSeconds) {
             await reply(ask, readyScript) == "true"
         }
+    }
+
+    /// Asks the page `answerScript` unless an ask is out or it has answered; returns whether it has.
+    private static func askOnce(_ ask: @escaping Asking, _ state: AnswerState) async -> Bool {
+        if !state.asking && !state.answered {
+            state.asking = true
+            ask(answerScript) { result in
+                state.asking = false
+                if result == "answered" {
+                    state.answered = true
+                }
+            }
+        }
+        return state.answered
     }
 
     /// The page's string answer to `script`, asked once through `ask`.
@@ -622,6 +647,14 @@ final class LatePage {
             answer(script == Probe.answerScript ? "answered" : String(Date() >= loads))
         }
     }
+}
+
+/// Whether a page has answered the load wait's `Probe.answerScript`, and whether an ask is out
+/// (SPEC-349 R11).
+@MainActor
+final class AnswerState {
+    var asking = false
+    var answered = false
 }
 
 final class PlantedCardTests: XCTestCase {
