@@ -1,7 +1,9 @@
 name: changelog
 
 # A pull request adds a fragment under changelog.d/, or it is the release pull request that
-# compiles them into CHANGELOG.md. Its job, `fragment`, is a required check on main.
+# compiles them into CHANGELOG.md, or it is a Dependabot pull request that changes only the files
+# the ecosystems of .github/dependabot.yml update (SPEC-190 R13). Its job, `fragment`, is a
+# required check on dev and main.
 on:
   pull_request:
     branches: [dev, main]
@@ -27,8 +29,20 @@ jobs:
       - name: a fragment is added, or CHANGELOG.md is compiled
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
           if git diff --name-only "$BASE" HEAD -- CHANGELOG.md | grep -q .; then exit 0; fi
           if git diff --name-only --diff-filter=A "$BASE" HEAD -- changelog.d/ | grep -v README.md | grep -q .; then exit 0; fi
+          if [ "$AUTHOR" = "dependabot[bot]" ]; then
+            cargo="Cargo\.lock|Cargo\.toml|crates/[^/]+/Cargo\.toml"
+            npm="package\.json|web/app/package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml"
+            actions="\.github/workflows/[^/]+\.ya?ml"
+            changed="$(git diff --name-only --no-renames "$BASE" HEAD)"
+            other="$(printf "%s\n" "$changed" | grep -v -x -E "$cargo|$npm|$actions" || true)"
+            if [ -n "$changed" ] && [ -z "$other" ]; then
+              echo "A Dependabot pull request that changes only dependency files needs no fragment."
+              exit 0
+            fi
+          fi
           echo "Add a fragment under changelog.d/ (see changelog.d/README.md)."
           exit 1
