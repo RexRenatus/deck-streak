@@ -1218,6 +1218,8 @@ final class PlantedCardTests: XCTestCase {
         })
         """
 
+    /// SPEC-361 A18: the permitted loads load in both card views, in both sessions of one harness
+    /// job, while one keeper card holds WebKit's GPU and networking processes across the views.
     @MainActor
     func test_the_permitted_loads_load_in_both_card_views() async throws {
         let probe = try await Probe.make()
