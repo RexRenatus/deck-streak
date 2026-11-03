@@ -120,6 +120,22 @@
         "    directory: /tools",
         "the update entry for the Python coverage tool reads the directory that holds its requirements file; another directory finds none (SPEC-592 R11)",
         "test_coverage_report.TheUpdatePath.test_the_requirements_file_has_a_dependabot_update_path"
+      ],
+      [
+        "S59215-THE-PIP-ARM-ADMITS-THE-REQUIREMENTS-FILE-BY-ITS-EXACT-PATH",
+        ".github/workflows/changelog.yml",
+        "pip=\"tools/coverage/requirements\\.txt\"",
+        "pip=\"tools/coverage/requirements\\.in\"",
+        "the fragment arm admits the coverage requirements file by its exact path, so a Dependabot pull request that changes only it needs no fragment (SPEC-592 R12)",
+        "test_changelog_fragment.ADependabotDependencyPullRequestNeedsNoFragment.test_a_dependabot_pull_request_that_changes_only_dependency_files_needs_no_fragment"
+      ],
+      [
+        "S59216-THE-PIP-ARM-NAMES-ONE-PATH-NEVER-ITS-DIRECTORY",
+        ".github/workflows/changelog.yml",
+        "coverage/requirements\\.txt\"",
+        "coverage/.+\"",
+        "the fragment arm admits one exact path for pip, never its directory, so a path that only resembles the requirements file still needs a fragment (SPEC-592 R12)",
+        "test_changelog_fragment.EveryOtherPullRequestReadsAsItDid.test_a_dependabot_pull_request_that_changes_another_path_is_refused"
       ]
     ]
   }
