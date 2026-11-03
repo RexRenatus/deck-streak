@@ -351,6 +351,8 @@ class TheExclusionList(unittest.TestCase):
         self.assertEqual(row_problems([good]), [])
         deprecated = [r for r in rows if r["kind"] == "deprecated"]
         self.assertEqual(len(deprecated), 4, "the deprecated Telegram rows")
+        bot = [r["glob"] for r in rows if r.get("package") == "deck-streak-bot"]
+        self.assertEqual(bot, ["crates/bot/**"], "the bot crate row names the whole crate")
 
     def test_the_rust_run_flags_come_from_the_rows(self):
         done = run("args", "--lane", "rust")
