@@ -1,0 +1,302 @@
+name: coverage
+
+# An advisory coverage report (SPEC-592, ADR-613): the Rust workspace by cargo-llvm-cov, the web app
+# by the v8 provider of vitest and the repository Python by coverage.py, on every pull request into
+# dev or main and every push to dev. No ruleset and no needs outside this file names its jobs, so no
+# result of theirs holds a merge. Each lane exits 0 on a measured report whatever its figures read,
+# and 1 only on VOID: no examined line, an lcov the report cannot read, or a coverage provider locked
+# at another version than vitest. config/coverage.json is the one list of what is not measured. The
+# token is read-only, no secret is read, every action is pinned by its full commit SHA, and a cache
+# is restored, never saved.
+on:
+  pull_request:
+    branches: [dev, main]
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [dev]
+
+permissions:
+  contents: read
+
+# A pull request runs share its ref group, and a newer push to it cancels the run it supersedes; a
+# push to dev has a group of its own, its run id, so it is never cancelled.
+concurrency:
+  group: coverage-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  coverage-plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      scope: ${{ steps.plan.outputs.scope }}
+      rust: ${{ steps.plan.outputs.rust }}
+      web: ${{ steps.plan.outputs.web }}
+      python: ${{ steps.plan.outputs.python }}
+      retention: ${{ steps.plan.outputs.retention }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # the merge ref and its first parent
+          fetch-depth: 2
+          persist-credentials: false
+      - name: the paths the pull request changes (none is read on a push)
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/coverage"
+          if [ "$EVENT" = "pull_request" ]; then
+            git diff --name-only --no-renames HEAD^1 HEAD > "$RUNNER_TEMP/coverage/changed.txt"
+          else
+            : > "$RUNNER_TEMP/coverage/changed.txt"
+          fi
+      - name: the plan (the scope, each lane and why, the retention)
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          python3 scripts/coverage-report.py plan --event "$EVENT" --base-ref "$BASE_REF" \
+            --head-ref "$HEAD_REF" --head-repo "$HEAD_REPO" --repo "$REPO" \
+            --changed "$RUNNER_TEMP/coverage/changed.txt" --github-output "$GITHUB_OUTPUT"
+
+  coverage-rust:
+    needs: [coverage-plan]
+    if: ${{ needs.coverage-plan.outputs.rust == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      CARGO_INCREMENTAL: "0"
+      EVENT: ${{ github.event_name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: the planted controls (an empty lane and an unreadable lcov read VOID, an uncovered changed line is printed)
+        run: python3 scripts/coverage-report.py controls --lane rust
+      - name: the pinned Rust toolchain (rust-toolchain.toml)
+        run: rustup show
+      - name: llvm-tools, in this job only (the toolchain pin and the shared cache key stay as they are)
+        run: rustup component add llvm-tools
+      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+        with:
+          tool: cargo-llvm-cov@0.9.1,cargo-nextest@0.9.149
+          fallback: none
+      - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
+        env:
+          PROTOC_SHA256: 96553041f1a91ea0efee963cb16f462f5985b4d65365f3907414c360044d8065
+        run: |
+          curl -fsSL -o /tmp/protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v31.1/protoc-31.1-linux-x86_64.zip
+          echo "$PROTOC_SHA256  /tmp/protoc.zip" | sha256sum -c -
+          mkdir -p "$HOME/.local/protoc" && unzip -q /tmp/protoc.zip -d "$HOME/.local/protoc"
+          echo "$HOME/.local/protoc/bin" >> "$GITHUB_PATH"
+      - name: restore the Rust cache, keyed on the toolchain pin and Cargo.lock
+        id: rust-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
+      - name: the instrumented run, cargo llvm-cov over nextest (a failing test is printed, not fatal)
+        run: |
+          mkdir -p "$RUNNER_TEMP/coverage-rust"
+          python3 scripts/coverage-report.py args --lane rust > "$RUNNER_TEMP/coverage-rust/args.txt"
+          mapfile -t extra < "$RUNNER_TEMP/coverage-rust/args.txt"
+          cargo llvm-cov nextest --workspace --locked --no-fail-fast --ignore-run-fail --lcov \
+            --output-path "$RUNNER_TEMP/coverage-rust/lcov.info" "${extra[@]}"
+      - name: the region figures, from the same profile
+        run: cargo llvm-cov report --json --summary-only --output-path "$RUNNER_TEMP/coverage-rust/summary.json"
+      - name: the lines the pull request adds (none is read on a push)
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            git diff -U0 --no-color --no-ext-diff --no-renames --src-prefix=a/ --dst-prefix=b/ HEAD^1 HEAD \
+              > "$RUNNER_TEMP/coverage-rust/changed.diff"
+          else
+            : > "$RUNNER_TEMP/coverage-rust/changed.diff"
+          fi
+      - name: the report (VOID exits 1; every measured report exits 0)
+        run: |
+          python3 scripts/coverage-report.py report --lane rust --lcov "$RUNNER_TEMP/coverage-rust/lcov.info" \
+            --llvm-summary "$RUNNER_TEMP/coverage-rust/summary.json" --root "$GITHUB_WORKSPACE" \
+            --diff "$RUNNER_TEMP/coverage-rust/changed.diff" --event "$EVENT" \
+            --summary "$GITHUB_STEP_SUMMARY" --out-dir "$RUNNER_TEMP/coverage-rust"
+      - name: upload the lcov, its summary and the report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-rust
+          path: ${{ runner.temp }}/coverage-rust/
+          retention-days: ${{ needs.coverage-plan.outputs.retention }}
+          if-no-files-found: warn
+
+  coverage-web:
+    needs: [coverage-plan]
+    if: ${{ needs.coverage-plan.outputs.web == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      EVENT: ${{ github.event_name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: the planted controls (and a coverage provider locked at another version than vitest reads VOID)
+        run: python3 scripts/coverage-report.py controls --lane web
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: the pnpm store's path
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - name: restore the pnpm store, keyed on pnpm-lock.yaml
+        id: pnpm-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+      - name: the web app dependencies
+        run: pnpm install --frozen-lockfile
+      - name: the coverage provider is locked at the vitest version (VOID otherwise)
+        run: python3 scripts/coverage-report.py provider --lockfile pnpm-lock.yaml
+      - name: the generated sources the tests import, by the web app check (its exit is printed, not fatal)
+        run: |
+          code=0
+          pnpm --dir web/app check || code=$?
+          echo "web/app check exited $code"
+      - name: the instrumented run, vitest with the v8 provider (a failing test is printed, not fatal)
+        run: |
+          mkdir -p "$RUNNER_TEMP/coverage-web"
+          code=0
+          pnpm exec vitest run --coverage --coverage.reportsDirectory="$RUNNER_TEMP/coverage-web" || code=$?
+          echo "vitest exited $code"
+          echo "$code" > "$RUNNER_TEMP/coverage-web/runner.exit"
+      - name: the lines the pull request adds (none is read on a push)
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            git diff -U0 --no-color --no-ext-diff --no-renames --src-prefix=a/ --dst-prefix=b/ HEAD^1 HEAD \
+              > "$RUNNER_TEMP/coverage-web/changed.diff"
+          else
+            : > "$RUNNER_TEMP/coverage-web/changed.diff"
+          fi
+      - name: the report (VOID exits 1; every measured report exits 0)
+        run: |
+          python3 scripts/coverage-report.py report --lane web --lcov "$RUNNER_TEMP/coverage-web/lcov.info" \
+            --root "$GITHUB_WORKSPACE" --diff "$RUNNER_TEMP/coverage-web/changed.diff" --event "$EVENT" \
+            --runner-exit-file "$RUNNER_TEMP/coverage-web/runner.exit" \
+            --summary "$GITHUB_STEP_SUMMARY" --out-dir "$RUNNER_TEMP/coverage-web"
+      - name: upload the lcov, its summary and the report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-web
+          path: ${{ runner.temp }}/coverage-web/
+          retention-days: ${{ needs.coverage-plan.outputs.retention }}
+          if-no-files-found: warn
+
+  coverage-python:
+    needs: [coverage-plan]
+    if: ${{ needs.coverage-plan.outputs.python == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      CARGO_INCREMENTAL: "0"
+      EVENT: ${{ github.event_name }}
+      COVERAGE_RCFILE: ${{ github.workspace }}/tools/coverage/coverage.toml
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # the guard tests read the history, as in the gate hygiene job
+          fetch-depth: 0
+          persist-credentials: false
+      - name: the planted controls (an empty lane and an unreadable lcov read VOID, an uncovered changed line is printed)
+        run: python3 scripts/coverage-report.py controls --lane python
+      - name: the pinned Rust toolchain (rust-toolchain.toml)
+        run: rustup show
+      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+        with:
+          tool: cargo-deny
+      - name: restore the Rust cache, keyed on the toolchain pin and Cargo.lock
+        id: rust-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
+      - name: gitleaks 8.30.1, checksum verified
+        env:
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        run: |
+          curl -fsSL -o /tmp/gitleaks.tgz https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          echo "$GITLEAKS_SHA256  /tmp/gitleaks.tgz" | sha256sum -c -
+          mkdir -p "$HOME/.local/bin" && tar -xzf /tmp/gitleaks.tgz -C "$HOME/.local/bin" gitleaks
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
+        env:
+          PROTOC_SHA256: 96553041f1a91ea0efee963cb16f462f5985b4d65365f3907414c360044d8065
+        run: |
+          curl -fsSL -o /tmp/protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v31.1/protoc-31.1-linux-x86_64.zip
+          echo "$PROTOC_SHA256  /tmp/protoc.zip" | sha256sum -c -
+          mkdir -p "$HOME/.local/protoc" && unzip -q /tmp/protoc.zip -d "$HOME/.local/protoc"
+          echo "$HOME/.local/protoc/bin" >> "$GITHUB_PATH"
+      - name: coverage.py, hash-pinned, in a virtual environment under the runner temp directory
+        run: |
+          python3 -m venv "$RUNNER_TEMP/coverage-venv"
+          "$RUNNER_TEMP/coverage-venv/bin/python" -m pip install --require-hashes --no-deps --only-binary :all: \
+            -r tools/coverage/requirements.txt
+          echo "$RUNNER_TEMP/coverage-venv/bin" >> "$GITHUB_PATH"
+      - name: the three suites the gate python stage runs, under coverage (a failing suite is printed, not fatal)
+        run: |
+          mkdir -p "$RUNNER_TEMP/coverage-python"
+          failed=0
+          for suite in scripts/tests tools/parity-oracle agent/tests; do
+            code=0
+            coverage run -m unittest discover -s "$suite" -p 'test_*.py' || code=$?
+            echo "coverage: $suite exited $code"
+            if [ "$code" -ne 0 ]; then failed=1; fi
+          done
+          echo "$failed" > "$RUNNER_TEMP/coverage-python/runner.exit"
+      - name: the parallel data files, combined into one lcov
+        run: |
+          coverage combine
+          coverage lcov -o "$RUNNER_TEMP/coverage-python/lcov.info"
+      - name: the lines the pull request adds (none is read on a push)
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            git diff -U0 --no-color --no-ext-diff --no-renames --src-prefix=a/ --dst-prefix=b/ HEAD^1 HEAD \
+              > "$RUNNER_TEMP/coverage-python/changed.diff"
+          else
+            : > "$RUNNER_TEMP/coverage-python/changed.diff"
+          fi
+      - name: the report (VOID exits 1; every measured report exits 0)
+        run: |
+          python3 scripts/coverage-report.py report --lane python --lcov "$RUNNER_TEMP/coverage-python/lcov.info" \
+            --root "$GITHUB_WORKSPACE" --diff "$RUNNER_TEMP/coverage-python/changed.diff" --event "$EVENT" \
+            --runner-exit-file "$RUNNER_TEMP/coverage-python/runner.exit" \
+            --summary "$GITHUB_STEP_SUMMARY" --out-dir "$RUNNER_TEMP/coverage-python"
+      - name: upload the lcov and the report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-python
+          path: ${{ runner.temp }}/coverage-python/
+          retention-days: ${{ needs.coverage-plan.outputs.retention }}
+          if-no-files-found: warn
