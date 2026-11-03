@@ -62,3 +62,40 @@ history.
 ## More Information
 
 SPEC-190, SPEC-038 R8, ADR-055, issue #369.
+
+## Amendment (SPEC-190 R13 and R14, #1020): Dependabot passes `fragment` on dependency files
+
+`fragment` refused every Dependabot pull request into `dev`, 20 of 20 at their heads, because
+Dependabot adds no changelog fragment. Its step now also passes a pull request whose author, read
+from the event as `github.event.pull_request.user.login`, is `dependabot[bot]` and whose every
+changed path, both paths of a moved file, is a file an ecosystem of `.github/dependabot.yml` updates
+(SPEC-190 R13); every other pull request reads the verdict and the message it read before (R14).
+The concurrency rule above is unchanged.
+
+This decision was chosen against these options:
+
+- Chosen, because it needs no write token, no secret, no new trigger and no ruleset change: an
+  author test and a path test in the step that already runs, on a `pull_request` run whose token
+  stays read-only.
+- A fragment a workflow generates and commits to the branch of the Dependabot pull request:
+  rejected, because the commit needs a token that may write contents, a commit pushed with the token
+  of the run starts no checks without the approval of a person, so `fragment` would report on the
+  new head only through a secret token or a `pull_request_target` trigger, and Dependabot stops
+  rebasing a branch that holds a commit it did not make.
+- `github.actor`, a branch name or a title as the author: rejected, because each names who started
+  the run or what the branch is called, not who opened the pull request, and a re-run by a person
+  changes `github.actor`.
+- Skipping `fragment` for Dependabot by an `if` on the job: rejected, because a job its `if` skips
+  reports success without having run, whatever files the pull request changes.
+- An exempt list of files for every author: rejected, because it would change the verdict for a
+  pull request by a person.
+- A pattern match on the login: rejected, because `dependabot[bot]` read as a pattern matches other
+  logins and not the login itself.
+
+Confirmation: SPEC-190 A13 to A18, six hand-proved rows S19061 to S19066, and `fragment` on the next
+Dependabot pull request into `dev`.
+
+What would make this wrong: the Dependabot login changing, or Dependabot updating a file R13 does
+not name (a new ecosystem or directory), each of which turns `fragment` red as before, read on the
+next Dependabot pull request; and since Dependabot reads `.github/dependabot.yml` from `main`, a
+change to that file takes effect at the next release.
