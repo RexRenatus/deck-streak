@@ -232,3 +232,66 @@ Chosen, and what each was chosen against:
 - Bad, because an advisory in a build or test tool fails every pull request until an update or an
   override fixes it, as #259 does for #254 and #255.
 - Bad, because a registry outage fails the stage, VOID, until a re-run.
+
+## Amendment: every pull request into dev is reviewed for the dependencies it adds
+
+Recorded by SPEC-038, its section 17. This decision is unchanged; the amendment decides how the
+dependencies a pull request adds or changes are judged beside `audit-web` and `audit-rust`.
+
+Chosen, and what each was chosen against:
+
+- GitHub's dependency review action, in a workflow of its own that runs on every pull request
+  into `dev`, its one job a required check by name. It was chosen because it reads the licence and
+  the known advisories of every dependency a pull request adds or changes, npm packages and pinned
+  actions among them, which neither audit reads.
+  - A job in `ci.yml` that the aggregate `ci` needs: rejected, because open pull requests change
+    `ci.yml`, and the aggregate's `needs` line is a line they would share; a workflow of its own
+    changes no line of `ci.yml`.
+  - A licence checker over the npm lockfile alone: rejected, because it reads neither the actions
+    nor any advisory.
+- Every scope, `runtime, development, unknown`, at the action's lowest severity, `low`. It was
+  chosen because both audits already hold every advisory as an error.
+  - `runtime` alone: rejected, because every package of the JavaScript workspace is a development
+    dependency, so it would review no npm package.
+  - A severity floor above `low`: rejected, because an advisory below it would never fail the
+    review, and the two audits would hold a different bar.
+- No list of allowed advisories, no package admitted under any licence, no `warn-only` and no
+  `continue-on-error`. It was chosen because an advisory with no fix is fixed by us, by an update,
+  a replacement or a patched copy of our own, and is never ignored.
+  - A list of allowed advisories for an advisory with no fix: rejected, for that reason.
+  - `warn-only`, or `continue-on-error` on the step: rejected, because the job would then pass
+    with a finding.
+- An allow list, the `allow` list of `deny.toml`, read by the census from `deny.toml` itself. It
+  was chosen because one licence policy then holds every ecosystem, and neither list can move
+  alone.
+  - A deny list of licences known to be incompatible: rejected, because a licence nobody listed
+    would pass.
+  - A list of its own for npm and the actions: rejected, because two lists drift.
+- Rust's crates reviewed too, on the same list. It was chosen because the action reads every
+  ecosystem the dependency graph reads, and none of its inputs leaves one out.
+  - `warn-only`, with a step of our own that fails on every finding outside Cargo: rejected,
+    because the action's own verdict would then be set aside for a filter of ours.
+  - Exempting each crate by its package URL: rejected, because it is a list of exceptions, and it
+    reaches no advisory.
+
+### Consequences of the amendment
+
+- Good, because an npm package or an action that carries a known advisory, or a licence outside
+  the list, fails the pull request that adds or changes it, whatever its scope.
+- Good, because the review names each advisory's first patched version, the fix the policy asks
+  for.
+- Bad, because a crate is judged twice, by `audit-rust` over the whole graph and by the review
+  when a pull request changes it; a change of `frankenstein`, which `deny.toml` admits under its
+  own licence for that crate alone, reads red in the review until a decision of its own.
+- Bad, because a dependency whose licence is outside the list reads red when a pull request
+  updates it, until the list grows by a reviewed change to `deny.toml`.
+- Bad, because the job reads the dependency graph through the network, so an outage of the graph
+  fails the job until a re-run.
+
+### What would make this amendment wrong
+
+- The action gains an input that leaves an ecosystem out: Rust then goes back to `audit-rust`
+  alone, and this amendment is amended.
+- The review cannot compare a pull request into `dev`, whose base is not the default branch: the
+  job's run on its own pull request is the first measurement of that, and a red there reopens
+  this decision.
