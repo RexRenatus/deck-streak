@@ -66,7 +66,9 @@ R4. **The sibling runs the moved steps.** Then `release-and-app` runs, moved byt
     the base: the Release build for testing, the boot and launch before the measurements, the Release
     measurements, the Release app built alone, its size, the required-reason symbols, the app's tests, the
     review screen's tests, the bury and flag tests and the unsigned archive, each condition literal kept. Its
-    one download is the framework of its own run, by SPEC-339 R12's rule.
+    one download is the framework of its own run, by SPEC-339 R12's rule. The one exception to "byte for
+    byte" is R13's measurement lines in the run text of the app's, the review screen's and the bury and flag
+    tests; every line those steps held at the base stays in their run text, byte for byte and in its order.
 R5. **No gate is weakened.** No test, planted card, assertion, destination, configuration, selection, wait,
     timeout or retry changes; no step is skipped, filtered or made conditional; the planted suite stays whole in
     `harness`, one simulator at a time.
@@ -93,6 +95,18 @@ R11. **Rows follow their lines.** The six rows of S33900-S33999 that anchor insi
     in the same commit, ids, mutants and killers kept: each find runs on to the next step of `harness`, so it occurs
     once. Band S59100-S59199 adds thirteen rows for the new tests (section 7).
 R12. **The callers do not change.** Each caller keeps its one call job; no context joins a required set.
+R13. **The runner's state is recorded at each DeckStreak test step.** The app's, the review screen's and the
+    bury and flag tests of `release-and-app` each record, as the step starts (the app's tests after their
+    generate line, which stays first) and at its end whatever its outcome, the runner's memory (`vm_stat`), its
+    swap (`sysctl vm.swapusage`), its load (`uptime`) and its booted simulators (`xcrun simctl list devices
+    booted`); and, only when the step's `xcodebuild` fails, the iPhone simulator's unified log from the step's
+    `started` time to the failure, narrowed by a predicate to the test manager, RunningBoard, the DeckStreak
+    app and its UI test runner, the accessibility subsystem and any message that names the app. Each reading
+    is a file of its own under `runner-state/` in the report folder, ending with its own status line, and the
+    job's upload carries it (R9); the report body reads none of them. A reading that fails writes its status
+    into its own file and changes no step's outcome: each runs only as an `if` condition, and an EXIT trap
+    that never exits takes the end reading, so the step's status stays its own commands'. This requirement
+    adds no criterion of its own: a later change keeps the measurement under a criterion or removes it.
 
 ## 3. Acceptance criteria
 
