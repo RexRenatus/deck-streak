@@ -495,6 +495,13 @@ class DynamicImportsCheck(unittest.TestCase):
                 "scripts/tests/test_b.py",
                 3,
             ),
+            (
+                "an annotated register and one addition",
+                'DYNAMIC_IMPORTS: dict = {**allowed("planted", ("test_known", "load", "x", 1))}\n'
+                + grow % "test_new",
+                NEW,
+                2,
+            ),
         ]
         for name, register, loader, count in examined("register additions", cases):
             with self.subTest(name), tempfile.TemporaryDirectory() as tmp:
