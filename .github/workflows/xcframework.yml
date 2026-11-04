@@ -488,6 +488,366 @@ jobs:
             -derivedDataPath "$RUNNER_TEMP/debug" \
             -resultBundlePath "$RESULTS/card-probe.xcresult" \
             CODE_SIGNING_ALLOWED=NO
+      - name: the report
+        if: ${{ always() }}
+        run: |
+          python3 - <<'PY'
+          import datetime, json, os, pathlib, re, statistics, subprocess
+          report = pathlib.Path(os.environ["REPORT"])
+          results = pathlib.Path(os.environ["RESULTS"])
+          report.mkdir(parents=True, exist_ok=True)
+          simulators = [os.environ["IPHONE_SIM"], os.environ["IPAD_SIM"]]
+          # One report body in both jobs of the split (SPEC-591 R6, ADR-612): each source is
+          # measured in one job, and the other job names that job for its rows.
+          here = os.environ["GITHUB_JOB"]
+          owners = {"debug": "harness", "release": "release-and-app", "app": "release-and-app",
+                    "review": "release-and-app", "review-actions": "release-and-app"}
+          if here not in owners.values():
+              raise SystemExit(f"the report runs in {here!r}, not in a job of the split")
+          def elsewhere(label):
+              """A row whose source the other job measures names that job; None in its own."""
+              return None if owners[label] == here else f"in `{owners[label]}`"
+          def read(name):
+              path = report / name
+              return path.read_text().strip() if path.is_file() else ""
+          def minutes(name):
+              seconds = read(name)
+              away = elsewhere(name.removesuffix("-seconds"))
+              return away or (f"{int(seconds) / 60:.1f} minutes" if seconds else "not measured")
+          def tool(*arguments):
+              done = subprocess.run(["xcrun", "xcresulttool", "get", "test-results", *arguments],
+                                    capture_output=True, text=True)
+              return json.loads(done.stdout) if done.returncode == 0 and done.stdout.strip() else None
+          def cases_in(label):
+              """Every test case one bundle holds, each case's details written beside the report."""
+              bundle = results / f"{label}.xcresult"
+              tests = tool("tests", "--path", str(bundle)) if bundle.exists() else None
+              if tests is None:
+                  return []
+              (report / f"{label}-tests.json").write_text(json.dumps(tests, indent=1))
+              cases = []
+              def walk(node):
+                  if node.get("nodeType") == "Test Case":
+                      cases.append(node)
+                  for child in node.get("children", []):
+                      walk(child)
+              for node in tests.get("testNodes", []):
+                  walk(node)
+              for case in cases:
+                  details = tool("test-details", "--test-id", case.get("nodeIdentifier", ""),
+                                 "--path", str(bundle))
+                  if details is not None:
+                      name = case.get("nodeIdentifier", "").replace("/", "-")
+                      (report / f"details-{label}-{name}.json").write_text(json.dumps(details, indent=1))
+              return cases
+          def per_simulator(case):
+              """A case's result on each simulator it ran on, or its one result."""
+              devices = [child for child in case.get("children", []) if child.get("nodeType") == "Device"]
+              if not devices:
+                  return str(case.get("result"))
+              return "; ".join(f"{device.get('name')}: {device.get('result')}" for device in devices)
+          def measured(node, device=None):
+              """(simulator, metric, unit, values) for every metric a bundle holds, read without
+              trusting one schema: a `device` names the simulator its subtree ran on."""
+              if isinstance(node, list):
+                  for item in node:
+                      yield from measured(item, device)
+              elif isinstance(node, dict):
+                  if isinstance(node.get("device"), dict):
+                      device = node["device"].get("deviceName", device)
+                  values = node.get("measurements")
+                  if isinstance(values, list) and values and all(
+                          isinstance(value, (int, float)) for value in values):
+                      name = " ".join(str(node.get(key, "")) for key in ("displayName", "identifier"))
+                      yield device, name.strip(), node.get("unitOfMeasurement", ""), values
+                  for key, value in node.items():
+                      if key != "measurements":
+                          yield from measured(value, device)
+          debug_cases = cases_in("debug")
+          release_cases = cases_in("release")
+          app_cases = cases_in("app")
+          review_cases = cases_in("review")
+          review_actions_cases = cases_in("review-actions")
+          release = results / "release.xcresult"
+          metrics = tool("metrics", "--path", str(release)) if release.exists() else None
+          found = []
+          if metrics is not None:
+              (report / "release-metrics.json").write_text(json.dumps(metrics, indent=1))
+              found = list(measured(metrics))
+          # Section 7's figures: a launch takes the median of its passes, memory the largest.
+          figures = [
+              ("M1 launch to first responsive frame, median", statistics.median,
+               lambda name: "applaunch" in name.lower() or "applicationlaunch" in name.lower()),
+              ("M1 open to deck list (signpost), median", statistics.median,
+               lambda name: "open-to-deck-list" in name),
+              ("M2 peak physical memory, largest", max,
+               lambda name: "memory" in name.lower() and "peak" in name.lower()),
+          ]
+          rows = [
+              ("tests, Debug, both simulators", minutes("debug-seconds")),
+              ("measurements, Release, both simulators", minutes("release-seconds")),
+              ("Release app bytes", elsewhere("release") or read("app-bytes") or "not measured"),
+              ("Release executable bytes",
+               elsewhere("release") or read("executable-bytes") or "not measured"),
+              ("app's tests, Debug, both simulators", minutes("app-seconds")),
+              ("review screen's tests, Debug, both simulators", minutes("review-seconds")),
+              ("bury and flag tests, Debug, both simulators", minutes("review-actions-seconds")),
+          ]
+          for simulator in simulators:
+              for label, pick, wanted in figures:
+                  hits = [(unit, values) for device, name, unit, values in found
+                          if device and (simulator in device or device in simulator) and wanted(name)]
+                  value = elsewhere("release") or "not measured"
+                  if hits:
+                      unit, values = hits[0]
+                      value = f"{pick(values):g} {unit} (of {len(values)} passes)"
+                  rows.append((f"{label}, {simulator}", value))
+          def warm_rows(label, title):
+              """Each simulator's warm before a step: its boot wait, launch and end (SPEC-339 R16)."""
+              if elsewhere(label):
+                  rows.extend((f"{title} warm {what}, {simulator}", elsewhere(label))
+                              for simulator in simulators for what in ("boot wait", "launch", "end"))
+                  return
+              path = report / f"warm-{label}.json"
+              records = json.loads(path.read_text()) if path.is_file() else []
+              for simulator in simulators:
+                  record = next((r for r in records if r.get("simulator") == simulator), {})
+                  for phase, what in (("bootstatus", "boot wait"), ("launch", "launch"),
+                                      ("terminate", "end")):
+                      done = record.get("phases", {}).get(phase) or {}
+                      value = done.get("outcome", "not measured")
+                      if "seconds" in done:
+                          value = f"{done['seconds']:g} s, {value}"
+                      if phase == "bootstatus" and record:
+                          value += f", {record.get('state') or 'unknown'} before"
+                      rows.append((f"{title} warm {what}, {simulator}", value))
+          def runner_rows(label, title):
+              """Each simulator's UI test runner bootstrap and first-launch gap, read from the step's
+              console in destination order by the stamps its lines carry (SPEC-339 R16)."""
+              if elsewhere(label):
+                  for simulator in simulators:
+                      rows.append((f"{title} runner bootstrap, {simulator}", elsewhere(label)))
+                      rows.append((f"{title} first-launch gap, {simulator}", elsewhere(label)))
+                  return
+              stamp = re.compile(r"\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d+")
+              def at(text):
+                  return datetime.datetime.strptime(text, "%Y-%m-%d %H:%M:%S.%f")
+              def seconds(session, start, end):
+                  if not (session.get(start) and session.get(end)):
+                      return None
+                  return f"{(at(session[end]) - at(session[start])).total_seconds():.1f} s"
+              path = report / f"{label}-console.log"
+              lines = path.read_text(errors="replace").splitlines() if path.is_file() else []
+              sessions = []
+              for line in lines:
+                  found = stamp.search(line)
+                  if re.search(r"-Runner\[\d+:\d+\] \[Default\] Running tests\.\.\.", line):
+                      sessions.append({"runner": found.group(0) if found else None})
+                  elif not sessions or not found:
+                      continue
+                  elif "Test Suite 'Selected tests' started at" in line:
+                      sessions[-1].setdefault("suite", found.group(0))
+                  elif "Start Test at" in line:
+                      sessions[-1].setdefault("test", found.group(0))
+                  elif "IDELaunchParametersSnapshot: no debugger version" in line:
+                      if "test" in sessions[-1]:
+                          sessions[-1].setdefault("launch", found.group(0))
+              for index, simulator in enumerate(simulators):
+                  if len(sessions) != len(simulators):
+                      bootstrap = gap = (f"not measured ({len(sessions)} runner sessions for "
+                                         f"{len(simulators)} simulators)")
+                  else:
+                      session = sessions[index]
+                      bootstrap = seconds(session, "runner", "suite") or (
+                          "the runner reached no test" if session.get("runner") else "not measured")
+                      gap = seconds(session, "test", "launch") or "not measured"
+                  rows.append((f"{title} runner bootstrap, {simulator}", bootstrap))
+                  rows.append((f"{title} first-launch gap, {simulator}", gap))
+          warm_rows("debug", "Debug")
+          runner_rows("debug", "Debug")
+          warm_rows("release", "Release")
+          runner_rows("release", "Release")
+          def end_rows(label, title):
+              """Each simulator's longest XCTest end of an earlier instance at a launch, read from
+              the step's console in destination order by XCTest's own seconds (SPEC-339 R16)."""
+              if elsewhere(label):
+                  rows.extend((f"{title} longest end, {simulator}", elsewhere(label))
+                              for simulator in simulators)
+                  return
+              path = report / f"{label}-console.log"
+              lines = path.read_text(errors="replace").splitlines() if path.is_file() else []
+              sessions, pending = [], None
+              for line in lines:
+                  if re.search(r"-Runner\[\d+:\d+\] \[Default\] Running tests\.\.\.", line):
+                      sessions.append([])
+                      pending = None
+                      continue
+                  activity = re.match(r"\s*t =\s+(\d+(?:\.\d+)?)s\s+(.*)", line)
+                  if not sessions or not activity:
+                      continue
+                  at = float(activity.group(1))
+                  if pending is not None and at >= pending:
+                      sessions[-1].append(at - pending)
+                  pending = None
+                  if re.fullmatch(r"Terminate \S+:\d+", activity.group(2).strip()):
+                      pending = at
+              for index, simulator in enumerate(simulators):
+                  if len(sessions) != len(simulators):
+                      value = (f"not measured ({len(sessions)} runner sessions for "
+                               f"{len(simulators)} simulators)")
+                  elif not sessions[index]:
+                      value = "no end in the session"
+                  else:
+                      ends = sessions[index]
+                      value = f"{max(ends):.1f} s, the longest end of {len(ends)}"
+                  rows.append((f"{title} longest end, {simulator}", value))
+          end_rows("debug", "Debug")
+          end_rows("release", "Release")
+          lines = [
+              f"`xcframework.yml`'s `{here}` job:",
+              "",
+              "| measure | measured |",
+              "|---|---|",
+          ] + [f"| {name} | {value} |" for name, value in rows]
+          lines += ["", "| test | result |", "|---|---|"]
+          for label, cases in (
+              ("Debug", debug_cases), ("Release", release_cases), ("App", app_cases),
+              ("Review", review_cases),
+              ("Review actions", review_actions_cases),
+          ):
+              lines += [f"| {label} `{c.get('nodeIdentifier')}` | {per_simulator(c)} |" for c in cases]
+              if not cases:
+                  value = elsewhere(label.lower().replace(" ", "-")) or "not measured"
+                  lines.append(f"| {label}: no test result was read | {value} |")
+          if found:
+              lines += ["", "| simulator | metric | unit | passes |", "|---|---|---|---|"]
+              lines += [f"| {device} | {name} | {unit} | {', '.join(f'{value:g}' for value in values)} |"
+                        for device, name, unit, values in found]
+          symbols = read("symbols")
+          if symbols:
+              lines += ["", "Required-reason imports against the privacy manifest:", "", "```", symbols, "```"]
+          app_symbols = read("app-symbols")
+          if app_symbols:
+              lines += ["", "The app's required-reason imports against its privacy manifest:", "", "```",
+                        app_symbols, "```"]
+          text = "\n".join(lines) + "\n"
+          (report / "report.md").write_text(text)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write("## Swift harness (SPEC-339)\n\n" + text)
+          print(text)
+          PY
+      - name: upload the report and the result bundles
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: harness
+          path: |
+            harness-report/
+            harness-results/
+          if-no-files-found: warn
+
+  release-and-app:
+    needs: xcframework
+    runs-on: xcode-27
+    timeout-minutes: 130
+    env:
+      REPORT: ${{ github.workspace }}/harness-report
+      RESULTS: ${{ github.workspace }}/harness-results
+      DEVELOPER_DIR: /Applications/Xcode_27.app/Contents/Developer
+      # One iPhone and one iPad on Xcode 27.0's own simulator runtime, iOS 27.0, which the xcode-27 image holds.
+      IPHONE_SIM: "iPhone 17"
+      IPAD_SIM: "iPad (A16)"
+      SIM_OS: "27.0"
+      # The project generator, pinned by its release and the digest of its archive.
+      XCODEGEN_VERSION: "2.46.0"
+      XCODEGEN_DIGEST: 4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: this run's XCFramework, bindings and synthetic collection
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: xcframework
+          path: engine-artifact
+      - name: place the framework, the bindings and the collection
+        run: |
+          mkdir -p "$REPORT" "$RESULTS" ios/EnginePackage/Sources/DeckStreakFFI ios/Harness/Resources
+          cp -R engine-artifact/DeckStreakFFI.xcframework ios/EnginePackage/
+          cp engine-artifact/bindings/deck_streak_ffi.swift ios/EnginePackage/Sources/DeckStreakFFI/
+          cp engine-artifact/harness-fixture/collection.anki2 ios/Harness/Resources/
+      - name: the app icon, written
+        run: |
+          python3 scripts/ios_icon.py write ios/Harness/Assets.xcassets/AppIcon.appiconset/AppIcon.png
+      - name: XcodeGen, checksum-verified
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/xcodegen.zip" "https://github.com/yonaskolb/XcodeGen/releases/download/${XCODEGEN_VERSION}/xcodegen.zip"
+          echo "$XCODEGEN_DIGEST  $RUNNER_TEMP/xcodegen.zip" | shasum -a 256 -c -
+          unzip -q "$RUNNER_TEMP/xcodegen.zip" -d "$RUNNER_TEMP"
+      - name: the project, generated
+        run: |
+          "$RUNNER_TEMP/xcodegen/bin/xcodegen" generate --spec ios/project.yml
+      - name: the tests, Debug, built for testing
+        run: |
+          # Built once for both simulators, so the tests below run without building again (SPEC-339
+          # R12, as #1060 amends it).
+          xcodebuild build-for-testing -project ios/Harness.xcodeproj -scheme Harness -configuration Debug \
+            -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" \
+            -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" \
+            -derivedDataPath "$RUNNER_TEMP/debug" \
+            CODE_SIGNING_ALLOWED=NO
+      - name: each simulator booted and the harness launched once, before its tests
+        run: |
+          # On each simulator in turn: wait for its boot to finish, install the app the build made,
+          # launch it and end it, inside its own budget, each phase's outcome and seconds written for
+          # the report. Only a simulator name that is not one available simulator fails the step; a
+          # phase that fails is recorded, and the tests decide (SPEC-339 R12, R15).
+          cat > "$RUNNER_TEMP/simulator-warm.py" <<'PY'
+          import json, os, pathlib, plistlib, subprocess, sys, time
+          label, app = sys.argv[1], pathlib.Path(sys.argv[2])
+          report = pathlib.Path(os.environ["REPORT"])
+          budget = {"debug": 480, "release": 120}[label]
+          bundle = plistlib.loads((app / "Info.plist").read_bytes())["CFBundleIdentifier"]
+          listed = subprocess.run(["xcrun", "simctl", "list", "-j", "devices", "available"],
+                                  capture_output=True, text=True, check=True)
+          runtimes = json.loads(listed.stdout)["devices"]
+          runtime = "iOS-" + os.environ["SIM_OS"].replace(".", "-")
+          records, problems = [], []
+          for simulator in (os.environ["IPHONE_SIM"], os.environ["IPAD_SIM"]):
+              devices = [device for key, listing in runtimes.items() if key.endswith(runtime)
+                         for device in listing if device.get("name") == simulator]
+              if len(devices) != 1:
+                  problems.append(f"warm: {len(devices)} available simulators named {simulator}, not one")
+                  continue
+              udid = devices[0]["udid"]
+              deadline = time.monotonic() + budget
+              record = {"simulator": simulator, "state": devices[0].get("state", ""), "phases": {}}
+              for phase, command in (
+                  ("bootstatus", ["xcrun", "simctl", "bootstatus", udid, "-b"]),
+                  ("install", ["xcrun", "simctl", "install", udid, str(app)]),
+                  ("launch", ["xcrun", "simctl", "launch", udid, bundle]),
+                  ("terminate", ["xcrun", "simctl", "terminate", udid, bundle]),
+              ):
+                  left = deadline - time.monotonic()
+                  if left <= 0:
+                      record["phases"][phase] = {"outcome": "skipped: the warm budget was spent"}
+                      continue
+                  started = time.monotonic()
+                  try:
+                      done = subprocess.run(command, capture_output=True, text=True, timeout=left)
+                      outcome = "ok" if done.returncode == 0 else f"exit {done.returncode}"
+                  except subprocess.TimeoutExpired:
+                      outcome = "timed out"
+                  seconds = round(time.monotonic() - started, 1)
+                  record["phases"][phase] = {"outcome": outcome, "seconds": seconds}
+              records.append(record)
+          (report / f"warm-{label}.json").write_text(json.dumps(records, indent=1))
+          print(json.dumps(records, indent=1))
+          for problem in problems:
+              print(problem)
+          raise SystemExit(1 if problems else 0)
+          PY
+          python3 "$RUNNER_TEMP/simulator-warm.py" debug "$RUNNER_TEMP/debug/Build/Products/Debug-iphonesimulator/Harness.app"
       - name: the measurements, Release, built for testing
         run: |
           # Built once for both simulators, so the measurements below run without building again
@@ -567,6 +927,41 @@ jobs:
         id: app-tests
         run: |
           "$RUNNER_TEMP/xcodegen/bin/xcodegen" generate --spec ios/app.yml
+          # The runner's memory, swap, load and booted simulators at this step's start and end, and,
+          # when its xcodebuild fails, the iPhone's unified log from the xcodebuild's start to the
+          # failure, each reading in a file of its own under runner-state/ that ends with its status
+          # (SPEC-591 R13). The readings run only as an if condition, where errexit is ignored, and
+          # the EXIT trap never exits, so the step's status stays the one its own commands set.
+          reading() {
+            out="$REPORT/runner-state/$1"
+            shift
+            {
+              echo "at $(date +%s): $*"
+              "$@"
+              echo "status $?"
+            } > "$out" 2>&1
+          }
+          runner_state() {
+            mkdir -p "$REPORT/runner-state"
+            reading "app-$1-vm_stat.txt" vm_stat
+            reading "app-$1-swapusage.txt" sysctl vm.swapusage
+            reading "app-$1-uptime.txt" uptime
+            reading "app-$1-booted.txt" xcrun simctl list devices booted
+          }
+          iphone_log() {
+            predicate='process == "testmanagerd" OR process == "runningboardd" OR process BEGINSWITH "DeckStreak" OR subsystem BEGINSWITH[c] "com.apple.accessibility" OR eventMessage CONTAINS[c] "deckstreak"'
+            iphone=$(xcrun simctl list devices booted | grep -F "    $IPHONE_SIM (" | grep -E -o '[0-9A-F]{8}(-[0-9A-F]{4}){3}-[0-9A-F]{12}')
+            reading "app-iphone-log.txt" xcrun simctl spawn "$iphone" log show --last "$(( $(date +%s) - started ))" --predicate "$predicate"
+          }
+          on_exit() {
+            step_status=$?
+            if runner_state end; then :; fi
+            if [ "$step_status" -ne 0 ] && [ -n "${started:-}" ]; then
+              if iphone_log; then :; fi
+            fi
+          }
+          trap on_exit EXIT
+          if runner_state start; then :; fi
           started=$(date +%s)
           xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -configuration Debug \
             -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" \
@@ -587,6 +982,41 @@ jobs:
         id: review-tests
         if: ${{ !cancelled() && steps.app-tests.outcome != 'skipped' }}
         run: |
+          # The runner's memory, swap, load and booted simulators at this step's start and end, and,
+          # when its xcodebuild fails, the iPhone's unified log from the xcodebuild's start to the
+          # failure, each reading in a file of its own under runner-state/ that ends with its status
+          # (SPEC-591 R13). The readings run only as an if condition, where errexit is ignored, and
+          # the EXIT trap never exits, so the step's status stays the one its own commands set.
+          reading() {
+            out="$REPORT/runner-state/$1"
+            shift
+            {
+              echo "at $(date +%s): $*"
+              "$@"
+              echo "status $?"
+            } > "$out" 2>&1
+          }
+          runner_state() {
+            mkdir -p "$REPORT/runner-state"
+            reading "review-$1-vm_stat.txt" vm_stat
+            reading "review-$1-swapusage.txt" sysctl vm.swapusage
+            reading "review-$1-uptime.txt" uptime
+            reading "review-$1-booted.txt" xcrun simctl list devices booted
+          }
+          iphone_log() {
+            predicate='process == "testmanagerd" OR process == "runningboardd" OR process BEGINSWITH "DeckStreak" OR subsystem BEGINSWITH[c] "com.apple.accessibility" OR eventMessage CONTAINS[c] "deckstreak"'
+            iphone=$(xcrun simctl list devices booted | grep -F "    $IPHONE_SIM (" | grep -E -o '[0-9A-F]{8}(-[0-9A-F]{4}){3}-[0-9A-F]{12}')
+            reading "review-iphone-log.txt" xcrun simctl spawn "$iphone" log show --last "$(( $(date +%s) - started ))" --predicate "$predicate"
+          }
+          on_exit() {
+            step_status=$?
+            if runner_state end; then :; fi
+            if [ "$step_status" -ne 0 ] && [ -n "${started:-}" ]; then
+              if iphone_log; then :; fi
+            fi
+          }
+          trap on_exit EXIT
+          if runner_state start; then :; fi
           cp -R engine-artifact/review-fixture "$RUNNER_TEMP/review-fixture"
           started=$(date +%s)
           TEST_RUNNER_DS_REVIEW_FIXTURE="$RUNNER_TEMP/review-fixture" xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -configuration Debug \
@@ -607,6 +1037,41 @@ jobs:
         id: review-actions-tests
         if: ${{ !cancelled() && steps.app-tests.outcome != 'skipped' }}
         run: |
+          # The runner's memory, swap, load and booted simulators at this step's start and end, and,
+          # when its xcodebuild fails, the iPhone's unified log from the xcodebuild's start to the
+          # failure, each reading in a file of its own under runner-state/ that ends with its status
+          # (SPEC-591 R13). The readings run only as an if condition, where errexit is ignored, and
+          # the EXIT trap never exits, so the step's status stays the one its own commands set.
+          reading() {
+            out="$REPORT/runner-state/$1"
+            shift
+            {
+              echo "at $(date +%s): $*"
+              "$@"
+              echo "status $?"
+            } > "$out" 2>&1
+          }
+          runner_state() {
+            mkdir -p "$REPORT/runner-state"
+            reading "review-actions-$1-vm_stat.txt" vm_stat
+            reading "review-actions-$1-swapusage.txt" sysctl vm.swapusage
+            reading "review-actions-$1-uptime.txt" uptime
+            reading "review-actions-$1-booted.txt" xcrun simctl list devices booted
+          }
+          iphone_log() {
+            predicate='process == "testmanagerd" OR process == "runningboardd" OR process BEGINSWITH "DeckStreak" OR subsystem BEGINSWITH[c] "com.apple.accessibility" OR eventMessage CONTAINS[c] "deckstreak"'
+            iphone=$(xcrun simctl list devices booted | grep -F "    $IPHONE_SIM (" | grep -E -o '[0-9A-F]{8}(-[0-9A-F]{4}){3}-[0-9A-F]{12}')
+            reading "review-actions-iphone-log.txt" xcrun simctl spawn "$iphone" log show --last "$(( $(date +%s) - started ))" --predicate "$predicate"
+          }
+          on_exit() {
+            step_status=$?
+            if runner_state end; then :; fi
+            if [ "$step_status" -ne 0 ] && [ -n "${started:-}" ]; then
+              if iphone_log; then :; fi
+            fi
+          }
+          trap on_exit EXIT
+          if runner_state start; then :; fi
           cp -R engine-artifact/review-fixture "$RUNNER_TEMP/review-actions-fixture"
           started=$(date +%s)
           TEST_RUNNER_DS_REVIEW_FIXTURE="$RUNNER_TEMP/review-actions-fixture" xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -configuration Debug \
@@ -665,12 +1130,23 @@ jobs:
           results = pathlib.Path(os.environ["RESULTS"])
           report.mkdir(parents=True, exist_ok=True)
           simulators = [os.environ["IPHONE_SIM"], os.environ["IPAD_SIM"]]
+          # One report body in both jobs of the split (SPEC-591 R6, ADR-612): each source is
+          # measured in one job, and the other job names that job for its rows.
+          here = os.environ["GITHUB_JOB"]
+          owners = {"debug": "harness", "release": "release-and-app", "app": "release-and-app",
+                    "review": "release-and-app", "review-actions": "release-and-app"}
+          if here not in owners.values():
+              raise SystemExit(f"the report runs in {here!r}, not in a job of the split")
+          def elsewhere(label):
+              """A row whose source the other job measures names that job; None in its own."""
+              return None if owners[label] == here else f"in `{owners[label]}`"
           def read(name):
               path = report / name
               return path.read_text().strip() if path.is_file() else ""
           def minutes(name):
               seconds = read(name)
-              return f"{int(seconds) / 60:.1f} minutes" if seconds else "not measured"
+              away = elsewhere(name.removesuffix("-seconds"))
+              return away or (f"{int(seconds) / 60:.1f} minutes" if seconds else "not measured")
           def tool(*arguments):
               done = subprocess.run(["xcrun", "xcresulttool", "get", "test-results", *arguments],
                                     capture_output=True, text=True)
@@ -743,8 +1219,9 @@ jobs:
           rows = [
               ("tests, Debug, both simulators", minutes("debug-seconds")),
               ("measurements, Release, both simulators", minutes("release-seconds")),
-              ("Release app bytes", read("app-bytes") or "not measured"),
-              ("Release executable bytes", read("executable-bytes") or "not measured"),
+              ("Release app bytes", elsewhere("release") or read("app-bytes") or "not measured"),
+              ("Release executable bytes",
+               elsewhere("release") or read("executable-bytes") or "not measured"),
               ("app's tests, Debug, both simulators", minutes("app-seconds")),
               ("review screen's tests, Debug, both simulators", minutes("review-seconds")),
               ("bury and flag tests, Debug, both simulators", minutes("review-actions-seconds")),
@@ -753,13 +1230,17 @@ jobs:
               for label, pick, wanted in figures:
                   hits = [(unit, values) for device, name, unit, values in found
                           if device and (simulator in device or device in simulator) and wanted(name)]
-                  value = "not measured"
+                  value = elsewhere("release") or "not measured"
                   if hits:
                       unit, values = hits[0]
                       value = f"{pick(values):g} {unit} (of {len(values)} passes)"
                   rows.append((f"{label}, {simulator}", value))
           def warm_rows(label, title):
               """Each simulator's warm before a step: its boot wait, launch and end (SPEC-339 R16)."""
+              if elsewhere(label):
+                  rows.extend((f"{title} warm {what}, {simulator}", elsewhere(label))
+                              for simulator in simulators for what in ("boot wait", "launch", "end"))
+                  return
               path = report / f"warm-{label}.json"
               records = json.loads(path.read_text()) if path.is_file() else []
               for simulator in simulators:
@@ -776,6 +1257,11 @@ jobs:
           def runner_rows(label, title):
               """Each simulator's UI test runner bootstrap and first-launch gap, read from the step's
               console in destination order by the stamps its lines carry (SPEC-339 R16)."""
+              if elsewhere(label):
+                  for simulator in simulators:
+                      rows.append((f"{title} runner bootstrap, {simulator}", elsewhere(label)))
+                      rows.append((f"{title} first-launch gap, {simulator}", elsewhere(label)))
+                  return
               stamp = re.compile(r"\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d+")
               def at(text):
                   return datetime.datetime.strptime(text, "%Y-%m-%d %H:%M:%S.%f")
@@ -817,6 +1303,10 @@ jobs:
           def end_rows(label, title):
               """Each simulator's longest XCTest end of an earlier instance at a launch, read from
               the step's console in destination order by XCTest's own seconds (SPEC-339 R16)."""
+              if elsewhere(label):
+                  rows.extend((f"{title} longest end, {simulator}", elsewhere(label))
+                              for simulator in simulators)
+                  return
               path = report / f"{label}-console.log"
               lines = path.read_text(errors="replace").splitlines() if path.is_file() else []
               sessions, pending = [], None
@@ -847,7 +1337,7 @@ jobs:
           end_rows("debug", "Debug")
           end_rows("release", "Release")
           lines = [
-              "`xcframework.yml`'s `harness` job:",
+              f"`xcframework.yml`'s `{here}` job:",
               "",
               "| measure | measured |",
               "|---|---|",
@@ -860,7 +1350,8 @@ jobs:
           ):
               lines += [f"| {label} `{c.get('nodeIdentifier')}` | {per_simulator(c)} |" for c in cases]
               if not cases:
-                  lines.append(f"| {label}: no test result was read | not measured |")
+                  value = elsewhere(label.lower().replace(" ", "-")) or "not measured"
+                  lines.append(f"| {label}: no test result was read | {value} |")
           if found:
               lines += ["", "| simulator | metric | unit | passes |", "|---|---|---|---|"]
               lines += [f"| {device} | {name} | {unit} | {', '.join(f'{value:g}' for value in values)} |"
@@ -882,8 +1373,33 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: harness
+          name: release-and-app
           path: |
             harness-report/
             harness-results/
           if-no-files-found: warn
+
+  verdict:
+    needs: [xcframework, harness-wire, card-isolation, harness, release-and-app]
+    if: ${{ always() }}
+    runs-on: xcode-27
+    timeout-minutes: 10
+    steps:
+      - name: every job of the body succeeded
+        env:
+          XCFRAMEWORK: ${{ needs.xcframework.result }}
+          HARNESS_WIRE: ${{ needs.harness-wire.result }}
+          CARD_ISOLATION: ${{ needs.card-isolation.result }}
+          HARNESS: ${{ needs.harness.result }}
+          RELEASE_AND_APP: ${{ needs.release-and-app.result }}
+        run: |
+          # One name for the whole body (SPEC-591 R8, ADR-611): the result of each job it needs,
+          # read from the needs context through this step environment; any result but success,
+          # whether a failure, a cancellation or a skip, fails it.
+          echo "xcframework $XCFRAMEWORK, harness-wire $HARNESS_WIRE, card-isolation $CARD_ISOLATION"
+          echo "harness $HARNESS, release-and-app $RELEASE_AND_APP"
+          status=0
+          for result in "$XCFRAMEWORK" "$HARNESS_WIRE" "$CARD_ISOLATION" "$HARNESS" "$RELEASE_AND_APP"; do
+            [ "$result" = success ] || status=1
+          done
+          exit "$status"

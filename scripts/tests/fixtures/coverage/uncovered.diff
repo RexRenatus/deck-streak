@@ -1,0 +1,8 @@
+diff --git a/scripts/planted_control.py b/scripts/planted_control.py
+new file mode 100644
+--- /dev/null
++++ b/scripts/planted_control.py
+@@ -0,0 +1,3 @@
++a = 1
++b = 2
++c = 3

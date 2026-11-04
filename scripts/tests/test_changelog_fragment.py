@@ -25,8 +25,9 @@ BOT = "dependabot[bot]"
 PERSON = "someone"
 REFUSED = "Add a fragment under changelog.d/ (see changelog.d/README.md).\n"
 PASSED = "A Dependabot pull request that changes only dependency files needs no fragment.\n"
-# The ecosystems `.github/dependabot.yml` updates, each from the root of the repository (R13).
-ECOSYSTEMS = ("cargo", "github-actions", "npm")
+# The ecosystems `.github/dependabot.yml` updates, each with its directory (R13): the root of the
+# repository, and for pip the coverage requirements file of SPEC-592 (R11).
+ECOSYSTEMS = {"cargo": "/", "github-actions": "/", "npm": "/", "pip": "/tools/coverage"}
 IDENTITY = (
     "-c",
     "user.name=fixture",
@@ -51,6 +52,7 @@ TREE = {
     "pnpm-lock.yaml": "lockfileVersion: 9\n",
     "pnpm-workspace.yaml": "packages:\n  - web/app\n",
     "web/app/package.json": "{}\n",
+    "tools/coverage/requirements.txt": "coverage\n",
     "vendor/deepmerge/package.json": "{}\n",
     ".github/dependabot.yml": "version: 2\n",
     ".github/workflows/ci.yml": "name: ci\n",
@@ -135,8 +137,8 @@ def verdict(author, head, base=None, moves=()):
 def dependency_files():
     """Every file in this tree that an ecosystem of `.github/dependabot.yml` updates (R13): the
     workspace manifest, the lockfile and the manifest of each member of the Cargo workspace; the
-    root manifest, the lockfile, the workspace file and the manifest of the one pnpm package; and
-    every workflow file."""
+    root manifest, the lockfile, the workspace file and the manifest of the one pnpm package; the
+    coverage requirements file (SPEC-592 R11); and every workflow file."""
     found = [
         "Cargo.toml",
         "Cargo.lock",
@@ -144,6 +146,7 @@ def dependency_files():
         "pnpm-lock.yaml",
         "pnpm-workspace.yaml",
         "web/app/package.json",
+        "tools/coverage/requirements.txt",
     ]
     found += sorted(path.relative_to(REPO).as_posix() for path in REPO.glob("crates/*/Cargo.toml"))
     found += sorted(
@@ -178,6 +181,7 @@ class ADependabotDependencyPullRequestNeedsNoFragment(unittest.TestCase):
             "github-actions: a workflow saved with the yaml suffix": bumped(
                 ".github/workflows/lint.yaml"
             ),
+            "pip: the coverage requirements file": bumped("tools/coverage/requirements.txt"),
         }
         for label, head in examined("Dependabot updates", updates.items()):
             with self.subTest(update=label):
@@ -188,8 +192,8 @@ class ADependabotDependencyPullRequestNeedsNoFragment(unittest.TestCase):
     def test_every_file_an_ecosystem_updates_in_this_tree_passes_alone(self):
         found = ecosystems(CONFIG.read_text(encoding="utf-8"))
         self.assertEqual(sorted(found), list(ECOSYSTEMS))
-        for name in ECOSYSTEMS:
-            self.assertRegex(found[name], r"(?m)^    directory: /$", name)
+        for name, directory in ECOSYSTEMS.items():
+            self.assertRegex(found[name], rf"(?m)^    directory: {re.escape(directory)}$", name)
         cargo = (REPO / "Cargo.toml").read_text(encoding="utf-8")
         self.assertRegex(cargo, r"(?m)^members = \[\"crates/\*\"\]$")
         pnpm = (REPO / "pnpm-workspace.yaml").read_text(encoding="utf-8")
@@ -211,6 +215,11 @@ class EveryOtherPullRequestReadsAsItDid(unittest.TestCase):
             "a dependency update by a person, with no fragment": (
                 PERSON,
                 bumped("Cargo.lock"),
+                REFUSED,
+            ),
+            "a coverage requirements update by a person, with no fragment": (
+                PERSON,
+                bumped("tools/coverage/requirements.txt"),
                 REFUSED,
             ),
             "a source change by a person, with no fragment": (PERSON, source, REFUSED),
@@ -235,6 +244,18 @@ class EveryOtherPullRequestReadsAsItDid(unittest.TestCase):
             "the configuration of Dependabot": (bumped(".github/dependabot.yml"), ()),
             "a file below the workflow directory": (
                 {".github/workflows/nested/ci.yml": "name: ci\n"},
+                (),
+            ),
+            "a source file beside the coverage requirements file": (
+                bumped("tools/coverage/requirements.txt", "crates/kernel/src/lib.rs"),
+                (),
+            ),
+            "a file that only resembles the coverage requirements file": (
+                {"tools/coverage/requirements.txt.bak": "coverage\n"},
+                (),
+            ),
+            "a requirements file below the coverage directory": (
+                {"tools/coverage/x/requirements.txt": "coverage\n"},
                 (),
             ),
             "a source file moved onto the manifest path of a member": ({}, moved),

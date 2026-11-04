@@ -9084,64 +9084,67 @@ WARM_REPORT_NEEDS = (
 )
 
 
-def harness_warm_problems(workflow):
+def harness_warm_problems(workflow, job_id="harness", labels=tuple(WARM_STEPS)):
     """Each way the `harness` job could test a simulator before its session is warmed, named
     (SPEC-339 R12 as #1060 amends it, R15, R16): each Harness test step's build, warm and tests,
     each named once and side by side in that order; the build for testing and the tests without
     building, with the step's destinations, selection, derived data, result bundle and teed console
     under pipefail, the tests building nothing again; the warm's script written once, by the Debug
     warm, with what `WARM_SCRIPT_NEEDS` lists; each warm ending by running it on its own build's
-    app; and the report reading the warm's and the consoles' rows."""
-    steps = ((workflow.get("jobs") or {}).get("harness") or {}).get("steps") or []
+    app; and the report reading the warm's and the consoles' rows, as SPEC-591 R10 re-points it."""
+    steps = ((workflow.get("jobs") or {}).get(job_id) or {}).get("steps") or []
     names = [step.get("name") for step in steps]
     problems = []
     found = {}
-    for label, trio in WARM_STEPS.items():
+    for label in labels:
+        trio = WARM_STEPS[label]
         for name in trio:
             if names.count(name) != 1:
-                problems.append(f"harness: {names.count(name)} steps named {name!r}, not one")
+                problems.append(f"{job_id}: {names.count(name)} steps named {name!r}, not one")
             else:
                 found[name] = steps[names.index(name)]
         if all(name in found for name in trio):
             at = [names.index(name) for name in trio]
             if at != list(range(at[0], at[0] + len(trio))):
                 problems.append(
-                    f"harness: the {label} build, warm and tests are not side by side in order"
+                    f"{job_id}: the {label} build, warm and tests are not side by side in order"
                 )
         build, warm, tests = (found.get(name) for name in trio)
         if build is not None:
             run = run_joined(build)
             problems += [
-                f"harness: the {label} build for testing lacks {n}"
+                f"{job_id}: the {label} build for testing lacks {n}"
                 for n in WARM_BUILD_NEEDS[label]
                 if n not in run
             ]
         if tests is not None:
             run = run_joined(tests)
             problems += [
-                f"harness: the {label} tests lack {n}"
+                f"{job_id}: the {label} tests lack {n}"
                 for n in WARM_TEST_NEEDS[label]
                 if n not in run
             ]
             if "xcodebuild test " in run:
-                problems.append(f"harness: the {label} tests build again, with `xcodebuild test`")
+                problems.append(f"{job_id}: the {label} tests build again, with `xcodebuild test`")
         if warm is not None:
             lines = [line.strip() for line in str(warm.get("run", "")).splitlines() if line.strip()]
             if lines[-1:] != [f"python3 {WARM_SCRIPT} {label} {WARM_APPS[label]}"]:
                 problems.append(
-                    f"harness: the {label} warm does not end by running the warm on its build's app"
+                    f"{job_id}: the {label} warm does not end by running the warm on its build's app"
                 )
     writes = [s.get("name") for s in steps if f"cat > {WARM_SCRIPT} <<" in str(s.get("run", ""))]
     if writes != [WARM_STEPS["debug"][1]]:
-        problems.append(f"harness: {len(writes)} steps write the warm's script, not the Debug warm")
+        problems.append(
+            f"{job_id}: {len(writes)} steps write the warm's script, not the Debug warm"
+        )
     else:
-        script = str(found[WARM_STEPS["debug"][1]].get("run", ""))
+        script = str(steps[names.index(WARM_STEPS["debug"][1])].get("run", ""))
         problems += [
-            f"harness: the warm's script lacks {n}" for n in WARM_SCRIPT_NEEDS if n not in script
+            f"{job_id}: the warm's script lacks {n}" for n in WARM_SCRIPT_NEEDS if n not in script
         ]
     reports = [s for s in steps if s.get("name") == "the report"]
     text = str(reports[0].get("run", "")) if len(reports) == 1 else ""
-    problems += [f"harness: the report lacks {n}" for n in WARM_REPORT_NEEDS if n not in text]
+    problems += [f"{job_id}: the report lacks {n}" for n in WARM_REPORT_NEEDS if n not in text]
     return problems
 
 
@@ -9204,8 +9207,9 @@ class TheHarnessWarmsEachSimulatorBeforeItsTests(unittest.TestCase):
         the teed steps keep xcodebuild's exit; and the report reads the warm's and the consoles'
         rows."""
         jobs = load("xcframework.yml")["jobs"]
-        examined("warmed harness steps", jobs["harness"].get("steps") or [])
-        self.assertEqual(harness_warm_problems({"jobs": jobs}), [])
+        for job_id, labels in (("harness", ("debug",)), (SPLIT_JOB, ("release",))):
+            examined(f"warmed {job_id} steps", jobs[job_id].get("steps") or [])
+            self.assertEqual(harness_warm_problems({"jobs": jobs}, job_id, labels), [])
 
         # The controls: the good job is accepted, and each plant is refused by its rule's name.
         script = f"cat > {WARM_SCRIPT} <<'PY'\n" + "\n".join(WARM_SCRIPT_NEEDS) + "\nPY\n"
@@ -9429,7 +9433,7 @@ def run_joined(step):
     return re.sub(r"\\\n\s*", " ", str(step.get("run", "")))
 
 
-def app_steps_problems(workflow):
+def app_steps_problems(workflow, job_id="harness"):
     """Each way the Apple job body could fail to build and prove the app, named (SPEC-347 R13,
     A14): the `harness` job, on the admitted runner, holds one step of each name; the harness's
     generate step keeps its one line; the app's test step opens with the app's generate line and
@@ -9438,14 +9442,14 @@ def app_steps_problems(workflow):
     executable's imports against the app's manifest; the app's tests, the review screen's tests
     (SPEC-348 R20) and the archive sit, in order, between the harness's last step and the report,
     which carries their rows; no env of the job or of those steps names a signing setting; and no
-    other job of the workflow names the app's spec or scheme."""
+    other job of the workflow names the app's spec or scheme, as SPEC-591 R10 re-points it."""
     jobs = workflow.get("jobs") or {}
-    job = jobs.get("harness") or {}
+    job = jobs.get(job_id) or {}
     steps = job.get("steps") or []
     names = [step.get("name") for step in steps]
     problems = []
     if job.get("runs-on") != ADMITTED_RUNNERS["xcframework.yml"]:
-        problems.append(f"harness: it runs on {job.get('runs-on')!r}, not the admitted runner")
+        problems.append(f"{job_id}: it runs on {job.get('runs-on')!r}, not the admitted runner")
     found = {}
     for name in (
         HARNESS_PROJECT,
@@ -9457,7 +9461,7 @@ def app_steps_problems(workflow):
         HARNESS_REPORT,
     ):
         if names.count(name) != 1:
-            problems.append(f"harness: {names.count(name)} steps named {name!r}, not one")
+            problems.append(f"{job_id}: {names.count(name)} steps named {name!r}, not one")
         else:
             found[name] = steps[names.index(name)]
     project = found.get(HARNESS_PROJECT)
@@ -9469,7 +9473,7 @@ def app_steps_problems(workflow):
         ]
         if generates != [HARNESS_GENERATE]:
             problems.append(
-                f"harness: the step {HARNESS_PROJECT!r} does not hold the harness's one generate "
+                f"{job_id}: the step {HARNESS_PROJECT!r} does not hold the harness's one generate "
                 "line alone"
             )
     tests = found.get(APP_TESTS)
@@ -9477,26 +9481,26 @@ def app_steps_problems(workflow):
         lines = [line.strip() for line in str(tests.get("run", "")).splitlines() if line.strip()]
         if lines[:1] != [APP_GENERATE]:
             problems.append(
-                "harness: the app's test step does not open with the app's generate line"
+                f"{job_id}: the app's test step does not open with the app's generate line"
             )
         run = run_joined(tests)
         problems += [
-            f"harness: the app's test step lacks {n}" for n in APP_TEST_NEEDS if n not in run
+            f"{job_id}: the app's test step lacks {n}" for n in APP_TEST_NEEDS if n not in run
         ]
     archive = found.get(APP_ARCHIVE)
     if archive is not None:
         run = run_joined(archive)
         problems += [
-            f"harness: the app's archive lacks {n}" for n in APP_ARCHIVE_NEEDS if n not in run
+            f"{job_id}: the app's archive lacks {n}" for n in APP_ARCHIVE_NEEDS if n not in run
         ]
         if "CODE_SIGNING_ALLOWED=NO" not in run:
             problems.append(
-                "harness: the app's archive does not turn code signing off on its command line"
+                f"{job_id}: the app's archive does not turn code signing off on its command line"
             )
     report = found.get(HARNESS_REPORT)
     if report is not None:
         text = str(report.get("run", ""))
-        problems += [f"harness: the report lacks {n}" for n in APP_REPORT_NEEDS if n not in text]
+        problems += [f"{job_id}: the report lacks {n}" for n in APP_REPORT_NEEDS if n not in text]
     if len(found) == 7:
         order = (HARNESS_LAST, APP_TESTS, REVIEW_TESTS, APP_ARCHIVE, HARNESS_REPORT)
         # The bury and flag step sits right after the review screen's step (SPEC-358 R8).
@@ -9504,7 +9508,7 @@ def app_steps_problems(workflow):
         at = [names.index(name) for name in order]
         if at != list(range(at[0], at[0] + len(order))):
             problems.append(
-                "harness: the app's three steps do not sit, in order, between the harness's last "
+                f"{job_id}: the app's three steps do not sit, in order, between the harness's last "
                 "step and the report"
             )
     envs = [("its env", job.get("env"))] + [
@@ -9514,11 +9518,11 @@ def app_steps_problems(workflow):
     ]
     for where, env in envs:
         problems += [
-            f"harness: {where} names {name}, which only a command line may set"
+            f"{job_id}: {where} names {name}, which only a command line may set"
             for name in SIGNING_NAMES
             if name in str(env or {})
         ]
-    for other in sorted(set(jobs) - {"harness"}):
+    for other in sorted(set(jobs) - {job_id}):
         text = str(jobs[other])
         problems += [
             f"{other}: it names {name}, which only the harness job may"
@@ -9534,8 +9538,8 @@ class TheAppIsGeneratedTestedAndArchived(unittest.TestCase):
         app's tests on both simulators and archives the app for a generic device with code signing
         off, after the harness's steps and before the report, and nothing else changes."""
         jobs = load("xcframework.yml")["jobs"]
-        self.assertEqual(app_steps_problems({"jobs": jobs}), [])
-        examined("harness steps", jobs["harness"].get("steps") or [])
+        self.assertEqual(app_steps_problems({"jobs": jobs}, SPLIT_JOB), [])
+        examined(f"{SPLIT_JOB} steps", jobs[SPLIT_JOB].get("steps") or [])
         examined("jobs", list(jobs))
 
         # The controls: the good job is accepted, and each plant is refused by its rule's name.
@@ -9797,32 +9801,32 @@ REVIEW_REPORT_NEEDS = (
 )
 
 
-def review_step_problems(workflow):
+def review_step_problems(workflow, job_id="harness"):
     """Each way the `harness` job could fail to run the review screen's tests, named (SPEC-348
     R20, ADR-359 D8): one step of its name, with its id and its condition, runs the app's scheme
     on both simulators limited to the three review classes, over the app's derived data into its
     own result bundle, signed ad hoc on its command line, with the review fixture copied into the
     runner's temporary directory and named on the test command's line, never in an env; the app's
     step skips those classes and names no fixture; and the report carries the step's cases and
-    time."""
-    job = (workflow.get("jobs") or {}).get("harness") or {}
+    time, as SPEC-591 R10 re-points it."""
+    job = (workflow.get("jobs") or {}).get(job_id) or {}
     steps = job.get("steps") or []
     names = [step.get("name") for step in steps]
     problems = []
     if names.count(REVIEW_TESTS) != 1:
         problems.append(
-            f"harness: {names.count(REVIEW_TESTS)} steps named {REVIEW_TESTS!r}, not one"
+            f"{job_id}: {names.count(REVIEW_TESTS)} steps named {REVIEW_TESTS!r}, not one"
         )
     review = steps[names.index(REVIEW_TESTS)] if names.count(REVIEW_TESTS) == 1 else None
     if review is not None:
         for key, wanted in (("id", REVIEW_ID), ("if", REVIEW_IF)):
             if review.get(key) != wanted:
                 problems.append(
-                    f"harness: the review step's {key} is {review.get(key)!r}, not {wanted!r}"
+                    f"{job_id}: the review step's {key} is {review.get(key)!r}, not {wanted!r}"
                 )
         run = run_joined(review)
         problems += [
-            f"harness: the review step lacks {n}"
+            f"{job_id}: the review step lacks {n}"
             for n in (*REVIEW_FIXTURE_NEEDS, *REVIEW_TEST_NEEDS)
             if n not in run
         ]
@@ -9830,20 +9834,22 @@ def review_step_problems(workflow):
     if review is not None:
         envs.append((f"the env of {REVIEW_TESTS!r}", review.get("env")))
     problems += [
-        f"harness: {where} names {REVIEW_FIXTURE}, which only the review step's command line may set"
+        f"{job_id}: {where} names {REVIEW_FIXTURE}, which only the review step's command line may set"
         for where, env in envs
         if REVIEW_FIXTURE in str(env or {})
     ]
     if names.count(APP_TESTS) == 1:
         run = run_joined(steps[names.index(APP_TESTS)])
         problems += [
-            f"harness: the app's test step lacks {n}" for n in REVIEW_SKIPS if n not in run
+            f"{job_id}: the app's test step lacks {n}" for n in REVIEW_SKIPS if n not in run
         ]
         if REVIEW_FIXTURE in run:
-            problems.append(f"harness: the app's test step names {REVIEW_FIXTURE}")
+            problems.append(f"{job_id}: the app's test step names {REVIEW_FIXTURE}")
     if names.count(HARNESS_REPORT) == 1:
         text = str(steps[names.index(HARNESS_REPORT)].get("run", ""))
-        problems += [f"harness: the report lacks {n}" for n in REVIEW_REPORT_NEEDS if n not in text]
+        problems += [
+            f"{job_id}: the report lacks {n}" for n in REVIEW_REPORT_NEEDS if n not in text
+        ]
     return problems
 
 
@@ -9853,8 +9859,8 @@ class TheReviewScreenIsTestedOnBothSimulators(unittest.TestCase):
         step of their own, over the review fixture named on its command line, after the app's
         tests, whose step skips them, and the report carries the step's cases and time."""
         jobs = load("xcframework.yml")["jobs"]
-        self.assertEqual(review_step_problems({"jobs": jobs}), [])
-        examined("harness steps", jobs["harness"].get("steps") or [])
+        self.assertEqual(review_step_problems({"jobs": jobs}, SPLIT_JOB), [])
+        examined(f"{SPLIT_JOB} steps", jobs[SPLIT_JOB].get("steps") or [])
 
         # The controls: the good job is accepted, and each plant is refused by its rule's name.
         review_run = (
@@ -10032,48 +10038,48 @@ REVIEW_ACTIONS_REPORT_NEEDS = (
 )
 
 
-def review_actions_step_problems(workflow):
+def review_actions_step_problems(workflow, job_id="harness"):
     """Each way the `harness` job could fail to run the review's bury and flag tests, named
     (SPEC-358 R8, A14): one step of its name, with its id and its condition, runs the app's scheme
     on the iPhone and then the iPad, one after the other, limited to the bury and flag class, over
     the app's derived data into its own result bundle, signed ad hoc on its command line, with a
     copy of the review fixture of its own named on the test command's line, never in its env; the
-    app's step skips the class; and the report carries the step's cases and time."""
-    job = (workflow.get("jobs") or {}).get("harness") or {}
+    app's step skips the class; and the report carries the step's cases and time, as SPEC-591 R10 re-points it."""
+    job = (workflow.get("jobs") or {}).get(job_id) or {}
     steps = job.get("steps") or []
     names = [step.get("name") for step in steps]
     problems = []
     count = names.count(REVIEW_ACTIONS_TESTS)
     if count != 1:
-        problems.append(f"harness: {count} steps named {REVIEW_ACTIONS_TESTS!r}, not one")
+        problems.append(f"{job_id}: {count} steps named {REVIEW_ACTIONS_TESTS!r}, not one")
     step = steps[names.index(REVIEW_ACTIONS_TESTS)] if count == 1 else None
     if step is not None:
         for key, wanted in (("id", REVIEW_ACTIONS_ID), ("if", REVIEW_IF)):
             if step.get(key) != wanted:
                 problems.append(
-                    f"harness: the bury and flag step's {key} is {step.get(key)!r}, not {wanted!r}"
+                    f"{job_id}: the bury and flag step's {key} is {step.get(key)!r}, not {wanted!r}"
                 )
         run = run_joined(step)
         problems += [
-            f"harness: the bury and flag step lacks {n}"
+            f"{job_id}: the bury and flag step lacks {n}"
             for n in (*REVIEW_ACTIONS_FIXTURE_NEEDS, *REVIEW_ACTIONS_TEST_NEEDS)
             if n not in run
         ]
         iphone, ipad = (run.find(n) for n in REVIEW_ACTIONS_TEST_NEEDS[1:3])
         if -1 < ipad < iphone:
-            problems.append("harness: the bury and flag step names the iPad before the iPhone")
+            problems.append(f"{job_id}: the bury and flag step names the iPad before the iPhone")
         if REVIEW_FIXTURE in str(step.get("env") or {}):
             problems.append(
-                f"harness: the env of {REVIEW_ACTIONS_TESTS!r} names {REVIEW_FIXTURE}, which only "
+                f"{job_id}: the env of {REVIEW_ACTIONS_TESTS!r} names {REVIEW_FIXTURE}, which only "
                 "its command line may set"
             )
     if names.count(APP_TESTS) == 1:
         if REVIEW_ACTIONS_SKIP not in run_joined(steps[names.index(APP_TESTS)]):
-            problems.append(f"harness: the app's test step lacks {REVIEW_ACTIONS_SKIP}")
+            problems.append(f"{job_id}: the app's test step lacks {REVIEW_ACTIONS_SKIP}")
     if names.count(HARNESS_REPORT) == 1:
         text = str(steps[names.index(HARNESS_REPORT)].get("run", ""))
         problems += [
-            f"harness: the report lacks {n}" for n in REVIEW_ACTIONS_REPORT_NEEDS if n not in text
+            f"{job_id}: the report lacks {n}" for n in REVIEW_ACTIONS_REPORT_NEEDS if n not in text
         ]
     return problems
 
@@ -10085,8 +10091,8 @@ class TheReviewActionsStepRunsOnTheIphoneAndThenTheIpad(unittest.TestCase):
         its command line, after the app's tests, whose step skips them, and the report carries the
         step's cases and time."""
         jobs = load("xcframework.yml")["jobs"]
-        self.assertEqual(review_actions_step_problems({"jobs": jobs}), [])
-        examined("harness steps", jobs["harness"].get("steps") or [])
+        self.assertEqual(review_actions_step_problems({"jobs": jobs}, SPLIT_JOB), [])
+        examined(f"{SPLIT_JOB} steps", jobs[SPLIT_JOB].get("steps") or [])
 
         # The controls: the good job is accepted, and each plant is refused by its rule's name.
         def actions_run(needs):
@@ -10822,3 +10828,712 @@ class ThePriceWorkflowMeasuresScoped(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ------------------------------- the harness work in two jobs and a verdict (SPEC-591 R1 to R10)
+# `harness` ran 22 steps in series; its work now runs in `harness` and a sibling, `release-and-app`,
+# and a `verdict` job reads every job of the body. Each rule below is a pure function over the jobs
+# of a read workflow, and each test holds its rule to the live file and to its planted bodies.
+SPLIT_JOB = "release-and-app"
+VERDICT_JOB = "verdict"
+# The 22 steps of `harness` at the split, in order; a step's key is its name, or its action for the
+# unnamed checkout.
+HARNESS_AT_SPLIT = [
+    "actions/checkout",
+    "this run's XCFramework, bindings and synthetic collection",
+    "place the framework, the bindings and the collection",
+    "the app icon, written",
+    "XcodeGen, checksum-verified",
+    "the project, generated",
+    "the tests, Debug, built for testing",
+    "each simulator booted and the harness launched once, before its tests",
+    "the tests, Debug, on the iPhone and then the iPad",
+    "the card view's planted suite, Debug, on the iPhone and then the iPad",
+    "the measurements, Release, built for testing",
+    "each simulator booted and the harness launched once, before its measurements",
+    "the measurements, Release, on the iPhone and then the iPad",
+    "the Release app, built alone",
+    "the Release app's size",
+    "the required-reason symbols the Release executable imports, against the manifest",
+    "the app's tests, Debug, on the iPhone and then the iPad",
+    "the review screen's tests, Debug, on the iPhone and then the iPad",
+    "the bury and flag tests, Debug, on the iPhone and then the iPad",
+    "the app, archived unsigned for a device",
+    "the report",
+    "upload the report and the result bundles",
+]
+HARNESS_KEEPS = HARNESS_AT_SPLIT[:10]
+SPLIT_REPEATS = HARNESS_AT_SPLIT[:8]
+SPLIT_MOVES = HARNESS_AT_SPLIT[10:20]
+SPLIT_TAIL = HARNESS_AT_SPLIT[20:]
+# SPEC-591 R7: the sibling's worst sum over three runs is 81.70 minutes (jobs 125484649336,
+# 125641992874 and 125710788160); one and a half times that is 122.55, rounded up to the minute 123,
+# and 149 keeps it under the bound of `harness`. The verdict reads five results and bounds itself at
+# ten minutes.
+SPLIT_TIMEOUT_MINUTES = range(123, 150)
+VERDICT_TIMEOUT_MINUTES = range(1, 11)
+# The line of row S36111: the bound of `harness`, which occurs once in the file.
+HARNESS_BOUND_LINE = "    timeout-minutes: 150\n"
+# What the one report body holds so each job names the other for the rows it does not measure.
+REPORT_SPLIT_NEEDS = [
+    'here = os.environ["GITHUB_JOB"]',
+    "def elsewhere(label):",
+    '"debug": "harness"',
+    '"release": "release-and-app"',
+]
+SPLIT_UPLOAD = "upload the report and the result bundles"
+SPLIT_RESULT_OK = "${{ always() }}"
+
+
+def split_step_key(step):
+    """A step's key: its name, or its action for an unnamed step."""
+    return step.get("name") or action(step)
+
+
+def split_keys(job):
+    return [split_step_key(step) for step in (job or {}).get("steps") or []]
+
+
+def split_needs(job):
+    needs = (job or {}).get("needs")
+    return [needs] if isinstance(needs, str) else list(needs or [])
+
+
+def split_order_problems(jobs):
+    """SPEC-591 R1: every step of `harness` at the split runs once across the two jobs, in order."""
+    if SPLIT_JOB not in jobs:
+        return [f"{SPLIT_JOB}: no such job"]
+    owned = split_keys(jobs.get("harness"))[:-2] + split_keys(jobs[SPLIT_JOB])[8:-2]
+    problems = [
+        f"{key} runs {owned.count(key)} times across the two jobs, not once"
+        for key in HARNESS_AT_SPLIT[:20]
+        if owned.count(key) != 1
+    ]
+    problems += [
+        f"{key} is not a step of harness at the split"
+        for key in owned
+        if key not in HARNESS_AT_SPLIT
+    ]
+    if not problems and owned != HARNESS_AT_SPLIT[:20]:
+        problems.append("the two jobs hold the steps out of their order at the split")
+    return problems
+
+
+def split_tail_problems(jobs):
+    """SPEC-591 R2: `harness` holds its first ten steps, then its report and upload, and no more."""
+    keys = split_keys(jobs.get("harness"))
+    if keys == HARNESS_KEEPS + SPLIT_TAIL:
+        return []
+    moved = [
+        f"harness: it holds {key}, which runs in {SPLIT_JOB}" for key in keys if key in SPLIT_MOVES
+    ]
+    return moved or ["harness: it does not end at its report and upload after the planted suite"]
+
+
+def split_copy_problems(jobs):
+    """SPEC-591 R3, R4: the sibling repeats the environment and first eight steps of `harness` and
+    then runs the moved steps in their order at the split."""
+    sibling = jobs.get(SPLIT_JOB)
+    if sibling is None:
+        return [f"{SPLIT_JOB}: no such job"]
+    harness = jobs.get("harness") or {}
+    problems = []
+    if sibling.get("runs-on") != ADMITTED_RUNNERS["xcframework.yml"]:
+        problems.append(f"{SPLIT_JOB}: it does not run on the admitted runner")
+    if sibling.get("env") != harness.get("env"):
+        problems.append(f"{SPLIT_JOB}: its env is not the harness env")
+    own, copied = sibling.get("steps") or [], harness.get("steps") or []
+    for at in range(8):
+        if at >= len(own) or at >= len(copied) or own[at] != copied[at]:
+            problems.append(f"{SPLIT_JOB}: its step {at + 1} is not step {at + 1} of harness")
+    if split_keys(sibling)[8:] != SPLIT_MOVES + SPLIT_TAIL:
+        problems.append(
+            f"{SPLIT_JOB}: its steps after the copy are not the moved steps in their order at the split"
+        )
+    return problems
+
+
+def split_verdict_problems(jobs):
+    """SPEC-591 R8: the verdict needs every other job, runs on every outcome, reads one result per
+    need through its step's env and fails unless each is success."""
+    verdict = jobs.get(VERDICT_JOB)
+    if verdict is None:
+        return [f"{VERDICT_JOB}: no such job"]
+    others = sorted(set(jobs) - {VERDICT_JOB})
+    needs = split_needs(verdict)
+    problems = []
+    if sorted(needs) != others:
+        problems.append(
+            f"{VERDICT_JOB}: it needs {', '.join(sorted(needs))}, not every other job "
+            f"{', '.join(others)}"
+        )
+    if verdict.get("if") != SPLIT_RESULT_OK:
+        problems.append(f"{VERDICT_JOB}: it does not run on every outcome")
+    if verdict.get("runs-on") != ADMITTED_RUNNERS["xcframework.yml"]:
+        problems.append(f"{VERDICT_JOB}: it does not run on the admitted runner")
+    steps = verdict.get("steps") or []
+    if any(step.get("uses") for step in steps):
+        problems.append(f"{VERDICT_JOB}: it checks out or downloads")
+    if len(steps) != 1 or not steps[0].get("run"):
+        problems.append(f"{VERDICT_JOB}: it does not hold exactly one step, with a run")
+        return problems
+    env = steps[0].get("env") or {}
+    if sorted(env.values()) != sorted(f"${{{{ needs.{need}.result }}}}" for need in needs):
+        problems.append(f"{VERDICT_JOB}: its env does not carry one result per need")
+    run = str(steps[0]["run"])
+    loops = [line for line in run.splitlines() if line.strip().startswith("for result in")]
+    if len(loops) != 1 or sorted(re.findall(r'"\$([A-Z_]+)"', loops[0])) != sorted(env):
+        problems.append(f"{VERDICT_JOB}: its loop does not read every entry")
+    if '[ "$result" = success ] || status=1' not in run or 'exit "$status"' not in run:
+        problems.append(f"{VERDICT_JOB}: it does not fail unless every result is success")
+    return problems
+
+
+def split_job_block(text, job_id):
+    """The lines of one job of a workflow text, from its key to the next job's key."""
+    lines, block, inside = text.splitlines(keepends=True), [], False
+    for line in lines:
+        if line == f"  {job_id}:\n":
+            inside = True
+        elif inside and re.match(r"  \S", line):
+            break
+        if inside:
+            block.append(line)
+    return "".join(block)
+
+
+def split_bound_problems(text, jobs):
+    """SPEC-591 R2, R7: the line of row S36111 occurs once, inside `harness`, and each new job
+    states a bound line of its own, not the harness bound."""
+    problems = []
+    count = text.count(HARNESS_BOUND_LINE)
+    if count != 1:
+        problems.append(f"the line of row S36111 occurs {count} times, not once")
+    elif HARNESS_BOUND_LINE not in split_job_block(text, "harness"):
+        problems.append("the line of row S36111 is not the harness bound")
+    for name in (SPLIT_JOB, VERDICT_JOB):
+        bound = str((jobs.get(name) or {}).get("timeout-minutes") or "")
+        if not bound:
+            problems.append(f"{name}: no bound line of its own")
+        elif bound == "150":
+            problems.append(f"{name}: its bound is the harness bound")
+    return problems
+
+
+def split_band_problems(jobs):
+    """SPEC-591 R7: the bound of each new job is a digit string inside its band."""
+    problems = []
+    for name, band in ((SPLIT_JOB, SPLIT_TIMEOUT_MINUTES), (VERDICT_JOB, VERDICT_TIMEOUT_MINUTES)):
+        minutes = str((jobs.get(name) or {}).get("timeout-minutes") or "")
+        if not (minutes.isdigit() and int(minutes) in band):
+            problems.append(
+                f"the {name} job's timeout is {minutes or 'unset'}, "
+                f"not {band.start} to {band.stop - 1} minutes"
+            )
+    return problems
+
+
+def split_report_problems(jobs):
+    """SPEC-591 R6: each split job holds one report step, the two bodies are one text, and the
+    text names the other job for the rows it does not measure."""
+    problems, bodies = [], []
+    for name in ("harness", SPLIT_JOB):
+        reports = [
+            step
+            for step in (jobs.get(name) or {}).get("steps") or []
+            if split_step_key(step) == HARNESS_REPORT
+        ]
+        if len(reports) != 1:
+            problems.append(f"{name}: {len(reports)} report steps, not one")
+        else:
+            bodies.append(str(reports[0].get("run", "")))
+    if len(bodies) == 2 and bodies[0] != bodies[1]:
+        problems.append("the two report bodies differ")
+    problems += [
+        f"the report lacks {need}"
+        for need in REPORT_SPLIT_NEEDS
+        if any(need not in body for body in bodies)
+    ]
+    return problems
+
+
+def split_download_problems(jobs):
+    """SPEC-591 R4: only `harness` and the sibling download the framework, each of its own run."""
+    names = sorted(
+        name
+        for name, job in jobs.items()
+        if any(action(step) == "actions/download-artifact" for step in job.get("steps") or [])
+    )
+    if names != sorted(["harness", SPLIT_JOB]):
+        return [
+            f"the jobs that download the framework are {', '.join(names)}, "
+            "not harness and release-and-app"
+        ]
+    problems = []
+    for name in names:
+        problems += harness_link_problems({"jobs": {"harness": jobs[name]}})
+    return problems
+
+
+def split_upload_problems(jobs):
+    """SPEC-591 R9: each split job uploads under its own name, whatever the outcome."""
+    problems = []
+    for name in ("harness", SPLIT_JOB):
+        steps = (jobs.get(name) or {}).get("steps") or []
+        uploads = [step for step in steps if action(step) == "actions/upload-artifact"]
+        given = (uploads[0].get("with") or {}) if len(uploads) == 1 else {}
+        own = (
+            len(uploads) == 1
+            and uploads[0].get("if") == SPLIT_RESULT_OK
+            and given.get("name") == name
+            and all(
+                folder in str(given.get("path"))
+                for folder in ("harness-report/", "harness-results/")
+            )
+        )
+        if not own:
+            problems.append(f"{name}: its upload is not its own under always()")
+    return problems
+
+
+def planted_split_step(key):
+    """A planted step of a key; the checkout and the upload keep their actions."""
+    if key == "actions/checkout":
+        return {"uses": "actions/checkout@" + "0" * 40}
+    if key == HARNESS_AT_SPLIT[1]:
+        return {
+            "name": key,
+            "uses": "actions/download-artifact@" + "0" * 40,
+            "with": {"name": "xcframework"},
+        }
+    if key == SPLIT_UPLOAD:
+        return {
+            "name": key,
+            "if": SPLIT_RESULT_OK,
+            "uses": "actions/upload-artifact@" + "0" * 40,
+            "with": {"name": "harness", "path": "harness-report/\nharness-results/"},
+        }
+    if key == HARNESS_REPORT:
+        return {"name": key, "run": "\n".join(REPORT_SPLIT_NEEDS)}
+    return {"name": key, "run": "true"}
+
+
+def planted_split_jobs(harness=None, sibling=None):
+    """A planted body whose two jobs hold the given step keys, good by default."""
+    runner = ADMITTED_RUNNERS["xcframework.yml"]
+    harness = HARNESS_KEEPS + SPLIT_TAIL if harness is None else harness
+    sibling = SPLIT_REPEATS + SPLIT_MOVES + SPLIT_TAIL if sibling is None else sibling
+
+    def job(name, keys):
+        steps = [planted_split_step(key) for key in keys]
+        for step in steps:
+            if action(step) == "actions/upload-artifact":
+                step["with"] = {**step["with"], "name": name}
+        return {"needs": ["xcframework"], "runs-on": runner, "env": {"REPORT": "r"}, "steps": steps}
+
+    return {
+        "xcframework": {"runs-on": runner, "steps": [{"run": "true"}]},
+        "harness": job("harness", harness),
+        SPLIT_JOB: job(SPLIT_JOB, sibling),
+    }
+
+
+class TheHarnessWorkRunsInTwoJobsAndAVerdict(unittest.TestCase):
+    def test_every_step_of_the_harness_at_the_split_runs_once_in_its_order(self):
+        """SPEC-591 A1: every step of `harness` at the base runs exactly once across `harness` and
+        `release-and-app`, in its order at the base."""
+        jobs = load("xcframework.yml")["jobs"]
+        self.assertIn(SPLIT_JOB, list(jobs))
+        examined("steps of the two jobs", split_keys(jobs["harness"]) + split_keys(jobs[SPLIT_JOB]))
+        self.assertEqual(split_order_problems(jobs), [])
+
+        # The controls: the good body is accepted, and each plant is refused by its rule's message.
+        moved = SPLIT_MOVES[3]
+        swapped = list(SPLIT_MOVES)
+        swapped[1], swapped[2] = swapped[2], swapped[1]
+        tail = SPLIT_TAIL
+        plants = {
+            "the good body": (planted_split_jobs(), []),
+            "a moved step dropped": (
+                planted_split_jobs(
+                    sibling=SPLIT_REPEATS + [k for k in SPLIT_MOVES if k != moved] + tail
+                ),
+                [f"{moved} runs 0 times across the two jobs, not once"],
+            ),
+            "a moved step in both jobs": (
+                planted_split_jobs(harness=HARNESS_KEEPS + [moved] + tail),
+                [f"{moved} runs 2 times across the two jobs, not once"],
+            ),
+            "two moved steps swapped": (
+                planted_split_jobs(sibling=SPLIT_REPEATS + swapped + tail),
+                ["the two jobs hold the steps out of their order at the split"],
+            ),
+            "a new step added": (
+                planted_split_jobs(sibling=SPLIT_REPEATS + SPLIT_MOVES + ["a new step"] + tail),
+                ["a new step is not a step of harness at the split"],
+            ),
+        }
+        for name, (planted, wanted) in examined("planted bodies", list(plants.items())):
+            with self.subTest(plant=name):
+                self.assertEqual(split_order_problems(planted), wanted, name)
+
+    def test_the_harness_ends_at_its_report_and_upload_after_the_planted_suite(self):
+        """SPEC-591 A2: `harness` holds its first ten steps at the base, then its report and
+        upload, and no moved step."""
+        jobs = load("xcframework.yml")["jobs"]
+        examined("steps of harness", split_keys(jobs["harness"]))
+        self.assertEqual(split_tail_problems(jobs), [])
+
+        moved = SPLIT_MOVES[0]
+        report, upload = SPLIT_TAIL
+        generic = ["harness: it does not end at its report and upload after the planted suite"]
+        plants = {
+            "the good body": (planted_split_jobs(), []),
+            "a moved step left in harness": (
+                planted_split_jobs(harness=HARNESS_KEEPS + [moved] + SPLIT_TAIL),
+                [f"harness: it holds {moved}, which runs in {SPLIT_JOB}"],
+            ),
+            "the report before the planted suite": (
+                planted_split_jobs(
+                    harness=HARNESS_KEEPS[:9] + [report] + HARNESS_KEEPS[9:] + [upload]
+                ),
+                generic,
+            ),
+            "a step after the upload": (
+                planted_split_jobs(harness=HARNESS_KEEPS + SPLIT_TAIL + ["a step after"]),
+                generic,
+            ),
+        }
+        for name, (planted, wanted) in examined("planted bodies", list(plants.items())):
+            with self.subTest(plant=name):
+                self.assertEqual(split_tail_problems(planted), wanted, name)
+
+    def test_the_sibling_repeats_the_harness_prefix_and_boot_then_runs_the_moved_steps(self):
+        """SPEC-591 A3: `release-and-app` repeats the environment and first eight steps of
+        `harness` byte for byte, then runs the moved steps in their order at the base."""
+        jobs = load("xcframework.yml")["jobs"]
+        self.assertIn(SPLIT_JOB, list(jobs))
+        examined("steps of the sibling", jobs[SPLIT_JOB].get("steps") or [])
+        self.assertEqual(split_copy_problems(jobs), [])
+
+        def planted(edit):
+            body = planted_split_jobs()
+            edit(body[SPLIT_JOB])
+            return body
+
+        def change_step(job):
+            job["steps"][3] = {**job["steps"][3], "run": "false"}
+
+        def change_env(job):
+            job["env"] = {"REPORT": "other"}
+
+        plants = {
+            "the good body": (planted_split_jobs(), []),
+            "one copied step changed by a character": (
+                planted(change_step),
+                [f"{SPLIT_JOB}: its step 4 is not step 4 of harness"],
+            ),
+            "the copy without its Debug boot": (
+                planted_split_jobs(sibling=SPLIT_REPEATS[:7] + SPLIT_MOVES + SPLIT_TAIL),
+                [
+                    f"{SPLIT_JOB}: its step 8 is not step 8 of harness",
+                    f"{SPLIT_JOB}: its steps after the copy are not the moved steps in their order "
+                    "at the split",
+                ],
+            ),
+            "the env changed": (
+                planted(change_env),
+                [f"{SPLIT_JOB}: its env is not the harness env"],
+            ),
+            "a moved step missing": (
+                planted_split_jobs(sibling=SPLIT_REPEATS + SPLIT_MOVES[1:] + SPLIT_TAIL),
+                [
+                    f"{SPLIT_JOB}: its steps after the copy are not the moved steps in their order "
+                    "at the split"
+                ],
+            ),
+        }
+        for name, (body, wanted) in examined("planted bodies", list(plants.items())):
+            with self.subTest(plant=name):
+                self.assertEqual(split_copy_problems(body), wanted, name)
+
+    def test_the_verdict_needs_every_other_job_and_fails_unless_each_reads_success(self):
+        """SPEC-591 A4: `verdict` needs every other job of the body, runs under `always()`, reads
+        one result per need and fails unless each is `success`."""
+        jobs = load("xcframework.yml")["jobs"]
+        self.assertIn(VERDICT_JOB, list(jobs))
+        examined("jobs of the body", list(jobs))
+        self.assertEqual(split_verdict_problems(jobs), [])
+
+        names = ["xcframework", "harness-wire", "card-isolation", "harness", SPLIT_JOB]
+        keys = [name.upper().replace("-", "_") for name in names]
+        loop = " ".join('"$' + key + '"' for key in keys)
+        run = (
+            'echo "results"\n'
+            "status=0\n"
+            f"for result in {loop}; do\n"
+            '  [ "$result" = success ] || status=1\n'
+            "done\n"
+            'exit "$status"\n'
+        )
+
+        def body(**edit):
+            step = {
+                "name": "every job of the body succeeded",
+                "env": {key: f"${{{{ needs.{name}.result }}}}" for key, name in zip(keys, names)},
+                "run": run,
+            }
+            step = {**step, **edit.pop("step", {})}
+            verdict = {
+                "needs": list(names),
+                "if": SPLIT_RESULT_OK,
+                "runs-on": ADMITTED_RUNNERS["xcframework.yml"],
+                "steps": [step],
+            }
+            verdict.update(edit)
+            return {**{name: {"runs-on": "x"} for name in names}, VERDICT_JOB: verdict}
+
+        def env_of(**given):
+            base = body()[VERDICT_JOB]["steps"][0]["env"]
+            return {"step": {"env": {**base, **given}}}
+
+        plants = {
+            "the good body": (body(), []),
+            "a need dropped": (
+                body(needs=names[:3] + names[4:]),
+                [
+                    f"{VERDICT_JOB}: it needs {', '.join(sorted(names[:3] + names[4:]))}, not every "
+                    f"other job {', '.join(sorted(names))}",
+                    f"{VERDICT_JOB}: its env does not carry one result per need",
+                ],
+            ),
+            "not cancelled": (
+                body(**{"if": "${{ !cancelled() }}"}),
+                [f"{VERDICT_JOB}: it does not run on every outcome"],
+            ),
+            "a result compared to anything but failure": (
+                body(step={"run": run.replace('"$result" = success', '"$result" != failure')}),
+                [f"{VERDICT_JOB}: it does not fail unless every result is success"],
+            ),
+            "an entry reading another job": (
+                body(**env_of(HARNESS="${{ needs.card-isolation.result }}")),
+                [f"{VERDICT_JOB}: its env does not carry one result per need"],
+            ),
+            "an entry missing from the loop": (
+                body(step={"run": run.replace(' "$HARNESS"', "", 1)}),
+                [f"{VERDICT_JOB}: its loop does not read every entry"],
+            ),
+            "exit zero": (
+                body(step={"run": run.replace('exit "$status"', "exit 0")}),
+                [f"{VERDICT_JOB}: it does not fail unless every result is success"],
+            ),
+        }
+        checkout = body()
+        checkout[VERDICT_JOB]["steps"].append({"uses": "actions/checkout@" + "0" * 40})
+        plants["a checkout step"] = (
+            checkout,
+            [
+                f"{VERDICT_JOB}: it checks out or downloads",
+                f"{VERDICT_JOB}: it does not hold exactly one step, with a run",
+            ],
+        )
+        for name, (planted, wanted) in examined("planted bodies", list(plants.items())):
+            with self.subTest(plant=name):
+                self.assertEqual(split_verdict_problems(planted), wanted, name)
+
+    def test_the_harness_bound_line_occurs_once_and_each_new_job_has_its_own(self):
+        """SPEC-591 A5: the line of row S36111 occurs once in the file, inside `harness`, and each
+        new job states a bound line of its own."""
+        text = workflow_file_text(WORKFLOWS / "xcframework.yml")
+        jobs = load("xcframework.yml")["jobs"]
+        examined("lines of the workflow", text.splitlines())
+        self.assertEqual(split_bound_problems(text, jobs), [])
+
+        def planted(harness, sibling, verdict):
+            body = (
+                f"jobs:\n  harness:\n    needs: xcframework\n{harness}"
+                f"  {SPLIT_JOB}:\n    needs: xcframework\n{sibling}"
+                f"  {VERDICT_JOB}:\n    if: ${{{{ always() }}}}\n{verdict}"
+            )
+            bounds = {
+                SPLIT_JOB: re.findall(r"timeout-minutes: (\S+)", sibling),
+                VERDICT_JOB: re.findall(r"timeout-minutes: (\S+)", verdict),
+            }
+            return body, {
+                job: {"timeout-minutes": found[0]} if found else {} for job, found in bounds.items()
+            }
+
+        harness, sibling, verdict = (
+            HARNESS_BOUND_LINE,
+            "    timeout-minutes: 130\n",
+            "    timeout-minutes: 10\n",
+        )
+        plants = {
+            "the good text": (planted(harness, sibling, verdict), []),
+            "the sibling spelling the line": (
+                planted(harness, HARNESS_BOUND_LINE, verdict),
+                [
+                    "the line of row S36111 occurs 2 times, not once",
+                    f"{SPLIT_JOB}: its bound is the harness bound",
+                ],
+            ),
+            "a second copy in the verdict": (
+                planted(harness, sibling, HARNESS_BOUND_LINE),
+                [
+                    "the line of row S36111 occurs 2 times, not once",
+                    f"{VERDICT_JOB}: its bound is the harness bound",
+                ],
+            ),
+            "the line removed from harness": (
+                planted("", sibling, verdict),
+                ["the line of row S36111 occurs 0 times, not once"],
+            ),
+        }
+        for name, ((text_, jobs_), wanted) in examined("planted texts", list(plants.items())):
+            with self.subTest(plant=name):
+                self.assertEqual(split_bound_problems(text_, jobs_), wanted, name)
+
+    def test_each_new_job_bound_sits_in_its_own_band(self):
+        """SPEC-591 A6: the bound of `release-and-app` is a digit string inside 123 to 149, and
+        that of `verdict` inside 1 to 10."""
+        jobs = load("xcframework.yml")["jobs"]
+        self.assertIn(SPLIT_JOB, list(jobs))
+        examined("jobs of the body", list(jobs))
+        self.assertEqual(split_band_problems(jobs), [])
+
+        def planted(sibling, verdict):
+            return {
+                SPLIT_JOB: {"timeout-minutes": sibling} if sibling else {},
+                VERDICT_JOB: {"timeout-minutes": verdict} if verdict else {},
+            }
+
+        band = "the release-and-app job's timeout is {}, not 123 to 149 minutes"
+        short = "the verdict job's timeout is {}, not 1 to 10 minutes"
+        plants = {
+            "the good bounds": (planted("130", "10"), []),
+            "a sibling at 150": (planted("150", "10"), [band.format("150")]),
+            "a sibling at 122": (planted("122", "10"), [band.format("122")]),
+            "a sibling unset": (planted("", "10"), [band.format("unset")]),
+            "a sibling at 130m": (planted("130m", "10"), [band.format("130m")]),
+            "a verdict at 11": (planted("130", "11"), [short.format("11")]),
+            "a verdict unset": (planted("130", ""), [short.format("unset")]),
+        }
+        for name, (body, wanted) in examined("planted bounds", list(plants.items())):
+            with self.subTest(plant=name):
+                self.assertEqual(split_band_problems(body), wanted, name)
+
+    def test_the_two_report_bodies_are_one_text_that_names_the_other_job(self):
+        """SPEC-591 A7: the two report bodies are one text, which names the other job for each row
+        it does not measure."""
+        jobs = load("xcframework.yml")["jobs"]
+        examined("jobs of the body", list(jobs))
+        self.assertEqual(split_report_problems(jobs), [])
+
+        def planted(sibling_body):
+            body = planted_split_jobs()
+            for step in body[SPLIT_JOB]["steps"]:
+                if step.get("name") == HARNESS_REPORT:
+                    step["run"] = sibling_body
+            return body
+
+        good = "\n".join(REPORT_SPLIT_NEEDS)
+        no_function = good.replace("def elsewhere(label):", "def elsewhere_gone():")
+        plants = {
+            "the good bodies": (planted(good), []),
+            "one line of the sibling body changed": (
+                planted(good + "\nan extra line"),
+                ["the two report bodies differ"],
+            ),
+            "the elsewhere function removed": (
+                planted(no_function),
+                ["the two report bodies differ", "the report lacks def elsewhere(label):"],
+            ),
+            "an owner naming the verdict": (
+                planted(good.replace('"release": "release-and-app"', '"release": "verdict"')),
+                [
+                    "the two report bodies differ",
+                    'the report lacks "release": "release-and-app"',
+                ],
+            ),
+        }
+        for name, (body, wanted) in examined("planted bodies", list(plants.items())):
+            with self.subTest(plant=name):
+                self.assertEqual(split_report_problems(body), wanted, name)
+
+    def test_each_job_that_downloads_the_framework_needs_its_job_and_reads_one_artifact(self):
+        """SPEC-591 A8: the jobs that download the framework are exactly `harness` and
+        `release-and-app`, each of its own run."""
+        jobs = load("xcframework.yml")["jobs"]
+        self.assertIn(SPLIT_JOB, list(jobs))
+        examined("jobs of the body", list(jobs))
+        self.assertEqual(split_download_problems(jobs), [])
+
+        download = {"uses": PLANTED_DOWNLOAD, "with": {"name": "xcframework"}}
+
+        def planted(**edit):
+            body = planted_split_jobs()
+            body[SPLIT_JOB].update(edit)
+            return body
+
+        def extra(**given):
+            body = planted_split_jobs()
+            body[SPLIT_JOB]["steps"] = [{"uses": PLANTED_DOWNLOAD, "with": given}] + [
+                step
+                for step in body[SPLIT_JOB]["steps"]
+                if action(step) != "actions/download-artifact"
+            ]
+            return body
+
+        twice = planted_split_jobs()
+        twice[SPLIT_JOB]["steps"].append(download)
+        plants = {
+            "the good body": (planted_split_jobs(), []),
+            "the sibling waiting on harness-wire": (
+                planted(needs=["harness-wire"]),
+                ["harness: it does not wait on the xcframework job"],
+            ),
+            "a second download in the sibling": (twice, ["harness: 2 artifact downloads, not one"]),
+            "the sibling downloading harness": (
+                extra(name="harness"),
+                ["harness: it downloads 'harness', not 'xcframework'"],
+            ),
+            "a download naming a run": (
+                extra(name="xcframework", **{"run-id": "1"}),
+                ["harness: its download names a run-id, so it can reach another run"],
+            ),
+        }
+        for name, (body, wanted) in examined("planted bodies", list(plants.items())):
+            with self.subTest(plant=name):
+                self.assertEqual(split_download_problems(body), wanted, name)
+
+    def test_each_split_job_uploads_under_its_own_name_whatever_the_outcome(self):
+        """SPEC-591 A9: each split job uploads its report and result bundles under its own
+        artifact name, under `always()`."""
+        jobs = load("xcframework.yml")["jobs"]
+        self.assertIn(SPLIT_JOB, list(jobs))
+        examined("jobs of the body", list(jobs))
+        self.assertEqual(split_upload_problems(jobs), [])
+
+        def planted(**edit):
+            body = planted_split_jobs()
+            for step in body[SPLIT_JOB]["steps"]:
+                if action(step) == "actions/upload-artifact":
+                    if "if" in edit:
+                        step["if"] = edit["if"]
+                    given = {"path": edit.get("path"), "name": edit.get("with_name")}
+                    step["with"] = {
+                        **step["with"],
+                        **{key: value for key, value in given.items() if value},
+                    }
+            return body
+
+        own = [f"{SPLIT_JOB}: its upload is not its own under always()"]
+        plants = {
+            "the good body": (planted_split_jobs(), []),
+            "the sibling upload named harness": (planted(with_name="harness"), own),
+            "an upload without always": (planted(**{"if": "${{ success() }}"}), own),
+            "an upload without the results folder": (planted(path="harness-report/"), own),
+        }
+        for name, (body, wanted) in examined("planted bodies", list(plants.items())):
+            with self.subTest(plant=name):
+                self.assertEqual(split_upload_problems(body), wanted, name)

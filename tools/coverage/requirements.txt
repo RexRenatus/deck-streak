@@ -1,0 +1,5 @@
+# coverage.py for the Python lane of the coverage report (SPEC-592); installed with --require-hashes
+# into a virtual environment under the runner temp directory.
+coverage==7.17.1 \
+    --hash=sha256:622f0d4869db8fdfa3a7ee2c6b0207b17abe59b462617599c8c3def27f482d78 \
+    --hash=sha256:5c5c77f95a0e83e6b79eff948d251c9911cfd61d67f5059159fc25b7bc4aec27
