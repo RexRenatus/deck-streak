@@ -19,6 +19,8 @@ fsrs7.workspace = true
 [dev-dependencies]
 # ADR-353 D5: the released scheduler the engine pins, so one test binary links both (SPEC-342 A4).
 fsrs6.workspace = true
+# ADR-640 (SPEC-618 R9): the bench harness, for `benches/` alone.
+divan.workspace = true
 
 # ADR-353 D6: the harness's two entry points, which only call the `measure` module (SPEC-342 R7, R8).
 [[example]]
@@ -26,3 +28,9 @@ name = "replay_timing"
 
 [[example]]
 name = "replay_report"
+
+# SPEC-618 R9: the replay, card by card and in one batch, measured by CodSpeed; Divan's `main`
+# replaces the default harness.
+[[bench]]
+name = "replay"
+harness = false
