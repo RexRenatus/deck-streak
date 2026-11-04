@@ -84,7 +84,11 @@ jobs:
         run: rustup component add llvm-tools
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
-          tool: cargo-llvm-cov@0.9.1,cargo-nextest@0.9.149
+          tool: cargo-llvm-cov@0.9.1
+          fallback: none
+      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+        with:
+          tool: cargo-nextest@0.9.149
           fallback: none
       - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
         env:
@@ -110,9 +114,8 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/coverage-rust"
           python3 scripts/coverage-report.py args --lane rust > "$RUNNER_TEMP/coverage-rust/args.txt"
-          mapfile -t extra < "$RUNNER_TEMP/coverage-rust/args.txt"
-          cargo llvm-cov nextest --workspace --locked --no-fail-fast --ignore-run-fail --lcov \
-            --output-path "$RUNNER_TEMP/coverage-rust/lcov.info" "${extra[@]}"
+          xargs -d '\n' -a "$RUNNER_TEMP/coverage-rust/args.txt" cargo llvm-cov nextest --workspace --locked \
+            --ignore-run-fail --lcov --output-path "$RUNNER_TEMP/coverage-rust/lcov.info"
       - name: the region figures, from the same profile
         run: cargo llvm-cov report --json --summary-only --output-path "$RUNNER_TEMP/coverage-rust/summary.json"
       - name: the lines the pull request adds (none is read on a push)
