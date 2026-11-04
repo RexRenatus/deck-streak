@@ -239,10 +239,17 @@ def bounded_reading(doc):
             continue
         name = ".".join(path)
         if kind == "posint":
+            bound = K_BOUND if path == ("k",) else BUDGET_BOUND
+            if value > bound:
+                raise Refused("bound-range", name + " is past its range")
             reading[name] = value
         if kind == "posint-map":
             for key, seconds in value.items():
                 entry = name + "." + key
+                if not key.startswith(ENTRY_PREFIX):
+                    raise Refused("entry-unnamed", entry + " names no TLA+ entry")
+                if seconds > BUDGET_BOUND:
+                    raise Refused("bound-range", entry + " is past its range")
                 reading[entry] = seconds
     return reading
 
