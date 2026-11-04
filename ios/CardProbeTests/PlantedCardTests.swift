@@ -236,6 +236,51 @@ enum Variant: Hashable, Sendable {
     }
 }
 
+/// A page ask that had no answer within its bound (SPEC-609 R2). It ends the running test, and its
+/// description names the ask, the probe it stopped on and the bound in whole seconds.
+struct ProbeStall: Error, CustomStringConvertible, LocalizedError {
+    /// The label of the ask, such as `state`, `ready` or `snapshot`.
+    let label: String
+    /// The probe record when the ask was made (SPEC-609 R3).
+    let probe: String
+    /// The bound the ask had, in seconds.
+    let seconds: TimeInterval
+
+    var description: String {
+        "card probe stall: the \(label) ask in \(probe) had no answer within \(Int(seconds.rounded())) s"
+    }
+
+    var errorDescription: String? {
+        description
+    }
+}
+
+/// The one-shot guard of one bounded ask, on the main actor (SPEC-609 R2): it resumes the ask's
+/// continuation once, with whichever of the answer and the bound comes first, cancels the bound's
+/// timer when it resumes, and drops whatever comes after.
+@MainActor
+final class AskGuard<Value: Sendable> {
+    private var continuation: CheckedContinuation<Value, any Error>?
+    /// The bound's timer, cancelled once the guard has resumed.
+    var timer: Task<Void, Never>?
+
+    init(_ continuation: CheckedContinuation<Value, any Error>) {
+        self.continuation = continuation
+    }
+
+    /// Resumes the ask with `outcome` unless it has resumed already; returns whether it did.
+    func take(_ outcome: Result<Value, any Error>) -> Bool {
+        guard let continuation else {
+            return false
+        }
+        self.continuation = nil
+        timer?.cancel()
+        timer = nil
+        continuation.resume(with: outcome)
+        return true
+    }
+}
+
 /// Builds the suite's views, shows a card in one, and reads every probe.
 @MainActor
 final class Probe {
@@ -276,13 +321,97 @@ final class Probe {
         window?.addSubview(view)
     }
 
-    /// Runs the app's own script and returns its string result.
-    static func evaluate(_ view: WKWebView, _ script: String) async -> String? {
-        await withCheckedContinuation { (continuation: CheckedContinuation<String?, Never>) in
-            view.evaluateJavaScript(script) { result, _ in
-                continuation.resume(returning: result as? String)
+    /// The most one page ask may wait for its answer: a page's `evaluateJavaScript` answer or a
+    /// view's `takeSnapshot` completion that has not come within it is a stall, which fails the
+    /// running test by name (SPEC-609 R1, R2). It is twice `warmUpSeconds`, so WebKit's first
+    /// process start, which one ask may wait for, is no stall (SPEC-361 R16, ADR-372 D11).
+    static let askSeconds: TimeInterval = 120
+
+    /// The probe the running test is on, for a stall to name: set by `show`, and reset to
+    /// `no probe` by each test's `setUp` (SPEC-609 R3).
+    static var probing = "no probe"
+
+    /// How many probes the running test has shown (SPEC-609 R3).
+    static var probes = 0
+
+    /// How many asks the running test's pages answered (SPEC-609 R5).
+    static var answeredAsks = 0
+
+    /// The slowest answered ask of the running test, in seconds (SPEC-609 R5).
+    static var slowestAsk: TimeInterval = 0
+
+    /// Resets the probe record and the measurement, from each test's `setUp` (SPEC-609 R3, R5).
+    static func resetRecord() {
+        probing = "no probe"
+        probes = 0
+        answeredAsks = 0
+        slowestAsk = 0
+    }
+
+    /// The line each test's `tearDown` prints: the asks its pages answered and the slowest, against
+    /// the ask bound (SPEC-609 R5).
+    static func asksLine(_ test: String) -> String {
+        "card probe asks: \(test) asks=\(answeredAsks) slowest=\(String(format: "%.2f", slowestAsk))"
+            + " bound=\(Int(askSeconds.rounded()))"
+    }
+
+    /// The one bounded page ask (SPEC-609 R1, R2): `start` asks the page and hands its answer to the
+    /// handler it is given. Returns the answer, or throws `ProbeStall`, labelled `label` and naming
+    /// `probing`, when none has come within `seconds`. Each answered ask is counted, and the
+    /// slowest kept (R5).
+    static func bounded<Value: Sendable>(
+        label: String, seconds: TimeInterval = Probe.askSeconds,
+        _ start: (@escaping @MainActor @Sendable (Value) -> Void) -> Void
+    ) async throws -> Value {
+        let asked = Date()
+        let value: Value = try await withCheckedThrowingContinuation {
+            (continuation: CheckedContinuation<Value, any Error>) in
+            let once = AskGuard(continuation)
+            start { answer in
+                _ = once.take(.success(answer))
             }
         }
+        answeredAsks += 1
+        slowestAsk = max(slowestAsk, Date().timeIntervalSince(asked))
+        return value
+    }
+
+    /// The page's string answer to `script`, asked once through `ask` under `seconds` and labelled
+    /// `label` in a stall (SPEC-609 R1, R2).
+    static func ask(
+        asking ask: @escaping Asking, _ script: String, label: String,
+        seconds: TimeInterval = Probe.askSeconds
+    ) async throws -> String? {
+        let answer: String? = try await bounded(label: label, seconds: seconds) { handler in
+            ask(script, handler)
+        }
+        return answer
+    }
+
+    /// The label an ask of `script` carries in a stall: the name of one of the suite's own scripts,
+    /// or else the script's opening characters (SPEC-609 R2).
+    static func label(of script: String) -> String {
+        switch script {
+        case stateScript:
+            return "state"
+        case linkScript:
+            return "links"
+        case readyScript:
+            return "ready"
+        case answerScript:
+            return "answer"
+        default:
+            return "script " + String(script.prefix(48)).replacingOccurrences(of: "\n", with: " ")
+        }
+    }
+
+    /// Runs the app's own script and returns its string result, asked under the ask bound
+    /// (SPEC-609 R1).
+    static func evaluate(_ view: WKWebView, _ script: String) async throws -> String? {
+        try await ask(
+            asking: { asked, answer in
+                view.evaluateJavaScript(asked) { result, _ in answer(result as? String) }
+            }, script, label: label(of: script))
     }
 
     /// The app's own count of the `link` elements a view holds: in the document, in every
@@ -304,21 +433,24 @@ final class Probe {
 
     /// How many `link` elements `view` holds, read by `linkScript`; nil when the answer is not a
     /// number.
-    static func links(_ view: WKWebView) async -> Int? {
-        guard let text = await evaluate(view, linkScript) else {
+    static func links(_ view: WKWebView) async throws -> Int? {
+        guard let text = try await evaluate(view, linkScript) else {
             return nil
         }
         return Int(text)
     }
 
-    /// Polls `check` until it holds or `seconds` pass; returns the seconds it took, or nil.
-    static func poll(_ seconds: TimeInterval, _ check: () async -> Bool) async -> TimeInterval? {
+    /// Polls `check` until it holds or `seconds` pass; returns the seconds it took, or nil. A check
+    /// that throws, such as one whose ask stalled, ends the poll with its error (SPEC-609 R2).
+    static func poll(
+        _ seconds: TimeInterval, _ check: () async throws -> Bool
+    ) async rethrows -> TimeInterval? {
         let start = Date()
         while Date().timeIntervalSince(start) < seconds {
-            if await check() { return Date().timeIntervalSince(start) }
+            if try await check() { return Date().timeIntervalSince(start) }
             try? await Task.sleep(nanoseconds: 50_000_000)
         }
-        return await check() ? Date().timeIntervalSince(start) : nil
+        return try await check() ? Date().timeIntervalSince(start) : nil
     }
 
     /// The bound of every measured load wait: how long a card is given to report that it has
@@ -334,8 +466,8 @@ final class Probe {
     private static var warmedUp: Bool?
 
     /// Whether the card document `view` was handed reports that it has finished loading, read once.
-    private static func reportsLoaded(_ view: WKWebView) async -> Bool {
-        await evaluate(
+    private static func reportsLoaded(_ view: WKWebView) async throws -> Bool {
+        try await evaluate(
             view,
             "String(document.readyState === 'complete' && !!document.querySelector('meta[name=\"planted-card\"]'))"
         ) == "true"
@@ -343,8 +475,8 @@ final class Probe {
 
     /// The seconds the card document `view` was handed took to finish loading, or nil when it had
     /// not finished within `loadSeconds` (SPEC-361 R16), asked through the view's own script.
-    static func loadTime(_ view: WKWebView) async -> TimeInterval? {
-        await loadTime(asking: { script, answer in
+    static func loadTime(_ view: WKWebView) async throws -> TimeInterval? {
+        try await loadTime(asking: { script, answer in
             view.evaluateJavaScript(script) { result, _ in answer(result as? String) }
         })
     }
@@ -365,21 +497,22 @@ final class Probe {
     /// whenever an ask comes back without its answer, one ask at a time, under `answerSeconds`;
     /// once the page has answered, it returns the seconds the card then took to finish loading, or
     /// nil when the page never answered or the card had not finished within `loadSeconds`
-    /// (SPEC-361 R16, SPEC-349 R11). It prints the seconds the page took to answer.
+    /// (SPEC-361 R16, SPEC-349 R11). It prints the seconds the page took to answer. Each ready ask
+    /// waits under `askSeconds`, and a stalled one throws `ProbeStall` (SPEC-609 R1, R2).
     static func loadTime(
         asking ask: @escaping Asking, answerSeconds: TimeInterval = Probe.warmUpSeconds,
-        loadSeconds: TimeInterval = Probe.loadSeconds
-    ) async -> TimeInterval? {
+        loadSeconds: TimeInterval = Probe.loadSeconds, askSeconds: TimeInterval = Probe.askSeconds
+    ) async throws -> TimeInterval? {
         let state = AnswerState()
-        let answered = await poll(answerSeconds) {
+        let answered = try await poll(answerSeconds) {
             await askOnce(ask, state)
         }
         print("card probe answer: took=\(answered.map { String(format: "%.2f", $0) } ?? "none")")
         guard answered != nil else {
             return nil
         }
-        return await poll(loadSeconds) {
-            await reply(ask, readyScript) == "true"
+        return try await poll(loadSeconds) {
+            try await reply(ask, readyScript, seconds: askSeconds) == "true"
         }
     }
 
@@ -397,16 +530,17 @@ final class Probe {
         return state.answered
     }
 
-    /// The page's string answer to `script`, asked once through `ask`.
-    private static func reply(_ ask: @escaping Asking, _ script: String) async -> String? {
-        await withCheckedContinuation { (continuation: CheckedContinuation<String?, Never>) in
-            ask(script) { continuation.resume(returning: $0) }
-        }
+    /// The page's string answer to `script`, asked once through `ask` under `seconds`, the ask bound
+    /// (SPEC-609 R1).
+    private static func reply(
+        _ ask: @escaping Asking, _ script: String, seconds: TimeInterval = Probe.askSeconds
+    ) async throws -> String? {
+        try await Probe.ask(asking: ask, script, label: label(of: script), seconds: seconds)
     }
 
     /// Whether the card document `view` was handed has finished loading.
-    static func loaded(_ view: WKWebView) async -> Bool {
-        await loadTime(view) != nil
+    static func loaded(_ view: WKWebView) async throws -> Bool {
+        try await loadTime(view) != nil
     }
 
     /// Starts WebKit once per test process, before any measured wait, on both paths a measured
@@ -414,13 +548,13 @@ final class Probe {
     /// whose script runs in a scripts-on view, each mounted and waited for under `warmUpSeconds`.
     /// Returns whether both loaded; every later call returns the first reading (SPEC-361 R16,
     /// ADR-372 D11).
-    static func warmUp() async -> Bool {
+    static func warmUp() async throws -> Bool {
         if let reading = warmedUp {
             return reading
         }
         let ruleList = await RuleList.compile()
-        let off = await warmUpLoad(switchedOn: false, body: "<p>a card</p>", ruleList: ruleList)
-        let on = await warmUpLoad(
+        let off = try await warmUpLoad(switchedOn: false, body: "<p>a card</p>", ruleList: ruleList)
+        let on = try await warmUpLoad(
             switchedOn: true, body: "<script>\(ranMarker)</script><p>a card</p>", ruleList: ruleList)
         let loaded = off && on
         warmedUp = loaded
@@ -431,13 +565,13 @@ final class Probe {
     /// waited for under `warmUpSeconds` and taken down. Returns whether it loaded.
     private static func warmUpLoad(
         switchedOn: Bool, body: String, ruleList: WKContentRuleList?
-    ) async -> Bool {
+    ) async throws -> Bool {
         let view = CardWebViewFactory.make(
             layers: Set(CardLayer.allCases), ruleList: ruleList, switchedOn: switchedOn)
         CardWebViewFactory.load(Planted.document(id: "warm-up", head: "", body: body), into: view)
         mount(view)
-        let took = await poll(Probe.warmUpSeconds) {
-            await reportsLoaded(view)
+        let took = try await poll(Probe.warmUpSeconds) {
+            try await reportsLoaded(view)
         }
         view.stopLoading()
         view.removeFromSuperview()
@@ -451,13 +585,13 @@ final class Probe {
     /// `warmUpSeconds` and left mounted for the caller to take down. While it lives, WebKit's GPU
     /// and networking processes have a page to serve, so a measured wait that follows another
     /// view's teardown does not pay their relaunch (ADR-372 D11). Returns nil when it never loaded.
-    static func keeper(ruleList: WKContentRuleList?) async -> WKWebView? {
+    static func keeper(ruleList: WKContentRuleList?) async throws -> WKWebView? {
         let view = CardWebViewFactory.make(
             layers: Set(CardLayer.allCases), ruleList: ruleList, switchedOn: false)
         CardWebViewFactory.load(Planted.document(id: "keeper", head: "", body: "<p>a card</p>"), into: view)
         mount(view)
-        let took = await poll(Probe.warmUpSeconds) {
-            await reportsLoaded(view)
+        let took = try await poll(Probe.warmUpSeconds) {
+            try await reportsLoaded(view)
         }
         print("card probe keeper: loaded=\(took != nil) took=\(took.map { String(format: "%.2f", $0) } ?? "none")")
         guard took != nil else {
@@ -467,26 +601,27 @@ final class Probe {
         return view
     }
 
-    /// Takes one snapshot of `view` and decodes its pixels.
-    static func snapshot(_ view: WKWebView) async -> ViewSnapshot {
-        await withCheckedContinuation { (continuation: CheckedContinuation<ViewSnapshot, Never>) in
+    /// Takes one snapshot of `view` and decodes its pixels, under the ask bound (SPEC-609 R1).
+    static func snapshot(_ view: WKWebView) async throws -> ViewSnapshot {
+        let taken: ViewSnapshot = try await bounded(label: "snapshot") { answer in
             view.takeSnapshot(with: nil) { image, _ in
-                continuation.resume(
-                    returning: ViewSnapshot(
+                answer(
+                    ViewSnapshot(
                         png: image?.pngData() ?? Data(), pixels: image?.cgImage.flatMap { Pixels($0) }))
             }
         }
+        return taken
     }
 
     /// Snapshots `view` until two snapshots in a row decode to the same pixels, or `seconds` pass.
     /// Returns the last snapshot, how many were taken, and whether two in a row matched.
     static func settle(
         _ view: WKWebView, _ seconds: TimeInterval
-    ) async -> (snapshot: ViewSnapshot, polls: Int, settled: Bool) {
+    ) async throws -> (snapshot: ViewSnapshot, polls: Int, settled: Bool) {
         var last = ViewSnapshot()
         var polls = 0
-        let took = await Probe.poll(seconds) {
-            let next = await Probe.snapshot(view)
+        let took = try await Probe.poll(seconds) {
+            let next = try await Probe.snapshot(view)
             polls += 1
             let same = polls > 1 && next.pixels != nil && next.pixels == last.pixels
             last = next
@@ -514,6 +649,9 @@ final class Probe {
         _ card: Planted, in variant: Variant, window: TimeInterval?, deadline: TimeInterval = 5,
         witness: Witness? = nil, countLinks: Bool = false
     ) async throws -> (Reading, TimeInterval?) {
+        // The probe record a stall names (SPEC-609 R3).
+        Probe.probes += 1
+        Probe.probing = "\(card.id) in \(String(describing: variant)) (probe \(Probe.probes))"
         let listeners = try Listeners()
         try await listeners.start()
         defer { listeners.cancel() }
@@ -564,14 +702,14 @@ final class Probe {
             }
         }
         var reading = Reading()
-        reading.loaded = await Probe.loaded(view)
+        reading.loaded = try await Probe.loaded(view)
         // Counted once the view has loaded; `read` rebuilds the reading, so the count is carried.
         var links: Int?
         if countLinks {
-            links = await Probe.links(view)
+            links = try await Probe.links(view)
         }
         if card.click {
-            _ = await Probe.evaluate(
+            _ = try await Probe.evaluate(
                 view,
                 "(function () { var e = document.querySelector('[data-planted-click]'); if (!e) { return 'none'; } e.click(); return 'clicked'; })()"
             )
@@ -579,10 +717,10 @@ final class Probe {
         var took: TimeInterval?
         if let window {
             try? await Task.sleep(nanoseconds: UInt64(window * 1_000_000_000))
-            reading = await read(view, listeners, recorder, reading.loaded, witness, label)
+            reading = try await read(view, listeners, recorder, reading.loaded, witness, label)
         } else {
-            took = await Probe.poll(deadline) {
-                reading = await self.read(view, listeners, recorder, reading.loaded, witness, label)
+            took = try await Probe.poll(deadline) {
+                reading = try await self.read(view, listeners, recorder, reading.loaded, witness, label)
                 return reading.reached(card)
             }
         }
@@ -593,7 +731,7 @@ final class Probe {
     private func read(
         _ view: WKWebView, _ listeners: Listeners, _ recorder: Recorder, _ loaded: Bool,
         _ witness: Witness?, _ label: String
-    ) async -> Reading {
+    ) async throws -> Reading {
         var reading = Reading()
         reading.loaded = loaded
         reading.arrivals = listeners.arrivals()
@@ -606,7 +744,7 @@ final class Probe {
         }
         reading.windows = view.uiDelegate === recorder ? recorder.windows : 0
         reading.messages = recorder.messages
-        if let text = await Probe.evaluate(view, Probe.stateScript),
+        if let text = try await Probe.evaluate(view, Probe.stateScript),
            let state = try? JSONDecoder().decode(PageState.self, from: Data(text.utf8)) {
             reading.marker = state.ran
             reading.body = state.body
@@ -657,12 +795,58 @@ final class AnswerState {
     var answered = false
 }
 
+/// A page the bounded ask asks, standing in for one whose process stopped answering: it keeps
+/// every answer it is handed and never calls one (SPEC-609 R6, A1).
+@MainActor
+final class SilentPage {
+    private var kept: [@MainActor @Sendable (String?) -> Void] = []
+
+    /// Keeps `answer`, never calling it, as such a page would.
+    func ask(_ script: String, _ answer: @escaping @MainActor @Sendable (String?) -> Void) {
+        kept.append(answer)
+    }
+}
+
+/// A page the load wait asks, standing in for one whose process answers and then falls silent: it
+/// answers `Probe.answerScript` with `answered` at once, and keeps, never calls, the answer to any
+/// other script (SPEC-609 R6, A2).
+@MainActor
+final class FallsSilentPage {
+    private var kept: [@MainActor @Sendable (String?) -> Void] = []
+
+    /// Answers `script` through `answer` as such a page would.
+    func ask(_ script: String, _ answer: @escaping @MainActor @Sendable (String?) -> Void) {
+        if script == Probe.answerScript {
+            answer("answered")
+        } else {
+            kept.append(answer)
+        }
+    }
+}
+
+/// What a criterion's call under test came back with, once it has: its value or its thrown error,
+/// and when (SPEC-609 R6).
+@MainActor
+final class Outcome<Value> {
+    var result: Result<Value, any Error>?
+    var finished: Date?
+}
+
 final class PlantedCardTests: XCTestCase {
     /// SPEC-361 R16: WebKit has started before any measured wait, once per process (ADR-372 D11).
+    /// SPEC-609 R3, R5: each test starts with no probe and no ask counted.
     override func setUp() async throws {
         try await super.setUp()
-        let warmedUp = await Probe.warmUp()
+        await Probe.resetRecord()
+        let warmedUp = try await Probe.warmUp()
         XCTAssertTrue(warmedUp, "the card probe warm-up: WebKit never started, so no card could load")
+    }
+
+    /// SPEC-609 R5: the asks this test's pages answered, and the slowest, against the ask bound.
+    override func tearDown() async throws {
+        let line = await Probe.asksLine(self.name)
+        print(line)
+        try await super.tearDown()
     }
 
     /// Prints how many were judged, and refuses zero (the tdd pack's contract).
@@ -856,15 +1040,15 @@ final class PlantedCardTests: XCTestCase {
         for (name, build) in examined("render views", builds) {
             let view = try await build()
             Probe.mount(view)
-            let loaded = await Probe.loaded(view)
+            let loaded = try await Probe.loaded(view)
             // A bounded stability poll, never a fixed wait: the snapshot judged is the first that
             // decodes to the same pixels as the one before it, and a view that never settles fails.
-            let (snapshot, polls, settled) = await Probe.settle(view, Self.settleDeadline)
+            let (snapshot, polls, settled) = try await Probe.settle(view, Self.settleDeadline)
             let line = "settle \(name): polls=\(polls) settled=\(settled) deadline=\(Self.settleDeadline)s"
             print(line)
             XCTAssertTrue(settled, line)
-            let text = await Probe.evaluate(view, "document.body ? document.body.innerText : ''") ?? ""
-            let width = await Probe.evaluate(
+            let text = try await Probe.evaluate(view, "document.body ? document.body.innerText : ''") ?? ""
+            let width = try await Probe.evaluate(
                 view,
                 "String((document.getElementById('render-image') || { naturalWidth: 0 }).naturalWidth)") ?? ""
             let geometry = "zoom=\(view.scrollView.zoomScale) offset=\(view.scrollView.contentOffset)"
@@ -1055,8 +1239,8 @@ final class PlantedCardTests: XCTestCase {
         let planter = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
         Probe.mount(planter)
         planter.loadHTMLString(Planted.document(id: "planter", head: "", body: "<p>planter</p>"), baseURL: origin)
-        let planterLoaded = await Probe.loaded(planter)
-        let stored = await Probe.evaluate(planter, "localStorage.setItem('planted', '\(planted)'); localStorage.getItem('planted')")
+        let planterLoaded = try await Probe.loaded(planter)
+        let stored = try await Probe.evaluate(planter, "localStorage.setItem('planted', '\(planted)'); localStorage.getItem('planted')")
         planter.removeFromSuperview()
         print("app-state planter: loaded=\(planterLoaded) stored=\(stored == planted)")
 
@@ -1078,11 +1262,11 @@ final class PlantedCardTests: XCTestCase {
         for (name, build) in examined("app-state views", builds) {
             let view = try build()
             Probe.mount(view)
-            let loaded = await Probe.loaded(view)
+            let loaded = try await Probe.loaded(view)
             // The card writes its record after each step; the last step is given three seconds.
             try? await Task.sleep(nanoseconds: 3_000_000_000)
-            records[name] = await Probe.evaluate(view, "document.documentElement.dataset.record || ''") ?? ""
-            ran[name] = await Probe.evaluate(view, "String(document.documentElement.dataset.ran === '1')") == "true"
+            records[name] = try await Probe.evaluate(view, "document.documentElement.dataset.record || ''") ?? ""
+            ran[name] = try await Probe.evaluate(view, "String(document.documentElement.dataset.ran === '1')") == "true"
             view.configuration.userContentController.removeAllScriptMessageHandlers()
             view.removeFromSuperview()
             print("app-state \(name): loaded=\(loaded) ran=\(ran[name] ?? false) record=\(records[name] ?? "")")
@@ -1179,11 +1363,11 @@ final class PlantedCardTests: XCTestCase {
         for (name, build) in examined("render-script views", builds) {
             let view = try build()
             Probe.mount(view)
-            let loaded = await Probe.loaded(view)
-            let ran = await Probe.poll(5) {
-                await Probe.evaluate(view, "String(document.documentElement.dataset.ran === '1')") == "true"
+            let loaded = try await Probe.loaded(view)
+            let ran = try await Probe.poll(5) {
+                try await Probe.evaluate(view, "String(document.documentElement.dataset.ran === '1')") == "true"
             } != nil
-            let text = await Probe.evaluate(view, "document.body ? document.body.innerText : ''") ?? ""
+            let text = try await Probe.evaluate(view, "document.body ? document.body.innerText : ''") ?? ""
             view.removeFromSuperview()
             print("render-script \(name): loaded=\(loaded) ran=\(ran) text=\(text.debugDescription)")
             shown[name] = (text: text, ran: ran)
@@ -1241,11 +1425,11 @@ final class PlantedCardTests: XCTestCase {
         for (name, build) in examined("permitted views", builds) {
             let view = try build()
             Probe.mount(view)
-            let loaded = await Probe.loaded(view)
-            _ = await Probe.evaluate(view, "document.fonts.load('16px permitted'); 'asked'")
+            let loaded = try await Probe.loaded(view)
+            _ = try await Probe.evaluate(view, "document.fonts.load('16px permitted'); 'asked'")
             var reading = PermittedReading()
-            _ = await Probe.poll(10) {
-                if let text = await Probe.evaluate(view, Self.permittedScript),
+            _ = try await Probe.poll(10) {
+                if let text = try await Probe.evaluate(view, Self.permittedScript),
                    let read = try? JSONDecoder().decode(PermittedReading.self, from: Data(text.utf8)) {
                     reading = read
                 }
@@ -1278,7 +1462,7 @@ final class PlantedCardTests: XCTestCase {
     func test_the_load_wait_starts_when_the_page_first_answers() async throws {
         let page = LatePage(startSeconds: 4, loadSeconds: 2)
         let start = Date()
-        let took = await Probe.loadTime(asking: { page.ask($0, $1) }, answerSeconds: 8, loadSeconds: 3)
+        let took = try await Probe.loadTime(asking: { page.ask($0, $1) }, answerSeconds: 8, loadSeconds: 3)
         let elapsed = Date().timeIntervalSince(start)
         let line = "card probe late page: took=\(took.map { String(format: "%.2f", $0) } ?? "none")"
             + " elapsed=\(String(format: "%.2f", elapsed))"
@@ -1293,7 +1477,7 @@ final class PlantedCardTests: XCTestCase {
     func test_a_page_that_never_answers_reads_not_loaded_after_the_answer_bound() async throws {
         let page = LatePage(startSeconds: 6, loadSeconds: 0)
         let start = Date()
-        let took = await Probe.loadTime(asking: { page.ask($0, $1) }, answerSeconds: 3, loadSeconds: 1)
+        let took = try await Probe.loadTime(asking: { page.ask($0, $1) }, answerSeconds: 3, loadSeconds: 1)
         let elapsed = Date().timeIntervalSince(start)
         let line = "card probe silent page: took=\(took.map { String(format: "%.2f", $0) } ?? "none")"
             + " elapsed=\(String(format: "%.2f", elapsed))"
@@ -1301,5 +1485,82 @@ final class PlantedCardTests: XCTestCase {
         XCTAssertNil(took, "a page that had not answered within its 3 s answer bound read loaded: \(line)")
         XCTAssertGreaterThanOrEqual(
             elapsed, 3, "the wait read the page not loaded before its whole answer bound: \(line)")
+    }
+
+    /// SPEC-609 A1 (R1, R2, R3, R6): an ask of a page that never answers ends at its own bound with
+    /// a stall that names its label, the probe it stopped on and the bound, inside its watchdog, so
+    /// the ask cannot hang its test.
+    @MainActor
+    func test_an_ask_a_page_never_answers_fails_at_the_ask_bound_and_names_its_probe() async throws {
+        let page = SilentPage()
+        Probe.probing = "a silent card in a silent view (probe 1)"
+        let outcome = Outcome<String?>()
+        let start = Date()
+        Task { @MainActor in
+            do {
+                let answer = try await Probe.ask(
+                    asking: { page.ask($0, $1) }, "'state'", label: "silent-state", seconds: 2)
+                outcome.result = .success(answer)
+            } catch {
+                outcome.result = .failure(error)
+            }
+            outcome.finished = Date()
+        }
+        let returned = try await Probe.poll(10) { outcome.result != nil }
+        guard returned != nil, let result = outcome.result else {
+            XCTFail(
+                "A1 watchdog: the ask of a silent page with `seconds: 2` had not returned by the end of the watchdog, `seconds: 10`, so the ask has no bound")
+            return
+        }
+        let elapsed = (outcome.finished ?? Date()).timeIntervalSince(start)
+        var stall: ProbeStall?
+        if case .failure(let error) = result {
+            stall = error as? ProbeStall
+        }
+        let line = "card probe silent ask: stalled=\(stall != nil) elapsed=\(String(format: "%.2f", elapsed))"
+        print(line)
+        let said = try XCTUnwrap(stall, "A1: the ask of a silent page came back with no probe stall: \(line)").description
+        XCTAssertTrue(said.contains("silent-state"), "A1: the stall names no ask label: \(said)")
+        XCTAssertTrue(
+            said.contains("a silent card in a silent view (probe 1)"), "A1: the stall names no probe: \(said)")
+        XCTAssertTrue(said.contains("within 2 s"), "A1: the stall names no bound in whole seconds: \(said)")
+        XCTAssertGreaterThanOrEqual(elapsed, 2, "A1: the ask stalled before its bound, `seconds: 2`: \(line)")
+        XCTAssertLessThan(elapsed, 10, "A1: the ask stalled only at the watchdog, `seconds: 10`: \(line)")
+    }
+
+    /// SPEC-609 A2 (R1, R2, R6): the load wait over a page that answers and then falls silent ends at
+    /// its ready ask's bound with a stall that names the ready ask, inside its watchdog, so the load
+    /// wait cannot hang its test.
+    @MainActor
+    func test_a_page_that_answers_then_falls_silent_fails_the_load_wait_at_the_ask_bound() async throws {
+        let page = FallsSilentPage()
+        let outcome = Outcome<TimeInterval?>()
+        let start = Date()
+        Task { @MainActor in
+            do {
+                let took = try await Probe.loadTime(
+                    asking: { page.ask($0, $1) }, answerSeconds: 3, loadSeconds: 1, askSeconds: 2)
+                outcome.result = .success(took)
+            } catch {
+                outcome.result = .failure(error)
+            }
+            outcome.finished = Date()
+        }
+        let returned = try await Probe.poll(12) { outcome.result != nil }
+        guard returned != nil, let result = outcome.result else {
+            XCTFail(
+                "A2 watchdog: the load wait over a page that falls silent, with `askSeconds: 2`, had not returned by the end of the watchdog, `seconds: 12`, so its ready ask has no bound")
+            return
+        }
+        let elapsed = (outcome.finished ?? Date()).timeIntervalSince(start)
+        var stall: ProbeStall?
+        if case .failure(let error) = result {
+            stall = error as? ProbeStall
+        }
+        let line = "card probe falls silent: stalled=\(stall != nil) elapsed=\(String(format: "%.2f", elapsed))"
+        print(line)
+        let said = try XCTUnwrap(stall, "A2: the load wait came back with no probe stall: \(line)").description
+        XCTAssertTrue(said.contains("the ready ask"), "A2: the stall names no ready ask: \(said)")
+        XCTAssertTrue(said.contains("within 2 s"), "A2: the stall names no bound in whole seconds: \(said)")
     }
 }
