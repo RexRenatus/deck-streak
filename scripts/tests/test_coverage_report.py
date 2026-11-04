@@ -1136,3 +1136,383 @@ class KillTheReportVoids(unittest.TestCase):
                         done.stdout,
                         "coverage-report: VOID lane python: " + reason + "\n",
                     )
+
+
+class KillThePlanGlobsAndConfig(unittest.TestCase):
+    """Mutation kills: the plan's first match per lane over an ordered changed list, so that each
+    glob form changes a lane's first match, and each VOID of the plan read whole."""
+
+    CONFIG = {
+        "lanes": {
+            "rust": {
+                "measures": ["e{ab,c}z"],
+                "configures": [],
+                "sf_bases": ["."],
+                "group_depth": 2,
+            },
+            "web": {
+                "measures": ["nothing"],
+                "configures": [],
+                "sf_bases": ["."],
+                "group_depth": 2,
+            },
+            "python": {
+                "measures": ["a**b", "c*d", "k.py", "e{ab,c}z", "w/**"],
+                "configures": [],
+                "sf_bases": ["."],
+                "group_depth": 2,
+            },
+        },
+    }
+    CHANGED = ["ac", "cx", "k.pyc", "ebz", "eab", "w/x", "w/y", "eabz"]
+    NO_LANE = "does not run: no changed path the lane measures or configures"
+
+    def test_each_lane_names_its_first_match_in_the_changed_order(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "github-output.txt"
+            done = run(
+                "plan",
+                "--event",
+                "pull_request",
+                "--changed",
+                write(tmp, "changed.txt", "".join(p + "\n" for p in self.CHANGED)),
+                "--github-output",
+                str(out),
+                "--config",
+                write(tmp, "coverage.json", json.dumps(self.CONFIG)),
+            )
+            self.assertEqual(done.returncode, 0, said(done))
+            self.assertEqual(
+                done.stdout,
+                "coverage-plan: lane rust runs: eabz\n"
+                "coverage-plan: lane web " + self.NO_LANE + "\n"
+                "coverage-plan: lane python runs: w/x\n"
+                "coverage-plan: scope diff, retention 30 days, examined 8 changed paths\n",
+            )
+            self.assertEqual(
+                out.read_text(encoding="utf-8"),
+                "scope=diff\nrust=true\nweb=false\npython=true\nretention=30\n",
+            )
+
+    def test_each_unreadable_config_and_glob_reads_void_by_name(self):
+        lanes = self.CONFIG["lanes"]
+        cases = {
+            "config unreadable: Expecting value: line 1 column 1 (char 0)": "x",
+            "config holds no lane rust": json.dumps({"lanes": {}}),
+            "exclusion row names no lane: q/**": json.dumps(
+                {"lanes": lanes, "exclusions": [{"glob": "q/**", "lane": "swift"}]}
+            ),
+            "unreadable glob x{a": json.dumps(
+                {"lanes": dict(lanes, rust=dict(lanes["rust"], measures=["x{a"]))}
+            ),
+            "unreadable glob f{,a}": json.dumps(
+                {"lanes": dict(lanes, rust=dict(lanes["rust"], measures=["f{,a}"]))}
+            ),
+            "unreadable glob h!x": json.dumps(
+                {"lanes": dict(lanes, rust=dict(lanes["rust"], measures=["h!x"]))}
+            ),
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            changed = write(tmp, "changed.txt", "ac\n")
+            for reason, text in examined("void configs", cases.items()):
+                with self.subTest(reason):
+                    done = run(
+                        "plan",
+                        "--event",
+                        "pull_request",
+                        "--changed",
+                        changed,
+                        "--config",
+                        write(tmp, "coverage.json", text),
+                    )
+                    self.assertEqual(done.returncode, 1, said(done))
+                    self.assertEqual(done.stdout, "coverage-plan: VOID " + reason + "\n")
+
+    def test_an_event_it_does_not_read_and_a_missing_changed_list_read_void(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            absent = str(Path(tmp) / "absent.txt")
+            cases = {
+                "an event the plan does not read: other": ["--event", "other"],
+                "cannot read "
+                + absent
+                + ": [Errno 2] No such file or directory: '"
+                + absent
+                + "'": ["--event", "pull_request", "--changed", absent],
+            }
+            for reason, args in examined("void plan inputs", cases.items()):
+                with self.subTest(reason):
+                    done = run("plan", *args)
+                    self.assertEqual(done.returncode, 1, said(done))
+                    self.assertEqual(done.stdout, "coverage-plan: VOID " + reason + "\n")
+
+    def test_the_release_needs_both_repositories_named_and_no_list_is_no_path(self):
+        cases = {
+            "only the base repository": ["--repo", "XX"],
+            "only the head repository": ["--head-repo", "XX"],
+        }
+        for name, args in examined("one-sided releases", cases.items()):
+            with self.subTest(name):
+                done = run(
+                    "plan",
+                    "--event",
+                    "pull_request",
+                    "--base-ref",
+                    "main",
+                    "--head-ref",
+                    "dev",
+                    *args,
+                )
+                self.assertEqual(done.returncode, 0, said(done))
+                self.assertEqual(
+                    done.stdout,
+                    "coverage-plan: lane rust " + self.NO_LANE + "\n"
+                    "coverage-plan: lane web " + self.NO_LANE + "\n"
+                    "coverage-plan: lane python " + self.NO_LANE + "\n"
+                    "coverage-plan: scope diff, retention 30 days, examined 0 changed paths\n",
+                )
+
+
+class KillTheProviderArgsAndControls(unittest.TestCase):
+    """Mutation kills: the provider's, the Rust flags' and the planted controls' exact lines."""
+
+    def test_each_provider_void_names_its_reason(self):
+        two = "the lockfile locks two versions of vitest or of the provider"
+        cases = [
+            ("the lockfile locks no vitest", [], ["5.0.5"]),
+            ("the lockfile locks no coverage provider", ["5.0.5"], []),
+            (two, ["5.0.4", "5.0.5"], ["5.0.4"]),
+            (two, ["5.0.4"], ["5.0.4", "5.0.5"]),
+            (
+                "the provider is locked at 5.0.4 and vitest at 5.0.5",
+                ["5.0.5"],
+                ["5.0.4"],
+            ),
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            for reason, vitest, provider in examined("provider voids", cases):
+                with self.subTest(reason, vitest=vitest, provider=provider):
+                    text = "".join(f"  vitest@{v}:\n" for v in vitest) + "".join(
+                        f"  '@vitest/coverage-v8@{v}':\n" for v in provider
+                    )
+                    done = run("provider", "--lockfile", write(tmp, "lock.yaml", text))
+                    self.assertEqual(done.returncode, 1, said(done))
+                    self.assertEqual(done.stdout, "coverage-provider: VOID " + reason + "\n")
+            absent = str(Path(tmp) / "absent.yaml")
+            done = run("provider", "--lockfile", absent)
+        self.assertEqual(done.returncode, 1, said(done))
+        self.assertEqual(
+            done.stdout,
+            "coverage-provider: VOID cannot read "
+            + absent
+            + ": [Errno 2] No such file or directory: '"
+            + absent
+            + "'\n",
+        )
+
+    def test_the_rust_flags_join_two_binaries_and_other_lanes_print_nothing(self):
+        config = dict(
+            KillThePlanGlobsAndConfig.CONFIG,
+            exclusions=[
+                {"glob": "crates/a/**", "lane": "rust", "binary": "a::b"},
+                {"glob": "crates/c/**", "lane": "rust", "binary": "c::d"},
+            ],
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            flags = run(
+                "args",
+                "--lane",
+                "rust",
+                "--config",
+                write(tmp, "c.json", json.dumps(config)),
+            )
+            void = run("args", "--lane", "rust", "--config", write(tmp, "bad.json", "x"))
+        web = run("args", "--lane", "web")
+        self.assertEqual(
+            (flags.returncode, flags.stdout),
+            (0, "-E\nnot (binary_id(=a::b) | binary_id(=c::d))\n"),
+        )
+        self.assertEqual((web.returncode, web.stdout), (0, ""))
+        self.assertEqual(
+            (void.returncode, void.stdout),
+            (
+                1,
+                "coverage-args: VOID config unreadable: Expecting value: line 1 column 1 (char 0)\n",
+            ),
+        )
+
+    def test_the_controls_name_each_case_and_each_misread(self):
+        planted = "SF:/planted/scripts/planted_control.py\nDA:1,1\nDA:2,1\nDA:3,0\nend_of_record\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            empty = Path(tmp) / "empty"
+            empty.mkdir()
+            inside = Path(tmp) / "inside"
+            write(
+                inside,
+                "examined-none.lcov",
+                "SF:/planted/scripts/x.py\nDA:1,1\nend_of_record\n",
+            )
+            absolute = Path(tmp) / "absolute"
+            write(
+                absolute,
+                "examined-none.lcov",
+                "SF:docs/planted_outside.txt\nDA:1,1\nend_of_record\n",
+            )
+            write(absolute, "unclosed.lcov", "SF:scripts/planted_control.py\nDA:1,1\n")
+            write(absolute, "uncovered.lcov", planted)
+            write(
+                absolute,
+                "uncovered.diff",
+                "+++ b/scripts/planted_control.py\n@@ -0,0 +1,3 @@\n",
+            )
+            web = run("controls", "--lane", "web")
+            missing = run("controls", "--lane", "python", "--fixtures", str(empty))
+            misread = run("controls", "--lane", "python", "--fixtures", str(inside))
+            rooted = run("controls", "--lane", "python", "--fixtures", str(absolute))
+        self.assertEqual(
+            (web.returncode, web.stdout),
+            (
+                0,
+                "coverage-controls: case examined-none.lcov read as planted\n"
+                "coverage-controls: case unclosed.lcov read as planted\n"
+                "coverage-controls: case uncovered.lcov read as planted\n"
+                "coverage-controls: case provider-mismatch.txt read as planted\n"
+                "coverage-controls: 4 of 4 planted cases read as planted\n",
+            ),
+        )
+        lost = str(empty / "examined-none.lcov")
+        self.assertEqual(
+            (missing.returncode, missing.stdout),
+            (
+                1,
+                "coverage-controls: VOID cannot read the fixture examined-none.lcov: [Errno 2] "
+                "No such file or directory: '" + lost + "'\n",
+            ),
+        )
+        self.assertEqual(
+            (misread.returncode, misread.stdout),
+            (
+                1,
+                "coverage-controls: VOID the planted case examined-none.lcov did not read as planted\n",
+            ),
+        )
+        self.assertEqual(
+            (rooted.returncode, rooted.stdout),
+            (
+                0,
+                "coverage-controls: case examined-none.lcov read as planted\n"
+                "coverage-controls: case unclosed.lcov read as planted\n"
+                "coverage-controls: case uncovered.lcov read as planted\n"
+                "coverage-controls: 3 of 3 planted cases read as planted\n",
+            ),
+        )
+
+
+class KillTheParserRefusals(unittest.TestCase):
+    """Mutation kills: each required argument refused by argparse with exit 2, and the description."""
+
+    def test_each_required_argument_left_out_is_refused_with_exit_2(self):
+        cases = {
+            "coverage-report.py: error: the following arguments are required: command": [],
+            "coverage-report.py plan: error: the following arguments are required: --event": [
+                "plan"
+            ],
+            "coverage-report.py provider: error: the following arguments are required: "
+            "--lockfile": ["provider"],
+            "coverage-report.py args: error: the following arguments are required: --lane": [
+                "args"
+            ],
+            "coverage-report.py controls: error: the following arguments are required: --lane": [
+                "controls"
+            ],
+            "coverage-report.py report: error: the following arguments are required: --lane, "
+            "--lcov, --root": ["report"],
+        }
+        for line, args in examined("refused argument lists", cases.items()):
+            with self.subTest(line):
+                done = run(*args)
+                self.assertEqual(done.returncode, 2, said(done))
+                self.assertEqual(done.stdout, "")
+                self.assertEqual(done.stderr.splitlines()[-1], line)
+
+    def test_the_help_names_the_report(self):
+        done = run("--help")
+        self.assertEqual(done.returncode, 0, said(done))
+        self.assertIn("the advisory coverage report", done.stdout.splitlines())
+
+
+class KillTheDefaultsInTheWorkingFolder(unittest.TestCase):
+    """Mutation kills for the empty defaults of --github-output, --summary and --out-dir: a mutant
+    that names one writes into the working folder, so each test starts the script from a temporary
+    folder it made, passes only absolute paths, and restores the folder it started in."""
+
+    def test_the_plan_writes_no_output_file_unless_named(self):
+        import os
+
+        saved = os.getcwd()
+        with tempfile.TemporaryDirectory() as tmp:
+            os.chdir(tmp)
+            try:
+                done = run("plan", "--event", "pull_request")
+            finally:
+                os.chdir(saved)
+            written = (Path(tmp) / "XX").exists()
+        self.assertEqual(done.returncode, 0, said(done))
+        self.assertEqual(
+            done.stdout,
+            "coverage-plan: lane rust " + KillThePlanGlobsAndConfig.NO_LANE + "\n"
+            "coverage-plan: lane web " + KillThePlanGlobsAndConfig.NO_LANE + "\n"
+            "coverage-plan: lane python " + KillThePlanGlobsAndConfig.NO_LANE + "\n"
+            "coverage-plan: scope diff, retention 30 days, examined 0 changed paths\n",
+        )
+        self.assertFalse(written)
+
+    def test_the_report_writes_no_summary_unless_named(self):
+        import os
+
+        saved = os.getcwd()
+        with tempfile.TemporaryDirectory() as tmp:
+            text = write(tmp, "in.lcov", lcov("scripts/one.py", [(1, 1)]))
+            os.chdir(tmp)
+            try:
+                done = run("report", "--lane", "python", "--lcov", text, "--root", tmp)
+            finally:
+                os.chdir(saved)
+            written = (Path(tmp) / "XX").exists()
+        self.assertEqual(done.returncode, 0, said(done))
+        self.assertEqual(
+            done.stdout,
+            "coverage-report: lane python examined 1 lines in 1 files; outside the lane 0 files; "
+            "exclusions 3 rows (config/coverage.json), 0 files dropped\n",
+        )
+        self.assertFalse(written)
+
+    def test_the_report_writes_no_report_folder_unless_named(self):
+        import os
+
+        saved = os.getcwd()
+        with tempfile.TemporaryDirectory() as tmp:
+            text = write(tmp, "in.lcov", lcov("scripts/one.py", [(1, 1)]))
+            os.chdir(tmp)
+            try:
+                done = run(
+                    "report",
+                    "--lane",
+                    "python",
+                    "--lcov",
+                    text,
+                    "--root",
+                    tmp,
+                    "--event",
+                    "push",
+                )
+            finally:
+                os.chdir(saved)
+            written = (Path(tmp) / "XX").exists()
+        self.assertEqual(done.returncode, 0, said(done))
+        self.assertEqual(
+            done.stdout,
+            "coverage-report: lane python examined 1 lines in 1 files; outside the lane 0 files; "
+            "exclusions 3 rows (config/coverage.json), 0 files dropped\n"
+            "the changed-line figure is read on pull requests only\n",
+        )
+        self.assertFalse(written)
