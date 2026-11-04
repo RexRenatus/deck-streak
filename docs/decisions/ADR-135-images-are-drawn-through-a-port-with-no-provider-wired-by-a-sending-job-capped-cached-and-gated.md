@@ -70,6 +70,10 @@ The options for #169, recorded for the owner's decision:
   changes.
 - No provider: the default stands, and the product is the text ceremony and no share card.
 
+The owner's decision on #169, recorded from the comment that settled it
+(https://github.com/RexRenatus/deck-streak/issues/169#issuecomment-5937808370): share cards and
+keepsakes are templated, with no AI-generated art: no new vendor, no new secret and no new spend.
+
 ### Consequences
 
 - Good, because the product with no provider is what every test and every deploy runs until #169.
