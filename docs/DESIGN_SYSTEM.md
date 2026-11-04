@@ -103,3 +103,27 @@ the Telegram mapping of `color` are unchanged.
 file. Ink on background measures 16.94:1 in both modes, and accent on background 5.97:1 light and 8.66:1 dark: each meets WCAG
 2.2 AA for text. No screen reads the tier yet: the screens take it in their own round, which also decides the card, muted-text
 and border values the three roles do not cover.
+
+Amendment (SPEC-593): the Tide tier gains a card, a muted-text and a border role, so each mode holds six roles, and every screen
+reads its colours from them. Each `color` role names its Tide role in the `tide` member of its `deck-streak` extension, beside
+`telegram`: `background` takes `background`, `foreground` and `card-foreground` take `ink`, `card` takes `card`,
+`muted-foreground` takes `muted`, `border` takes `border`, and `link` and `ring` take `accent`. The compile emits the twelve
+properties `--tide-<mode>-<role>`, each role's light value as its fallback in `:root` and its dark value under `.dark`, each
+still inside its role's Telegram variable, and a role outside the six, a role missing from either mode, or a `color` role with
+no Tide role fails the compile by name. The Telegram raw colours leave `ref`, and the section "Tokens" above is kept as it was.
+
+| mode | background | ink | accent | card | muted | border |
+|---|---|---|---|---|---|---|
+| dark | `#0f161d` | `#f4f7fa` | `#34c6c0` | `#21282f` | `#8f9499` | `#74797e` |
+| light | `#f4f7fa` | `#0f161d` | `#0b6a67` | `#ffffff` | `#5f656a` | `#82868c` |
+
+Every card carries the border role: a class list that holds `bg-card` also holds the `border` width class, whose colour the
+base rule in `layout.css` gives, so the card edge meets 3:1 against the card and the page in both modes, and the card fill is
+decorative. Every text pair meets 4.5:1 and every border and focus ring 3:1, in both modes.
+
+The web app keeps one colour-mode rule (ADR-616): a choice of `system`, `light` or `dark`, kept on the device under
+`deckstreak.colour-mode` and changed on the settings screen. Until the app mounts, and while the choice is `system` or nothing
+is stored, the stylesheet alone sets the mode: a `prefers-color-scheme` rule in `layout.css` gives every colour role its dark
+Tide fallback unless the browser reports light or the root element carries the `light` class, so a browser with no preference
+shows the dark mode. Once the app mounts, a stored `light` or `dark` sets that class on the root element, and `system` clears
+it. No script enters the page, and inside Telegram the chat theme and its scheme still paint every role.

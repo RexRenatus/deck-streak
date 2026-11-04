@@ -3,8 +3,9 @@
 @import "shadcn-svelte/tailwind.css";
 @import "@fontsource-variable/inter";
 /* The design tokens (ADR-028), compiled from src/lib/design/tokens.json when a build or the dev
- * server starts. Every colour reads the Telegram theme variable the client sets and falls back to
- * Telegram's light palette outside Telegram; the file maps each into Tailwind's theme. */
+ * server starts. Every colour reads the Telegram theme variable the client sets and, outside
+ * Telegram, falls back to its Tide role (SPEC-593 R2): the light value in :root and the dark value
+ * under .dark. The file maps each into Tailwind's theme. */
 @import '../lib/design/tokens.css';
 /* The house CJK stylesheet (packs/cjk-typography). Its :lang() rules match every element of a CJK
  * passage, so it sits in the base layer: unlayered, it would outrank every Tailwind utility. */
@@ -24,8 +25,11 @@
 
 @layer base {
   :root {
-    /* Telegram names the chat's scheme; outside Telegram the page is light, as its colours are. */
+    /* Telegram names the chat's scheme; outside Telegram the scheme is the mode's, as its colours are. */
     color-scheme: var(--tg-color-scheme, light);
+  }
+  .dark {
+    color-scheme: var(--tg-color-scheme, dark);
   }
   * {
     @apply border-border outline-ring;

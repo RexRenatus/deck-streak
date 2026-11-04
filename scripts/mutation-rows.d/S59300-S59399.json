@@ -1,0 +1,38 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S59301-THE-TIDECARD-DARK-ENTRY-IS-THE-DARK-CARD",
+        "ios/App/Assets.xcassets/TideCard.colorset/Contents.json",
+        "\"red\" : \"0x21\"",
+        "\"red\" : \"0x22\"",
+        "A one-byte change to the TideCard dark entry is killed by the colour set census",
+        "test_tide_tokens.TheAppCopiesTheTokens.test_each_colour_set_holds_its_tokens_values"
+      ],
+      [
+        "S59302-THE-TIDEMUTED-LIGHT-ENTRY-IS-THE-LIGHT-MUTED",
+        "ios/App/Assets.xcassets/TideMuted.colorset/Contents.json",
+        "\"green\" : \"0x65\"",
+        "\"green\" : \"0x66\"",
+        "A one-byte change to the TideMuted light entry is killed by the colour set census",
+        "test_tide_tokens.TheAppCopiesTheTokens.test_each_colour_set_holds_its_tokens_values"
+      ],
+      [
+        "S59303-THE-TIDEBORDER-DARK-ENTRY-IS-THE-DARK-BORDER",
+        "ios/App/Assets.xcassets/TideBorder.colorset/Contents.json",
+        "\"blue\" : \"0x7E\"",
+        "\"blue\" : \"0x7F\"",
+        "A one-byte change to the TideBorder dark entry is killed by the colour set census",
+        "test_tide_tokens.TheAppCopiesTheTokens.test_each_colour_set_holds_its_tokens_values"
+      ],
+      [
+        "S59304-THE-LIGHT-MUTED-IS-ITS-TOKEN",
+        "web/app/src/lib/design/tokens.json",
+        "\"hex\": \"#5f656a\"",
+        "\"hex\": \"#5f656b\"",
+        "A one-byte change to the light muted value in the token file is killed by the colour set census",
+        "test_tide_tokens.TheAppCopiesTheTokens.test_each_colour_set_holds_its_tokens_values"
+      ]
+    ]
+  }
+}
