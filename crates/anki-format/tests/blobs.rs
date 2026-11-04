@@ -118,11 +118,18 @@ fn case_findings(case: &Value, base: &[u8], golden: &[u8]) -> Vec<String> {
         }
         "tags.config" => both_ways(&TagConfigView {}, base, golden),
         "templates.config" => {
-            let view = seed.map_or_else(TemplateConfigView::default, |n| TemplateConfigView {
-                q_format: "{{Prompt}}{{Answer}}".to_owned(),
-                a_format: "{{Answer}}".to_owned(),
-                browser_font_size: small(10 + n % 30),
-            });
+            let view = seed.map_or_else(
+                || TemplateConfigView {
+                    q_format: "{{Prompt}}{{Answer}}".to_owned(),
+                    a_format: "{{Answer}}".to_owned(),
+                    browser_font_size: 0,
+                },
+                |n| TemplateConfigView {
+                    q_format: "{{Prompt}}{{Answer}}".to_owned(),
+                    a_format: "{{Answer}}".to_owned(),
+                    browser_font_size: small(10 + n % 30),
+                },
+            );
             both_ways(&view, base, golden)
         }
         other => vec![format!("{other}: not a blob column of the reader")],
