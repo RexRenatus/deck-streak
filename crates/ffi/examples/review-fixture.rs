@@ -16,6 +16,9 @@
 //! ```
 //!
 //! It prints nothing on success. On any error it writes one line to stderr and exits 2.
+//!
+//! After it writes the review collection, it sets that collection's rollover hour half a day ahead
+//! of its own reading, through the day pin it includes beside the four builders (SPEC-615 R1).
 
 use std::path::Path;
 use std::process::ExitCode;
@@ -34,6 +37,9 @@ mod sound_video;
 #[path = "../tests/support/health.rs"]
 mod health;
 
+#[path = "../tests/support/day_cutoff.rs"]
+mod day_cutoff;
+
 const USAGE: &str = "usage: review-fixture <output directory>";
 
 fn main() -> ExitCode {
@@ -45,6 +51,10 @@ fn main() -> ExitCode {
     let output = Path::new(&output);
     if let Err(error) = review::build(output) {
         eprintln!("review-fixture: the review fixture was not written: {error}");
+        return ExitCode::from(2);
+    }
+    if let Err(error) = day_cutoff::pin(&output.join("collection.anki2")) {
+        eprintln!("review-fixture: the review fixture day was not pinned: {error}");
         return ExitCode::from(2);
     }
     if let Err(error) = parity::build(&output.join("parity")) {

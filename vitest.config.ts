@@ -16,6 +16,18 @@ process.chdir(app);
 
 export default defineConfig({
   test: {
+    // Coverage (SPEC-592 R9, ADR-613 D4) stays off unless a run passes --coverage. Its patterns are
+    // read from the run root, which is the repository or web/app, so both spellings are listed; every
+    // app source file is included, and what is not measured is listed in config/coverage.json, which
+    // the report applies.
+    coverage: {
+      provider: 'v8',
+      enabled: false,
+      include: ['src/**/*.{ts,js,svelte}', 'web/app/src/**/*.{ts,js,svelte}'],
+      reporter: ['lcovonly', 'json-summary', 'text-summary'],
+      reportsDirectory: fileURLToPath(new URL('./target/coverage/web', import.meta.url)),
+      reportOnFailure: true
+    },
     projects: [
       {
         extends: `${app}/vite.config.ts`,
