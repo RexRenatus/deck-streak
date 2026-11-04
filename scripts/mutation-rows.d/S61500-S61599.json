@@ -1,0 +1,15 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S61500-THE-FIXTURE-DAY-ENDS-TWELVE-HOURS-AFTER-ITS-WRITER",
+        "ffi",
+        "tests/support/day_cutoff.rs",
+        "12 * 3600",
+        "6 * 3600",
+        "fixture_day_cutoff::the_review_fixture_day_ends_twelve_hours_after_its_writer",
+        "A rollover hour kept six hours ahead of the writer instead of twelve is killed by the day test (SPEC-615 R1, A1)"
+      ]
+    ]
+  }
+}

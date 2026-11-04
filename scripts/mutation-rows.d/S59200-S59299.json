@@ -1,0 +1,142 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S59200-THE-COVERAGE-TOKEN-IS-READ-ONLY",
+        ".github/workflows/coverage.yml",
+        "  contents: read",
+        "  contents: write",
+        "the coverage workflow token only reads the repository; a write token would let a lane change it (SPEC-592 R1)",
+        "test_coverage_report.TheWorkflowIsAdvisory.test_the_coverage_workflow_is_read_only_bounded_and_pinned"
+      ],
+      [
+        "S59201-THE-RUST-RUN-KEEPS-GOING-PAST-A-FAILING-TEST",
+        ".github/workflows/coverage.yml",
+        "--ignore-run-fail ",
+        "",
+        "the instrumented Rust run keeps its report when a test fails; without the flag a failing test ends the run before any figure (SPEC-592 R4)",
+        "test_coverage_report.TheWorkflowIsAdvisory.test_the_coverage_workflow_is_read_only_bounded_and_pinned"
+      ],
+      [
+        "S59202-THE-WEB-LANE-CHECKS-THE-PROVIDER-VERSION",
+        ".github/workflows/coverage.yml",
+        "python3 scripts/coverage-report.py provider --lockfile pnpm-lock.yaml",
+        "true",
+        "the web lane reads the provider and vitest versions from the lockfile; replaced by a no-op, a mixed lock is never refused (SPEC-592 R4)",
+        "test_coverage_report.TheWorkflowIsAdvisory.test_each_lane_runs_its_planted_controls_first"
+      ],
+      [
+        "S59203-THE-PYTHON-INSTALL-REQUIRES-HASHES",
+        ".github/workflows/coverage.yml",
+        "--require-hashes ",
+        "",
+        "the coverage tool installs only from hashes the requirements file holds; without the flag an unhashed release installs (SPEC-592 R10)",
+        "test_coverage_report.ThePythonLane.test_coverage_py_is_hash_pinned_on_the_ctrace_core"
+      ],
+      [
+        "S59204-THE-RUST-LANE-RUNS-ONLY-WHEN-PLANNED",
+        ".github/workflows/coverage.yml",
+        "    if: ${{ needs.coverage-plan.outputs.rust == 'true' }}",
+        "    if: ${{ always() }}",
+        "the Rust lane runs when the plan names it; with an always condition it runs on every change (SPEC-592 R3)",
+        "test_coverage_report.TheWorkflowIsAdvisory.test_the_coverage_workflow_is_read_only_bounded_and_pinned"
+      ],
+      [
+        "S59205-THE-PYTHON-LANE-RUNS-THE-THREE-SUITES",
+        ".github/workflows/coverage.yml",
+        "for suite in scripts/tests tools/parity-oracle agent/tests",
+        "for suite in scripts/tests tools/parity-oracle",
+        "the Python lane measures the three suites the gate python stage runs; with one left out its lines read as not executed (SPEC-592 R10)",
+        "test_coverage_report.ThePythonLane.test_the_python_lane_runs_the_suites_the_gate_runs"
+      ],
+      [
+        "S59206-THE-PYTHON-LANE-USES-THE-CTRACE-CORE",
+        "tools/coverage/coverage.toml",
+        "core = \"ctrace\"",
+        "core = \"sysmon\"",
+        "the Python lane uses the core that records branches on the runner Python; the other core records none (SPEC-592 R10)",
+        "test_coverage_report.ThePythonLane.test_coverage_py_is_hash_pinned_on_the_ctrace_core"
+      ],
+      [
+        "S59207-THE-PYTHON-LANE-MEASURES-BRANCHES",
+        "tools/coverage/coverage.toml",
+        "branch = true",
+        "branch = false",
+        "the Python lane measures branches as well as lines; with the setting off no branch figure is written (SPEC-592 R10)",
+        "test_coverage_report.ThePythonLane.test_coverage_py_is_hash_pinned_on_the_ctrace_core"
+      ],
+      [
+        "S59208-THE-PYTHON-LANE-PATCHES-SUBPROCESSES",
+        "tools/coverage/coverage.toml",
+        "patch = [\"subprocess\"]",
+        "patch = []",
+        "the Python lane measures the child processes the tests start; with the patch empty their lines read as not executed (SPEC-592 R10)",
+        "test_coverage_report.ThePythonLane.test_coverage_py_is_hash_pinned_on_the_ctrace_core"
+      ],
+      [
+        "S59209-THE-VITEST-COVERAGE-BLOCK-STAYS-OFF",
+        "vitest.config.ts",
+        "enabled: false,",
+        "enabled: true,",
+        "coverage is off unless a run passes the flag; switched on, every ordinary test run is instrumented (SPEC-592 R9)",
+        "test_coverage_report.TheWebLane.test_the_vitest_coverage_block_stays_off_unless_asked"
+      ],
+      [
+        "S59210-THE-VITEST-COVERAGE-REPORTS-ON-FAILURE",
+        "vitest.config.ts",
+        "reportOnFailure: true",
+        "reportOnFailure: false",
+        "the coverage report is written when a test fails; with the setting off a failing test leaves no lcov (SPEC-592 R9)",
+        "test_coverage_report.TheWebLane.test_the_vitest_coverage_block_stays_off_unless_asked"
+      ],
+      [
+        "S59211-THE-VITEST-COVERAGE-USES-THE-V8-PROVIDER",
+        "vitest.config.ts",
+        "provider: 'v8',",
+        "provider: 'istanbul',",
+        "the web lane measures with the provider the catalog pins; another provider reads no figure the lane expects (SPEC-592 R9)",
+        "test_coverage_report.TheWebLane.test_the_vitest_coverage_block_stays_off_unless_asked"
+      ],
+      [
+        "S59212-THE-DEPRECATED-BOT-ROW-NAMES-THE-WHOLE-CRATE",
+        "config/coverage.json",
+        "\"glob\": \"crates/bot/**\",",
+        "\"glob\": \"crates/bot/src/**\",",
+        "the exclusion row for the deprecated bot crate names the whole crate; narrowed, its other files are measured (SPEC-592 R5)",
+        "test_coverage_report.TheExclusionList.test_every_exclusion_is_one_row_with_its_reason"
+      ],
+      [
+        "S59213-THE-PROVIDER-IS-PINNED-EXACT",
+        "pnpm-workspace.yaml",
+        "  '@vitest/coverage-v8': 5.0.5",
+        "  '@vitest/coverage-v8': ^5.0.5",
+        "the coverage provider is pinned at one exact version in the catalog; a range lets it drift from vitest (SPEC-592 R9)",
+        "test_coverage_report.TheWebLane.test_the_catalog_pins_the_provider_beside_vitest"
+      ],
+      [
+        "S59214-THE-PIP-ENTRY-NAMES-THE-COVERAGE-DIRECTORY",
+        ".github/dependabot.yml",
+        "    directory: /tools/coverage",
+        "    directory: /tools",
+        "the update entry for the Python coverage tool reads the directory that holds its requirements file; another directory finds none (SPEC-592 R11)",
+        "test_coverage_report.TheUpdatePath.test_the_requirements_file_has_a_dependabot_update_path"
+      ],
+      [
+        "S59215-THE-PIP-ARM-ADMITS-THE-REQUIREMENTS-FILE-BY-ITS-EXACT-PATH",
+        ".github/workflows/changelog.yml",
+        "pip=\"tools/coverage/requirements\\.txt\"",
+        "pip=\"tools/coverage/requirements\\.in\"",
+        "the fragment arm admits the coverage requirements file by its exact path, so a Dependabot pull request that changes only it needs no fragment (SPEC-592 R12)",
+        "test_changelog_fragment.ADependabotDependencyPullRequestNeedsNoFragment.test_a_dependabot_pull_request_that_changes_only_dependency_files_needs_no_fragment"
+      ],
+      [
+        "S59216-THE-PIP-ARM-NAMES-ONE-PATH-NEVER-ITS-DIRECTORY",
+        ".github/workflows/changelog.yml",
+        "coverage/requirements\\.txt\"",
+        "coverage/.+\"",
+        "the fragment arm admits one exact path for pip, never its directory, so a path that only resembles the requirements file still needs a fragment (SPEC-592 R12)",
+        "test_changelog_fragment.EveryOtherPullRequestReadsAsItDid.test_a_dependabot_pull_request_that_changes_another_path_is_refused"
+      ]
+    ]
+  }
+}
