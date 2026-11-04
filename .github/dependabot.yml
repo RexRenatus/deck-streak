@@ -28,3 +28,14 @@ updates:
     cooldown:
       default-days: 7
     target-branch: dev
+  - package-ecosystem: pip
+    directory: /tools/coverage
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    target-branch: dev
+    # The Python coverage tool (SPEC-592 R11); a major moves as the cargo entry says.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
