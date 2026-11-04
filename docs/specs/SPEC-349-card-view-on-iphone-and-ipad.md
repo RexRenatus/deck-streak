@@ -261,3 +261,97 @@ A11: xcodebuild test -project ios/Harness.xcodeproj -scheme CardProbe -destinati
 A10's and A11's tests are committed with the wait's seam, the wait itself unchanged, and read
 red in the pull request's own run, by name, on both simulators, before the wait changes;
 `docs/red-first/SPEC-349.md` quotes each red and names the green.
+
+## 10. Amendment for the factory suite: a card handed over at a URL waits from its own document's first answer
+
+One `apple / harness` attempt, on a pull request that changes no card view path, failed the
+factory suite in one simulator session and passed it in the other (job 125835201348). This
+section adds R12, which ADR-360 D10 decides and A12 and A13 (section 12) hold. Sections 1 to 9,
+R1 to R11 and A1 to A11 stand as written.
+
+What failed, read from the job's steps and from its log cut to the failing step's window:
+
+- **The factory suite read one card not loaded** (`FactoryTests.swift:160` before this
+  amendment): the `without L7` row of `test_the_card_view_runs_scripts_only_with_every_control`,
+  the one row that hands its card over with an https base URL, in the first session, on the
+  iPhone simulator, and none in the second, on the iPad simulator (job 125835201348). The
+  planted suite passed its 16 tests in both sessions (job 125835201348).
+
+Why that row read its card not loaded:
+
+- **The factory suite already waits by R11.** Its rows call `Probe.loadTime(_:)`, the planted
+  suite's one load wait, so each wait starts when the view's page first answers. In the red row
+  the page answered 1.63 seconds into its wait (job 125835201348), and the card had not loaded
+  when the load wait that followed the answer ended (job 125835201348).
+- **The page answers from the view's empty first document.** A view answers the app's script
+  as soon as its page process runs, before the document it was handed commits. A card handed
+  over with no base URL has loaded by then (job 125835201348): every other row read loaded
+  0.00 to 0.07 seconds after its answer, in both sessions (job 125835201348).
+- **A card handed over at an https URL loads after that answer.** Its load logs WebKit's
+  `Unexpectedly missing certificate info` pair, the mark of a document at an https address,
+  which no other row of the factory suite logs (jobs 125835201348, 125641992874). The row read
+  its card loaded 2.34 seconds after its answer in one first session (job 125641992874), with
+  the pair between the two, and 0.12 and 0.13 seconds after it (jobs 125835201348, 125641992874)
+  in two second sessions. The red session logged no such pair (job 125835201348): its handed
+  document had not reached its https response when the wait ended.
+- **No load before that row hands a card over at a URL.** `Probe.warmUp()` and
+  `Probe.keeper(ruleList:)` load their cards with no base URL, and the factory suite ran first in
+  each session (job 125835201348), so that row's load is the first of its kind in its session.
+
+What this changes:
+
+- **R12. A card handed over at a URL waits from its own document's first answer (#841, #796).**
+  `Probe.loadTime(_:handed:)` asks the view's page, in place of `Probe.answerScript`,
+  `Probe.handedAnswerScript(_:)`: a script of the app's own that answers only from a document
+  whose address is the URL the card was handed at, and answers that it is waiting from any
+  other. It asks under the unchanged `Probe.warmUpSeconds`, as R11 does; only once the handed
+  document has answered does it poll whether the card has loaded, under the unchanged
+  `Probe.loadSeconds`. The factory suite's `without L7` row waits this way; every other row and
+  every wait of the planted suite keep R11's wait. A handed document that never answers reads
+  not loaded after the whole answer bound; a card that never loads reads not loaded after its
+  whole load wait, counted from the handed document's answer. Each wait still prints
+  `card probe answer: took=`. The row hands its card over at the same address as before, now
+  named `FactoryTests.cardBase`, and no assertion of the suite changes.
+- **The wait's seam.** `Probe.asking(_:handed:)` turns any way of asking a page into one that
+  puts the wait's first question to the handed document, so a stand-in page can be handed to the
+  wait: A12 and A13 run it over `HandedPage`, a stand-in whose empty first document answers at
+  once and whose handed document commits, then loads, each after a set time.
+- **Risks of the factory amendment.** A handed document that commits later than the load wait
+  and then loads within it now reads loaded where it read not loaded before: the wait judges the
+  card's load, and the commit is printed in the answer time and bounded by the answer bound. A
+  handed document that never commits now holds its row for the answer bound, not the load wait,
+  before it fails. The first session's slow commits are measured, not cured, and their cause is
+  not in the job log (#841). The planted suite's one case that hands a card over at a URL keeps
+  R11's wait, so a red there would read as this one did (#841).
+- **The factory amendment touches these paths:** `ios/CardProbeTests/FactoryTests.swift`,
+  `docs/specs/SPEC-349-card-view-on-iphone-and-ipad.md`,
+  `docs/decisions/ADR-360-card-view-on-iphone-and-ipad.md`, `docs/red-first/SPEC-349.md` and
+  `changelog.d/factory-handed-load-wait.md`.
+
+## 11. What this does NOT do, in the factory amendment
+
+- It raises no wait, bound or timeout: `Probe.loadSeconds` and `Probe.warmUpSeconds` keep their
+  values, and the harness job's bound stays as it is (#841).
+- It retries, skips or removes no test, row, planted card or assertion, adds no filter, and hands
+  the `without L7` row's card over at the same address (#841).
+- It changes no wait of the planted suite: `ios/CardProbeTests/PlantedCardTests.swift` does not
+  change, and its case that hands a card over at a URL keeps R11's wait (#841).
+- It does not find why a handed document commits slowly in a first session; it stops counting
+  that commit as the card's load (#841).
+- It changes no workflow step (#841).
+
+## 12. Acceptance criteria of the factory amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A12 | a card handed over at a URL, whose view answers at once from its empty first document and whose handed document commits after more than the load wait, then finishes loading within it, reads loaded within that wait, counted from the handed document's first answer | `xcodebuild test` `CardProbeTests/FactoryTests/test_the_load_wait_starts_when_the_handed_document_first_answers` |
+| A13 | a card handed over at a URL whose handed document never commits within the answer bound reads not loaded, and only after that whole bound, though its view answered at once from its empty first document | `.../test_a_handed_document_that_never_commits_reads_not_loaded_after_the_answer_bound` |
+
+```acceptance
+A12: xcodebuild test -project ios/Harness.xcodeproj -scheme CardProbe -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:CardProbeTests/FactoryTests/test_the_load_wait_starts_when_the_handed_document_first_answers
+A13: xcodebuild test -project ios/Harness.xcodeproj -scheme CardProbe -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:CardProbeTests/FactoryTests/test_a_handed_document_that_never_commits_reads_not_loaded_after_the_answer_bound
+```
+
+A12's and A13's tests are committed with the wait's seam, the wait itself unchanged, and read
+red in the pull request's own run, by name, on both simulators, before the wait changes;
+`docs/red-first/SPEC-349.md` quotes each red and names the green.
