@@ -167,3 +167,16 @@ Green after the fix, the same two commands: the first printed `examined 72 impor
 cases; every other drawn input, 11,777 of the 11,817 cases of 33 functions, equals the committed goldens' input.
 `test_engine_golden_provenance` reads the committed goldens, which still record the old pin, driver and registry; it
 turns green with the run that writes them under R19.
+
+## The fourth delivery: the oracle's engine pin follows the manifest's
+
+The three tests of A16 are committed here over two inert helpers in `test_goldens.py` that keep their names and
+signatures and find nothing: the pin reader returns no file and the comparison no fault. Each red below is quoted
+from `python3 -m unittest discover -s tools/parity-oracle -p 'test_goldens.py' -k <test>`, run alone on this
+commit's tree from the checkout root.
+
+```text
+test_every_oracle_engine_pin_is_the_manifest_engine_pin: AssertionError: examined 0 oracle engine pin file(s): the population is empty, so nothing was judged
+test_a_manifest_with_another_engine_pin_is_caught: AssertionError: Lists differ: [] != ["tools/parity-oracle/anki/generate.py pin[410 chars]bbb"]
+test_an_oracle_file_with_another_pin_or_not_one_is_caught: AssertionError: Lists differ: [] != ["tools/parity-oracle/anki/generate.py pin[100 chars]97f"]
+```
