@@ -772,3 +772,367 @@ class TheUpdatePath(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class KillTheReportFigures(unittest.TestCase):
+    """Mutation kills: one report over planted records, read whole on stdout, in the summary, in
+    report.txt and in report.json, and four smaller reports for the arms it does not reach."""
+
+    CONFIG = {
+        "lanes": {
+            "rust": {
+                "measures": ["crates/**/*.rs"],
+                "configures": [],
+                "sf_bases": ["."],
+                "group_depth": 2,
+            },
+            "web": {
+                "measures": ["web/**"],
+                "configures": [],
+                "sf_bases": ["."],
+                "group_depth": 2,
+            },
+            "python": {
+                "measures": ["**/*.py"],
+                "configures": [],
+                "sf_bases": ["."],
+                "group_depth": 2,
+            },
+        },
+        "exclusions": [
+            {"glob": "t/**", "lane": "python"},
+            {"glob": "u/*.py", "lane": "python"},
+            {"glob": "crates/x/**", "lane": "rust"},
+        ],
+    }
+    LCOV = (
+        "TN:\nVER:2\nSF:ROOT/s/a/one.py\nFN:1,f\nFN:5,g\nFN:9,k\nFNDA:1,f\nFNDA:0,g\nFNDA:2,k\n"
+        "DA:1,1\nDA:2,0\nDA:3,2\n\nDA:4,0\nDA:5,3\n"
+        "BRDA:1,0,0,-\nBRDA:1,0,1,0\nBRDA:2,0,0,1\nBRDA:2,0,1,3\nend_of_record\n"
+        "SF:s/a/two.py\nFNF:5\nFNH:3\nBRF:6\nBRH:4\nFN:1,x\nFNDA:4,x\nBRDA:1,0,0,2\n"
+        "DA:1,0\nDA:7,1\nend_of_record\n"
+        "SF:s/b/c/three.py\nDA:2,5\nend_of_record\n"
+        "SF:top.py\nDA:1,0\nend_of_record\n"
+        "SF:t/skip.py\nDA:1,1\nend_of_record\n"
+        "SF:docs/x.md\nDA:1,1\nend_of_record\n"
+        "SF:/elsewhere/s/x.py\nDA:1,1\nend_of_record\n"
+    )
+    DIFF = (
+        "diff --git a/s/a/one.py b/s/a/one.py\n--- a/s/a/one.py\n+++ b/s/a/one.py\n"
+        "@@ -1,2 +1,4 @@\n"
+        "--- a/s/a/two.py\n+++ b/s/a/two.py\n@@ -6 +6 @@\n"
+        '--- "a/s/q.py"\n+++ "b/s/q.py"\n@@ -1 +1 @@\n'
+        "--- a/s/z.py\n+++ c/s/z.py\n@@ -1 +1 @@\n"
+        "+++ b/docs/readme.md\n@@ -1 +1 @@\n"
+        "+++ b/t/skip2.py\n@@ -1 +1 @@\n"
+        "+++ b/s/a/gone.py\n@@ -1 +1 @@\n"
+        "+++ b/s/zz.py\n"
+    )
+    LLVM = {
+        "data": [
+            {
+                "files": [
+                    {
+                        "filename": "/elsewhere/q.py",
+                        "summary": {"regions": {"count": 9, "covered": 9}},
+                    },
+                    {
+                        "filename": "s/a/one.py",
+                        "summary": {"regions": {"count": 10, "covered": 7}},
+                    },
+                    {
+                        "filename": "s/a/two.py",
+                        "summary": {"regions": {"count": 4, "covered": 1}},
+                    },
+                    {
+                        "filename": "t/skip.py",
+                        "summary": {"regions": {"count": 5, "covered": 5}},
+                    },
+                ]
+            }
+        ]
+    }
+    STDOUT = (
+        "coverage-report: lane python examined 9 lines in 4 files; outside the lane 2 files; "
+        "exclusions 2 rows (config/coverage.json), 1 files dropped\n"
+        "changed executable lines 4, executed 2, not executed: s/a/one.py:2 s/a/one.py:4\n"
+        "changed files the lcov lacks: 2 s/a/gone.py s/zz.py\n"
+        "changed paths with a quoted name, counted and skipped: 1\n"
+        "runner exit 3\n"
+    )
+    TABLE = (
+        "| group | lines | lines executed | lines not executed | functions | functions executed "
+        "| branches | branches taken | regions | regions executed |\n"
+        "|---|---|---|---|---|---|---|---|---|---|\n"
+        "| . | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |\n"
+        "| s/a | 7 | 4 | 3 | 8 | 5 | 10 | 6 | 14 | 8 |\n"
+        "| s/b | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |\n"
+    )
+    SUMMARY = (
+        "### coverage: python\n\n"
+        + TABLE
+        + "\nchanged executable lines 4, executed 2, not executed: s/a/one.py:2 s/a/one.py:4\n\n"
+        "- s/a/one.py:2\n- s/a/one.py:4\n\n"
+    )
+    REPORT_TXT = STDOUT + "\n" + TABLE + "\ns/a/one.py:2\ns/a/one.py:4\n"
+    FIGURES = {
+        "lane": "python",
+        "examined_lines": 9,
+        "examined_files": 4,
+        "outside_files": 2,
+        "exclusion_rows": 2,
+        "dropped_files": 1,
+        "groups": [
+            {
+                "group": ".",
+                "lines": 1,
+                "executed": 0,
+                "not_executed": 1,
+                "functions": 0,
+                "functions_executed": 0,
+                "branches": 0,
+                "branches_taken": 0,
+                "regions": 0,
+                "regions_executed": 0,
+            },
+            {
+                "group": "s/a",
+                "lines": 7,
+                "executed": 4,
+                "not_executed": 3,
+                "functions": 8,
+                "functions_executed": 5,
+                "branches": 10,
+                "branches_taken": 6,
+                "regions": 14,
+                "regions_executed": 8,
+            },
+            {
+                "group": "s/b",
+                "lines": 1,
+                "executed": 1,
+                "not_executed": 0,
+                "functions": 0,
+                "functions_executed": 0,
+                "branches": 0,
+                "branches_taken": 0,
+                "regions": 0,
+                "regions_executed": 0,
+            },
+        ],
+        "changed_executable": 4,
+        "changed_executed": 2,
+        "not_executed": ["s/a/one.py:2", "s/a/one.py:4"],
+        "lacking_files": ["s/a/gone.py", "s/zz.py"],
+        "runner_exit": "3",
+    }
+
+    def test_one_report_prints_summarises_and_writes_every_figure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out_dir = Path(tmp) / "out"
+            out_dir.mkdir()
+            summary = Path(tmp) / "summary.md"
+            done = run(
+                "report",
+                "--lane",
+                "python",
+                "--lcov",
+                write(tmp, "in.lcov", self.LCOV.replace("ROOT", tmp)),
+                "--root",
+                tmp + "/",
+                "--diff",
+                write(tmp, "in.diff", self.DIFF),
+                "--event",
+                "pull_request",
+                "--llvm-summary",
+                write(tmp, "llvm.json", json.dumps(self.LLVM)),
+                "--runner-exit-file",
+                write(tmp, "exit.txt", "3\n"),
+                "--summary",
+                str(summary),
+                "--out-dir",
+                str(out_dir),
+                "--config",
+                write(tmp, "coverage.json", json.dumps(self.CONFIG)),
+            )
+            self.assertEqual(done.returncode, 0, said(done))
+            self.assertEqual(done.stdout, self.STDOUT)
+            self.assertEqual(summary.read_text(encoding="utf-8"), self.SUMMARY)
+            self.assertEqual((out_dir / "report.txt").read_text(encoding="utf-8"), self.REPORT_TXT)
+            self.assertEqual(
+                (out_dir / "report.json").read_text(encoding="utf-8"),
+                json.dumps(self.FIGURES, indent=2) + "\n",
+            )
+
+    def test_a_summary_past_its_limit_counts_the_rest(self):
+        entries = [f"scripts/m.py:{n}" for n in range(1, 102)]
+        changed = "changed executable lines 101, executed 0, not executed: " + " ".join(entries)
+        with tempfile.TemporaryDirectory() as tmp:
+            summary = Path(tmp) / "summary.md"
+            done = run(
+                "report",
+                "--lane",
+                "python",
+                "--lcov",
+                write(
+                    tmp,
+                    "in.lcov",
+                    lcov("scripts/m.py", [(n, 0) for n in range(1, 102)]),
+                ),
+                "--root",
+                tmp,
+                "--diff",
+                write(tmp, "in.diff", "+++ b/scripts/m.py\n@@ -0,0 +1,101 @@\n"),
+                "--event",
+                "pull_request",
+                "--summary",
+                str(summary),
+            )
+            self.assertEqual(done.returncode, 0, said(done))
+            self.assertEqual(
+                done.stdout,
+                "coverage-report: lane python examined 101 lines in 1 files; outside the lane 0 "
+                "files; exclusions 3 rows (config/coverage.json), 0 files dropped\n"
+                + changed
+                + "\nchanged files the lcov lacks: 0\n",
+            )
+            self.assertEqual(
+                summary.read_text(encoding="utf-8"),
+                "### coverage: python\n\n"
+                "| group | lines | lines executed | lines not executed | functions "
+                "| functions executed | branches | branches taken |\n"
+                "|---|---|---|---|---|---|---|---|\n"
+                "| scripts | 101 | 0 | 101 | 0 | 0 | 0 | 0 |\n\n"
+                + changed
+                + "\n\n"
+                + "".join("- " + entry + "\n" for entry in entries[:100])
+                + "and 1 more in report.txt\n\n",
+            )
+
+    def test_a_push_reads_no_diff_and_an_absent_runner_exit_is_unknown(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            done = run(
+                "report",
+                "--lane",
+                "python",
+                "--lcov",
+                write(tmp, "in.lcov", lcov("scripts/one.py", [(1, 1)])),
+                "--root",
+                tmp,
+                "--diff",
+                str(Path(tmp) / "absent.diff"),
+                "--event",
+                "push",
+                "--runner-exit-file",
+                str(Path(tmp) / "absent.txt"),
+            )
+        self.assertEqual(done.returncode, 0, said(done))
+        self.assertEqual(
+            done.stdout,
+            "coverage-report: lane python examined 1 lines in 1 files; outside the lane 0 files; "
+            "exclusions 3 rows (config/coverage.json), 0 files dropped\n"
+            "the changed-line figure is read on pull requests only\n"
+            "runner exit unknown\n",
+        )
+
+    def test_a_runner_exit_that_is_no_integer_is_unknown_and_no_event_prints_no_push_line(
+        self,
+    ):
+        with tempfile.TemporaryDirectory() as tmp:
+            done = run(
+                "report",
+                "--lane",
+                "python",
+                "--lcov",
+                write(tmp, "in.lcov", lcov("scripts/one.py", [(1, 1)])),
+                "--root",
+                tmp,
+                "--runner-exit-file",
+                write(tmp, "exit.txt", "x\n"),
+            )
+        self.assertEqual(done.returncode, 0, said(done))
+        self.assertEqual(
+            done.stdout,
+            "coverage-report: lane python examined 1 lines in 1 files; outside the lane 0 files; "
+            "exclusions 3 rows (config/coverage.json), 0 files dropped\n"
+            "runner exit unknown\n",
+        )
+
+    def test_a_diff_whose_lines_all_ran_reads_none_and_no_runner_line(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            done = report(
+                tmp,
+                lcov("scripts/one.py", [(1, 1)]),
+                diff_text="+++ b/scripts/one.py\n@@ -1 +1 @@\n",
+            )
+        self.assertEqual(done.returncode, 0, said(done))
+        self.assertEqual(
+            done.stdout,
+            "coverage-report: lane python examined 1 lines in 1 files; outside the lane 0 files; "
+            "exclusions 3 rows (config/coverage.json), 0 files dropped\n"
+            "changed executable lines 1, executed 1, not executed: none\n"
+            "changed files the lcov lacks: 0\n",
+        )
+
+
+class KillTheReportVoids(unittest.TestCase):
+    """Mutation kills: each VOID of the report names its line and its reason, read whole."""
+
+    def test_each_unreadable_lcov_names_its_line_and_reason(self):
+        cases = {
+            "": "the lcov is empty",
+            "TN:\nDA:1,1\n": "lcov line 2 lies outside a record",
+            "SF:scripts/a.py\nSF:scripts/b.py\n": "lcov line 2 opens a record inside a record",
+            "SF:scripts/a.py\nDA:x,1\n": "lcov line 2 holds a DA record that is not integers",
+            "SF:scripts/a.py\nFNF:x\n": "lcov line 2 holds a count that is not an integer",
+            "SF:scripts/a.py\nFNDA:x,f\n": "lcov line 2 holds a FNDA record that is not an integer",
+            "SF:scripts/a.py\nBRDA:1,0,0\n": "lcov line 2 holds a BRDA record that is not four fields",
+            "SF:scripts/a.py\nDA:1,1\n": "the lcov ends inside a record, scripts/a.py",
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            for text, reason in examined("void lcov texts", cases.items()):
+                with self.subTest(reason):
+                    done = report(tmp, text)
+                    self.assertEqual(done.returncode, 1, said(done))
+                    self.assertEqual(
+                        done.stdout,
+                        "coverage-report: VOID lane python: " + reason + "\n",
+                    )
+
+    def test_a_missing_lcov_or_diff_and_an_unreadable_llvm_summary_name_their_error(
+        self,
+    ):
+        with tempfile.TemporaryDirectory() as tmp:
+            good = write(tmp, "good.lcov", "SF:scripts/a.py\nDA:1,1\nend_of_record\n")
+            absent_lcov = str(Path(tmp) / "absent.lcov")
+            absent_diff = str(Path(tmp) / "absent.diff")
+            cases = {
+                "the lcov is missing: [Errno 2] No such file or directory: '" + absent_lcov + "'": [
+                    "--lcov",
+                    absent_lcov,
+                ],
+                "the diff is unreadable: [Errno 2] No such file or directory: '"
+                + absent_diff
+                + "'": [
+                    "--lcov",
+                    good,
+                    "--diff",
+                    absent_diff,
+                    "--event",
+                    "pull_request",
+                ],
+                "the llvm summary is unreadable: 'data'": [
+                    "--lcov",
+                    good,
+                    "--llvm-summary",
+                    write(tmp, "llvm.json", "{}"),
+                ],
+            }
+            for reason, args in examined("void inputs", cases.items()):
+                with self.subTest(reason):
+                    done = run("report", "--lane", "python", "--root", tmp, *args)
+                    self.assertEqual(done.returncode, 1, said(done))
+                    self.assertEqual(
+                        done.stdout,
+                        "coverage-report: VOID lane python: " + reason + "\n",
+                    )
