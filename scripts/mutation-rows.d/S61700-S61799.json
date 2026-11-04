@@ -1,0 +1,22 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S61700-INHERITED-RENAME-IGNORED",
+        "scripts/tests/test_context_map_schematic.py",
+        "            return source[\"package\"]\n",
+        "            return key\n",
+        "a workspace entry that ignores the package rename it inherits is refused (SPEC-617 R1, A1)",
+        "test_context_map_schematic.TheSchematicDrawsTheCrateGraph.test_an_inherited_package_rename_names_the_renamed_crate"
+      ],
+      [
+        "S61701-WORKSPACE-TABLE-UNREAD",
+        "scripts/tests/test_context_map_schematic.py",
+        "    inherited = workspace_dependencies(ROOT_MANIFEST.read_text(encoding=\"utf-8\"))\n",
+        "    inherited = {}\n",
+        "a census that reads no workspace dependencies table is refused (SPEC-617 R2, A2)",
+        "test_context_map_schematic.TheSchematicDrawsTheCrateGraph.test_the_real_tree_reads_the_workspace_dependencies"
+      ]
+    ]
+  }
+}
