@@ -131,7 +131,7 @@ describe('the web colour mode', () => {
     expect(bare.classes()).toEqual(['page']);
 
     // the root layout calls it once it has mounted, on the document's root element
-    expect(ROOT_LAYOUT).toMatch(/import\s*\{[^}]*\bapplyStoredColourMode\b[^}]*\}\s*from\s*'\$lib\/settings\/colour-mode'/);
+    expect(ROOT_LAYOUT).toMatch(/import\s*\{[^}]*\bapplyStoredColourMode\b[^}]*\}\s*from\s*'#lib\/settings\/colour-mode\.js'/);
     expect(ROOT_LAYOUT).toMatch(/onMount\(\s*\(\)\s*=>[\s\S]*?applyStoredColourMode\(\s*document\.documentElement\b/);
   });
 

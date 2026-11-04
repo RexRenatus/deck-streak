@@ -1,6 +1,11 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
   "tagline": "Convierte tus repasos diarios de Anki en una racha que vale la pena mantener.",
+  "colour_mode": "Modo de color",
+  "colour_mode_system": "Sistema",
+  "colour_mode_light": "Claro",
+  "colour_mode_dark": "Oscuro",
+  "settings_link": "Ajustes",
   "ladder_region": "Celebraciones",
   "ladder_opening": "Abriendo…",
   "ladder_dice": "Una tirada de dado",

@@ -1,6 +1,11 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
   "tagline": "把每天的Anki复习变成值得坚持的连续记录。",
+  "colour_mode": "颜色模式",
+  "colour_mode_system": "跟随系统",
+  "colour_mode_light": "浅色",
+  "colour_mode_dark": "深色",
+  "settings_link": "设置",
   "ladder_region": "庆祝",
   "ladder_opening": "正在打开…",
   "ladder_dice": "掷骰子",

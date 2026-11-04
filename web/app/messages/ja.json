@@ -1,6 +1,11 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
   "tagline": "毎日のAnkiの復習を、続けたくなる連続記録に。",
+  "colour_mode": "カラーモード",
+  "colour_mode_system": "システム",
+  "colour_mode_light": "ライト",
+  "colour_mode_dark": "ダーク",
+  "settings_link": "設定",
   "ladder_region": "お祝い",
   "ladder_opening": "開封中…",
   "ladder_dice": "サイコロ",

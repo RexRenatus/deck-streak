@@ -1,6 +1,11 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
   "tagline": "Transformez vos révisions Anki quotidiennes en une série que vous aurez envie de prolonger.",
+  "colour_mode": "Mode de couleur",
+  "colour_mode_system": "Système",
+  "colour_mode_light": "Clair",
+  "colour_mode_dark": "Sombre",
+  "settings_link": "Paramètres",
   "ladder_region": "Célébrations",
   "ladder_opening": "Ouverture…",
   "ladder_dice": "Un lancer de dé",

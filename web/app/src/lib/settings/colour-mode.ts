@@ -16,15 +16,38 @@ export interface ModeRoot {
   readonly classList: Pick<DOMTokenList, 'add' | 'remove'>;
 }
 
-/** The stored choice. The inert seam: it reads nothing yet and answers the default. */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function readColourMode(storage: Pick<Storage, 'getItem'> | undefined): ColourMode {
-  return COLOUR_MODES[0];
+/** The device's local storage, or undefined where there is none or the browser refuses it. */
+export function deviceStorage(): Storage | undefined {
+  try {
+    return typeof localStorage === 'undefined' ? undefined : localStorage;
+  } catch {
+    return undefined;
+  }
 }
 
-/** Sets `mode` on the root element. The inert seam: it applies no mode yet. */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function applyColourMode(root: ModeRoot, mode: ColourMode): void {}
+/** The stored choice: `system` when nothing is stored, the value is unknown or storage is refused. */
+export function readColourMode(storage: Pick<Storage, 'getItem'> | undefined): ColourMode {
+  let stored: string | null;
+  try {
+    stored = storage === undefined ? null : storage.getItem(COLOUR_MODE_KEY);
+  } catch {
+    return COLOUR_MODES[0];
+  }
+  return COLOUR_MODES.find((mode) => mode === stored) ?? COLOUR_MODES[0];
+}
+
+/** Sets `mode` on the root element: its class for `light` or `dark`, and neither for `system`. */
+export function applyColourMode(root: ModeRoot, mode: ColourMode): void {
+  if (mode === 'light') {
+    root.classList.remove('dark');
+    root.classList.add('light');
+  } else if (mode === 'dark') {
+    root.classList.remove('light');
+    root.classList.add('dark');
+  } else {
+    root.classList.remove('light', 'dark');
+  }
+}
 
 /** Applies the stored choice to the root element after mount, and answers it. */
 export function applyStoredColourMode(root: ModeRoot, storage: Pick<Storage, 'getItem'> | undefined): ColourMode {
@@ -33,6 +56,15 @@ export function applyStoredColourMode(root: ModeRoot, storage: Pick<Storage, 'ge
   return mode;
 }
 
-/** Keeps `mode` as the learner's choice and applies it. The inert seam: it keeps nothing yet. */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function storeColourMode(storage: Pick<Storage, 'setItem'> | undefined, root: ModeRoot, mode: ColourMode): void {}
+/**
+ * Keeps `mode` as the learner's choice and applies it. Storage the browser refuses keeps nothing,
+ * and the choice still holds on this page until it reloads.
+ */
+export function storeColourMode(storage: Pick<Storage, 'setItem'> | undefined, root: ModeRoot, mode: ColourMode): void {
+  try {
+    storage?.setItem(COLOUR_MODE_KEY, mode);
+  } catch {
+    // the choice is applied below all the same
+  }
+  applyColourMode(root, mode);
+}

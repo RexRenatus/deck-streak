@@ -60,3 +60,22 @@
     text-underline-offset: 0.2em;
   }
 }
+
+/* SPEC-593 R8, ADR-616 D1: until the app mounts, and while the choice is system, the stylesheet
+ * alone sets the mode. A browser that does not report light paints every colour role's dark Tide
+ * fallback, the value the compile emits for it under .dark, unless the root element carries the
+ * light class; one that reports light keeps the light fallbacks. The rule sits outside every
+ * layer, as the compiled roles do, and its selector outranks theirs. */
+@media not all and (prefers-color-scheme: light) {
+  :root:not(.light) {
+    color-scheme: var(--tg-color-scheme, dark);
+    --background: var(--tg-theme-bg-color, var(--tide-dark-background));
+    --foreground: var(--tg-theme-text-color, var(--tide-dark-ink));
+    --card: var(--tg-theme-secondary-bg-color, var(--tide-dark-card));
+    --card-foreground: var(--tg-theme-text-color, var(--tide-dark-ink));
+    --muted-foreground: var(--tg-theme-hint-color, var(--tide-dark-muted));
+    --link: var(--tg-theme-link-color, var(--tide-dark-accent));
+    --border: var(--tg-theme-hint-color, var(--tide-dark-border));
+    --ring: var(--tg-theme-link-color, var(--tide-dark-accent));
+  }
+}
