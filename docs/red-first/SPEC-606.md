@@ -15,4 +15,10 @@ A4: cargo test -p deck-streak-analytics --test pillar_about -- --exact each_pill
 ```
 
 ```red-first
+A1: red at b089ee1f918d0fc5d6f3a1daea5f95fa7dad74da: AssertionError: Consistency: the row's last element: expected 'METER' to be 'P' // Object.is equality
+A2: red at b089ee1f918d0fc5d6f3a1daea5f95fa7dad74da: AssertionError: the retention row's last element: expected 'DIV' to be 'P' // Object.is equality
+A3: red at b089ee1f918d0fc5d6f3a1daea5f95fa7dad74da: AssertionError: expected { en: [], 'zh-Hans': [ …(8) ], …(5) } to deeply equal { en: [], 'zh-Hans': [], …(5) }
+A4: red at b089ee1f918d0fc5d6f3a1daea5f95fa7dad74da: assertion `left == right` failed left: [] right: ["70", "30", "25", "50", "0", "95", "100", "5", "70", "1", "5", "40", "80", "100", "3", "21", "100", "3", "30"]
 ```
+
+The two pins that grow read red at the same commit, b089ee1f918d0fc5d6f3a1daea5f95fa7dad74da: `shows five pillars and an absent retention as a gap` (AssertionError: expected 'Retention No review answered yet' to be 'Retention No review answered yet The …' // Object.is equality) and `shows a retention the day has as its value and its bar` (AssertionError: expected 'Retention 85' to be 'Retention 85 The share of review card…' // Object.is equality).
