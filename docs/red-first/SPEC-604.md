@@ -8,6 +8,9 @@ ruleset file, the schema's keys, and the dependency-only batch that the `fragmen
 on a batch, and a batch whose members add fragments passes), and two guard the edges of the batch arm (a batch that
 changes another path, and every login or branch outside the arm, are refused before and after it). Each line below
 was measured by running the module by its acceptance command on a tree byte-identical to the commit it names.
+The queue file was also validated against Mergify's published configuration schema, fetched once and never vendored
+(its sha256 is 7a41ae7c44c579dc69a807d704db8ff1a30808b65d0c7d405ec59cb6136aa148): a planted copy whose batch size is a
+string read 1 error, and the queue file read 0 errors.
 
 ```text
 A1: python3 -m unittest discover -s scripts/tests -p test_merge_queue.py -k test_the_queue_tests_six_together_and_merges_each_by_a_merge_commit
@@ -28,4 +31,23 @@ A5: not red: guards what dev already holds; its planted workflow copies, one wit
 A6: not red: guards what dev already holds; the fragment rule passes a batch whose members each add a fragment, before and after the batch arm
 A8: not red: guards an edge of the batch arm; a batch that changes a path outside the dependency files is refused before and after the arm
 A9: not red: guards an edge of the batch arm; every login and branch outside the arm, ones that only resemble them included, is refused before and after the arm
+A1: red at 4a4acbf66d4aa22d3121d9ac0bc56e0d799f331e: AssertionError: 0 != 1 : .mergify.yml holds exactly one queue rule
+A1: green at 1ecc86c1d4a0d808dbf5ab94c28a8a5aa55a1cc7
+A2: red at 4a4acbf66d4aa22d3121d9ac0bc56e0d799f331e: AssertionError: False is not true : a ready, labelled, green pull request enters
+A2: green at 1ecc86c1d4a0d808dbf5ab94c28a8a5aa55a1cc7
+A3: red at 4a4acbf66d4aa22d3121d9ac0bc56e0d799f331e: AssertionError: False is not true : a draft batch with the three checks green merges
+A3: green at 1ecc86c1d4a0d808dbf5ab94c28a8a5aa55a1cc7
+A4: red at 4a4acbf66d4aa22d3121d9ac0bc56e0d799f331e: AssertionError: Lists differ: ['queue: #review-threads-unresolved = 0', [243 chars]iew'] != []
+A4: green at 1ecc86c1d4a0d808dbf5ab94c28a8a5aa55a1cc7
+A7: red at 4a4acbf66d4aa22d3121d9ac0bc56e0d799f331e: AssertionError: 1 != 0 : Add a fragment under changelog.d/ (see changelog.d/README.md).
+A7: green at 1ecc86c1d4a0d808dbf5ab94c28a8a5aa55a1cc7
+A10: red at 4a4acbf66d4aa22d3121d9ac0bc56e0d799f331e: AssertionError: Lists differ: [] != ['.mergify.yml']
+A10: green at 1ecc86c1d4a0d808dbf5ab94c28a8a5aa55a1cc7
+A11: red at 4a4acbf66d4aa22d3121d9ac0bc56e0d799f331e: AssertionError: examined 0 keys of .mergify.yml: the population is empty, so nothing was judged
+A11: green at 1ecc86c1d4a0d808dbf5ab94c28a8a5aa55a1cc7
 ```
+
+The criteria were committed with the tests alone (4a4acbf6) and read red by name in the pull
+request's own run. The queue file and the batch arm of the fragment check landed in 1ecc86c1 with
+the tests unchanged, and the run at this delivery's head reads them green. The commit after
+1ecc86c1 changes only this record.
