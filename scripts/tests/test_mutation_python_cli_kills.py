@@ -11,6 +11,7 @@ import io
 import json
 import re
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -133,7 +134,9 @@ class TheListingCarriesEachMutantWhole(unittest.TestCase):
 
 class TheRunPrintsAndWritesItsReport(unittest.TestCase):
     def report_of(self, tree, *args):
-        target = tree.root.parent / f"{tree.root.name}-cli.json"
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        target = Path(scratch.name) / "cli.json"
         code, out, err = call(tree, "run", *args, "--report", str(target))
         text = target.read_text(encoding="utf-8")
         target.unlink()

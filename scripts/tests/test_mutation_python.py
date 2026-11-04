@@ -207,6 +207,7 @@ class Tree:
     """A git repository in a temporary directory holding a scenario's population."""
 
     def __init__(self, test, sources, tests=None, mapping=None, extra=None):
+        self.test = test
         scratch = tempfile.TemporaryDirectory()
         test.addCleanup(scratch.cleanup)
         self.root = Path(scratch.name)
@@ -262,8 +263,9 @@ class Tree:
         )
 
     def report(self, *args, **kwargs):
-        target = self.root.parent / f"{self.root.name}-report.json"
-        self.addcleanup = None
+        scratch = tempfile.TemporaryDirectory()
+        self.test.addCleanup(scratch.cleanup)
+        target = Path(scratch.name) / "report.json"
         done = self.runner("run", *args, "--report", str(target), **kwargs)
         document = json.loads(target.read_text(encoding="utf-8")) if target.exists() else None
         target.unlink(missing_ok=True)
