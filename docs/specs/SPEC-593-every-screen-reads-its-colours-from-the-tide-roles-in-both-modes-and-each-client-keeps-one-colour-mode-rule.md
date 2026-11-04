@@ -193,6 +193,7 @@ the web part, beside A6 in the same census module.
 | `web/app/src/routes/settings/+page.svelte` | web | new: the settings screen that holds the control (R8) |
 | `web/app/src/lib/routes.ts` | web | changed: the settings screen joins the route list the accessibility audit covers (R8) |
 | `web/app/src/lib/study/card-health.test.ts` | web | changed: the settings screen joins its frozen list of route files (R8) |
+| `web/app/src/lib/startapp.test.ts` | web | changed: the settings screen joins its list of screens opened by their paths (R8) |
 | `web/app/src/routes/+page.svelte` | web | changed: a link to the settings screen, and the border class on its card (R5, R8) |
 | `web/app/messages/en.json` | web | changed: the setting labels (R8) |
 | `web/app/messages/es.json` | web | changed: the setting labels (R8) |
