@@ -80,6 +80,132 @@
       "evidence": "The refusal, the missing base run, each NoBase and the final count each assign document['why']; any other error leaves carry, and carry_verb writes its own document.",
       "issue": "#1003",
       "reached_by": "test_mutation_carry_kills.CarryDocument.test_carry_writes_each_refusal_and_carry_exactly"
+    },
+    {
+      "file": "scripts/coverage-report.py",
+      "mutant": "replace 0 with 1 in glob_regex",
+      "anchor": "            if end < 0:",
+      "reason": "end is -1 or at least 1 here, so end < 0 and end < 1 are true at the same values.",
+      "evidence": "end is glob.find(\"}\", i) with glob[i] == \"{\", so it is -1 or at least i+1, which is at least 1; both tests are true only at -1.",
+      "issue": "#1122",
+      "reached_by": "test_coverage_report.KillThePlanGlobsAndConfig.test_each_lane_names_its_first_match_in_the_changed_order"
+    },
+    {
+      "file": "scripts/coverage-report.py",
+      "mutant": "replace \"^\" with \"\" in glob_regex",
+      "anchor": "    return re.compile(\"^\" + \"\".join(out) + \"$\")",
+      "reason": "Every compiled glob is used only through re.match, which is already anchored at the start.",
+      "evidence": "any_match calls re.match on each compiled glob, and the pattern has no top-level alternation (each one is wrapped in (?:...)), so a leading ^ matches the same paths as none.",
+      "issue": "#1122",
+      "reached_by": "test_coverage_report.KillThePlanGlobsAndConfig.test_each_lane_names_its_first_match_in_the_changed_order"
+    },
+    {
+      "file": "scripts/coverage-report.py",
+      "mutant": "replace return value with return None in cmd_plan",
+      "anchor": "    write_output(args.github_output, pairs)\n    return 0",
+      "reason": "main hands the verb's value to sys.exit, and sys.exit(None) exits 0 with no output, as sys.exit(0) does.",
+      "evidence": "return 0 becomes return None; a test may observe the script only as a child process (base line 66, Ruling 3), and there both read exit code 0 with the same stdout and stderr, so the two cannot be told apart.",
+      "issue": "#1122",
+      "reached_by": "test_coverage_report.KillThePlanGlobsAndConfig.test_each_lane_names_its_first_match_in_the_changed_order"
+    },
+    {
+      "file": "scripts/coverage-report.py",
+      "mutant": "replace return value with return None in cmd_provider",
+      "anchor": "    print(LINE_PROVIDER % (version, version))\n    return 0",
+      "reason": "main hands the verb's value to sys.exit, and sys.exit(None) exits 0 with no output, as sys.exit(0) does.",
+      "evidence": "return 0 becomes return None; a test may observe the script only as a child process (base line 66, Ruling 3), and there both read exit code 0 with the same stdout and stderr, so the two cannot be told apart.",
+      "issue": "#1122",
+      "reached_by": "test_coverage_report.TheProviderIsLockedAtTheVitestVersion.test_a_provider_locked_at_another_version_reads_void"
+    },
+    {
+      "file": "scripts/coverage-report.py",
+      "mutant": "replace return value with return None in cmd_args",
+      "anchor": "        return 0",
+      "reason": "main hands the verb's value to sys.exit, and sys.exit(None) exits 0 with no output, as sys.exit(0) does.",
+      "evidence": "return 0 becomes return None; a test may observe the script only as a child process (base line 66, Ruling 3), and there both read exit code 0 with the same stdout and stderr, so the two cannot be told apart.",
+      "issue": "#1122",
+      "reached_by": "test_coverage_report.KillTheProviderArgsAndControls.test_the_rust_flags_join_two_binaries_and_other_lanes_print_nothing"
+    },
+    {
+      "file": "scripts/coverage-report.py",
+      "mutant": "replace return value with return None in cmd_args",
+      "anchor": "        print(\"not (\" + \" | \".join(\"binary_id(=\" + b + \")\" for b in binaries) + \")\")\n    return 0",
+      "reason": "main hands the verb's value to sys.exit, and sys.exit(None) exits 0 with no output, as sys.exit(0) does.",
+      "evidence": "return 0 becomes return None; a test may observe the script only as a child process (base line 66, Ruling 3), and there both read exit code 0 with the same stdout and stderr, so the two cannot be told apart.",
+      "issue": "#1122",
+      "reached_by": "test_coverage_report.KillTheProviderArgsAndControls.test_the_rust_flags_join_two_binaries_and_other_lanes_print_nothing"
+    },
+    {
+      "file": "scripts/coverage-report.py",
+      "mutant": "replace return value with return None in cmd_report",
+      "anchor": "        )\n    return 0",
+      "reason": "main hands the verb's value to sys.exit, and sys.exit(None) exits 0 with no output, as sys.exit(0) does.",
+      "evidence": "return 0 becomes return None; a test may observe the script only as a child process (base line 66, Ruling 3), and there both read exit code 0 with the same stdout and stderr, so the two cannot be told apart.",
+      "issue": "#1122",
+      "reached_by": "test_coverage_report.KillTheReportFigures.test_one_report_prints_summarises_and_writes_every_figure"
+    },
+    {
+      "file": "scripts/coverage-report.py",
+      "mutant": "replace return value with return None in cmd_controls",
+      "anchor": "    print(LINE_CONTROLS % (len(cases), len(cases)))\n    return 0",
+      "reason": "main hands the verb's value to sys.exit, and sys.exit(None) exits 0 with no output, as sys.exit(0) does.",
+      "evidence": "return 0 becomes return None; a test may observe the script only as a child process (base line 66, Ruling 3), and there both read exit code 0 with the same stdout and stderr, so the two cannot be told apart.",
+      "issue": "#1122",
+      "reached_by": "test_coverage_report.KillTheProviderArgsAndControls.test_the_controls_name_each_case_and_each_misread"
+    },
+    {
+      "file": "scripts/coverage-report.py",
+      "mutant": "replace \"@@\" with \"\" in parse_diff",
+      "anchor": "        elif raw.startswith(\"@@\") and path is not None:",
+      "reason": "HUNK is anchored at ^@@ , so a line that does not start with @@ matches nothing.",
+      "evidence": "With the test widened to every line once a path is set, the branch runs HUNK.match(raw) on lines without @@, which returns None, and no later branch follows it, so changed is the same before and after.",
+      "issue": "#1122",
+      "reached_by": "test_coverage_report.KillTheReportFigures.test_one_report_prints_summarises_and_writes_every_figure"
+    },
+    {
+      "file": "scripts/coverage-report.py",
+      "mutant": "replace return value with return None in reads_void",
+      "anchor": "        return False\n\n    def prints_uncovered():",
+      "reason": "The only caller reads the check as if not check():, where False and None are both false.",
+      "evidence": "return False becomes return None; cmd_controls calls each case's check once through if not check():, so the same cases count as misread before and after.",
+      "issue": "#1122",
+      "reached_by": "test_coverage_report.KillTheProviderArgsAndControls.test_the_controls_name_each_case_and_each_misread"
+    },
+    {
+      "file": "scripts/coverage-report.py",
+      "mutant": "replace return value with return None in provider_void",
+      "anchor": "        return False\n\n    cases.append((\"examined-none.lcov\", lambda: reads_void(\"examined-none.lcov\")))",
+      "reason": "The only caller reads the check as if not check():, where False and None are both false.",
+      "evidence": "return False becomes return None; cmd_controls calls each case's check once through if not check():, so the same cases count as misread before and after.",
+      "issue": "#1122",
+      "reached_by": "test_coverage_report.TheWorkflowIsAdvisory.test_a_planted_case_that_misreads_makes_the_controls_void"
+    },
+    {
+      "file": "scripts/coverage-report.py",
+      "mutant": "replace \"\" with \"XX\" in build_parser",
+      "anchor": "    plan.add_argument(\"--base-ref\", default=\"\")",
+      "reason": "The plan --base-ref default is read only as == \"main\", which neither \"\" nor \"XX\" is.",
+      "evidence": "args.base_ref is read only at line 159 as args.base_ref == \"main\", which is False for both defaults, so the release test reads the same.",
+      "issue": "#1122",
+      "reached_by": "test_coverage_report.KillThePlanGlobsAndConfig.test_each_lane_names_its_first_match_in_the_changed_order"
+    },
+    {
+      "file": "scripts/coverage-report.py",
+      "mutant": "replace \"\" with \"XX\" in build_parser",
+      "anchor": "    plan.add_argument(\"--head-ref\", default=\"\")",
+      "reason": "The plan --head-ref default is read only as == \"dev\", which neither \"\" nor \"XX\" is.",
+      "evidence": "args.head_ref is read only at line 160 as args.head_ref == \"dev\", which is False for both defaults, so the release test reads the same.",
+      "issue": "#1122",
+      "reached_by": "test_coverage_report.KillThePlanGlobsAndConfig.test_each_lane_names_its_first_match_in_the_changed_order"
+    },
+    {
+      "file": "scripts/coverage-report.py",
+      "mutant": "replace \"\" with \"XX\" in build_parser",
+      "anchor": "    report.add_argument(\"--event\", default=\"\")",
+      "reason": "The report --event default is read only against \"push\", which neither \"\" nor \"XX\" is.",
+      "evidence": "args.event is read only as != \"push\" (line 529) and == \"push\" (line 556), which give True and False for both defaults, so the diff is read and no push line prints, before and after.",
+      "issue": "#1122",
+      "reached_by": "test_coverage_report.KillTheReportFigures.test_a_runner_exit_that_is_no_integer_is_unknown_and_no_event_prints_no_push_line"
     }
   ]
 }
