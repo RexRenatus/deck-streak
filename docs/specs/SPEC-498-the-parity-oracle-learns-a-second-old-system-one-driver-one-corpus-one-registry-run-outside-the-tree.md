@@ -102,6 +102,15 @@ The third delivery of this SPEC, "each engine golden is a function of its input"
   gate, fixed before the run, reads the previous pin's pass against the committed goldens and the new pin's pass
   against the previous pin's. Any reading off the gate's rule writes nothing.
 
+The fourth delivery of this SPEC, "the oracle's engine pin follows the manifest's", adds:
+
+- **R20. One engine pin.** The driver's `ENGINE_COMMIT`, the runbook's pin and the stand-in harness's `PINNED`
+  each name, exactly once, the commit the root manifest's engine patch pins (the `rev` of its `anki` line). A test
+  reads the four files as text and fails, naming the file, when an oracle file names another commit or does not name
+  one exactly once; planted copies of the manifest with another rev, and of each oracle file with another pin, with
+  none or with two, are each caught. None of the three files changes: the driver's bytes are every engine golden's
+  `generator_sha256`.
+
 ## 2a. The harness's answers
 
 Each case's `output` is either `{"refused": LABEL}` or an object of exactly these keys:
@@ -153,6 +162,7 @@ Every row is named by its corpus index, never by an id the engine assigns.
 | A13 | R17: the run record shows the planted connection refused inside and accepted outside, the canary, the read-only mounts, the writes and the read list (read by the reviewer) | none: the run's private record | ADR-516 D4 |
 | A14 | R18: every drawn import case whose package shares a GUID with the target gives that note a `mod` on both sides (examined 72); the driver starts the harness with `TZ=UTC` beside `PATH` and `LC_ALL`; no engine golden holds a number of the run's clock its input did not give | 40 of 72 import cases share a GUID with no mod on both sides; the harness's environment holds `LC_ALL` and `PATH` only | ADR-516 D7 |
 | A15 | R19: the run record shows the two non-writing passes byte-equal, one under a planted host instant, and the semantic gate's reading before the one writing pass (read by the reviewer) | none: the run's private record | ADR-516 D7 |
+| A16 | R20: the driver's `ENGINE_COMMIT`, the runbook's pin and the stand-in harness's `PINNED` each name the manifest's engine pin exactly once; a planted manifest with another rev fails all three, and a planted oracle file with another pin, none or two fails alone | the stub reader finds no oracle pin and the stub comparison no fault | ADR-516 D8 |
 
 ```acceptance
 A1: python3 -m unittest discover -s tools/parity-oracle -p 'test_anki_driver.py' -k test_every_golden_is_strict_synthetic_and_seeded
@@ -182,6 +192,9 @@ A12: cargo test -p deck-streak-ingest --test engine_goldens -- --exact the_schem
 A14: python3 -m unittest discover -s tools/parity-oracle -p 'test_anki_registry.py' -k test_a_note_the_package_shares_with_the_target_carries_a_mod_on_both_sides
 A14: python3 -m unittest discover -s tools/parity-oracle -p 'test_anki_driver.py' -k test_the_driver_starts_the_harness_in_utc
 A14: python3 -m unittest discover -s tools/parity-oracle -p 'test_goldens.py' -k test_no_engine_golden_holds_a_date_an_id_or_a_clock
+A16: python3 -m unittest discover -s tools/parity-oracle -p 'test_goldens.py' -k test_every_oracle_engine_pin_is_the_manifest_engine_pin
+A16: python3 -m unittest discover -s tools/parity-oracle -p 'test_goldens.py' -k test_a_manifest_with_another_engine_pin_is_caught
+A16: python3 -m unittest discover -s tools/parity-oracle -p 'test_goldens.py' -k test_an_oracle_file_with_another_pin_or_not_one_is_caught
 ```
 
 ## 4. File manifest
@@ -227,6 +240,12 @@ A14: python3 -m unittest discover -s tools/parity-oracle -p 'test_goldens.py' -k
 | `docs/specs/SPEC-498-the-parity-oracle-learns-a-second-old-system-one-driver-one-corpus-one-registry-run-outside-the-tree.md` | docs | changed (third delivery): R18, R19, A14 and A15 |
 | `docs/decisions/ADR-516-the-second-oracle-is-one-driver-over-a-pinned-harness-kept-outside-the-tree.md` | docs | changed (third delivery): D7 |
 | `docs/red-first/SPEC-498.md` | docs | changed (third delivery): A14's red and green |
+| `tools/parity-oracle/test_goldens.py` | oracle tests | changed (fourth delivery): A16, the three oracle pins held to the manifest's |
+| `docs/specs/SPEC-498-the-parity-oracle-learns-a-second-old-system-one-driver-one-corpus-one-registry-run-outside-the-tree.md` | docs | changed (fourth delivery): R20 and A16 |
+| `docs/decisions/ADR-516-the-second-oracle-is-one-driver-over-a-pinned-harness-kept-outside-the-tree.md` | docs | changed (fourth delivery): D8 |
+| `docs/schematics/the-second-oracle-from-a-sandboxed-engine-run-to-a-rust-assertion.md` | docs | changed (fourth delivery): the manifest to oracle row |
+| `docs/red-first/SPEC-498.md` | docs | changed (fourth delivery): A16's reds and green |
+| `changelog.d/oracle-engine-pin-498.md` | changelog | new (fourth delivery): the fragment |
 
 ## 5. What this does NOT cover
 
@@ -261,3 +280,5 @@ discovers the three new test files beside `test_generate.py` and `test_goldens.p
 
 None in this delivery. The band S49800-S49899 is SPEC-498's; the driver's refusals are held by the planted controls
 of A1, A2, A3 and A5.
+
+The fourth delivery adds none either: A16's planted manifest and oracle files hold the pin tie's refusals.
