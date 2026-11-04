@@ -1,0 +1,14 @@
+# The Python lane settings of the coverage report (SPEC-592, ADR-613 D4). Nothing is omitted here:
+# what the report does not measure is listed in config/coverage.json.
+[tool.coverage.run]
+branch = true
+# The sys.monitoring core records no branches on the runner image Python.
+core = "ctrace"
+patch = ["subprocess"]
+parallel = true
+source = [
+    "${GITHUB_WORKSPACE?}/scripts",
+    "${GITHUB_WORKSPACE?}/tools/parity-oracle",
+    "${GITHUB_WORKSPACE?}/agent",
+]
+data_file = "${RUNNER_TEMP?}/coverage-python/.coverage"
