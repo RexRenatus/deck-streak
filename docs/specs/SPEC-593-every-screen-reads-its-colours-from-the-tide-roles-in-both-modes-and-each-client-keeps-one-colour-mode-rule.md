@@ -221,6 +221,12 @@ the web part, beside A6 in the same census module.
 | `ios/App/Assets.xcassets/TideBorder.colorset/Contents.json` | web | new: written by program from the token file (R7) |
 | `scripts/tests/test_tide_tokens.py` | web | changed: A5 over the six colour sets |
 | `scripts/tests/test_tide_screens.py` | web | new: A6 and A13 |
+| `web/app/src/lib/settings/ColourModeSetting.test.ts` | web | new: kill tests for `web/app/src/lib/settings/ColourModeSetting.svelte` (R8) |
+| `web/app/src/lib/settings/ColourModeSetting.server.test.ts` | web | new: kill tests for `web/app/src/lib/settings/ColourModeSetting.svelte` before it mounts (R8) |
+| `web/app/src/routes/settings.test.ts` | web | new: kill tests for `web/app/src/routes/settings/+page.svelte` and its link in `web/app/src/routes/+page.svelte` (R8) |
+| `web/app/src/routes/layout-colour-mode.test.ts` | web | new: kill tests for `web/app/src/routes/+layout.svelte` (R8) |
+| `scripts/mutation-equivalent.d/miniapp.json` | web | changed: six equivalence records for colour-mode.ts (R8) |
+| `docs/specs/planned/SPEC-057-every-surviving-mutant-is-killed-or-recorded-equivalent-before-the-first-mutation-gated-release.md` | web | changed: the miniapp campaign row refilled from its battery pair (R8) |
 | `ios/App/Sources/TideColours.swift` | native | new: one `Color` extension naming the six colour sets (R11) |
 | `ios/App/Sources/AccountView.swift` | native | changed: colours through the Tide extension (R11) |
 | `ios/App/Sources/AnswerBar.swift` | native | changed: colours through the Tide extension (R11) |
