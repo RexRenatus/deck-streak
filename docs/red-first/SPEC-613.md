@@ -24,3 +24,28 @@ Where each criterion's red is read:
 - A4 is not red: whether every engine, sync and study test passes in Firefox is a browser engine's
   behaviour, measured in CI at the second push, in its `web-engine` job.
 - A5 is not red: the `web-engine` job's time in three engines is measured in CI at the second push.
+
+A1's study half, the Vitest test `the study suite covers the review loop in both engines`, read
+red at 98010cc locally and in CI run 41825749005 job 126559904937 web: `AssertionError: expected [ 'Desktop Chrome', 'Desktop Safari' ] to deeply equal [ 'Desktop Chrome', …(2) ]`.
+
+Two commits between the reds of A1 to A3 and their greens edit test-shaped files. The first,
+c7a9078, lists in the file-read census table of `scripts/tests/test_ci_workflows.py` the four
+places the three Firefox checks hand a file to their reader, which the census test requires of
+a helper that reads a path it is given; it adds table entries only and changes no line of the
+three checks. The second, the wiring commit fa020ff, edits the account helper of
+`web/app/tests-engine/sync.spec.ts` and its doc comment, which give each engine project but
+Chromium a server user of its own (ADR-635 D3), and the header comments of
+`web/app/tests-engine/engine.spec.ts` and `web/app/tests-study/study.spec.ts`, which name
+Firefox. Neither changes an assertion of A1 to A3: the three checks are the same at the reds'
+commit and at the greens', and so is `web/app/src/lib/study/study-coverage.test.ts`.
+
+```red-first
+A1: red at 98010cc: CI run 41825749005 job 126559905069 hygiene: AssertionError: Lists differ: ['the engine configuration declares chromium, webkit, not chromium, webkit, firefox'] != []
+A1: green at fa020ff
+A2: red at 98010cc: CI run 41825749005 job 126559905069 hygiene: AssertionError: Lists differ: ['no install step before test:engine installs firefox', 'no install step before test:study installs firefox'] != []
+A2: green at fa020ff
+A3: red at 98010cc: CI run 41825749005 job 126559905069 hygiene: AssertionError: Lists differ: ['the engine configuration makes 2 sync user(s) for 3 project(s)', "account('firefox') gives <base>, chromium's user"] != []
+A3: green at fa020ff
+A4: not red: whether every engine, sync and study test passes in Firefox is a browser engine's behaviour, measured in CI at the second push, in its web-engine job
+A5: not red: the web-engine job's time in three engines is measured in CI at the second push
+```
