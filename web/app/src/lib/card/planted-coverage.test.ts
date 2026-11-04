@@ -73,7 +73,7 @@ function configuredEngines(config: string): { engines: string[]; refused: string
       break;
     }
   }
-  if (close < 0) return { engines, refused: ['no projects array'] };
+  if (close < 0) return { engines, refused: ['projects array never closes'] };
 
   // each top-level object of the array, kept without the objects nested in it
   const projects: string[] = [];
