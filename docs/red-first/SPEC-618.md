@@ -34,3 +34,13 @@ A1 and A3 to A14 were committed with two stub scripts that keep every argument a
 nothing (6883288c); each read red by name in the gate python stage of the pull request run. The
 two scripts replaced the stubs in 6739ab7f, with every test unchanged, and the run at this
 delivery head reads them green. The commit after 6739ab7f changes only this record.
+
+The second part's criteria, A15 to A24, were committed with their tests before any job, bench,
+list or exclusion they read. A20 to A24, in `test_perf_benches.py`, read red on any checkout at
+that commit, each by an assertion on what is absent there: the bench profile, the workspace entry
+of the renamed Divan crate, `perf/benchmarks.txt`, `vitest.bench.config.ts` and the Stryker
+exclusion of bench files. A15 to A19, in `test_ci_workflows.py`, are read by name in the gate python
+stage of that commit's pull request run, beside `test_the_gate_runs_in_four_parallel_jobs`, whose
+sorted needs pin gains the four bench jobs in the same commit; the dynamic
+`test_the_aggregate_check_needs_every_job_and_always_runs` stays green. None of the ten is a
+control. Their red and green lines join the fence when each is read.

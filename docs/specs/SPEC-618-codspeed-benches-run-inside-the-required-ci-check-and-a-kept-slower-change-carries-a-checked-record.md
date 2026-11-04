@@ -127,8 +127,8 @@ seeded and fixed, and no bench asserts a computed value.
 R14. The one install of an upload job. R2's package install is a package manager's install. The
 Rust upload job installs one tool, the pinned `cargo-codspeed` release binary, through
 `taiki-e/install-action` with `fallback: none`, so the install downloads a published binary and
-never compiles; the web upload job installs nothing. Neither runs `cargo build`, `pnpm install`,
-`npm` or `protoc`.
+never compiles; the web upload job sets up Node and pnpm as its build job does and installs no
+package. Neither runs `cargo build`, `pnpm install`, `npm` or `protoc`.
 
 R15. The coverage exclusions are entries of `config/coverage.json`, the register the coverage
 report applies: `crates/*/benches/**` in the Rust lane and `web/app/src/**/*.bench.ts` in the web
@@ -154,7 +154,7 @@ test and spec files, so no bench file loads there.
 | A12 | a benchmark no bench defines is refused (R8) | `test_perf_record.py` `test_a_benchmark_no_bench_defines_is_refused` |
 | A13 | a record for another branch is refused (R8) | `test_perf_record.py` `test_a_record_for_another_branch_is_refused` |
 | A14 | every other value outside the closed schema is refused, each problem on its own line (R8) | `test_perf_record.py` `test_a_record_outside_the_schema_is_refused` |
-| A15 | the four bench jobs exist and the aggregate `ci` needs each of them beside its other jobs (R1) | `test_ci_workflows.py` `test_the_four_bench_jobs_are_needs_of_ci`, `test_the_aggregate_check_needs_every_job_and_always_runs` |
+| A15 | the four bench jobs exist and the aggregate `ci` needs each of them beside its other jobs (R1) | `test_ci_workflows.py` `test_the_four_bench_jobs_are_needs_of_ci`, `test_the_gate_runs_in_four_parallel_jobs` |
 | A16 | each build job holds `contents: read` alone, each upload job holds `contents: read` and `id-token: write`, no other `ci.yml` job holds `id-token`, and the header names the upload jobs' grant (R2, R3) | `test_ci_workflows.py` `test_only_the_two_upload_jobs_hold_an_id_token_grant` |
 | A17 | an upload job prints the reason, checks out, installs the pinned CodSpeed cargo tool in the Rust lane alone, downloads and unpacks the archive and runs the pinned action in simulation mode with no `token`, and no step builds or installs a package (R2, R3, R14) | `test_ci_workflows.py` `test_an_upload_job_unpacks_and_uploads_and_builds_nothing` |
 | A18 | each bench job always starts, its plan publishes the three outputs, and every later step carries the plan's gate, so a run the plan finds not applicable skips every measured step (R4) | `test_ci_workflows.py` `test_each_bench_job_starts_and_its_plan_gates_every_step` |
@@ -182,7 +182,7 @@ A12: python3 -m unittest discover -s scripts/tests -p test_perf_record.py -k tes
 A13: python3 -m unittest discover -s scripts/tests -p test_perf_record.py -k test_a_record_for_another_branch_is_refused
 A14: python3 -m unittest discover -s scripts/tests -p test_perf_record.py -k test_a_record_outside_the_schema_is_refused
 A15: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_four_bench_jobs_are_needs_of_ci
-A15: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_aggregate_check_needs_every_job_and_always_runs
+A15: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_gate_runs_in_four_parallel_jobs
 A16: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_only_the_two_upload_jobs_hold_an_id_token_grant
 A17: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_an_upload_job_unpacks_and_uploads_and_builds_nothing
 A18: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_each_bench_job_starts_and_its_plan_gates_every_step
@@ -207,10 +207,12 @@ the gate's python stage gives by name; A20 to A24 are decided over the tree by
 `test_perf_benches.py`, which loads no workflow and runs on any checkout. Each is red at the second
 part's red commit by an assertion against what is absent there: the four jobs and their grants, the
 record step, the bench profile, the bench targets and files, the benchmark list, the bench config
-and the bench exclusions. The aggregate check's sorted needs list gains the four jobs in the same
-commit, so `test_the_aggregate_check_needs_every_job_and_always_runs` is red beside A15 until the
-jobs land. None of A15 to A24 is a control, and none pins an engine-computed value: every bench
-input is seeded and fixed, and no bench asserts what it computes.
+and the bench exclusions. The sorted needs list that `test_the_gate_runs_in_four_parallel_jobs`
+pins gains the four jobs in the same commit, so that test is red beside A15 until the jobs land,
+while `test_the_aggregate_check_needs_every_job_and_always_runs` stays green throughout: it holds
+every job the file defines among the needs of `ci`. None of A15 to A24 is a control, and none pins
+an engine-computed value: every bench input is seeded and fixed, and no bench asserts what it
+computes.
 
 ## 4. File manifest
 
