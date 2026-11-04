@@ -73,7 +73,7 @@ function configuredEngines(config: string): { engines: string[]; refused: string
       break;
     }
   }
-  if (close < 0) return { engines, refused: ['no projects array'] };
+  if (close < 0) return { engines, refused: ['projects array never closes'] };
 
   // each top-level object of the array, kept without the objects nested in it
   const projects: string[] = [];
@@ -540,5 +540,22 @@ describe('the planted card suite', () => {
     for (const name of real.engines) expect(name).toMatch(/^[a-z0-9-]+$/);
     expect(real.engines).toEqual(ENGINES);
     examined('projects in the card configuration', real.engines);
+  });
+
+  it('an unclosed projects array is refused apart from a missing one', () => {
+    // SPEC-399 R8, A4; ADR-413 D6: a `projects: [` the text never closes has a refusal of its own
+    const unclosed = (...projects: string[]): string =>
+      `export default defineConfig({\n  projects: [\n    ${projects.join(',\n    ')},\n  workers: 1\n});\n`;
+    const plants = [
+      unclosed("{ name: 'chromium', use: {} }"),
+      unclosed("{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }", "{ name: 'webkit', use: {} }")
+    ];
+    for (const plant of plants) {
+      const read = configuredEngines(plant);
+      expect(read.refused).toEqual(['projects array never closes']);
+      expect(read.engines).toEqual([]);
+    }
+    expect(configuredEngines('export default defineConfig({ workers: 1 });').refused).toEqual(['no projects array']);
+    examined('unclosed projects arrays', plants);
   });
 });
