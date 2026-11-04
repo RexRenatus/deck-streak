@@ -82,10 +82,9 @@ fn span(text: &str, open: &str, close: &str, comment: bool) -> Option<Found> {
 fn next_span(text: &str) -> Option<Found> {
     let tag = span(text, "{{", "}}", false);
     let comment = span(text, "<!--", "-->", true);
-    match (tag, comment) {
-        (Some(tag), Some(comment)) if comment.start < tag.start => Some(comment),
-        (tag, comment) => tag.or(comment),
-    }
+    tag.into_iter()
+        .chain(comment)
+        .min_by_key(|found| found.start)
 }
 
 /// What a tag's inside opens, closes or replaces.

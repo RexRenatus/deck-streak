@@ -99,10 +99,10 @@ fn element_length(from: &str, name: &str) -> Option<usize> {
     if !from.get(1..=name.len())?.eq_ignore_ascii_case(name) {
         return None;
     }
-    let body = after.find('>')? + 1;
+    let body = after.find('>')?;
     let closer = format!("</{name}>");
-    let close = find_ascii_case(after.get(body..)?, &closer)?;
-    Some(1 + name.len() + body + close + closer.len())
+    let close = body + find_ascii_case(after.get(body..)?, &closer)?;
+    Some(1 + name.len() + close + closer.len())
 }
 
 /// The first byte where `needle`, ASCII letters in any case, occurs in `text`.
