@@ -1,5 +1,5 @@
 // The study suite (SPEC-350 R13, A20; ADR-361): the built Mini App over the real module, staged at
-// `/engine/` beside the build, in Chromium and WebKit. Each test runs in a persistent profile of its
+// `/engine/` beside the build, in Chromium, WebKit and Firefox. Each test runs in a persistent profile of its
 // own, as a user's browser has (an empty path is a fresh temporary profile), seeds that profile's
 // collection through the app's own Worker (seed.ts), and then reviews from the deck list: show
 // answer, the intervals on the buttons, a rating by key and one by button, undo, bury and flag, a
