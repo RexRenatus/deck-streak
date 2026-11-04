@@ -6,7 +6,7 @@
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
-use deck_streak_render::template::{parse, tokenize};
+use deck_streak_render::template::{Token, parse, tokenize};
 use deck_streak_render::{
     CardContext, CardTemplate, MAX_DEPTH, MAX_TEMPLATE_BYTES, NoteContent, NoteType, NoteTypeKind,
     RenderIssue, check_note_type, render,
@@ -327,5 +327,182 @@ fn render_total_proptest() {
     assert_eq!(
         examined, 10_000,
         "every generated case reached the renderer"
+    );
+}
+
+/// The question of the first card whose one template has this front, with `Prompt` set to
+/// `prompt` and `Answer` empty.
+fn front_of(front: &str, prompt: &str) -> Result<String, RenderIssue> {
+    draw(&prompt_answer(front, ""), prompt, "").map(|card| card.question)
+}
+
+#[test]
+fn text_filter_drops_comments_styles_scripts_and_tags() {
+    let cases = [
+        ("a<!--x-->b", "ab"),
+        ("a<style>p{}</style>b", "ab"),
+        ("a<STYLE>p{}</Style>b", "ab"),
+        ("a<SCRIPT>go()</script>b", "ab"),
+        ("a<i>b</i>c", "abc"),
+        ("&#65;&amp;", "A&"),
+        ("&#+65; stays", "&#+65; stays"),
+    ];
+    for (field, shown) in cases {
+        assert_eq!(
+            front_of("{{text:Prompt}}", field),
+            Ok(shown.to_owned()),
+            "the text filter over {field:?}"
+        );
+    }
+}
+
+#[test]
+fn ruby_filters_split_each_base_from_its_reading() {
+    let front = "{{furigana:Prompt}}|{{kana:Prompt}}|{{kanji:Prompt}}";
+    let cases = [
+        ("ab[cd]e", "<ruby><rb>ab</rb><rt>cd</rt></ruby>e|cde|abe"),
+        (" a[cd]e", "<ruby><rb>a</rb><rt>cd</rt></ruby>e|cde|ae"),
+        ("a b[c]", "a<ruby><rb>b</rb><rt>c</rt></ruby>|ac|ab"),
+        (
+            "x[sound:y.mp3]z",
+            "x[sound:y.mp3]z|x[sound:y.mp3]z|x[sound:y.mp3]z",
+        ),
+        ("[a]", "[a]|[a]|[a]"),
+    ];
+    for (field, shown) in cases {
+        assert_eq!(
+            front_of(front, field),
+            Ok(shown.to_owned()),
+            "the ruby filters over {field:?}"
+        );
+    }
+}
+
+#[test]
+fn type_marker_keeps_a_cloze_or_nc_filter() {
+    let cases = [
+        ("{{Prompt}}{{type:Answer}}", "p[[type:Answer]]"),
+        ("{{Prompt}}{{type:cloze:Answer}}", "p[[type:cloze:Answer]]"),
+        ("{{Prompt}}{{type:nc:Answer}}", "p[[type:nc:Answer]]"),
+        ("{{Prompt}}{{type:text:Answer}}", "p[[type:Answer]]"),
+    ];
+    for (front, shown) in cases {
+        assert_eq!(
+            front_of(front, "p"),
+            Ok(shown.to_owned()),
+            "the front {front:?}"
+        );
+    }
+}
+
+#[test]
+fn cloze_number_sections_need_no_field() {
+    let front = "{{Prompt}}{{#c1}}z{{/c1}}{{#c2}}x{{/c2}}{{^c2}}y{{/c2}}";
+    assert_eq!(
+        front_of(front, "p"),
+        Ok("pzy".to_owned()),
+        "c1 is the first card's number and c2 is no field"
+    );
+    for name in ["c", "cat", "Nope"] {
+        let front = ["{{Prompt}}{{#", name, "}}x{{/", name, "}}"].concat();
+        assert_eq!(
+            front_of(&front, "p"),
+            Err(RenderIssue::UnknownField {
+                name: name.to_owned()
+            }),
+            "a section named {name:?} needs a field"
+        );
+    }
+}
+
+#[test]
+fn empty_name_with_a_filter_draws_nothing() {
+    assert_eq!(front_of("{{Prompt}}[{{text:}}]", "p"), Ok("p[]".to_owned()));
+}
+
+#[test]
+fn line_break_before_text_is_not_blank() {
+    assert_eq!(
+        front_of("{{Prompt}}", "<br>x"),
+        Ok("<br>x".to_owned()),
+        "text after a line break shows"
+    );
+    assert_eq!(
+        front_of("{{Prompt}}", "<br> <DIV></div>"),
+        Err(RenderIssue::EmptyFront),
+        "line breaks and empty div tags show nothing"
+    );
+}
+
+#[test]
+fn equal_fronts_that_show_the_card_name_pass_the_check() {
+    let twice = |front: &str| NoteType {
+        name: "Basic".to_owned(),
+        kind: NoteTypeKind::Standard,
+        fields: vec!["Prompt".to_owned(), "Answer".to_owned()],
+        templates: ["Forward", "Again"]
+            .into_iter()
+            .map(|name| CardTemplate {
+                name: name.to_owned(),
+                front: front.to_owned(),
+                back: "{{FrontSide}}".to_owned(),
+            })
+            .collect(),
+    };
+    assert_eq!(
+        check_note_type(&twice("{{Card}}")),
+        Ok(()),
+        "the card name tells the fronts apart"
+    );
+    assert_eq!(
+        check_note_type(&twice("{{Prompt}}")),
+        Err(RenderIssue::DuplicateFront { ordinal: 1 }),
+        "two fronts that read the same"
+    );
+}
+
+#[test]
+fn tokenize_takes_the_earlier_of_a_comment_and_a_tag() {
+    assert_eq!(
+        tokenize("<!--x-->{{Prompt}}"),
+        vec![Token::Comment("x"), Token::Var("Prompt")]
+    );
+    assert_eq!(
+        tokenize("{{Prompt}}<!--x-->"),
+        vec![Token::Var("Prompt"), Token::Comment("x")]
+    );
+    assert_eq!(
+        tokenize("<!--{{Nope}}-->"),
+        vec![Token::Comment("{{Nope}}")]
+    );
+    assert_eq!(tokenize("{{a}}x"), vec![Token::Var("a"), Token::Text("x")]);
+}
+
+#[test]
+fn tokenize_opens_a_section_only_past_one_character() {
+    assert_eq!(
+        tokenize("{{#a}}x{{/a}}"),
+        vec![
+            Token::Open {
+                inverted: false,
+                name: "a"
+            },
+            Token::Text("x"),
+            Token::Close("a"),
+        ]
+    );
+    assert_eq!(tokenize("{{#}}"), vec![Token::Var("#")]);
+}
+
+#[test]
+fn parse_takes_a_template_of_exactly_the_byte_bound() {
+    assert!(
+        parse(&"x".repeat(MAX_TEMPLATE_BYTES)).is_ok(),
+        "a template of exactly the bound parses"
+    );
+    assert_eq!(
+        parse(&"x".repeat(MAX_TEMPLATE_BYTES + 1)).err(),
+        Some(RenderIssue::TooLarge),
+        "one byte over the bound is too large"
     );
 }
