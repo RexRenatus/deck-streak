@@ -447,13 +447,13 @@ def group_rows(result, cfg):
     depth = cfg["lanes"][result["lane"]]["group_depth"]
     groups = {}
     for path, data in result["examined"].items():
-        g = groups.setdefault(group_of(path, depth), [0, 0, 0, 0, 0, 0, 0])
+        g = groups.setdefault(group_of(path, depth), [0, 0, 0, 0, 0, 0])
         g[0] += len(data["da"])
         g[1] += len([h for h in data["da"].values() if h > 0])
-        g[3] += data["fnf"]
-        g[4] += data["fnh"]
-        g[5] += data["brf"]
-        g[6] += data["brh"]
+        g[2] += data["fnf"]
+        g[3] += data["fnh"]
+        g[4] += data["brf"]
+        g[5] += data["brh"]
     rows = []
     for name in sorted(groups):
         g = groups[name]
@@ -463,10 +463,10 @@ def group_rows(result, cfg):
                 "lines": g[0],
                 "executed": g[1],
                 "not_executed": g[0] - g[1],
-                "functions": g[3],
-                "functions_executed": g[4],
-                "branches": g[5],
-                "branches_taken": g[6],
+                "functions": g[2],
+                "functions_executed": g[3],
+                "branches": g[4],
+                "branches_taken": g[5],
             }
         )
     if "regions" in result:
