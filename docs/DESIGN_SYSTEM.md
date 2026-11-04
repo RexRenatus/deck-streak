@@ -86,3 +86,20 @@ principle's text above is kept as it was. The ruling words what replaces it:
 > **Design principle 2: vivid in session, calm out of session.** In a session: haptics, motion,
 > sound, instant XP and ladder celebrations. Outside one: nothing pressures, shames or fabricates,
 > and at most one nudge a day. Every charter 10 anti-goal is kept.
+
+Amendment (SPEC-578): the token file holds a third tier, `modes`, beside `ref` and `color`. It holds DeckStreak's product
+palette, Tide (a deep blue-black with a teal accent), as six role values: a background, an ink and an accent for each of a dark
+and a light mode, each an alias of a raw colour in `ref.tide`. The section "Tokens" above is kept as it was; its two tiers and
+the Telegram mapping of `color` are unchanged.
+
+| mode | background | ink | accent |
+|---|---|---|---|
+| dark | `#0f161d` | `#f4f7fa` | `#34c6c0` |
+| light | `#f4f7fa` | `#0f161d` | `#0b6a67` |
+
+`web/app/scripts/build-tokens.ts` compiles each to a custom property, `--tide-<mode>-<role>`, mapped into Tailwind's theme as
+`--color-tide-<mode>-<role>`, and the iPhone and iPad app copies them as three colour sets, `TideBackground`, `TideInk` and
+`TideAccent`, each with a light entry and a dark entry; `scripts/tests/test_tide_tokens.py` holds every copy equal to the token
+file. Ink on background measures 16.94:1 in both modes, and accent on background 5.97:1 light and 8.66:1 dark: each meets WCAG
+2.2 AA for text. No screen reads the tier yet: the screens take it in their own round, which also decides the card, muted-text
+and border values the three roles do not cover.

@@ -1,0 +1,30 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S57801-THE-TIDE-LIGHT-BACKGROUND-IS-ITS-TOKEN",
+        "web/app/src/lib/design/tokens.json",
+        "\"hex\": \"#f4f7fa\"",
+        "\"hex\": \"#f4f7fb\"",
+        "the Tide neutral 50, the light background and the dark ink, is the value every copy reads; a one-byte change in the token file leaves the app's colour sets differing from their token (SPEC-578 A4)",
+        "test_tide_tokens.TheAppCopiesTheTokens.test_each_colour_set_holds_its_tokens_values"
+      ],
+      [
+        "S57802-THE-TIDEINK-DARK-ENTRY-IS-THE-DARK-INK",
+        "ios/App/Assets.xcassets/TideInk.colorset/Contents.json",
+        "\"red\" : \"0xF4\"",
+        "\"red\" : \"0xF5\"",
+        "the ink colour set's dark entry carries the dark ink; a one-byte change differs from the token (SPEC-578 A4, A5)",
+        "test_tide_tokens.TheAppCopiesTheTokens.test_each_colour_set_holds_its_tokens_values"
+      ],
+      [
+        "S57803-THE-TIDEACCENT-LIGHT-ENTRY-IS-THE-LIGHT-ACCENT",
+        "ios/App/Assets.xcassets/TideAccent.colorset/Contents.json",
+        "\"green\" : \"0x6A\"",
+        "\"green\" : \"0x6B\"",
+        "the accent colour set's light entry carries the light accent; a one-byte change differs from the token (SPEC-578 A4, A5)",
+        "test_tide_tokens.TheAppCopiesTheTokens.test_each_colour_set_holds_its_tokens_values"
+      ]
+    ]
+  }
+}
