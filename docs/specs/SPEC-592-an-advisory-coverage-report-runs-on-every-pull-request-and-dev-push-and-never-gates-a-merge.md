@@ -193,6 +193,10 @@ census refuses the forbidden shape.
 | `scripts/tests/fixtures/coverage/uncovered.diff` | tests | added: the diff that adds it |
 | `scripts/tests/fixtures/coverage/provider-mismatch.txt` | tests | added: a planted mixed lock |
 | `scripts/mutation-python.json` | mutation | changed: one entry, the new script and its test module |
+| `scripts/mutation-verdict.py` | mutation | changed: the scoped price table, each line regenerated from one price run over every population file |
+| `scripts/tests/fixtures/mutation-scoped-prices-41760230352/` | mutation | added: that run's cost records, one `costs.jsonl` per price leg |
+| `scripts/tests/fixtures/mutation-scoped-prices-39439842824/` | mutation | removed: the earlier run's records, as the table test holds exactly one run |
+| `scripts/mutation-rows.d/S42100-S42199.json` | rows | changed: the fifteen table rows re-pinned on their regenerated lines |
 | `scripts/mutation-rows.d/S59200-S59299.json` | rows | added |
 | `scripts/mutation-rows.d/S19000-S19099.json` | rows | changed: S19063 re-anchored on the arm line it pins |
 | `vitest.config.ts` | web | changed: a coverage block, off unless asked |

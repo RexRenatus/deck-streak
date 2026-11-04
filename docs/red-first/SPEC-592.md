@@ -27,4 +27,6 @@ gate python stage of the pull request run. The report replaced the stub in b33b7
 gained the requirements file in 93be50ad, with every test unchanged, and the run at this delivery
 head reads them green. 1e4ab9e9 then added one assertion to the exclusion list test, which a
 surviving mutation row showed was missing; it changes no criterion test. The commits after
-1e4ab9e9 change only documents.
+1e4ab9e9 change only documents, except f36d5c3c, which drops a flag the Rust coverage step cannot
+pair and passes its arguments without a shell array, and c2dbb37a, which regenerates the scoped
+price table, its fixture and its rows from one price run; neither changes a criterion test.
