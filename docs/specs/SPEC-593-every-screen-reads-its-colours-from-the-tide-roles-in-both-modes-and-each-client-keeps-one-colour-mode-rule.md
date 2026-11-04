@@ -33,7 +33,8 @@ Measured at the dev commit this SPEC is cut on, each figure with its command:
   either mode. `layout.css` sets `color-scheme: var(--tg-color-scheme, light)` (line 28), applies
   `border-border` to every element (line 31) and declares a `dark` variant on `.dark` (line 13)
   that nothing sets; `app.html` holds no script; `sveltekit.config.js` sets a content security
-  policy in `hash` mode.
+  policy in `hash` mode; `web/app/src/lib/csp.test.ts` pins that shell free of any script, inline or
+  by URL, and the script sources of that policy (SPEC-400 R7).
 - The native app has 14 SwiftUI view types in 12 files under `ios/App/Sources`, 13 `View` structs
   and one `UIViewRepresentable` (`git grep -n -E "struct [A-Za-z]+ *:[^{]*View" -- ios/App/Sources`),
   and none reads a colour set: the only colour styles are `.foregroundStyle(.secondary)` in
@@ -61,7 +62,8 @@ ADR-615 D1:
 | light | `#f4f7fa` | `#0f161d` | `#0b6a67` | `#ffffff` | `#5f656a` | `#82868c` |
 
 R2. The compile emits twelve custom properties, `--tide-<mode>-<role>`. Each `color` role names its
-Tide role in its `deck-streak` extension (`background` to `background`, `foreground` and
+Tide role in the `tide` member of its `deck-streak` extension, beside `telegram` (`background` to
+`background`, `foreground` and
 `card-foreground` to `ink`, `card` to `card`, `muted-foreground` to `muted`, `border` to `border`,
 and `link` and `ring` to `accent`), and the compile emits the light fallbacks in `:root` and the
 dark fallbacks under `.dark`, each still inside its role Telegram variable. A role outside the six,
@@ -103,14 +105,20 @@ light value as its universal entry and its dark value as its `luminosity` `dark`
 
 R8. The web colour mode (ADR-616 D1) is a three-way setting, `system`, `light` or `dark`, kept on
 the device under the local-storage key `deckstreak.colour-mode` and changed on a settings screen.
-With `system`, or with nothing stored, the page is light only when the browser reports
-`prefers-color-scheme: light`, and dark otherwise. An inline script in the head of `app.html` reads
-the key and the media query before the body paints, and sets or clears the `dark` class on the
-root element; a media-query listener repaints while the choice is `system`. The stylesheet takes
-`color-scheme` from `--tg-color-scheme`, with the class mode as its fallback.
+Until the app mounts, and while the choice is `system` or nothing is stored, the stylesheet alone
+sets the mode: a `prefers-color-scheme` rule in `layout.css` gives every colour role the dark
+fallback the compile emits for it under `.dark`, unless the browser reports
+`prefers-color-scheme: light` or the root element carries the `light` class. So a browser with no
+preference paints dark first, one that reports light paints the light fallbacks of `:root`, and
+the page follows a system change with no listener. After the app mounts, the root layout calls
+`colour-mode.ts`, which takes the stored choice from the key, sets the `light` or the `dark` class
+on the root element for a stored `light` or `dark`, and clears both for `system` or for no stored
+value. No script is added to the page for any of this (R9). The stylesheet takes `color-scheme`
+from `--tg-color-scheme`, with the mode as its fallback.
 
-R9. The sha256 of the head script is listed in the `script-src` of the content security policy,
-and a test holds the two equal.
+R9. No script enters the page for the mode: `app.html` and the content security policy in
+`sveltekit.config.js` stay unchanged, so the SPEC-400 R7 shell and page-policy tests in
+`web/app/src/lib/csp.test.ts` hold unchanged.
 
 R10. Inside Telegram the chat theme keeps painting every role: the SPEC-028 A8 and A9 tests hold
 unchanged.
@@ -130,8 +138,8 @@ follows the system appearance (ADR-616 D2).
 | A4 | every colour role falls back to its Tide role in each mode, light in `:root` and dark under `.dark`, inside its Telegram variable (R2) | `tokens.test.ts` |
 | A5 | each of the six colour sets holds its token light and dark values (R7) | `test_tide_tokens.py` |
 | A6 | every colour class in a screen names a declared role, and a planted off-role class or colour literal is refused (R4, R6) | `test_tide_screens.py` |
-| A7 | the head script applies a stored light, a stored dark, a system light and a system with no preference (dark) before first paint, and a planted script that ignores the stored choice is refused (R8) | `colour-mode.test.ts` |
-| A8 | the head script hash is listed in `script-src`, and a planted script edit is refused (R9) | `colour-mode.test.ts` |
+| A7 | until the app mounts the stylesheet paints the system mode, dark unless the browser reports light, its `layout.css` rule giving every colour role the dark fallback the compile emits; after mount a stored light or dark sets its class on the root element and `system` clears it; a planted rule that misses a role, and a planted apply that ignores the stored choice, are each refused (R8) | `colour-mode.test.ts` |
+| A8 | no script enters the page for the mode: the shell carries no script and the page policy admits nothing new (R9) | the SPEC-400 tests in `csp.test.ts`, unchanged |
 | A9 | the Telegram mapping and its contrast proof are unchanged (R10) | the SPEC-028 A8 and A9 tests |
 | A13 | every class list that holds `bg-card` holds a `border` width class, and a planted card without the border is refused (R5) | `test_tide_screens.py` |
 
@@ -144,10 +152,12 @@ A4: pnpm exec vitest run web/app/src/lib/design/tokens.test.ts -t "every colour 
 A5: python3 -m unittest discover -s scripts/tests -p test_tide_tokens.py -k test_each_colour_set_holds_its_tokens_values
 A6: python3 -m unittest discover -s scripts/tests -p test_tide_screens.py -k test_every_screen_colour_class_is_a_declared_role
 A6: python3 -m unittest discover -s scripts/tests -p test_tide_screens.py -k test_a_planted_off_role_class_or_literal_is_refused
-A7: pnpm exec vitest run web/app/src/lib/settings/colour-mode.test.ts -t "the head script applies the stored or system mode before first paint"
-A7: pnpm exec vitest run web/app/src/lib/settings/colour-mode.test.ts -t "a planted head script that ignores the stored choice is refused"
-A8: pnpm exec vitest run web/app/src/lib/settings/colour-mode.test.ts -t "the head script hash is listed in script-src"
-A8: pnpm exec vitest run web/app/src/lib/settings/colour-mode.test.ts -t "a planted head script edit is refused by the hash check"
+A7: pnpm exec vitest run web/app/src/lib/settings/colour-mode.test.ts -t "the stylesheet paints the system mode first, dark unless the browser reports light"
+A7: pnpm exec vitest run web/app/src/lib/settings/colour-mode.test.ts -t "a planted system rule that misses a colour role is refused"
+A7: pnpm exec vitest run web/app/src/lib/settings/colour-mode.test.ts -t "the stored choice is applied to the root element after mount"
+A7: pnpm exec vitest run web/app/src/lib/settings/colour-mode.test.ts -t "a planted apply that ignores the stored choice is refused"
+A8: pnpm exec vitest run web/app/src/lib/csp.test.ts -t "the page shell carries no script, inline or by URL"
+A8: pnpm exec vitest run web/app/src/lib/csp.test.ts -t "the page policy admits WebAssembly compilation and nothing else new"
 A9: pnpm exec vitest run web/app/src/lib/design/tokens.test.ts -t "every colour token resolves to a Telegram theme variable with a fallback"
 A9: pnpm exec vitest run web/app/src/lib/design/tokens.test.ts -t "every text and background pair meets AA contrast in both Telegram palettes"
 A13: python3 -m unittest discover -s scripts/tests -p test_tide_screens.py -k test_every_card_carries_the_border_role
@@ -163,7 +173,7 @@ the web part, beside A6 in the same census module.
 |---|---|---|
 | `docs/specs/SPEC-593-every-screen-reads-its-colours-from-the-tide-roles-in-both-modes-and-each-client-keeps-one-colour-mode-rule.md` | web | new: this SPEC |
 | `docs/decisions/ADR-615-every-screen-reads-its-colours-from-the-tide-roles-and-the-token-file-adds-card-muted-text-and-border-values-for-both-modes.md` | web | new |
-| `docs/decisions/ADR-616-the-web-app-follows-the-system-colour-scheme-with-a-stored-setting-set-before-first-paint-and-the-app-follows-the-system-appearance.md` | web | new |
+| `docs/decisions/ADR-616-the-web-app-follows-the-system-colour-scheme-with-a-stored-setting-applied-after-mount-and-the-app-follows-the-system-appearance.md` | web | new |
 | `docs/schematics/tide-screens.md` | web | new: the flow from the token file to each client, its screens and its modes |
 | `docs/DESIGN_SYSTEM.md` | web | changed: the card, muted and border roles, the card border rule and the colour-mode rule |
 | `docs/red-first/SPEC-593.md` | web | new: the web part reds and greens |
@@ -171,12 +181,14 @@ the web part, beside A6 in the same census module.
 | `changelog.d/tide-screens-593.md` | web | new |
 | `web/app/src/lib/design/tokens.json` | web | changed: the new `ref.tide` neutral steps, six roles per mode, each colour role naming its Tide role, the five Telegram raw colours removed (R1, R2) |
 | `web/app/scripts/build-tokens.ts` | web | changed: emits twelve custom properties and the per-mode fallbacks, and refuses a role with no Tide role (R2) |
-| `web/app/src/lib/design/tokens.test.ts` | web | changed: A1 to A4 |
-| `web/app/src/routes/layout.css` | web | changed: `color-scheme` per class mode under the Telegram scheme (R8) |
-| `web/app/src/app.html` | web | changed: the head script (R8) |
-| `web/app/sveltekit.config.js` | web | changed: the head script hash in `script-src` (R9) |
-| `web/app/src/lib/settings/colour-mode.ts` | web | new: the key, the stored choice, the mode it applies and the system listener (R8) |
-| `web/app/src/lib/settings/colour-mode.test.ts` | web | new: A7 and A8 |
+| `web/app/src/lib/design/tokens.test.ts` | web | changed: A1 to A4; of its three SPEC-578 tests, the closure test plants nothing and asserts a literal list of the twelve R1 and R2 properties, and the other two plant `glow` where they planted `muted` |
+| `web/app/src/routes/layout.css` | web | changed: the `prefers-color-scheme` system rule that paints the dark fallbacks unless the browser reports light, and `color-scheme` per mode under the Telegram scheme (R8) |
+| `web/app/src/routes/+layout.svelte` | web | changed: applies the stored colour mode after mount (R8) |
+| `web/app/src/app.html` | web | unchanged: no script enters the page shell (R9) |
+| `web/app/sveltekit.config.js` | web | unchanged: the page policy admits nothing new (R9) |
+| `web/app/src/lib/settings/colour-mode.ts` | web | new: the key, the stored choice and the class it sets on the root element after mount (R8) |
+| `web/app/src/lib/settings/colour-mode.test.ts` | web | new: A7 |
+| `web/app/src/lib/csp.test.ts` | web | unchanged: its SPEC-400 tests decide A8 (R9) |
 | `web/app/src/lib/settings/ColourModeSetting.svelte` | web | new: the three-way control (R8) |
 | `web/app/src/routes/settings/+page.svelte` | web | new: the settings screen that holds the control (R8) |
 | `web/app/src/routes/+page.svelte` | web | changed: a link to the settings screen, and the border class on its card (R5, R8) |
@@ -252,9 +264,11 @@ S59399 stay unused.
   literal escapes a class census. A13 reads every class list in every `.svelte` file under
   `web/app/src`, and its planted card shows it can go red; a new card component is read by the same
   census.
-- **A head script hash out of step.** A script edit without its hash makes the policy block the
-  script, so the page paints dark-first whatever the stored choice; A8 refuses the pair out of
-  step before it lands.
+- **A stored choice opposite the system.** Until the app mounts the stylesheet paints the system
+  mode, so such a choice shows the other mode for the first frames; section 8 names who checks it.
+  A system rule out of step with the compile would paint a wrong dark value: A7 holds every role of
+  the `layout.css` rule equal to the dark fallback the compile emits, and refuses a planted rule
+  that misses one.
 - **The colour scheme outranking Telegram.** A scheme set on the root element would outrank the
   Telegram scheme inside the Mini App; R8 keeps `color-scheme` in the stylesheet under
   `--tg-color-scheme`, and A9 holds the Telegram mapping.
@@ -297,9 +311,10 @@ name; no census here stands in for it.
 ## 8. What no repository test decides
 
 The tests decide the token values, every declared pair, every class and Swift colour reference,
-the head script and its hash. They cannot decide what a screen shows: the rendered colours of each
-screen in each mode in a browser, on the simulator and on a device; whether a real browser paints a
-first frame before the head script runs; and each appearance on a real display. A maintainer checks
+the system rule in `layout.css` and the stored choice applied after mount. They cannot decide what
+a screen shows: the rendered colours of each screen in each mode in a browser, on the simulator and
+on a device; how many frames a stored choice opposite the system shows the system mode before the
+app mounts; and each appearance on a real display. A maintainer checks
 each web screen in both modes after the web pull request merges, and each native screen in both
 appearances on a device after the native pull request merges, and records each check, with what
 was seen, as a closing section of `docs/red-first/SPEC-593.md`.

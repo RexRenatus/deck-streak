@@ -12,6 +12,6 @@
 
 - A colour mode for the web app: a new settings screen offers system, light or dark, kept on the
   device. With system, or with nothing chosen, the page is light only when the browser asks for
-  light, and dark otherwise. A small script in the page head applies the choice before the first
-  frame paints (a maintainer checks this in a real browser), and the content security policy lists
-  its hash (#1045; SPEC-593).
+  light, and dark otherwise. The stylesheet paints that mode from the first frame with no script,
+  and a stored light or dark applies once the app has loaded (a maintainer checks the first frames
+  in a real browser) (#1045; SPEC-593).
