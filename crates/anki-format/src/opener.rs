@@ -9,7 +9,6 @@
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read as _, Write};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use rusqlite::config::DbConfig;
 use rusqlite::limits::Limit;
@@ -232,19 +231,22 @@ fn refuse_a_wal(source: &Path) -> Result<(), Refusal> {
     }
 }
 
-static NEXT_DIR: AtomicU64 = AtomicU64::new(0);
+/// How many names `private_dir` tries before it refuses: one per reader this process holds at
+/// once, and more for a folder a past process of the same id left behind.
+const PRIVATE_DIR_NAMES: u32 = 256;
 
-/// The directory the copy lives in, made by the opener, readable by its owner alone.
+/// The directory the copy lives in, made by the opener, readable by its owner alone. The names
+/// are counted from 0 on every call, so the opener keeps no state between calls: a name another
+/// reader holds is taken by `mkdir` alone, and the next one is tried.
 fn private_dir() -> Result<PathBuf, Refusal> {
     let base = std::env::temp_dir();
     let process = std::process::id();
-    for _ in 0..64 {
-        let number = NEXT_DIR.fetch_add(1, Ordering::Relaxed);
+    for number in 0..PRIVATE_DIR_NAMES {
         let dir = base.join(format!("deck-streak-anki-format-{process}-{number}"));
-        match make_dir(&dir) {
+        match make_dir(&dir).map_err(|error| error.kind()) {
             Ok(()) => return Ok(dir),
-            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}
-            Err(error) => return Err(Refusal::Io(error.kind().to_string())),
+            Err(io::ErrorKind::AlreadyExists) => {}
+            Err(kind) => return Err(Refusal::Io(kind.to_string())),
         }
     }
     Err(Refusal::Io("no fresh private directory".to_owned()))

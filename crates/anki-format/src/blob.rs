@@ -236,14 +236,20 @@ impl<'a> Message<'a> {
     }
 }
 
+/// The most seven-bit groups a `u128` varint takes: 19 groups hold 133 bits.
+const VARINT_GROUPS: u32 = 19;
+
+/// `value` as a varint, in at most the groups a `u128` can take.
 fn put_varint(out: &mut Vec<u8>, value: u128) {
     let mut rest = value;
-    let mut more = true;
-    while more {
+    for _ in 0..VARINT_GROUPS {
         let low = u8::try_from(rest & 0x7f).unwrap_or(0);
         rest >>= 7;
-        more = rest != 0;
+        let more = rest != 0;
         out.push(if more { low | 0x80 } else { low });
+        if !more {
+            return;
+        }
     }
 }
 
