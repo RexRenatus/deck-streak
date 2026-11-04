@@ -68,6 +68,7 @@ push, and A3 pins a behaviour the base already has, so it is recorded `not red` 
 |---|---|---|
 | `scripts/tests/test_mutation_python.py` | tests | changed: `Tree` keeps the test that made it, `Tree.report` writes into a directory of its own, and the A1 test |
 | `scripts/tests/test_mutation_python_cli_kills.py` | tests | changed: `import tempfile`, `report_of` writes into a directory of its own, and the A2 test |
+| `scripts/tests/test_ci_workflows.py` | tests | changed: one dynamic-site listing for the A2 test's patch of its own module |
 | `scripts/mutation-rows.d/S61000-S61099.json` | mutation rows | added: S61000 and S61001 |
 | `scripts/mutation_python.py` | mutation scripts | unchanged: it still writes `costs.jsonl` beside `--report` |
 | `docs/specs/SPEC-610-each-mutation-runner-test-helper-writes-its-report-into-a-directory-of-its-own.md` | records | added: this SPEC |
