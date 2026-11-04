@@ -163,6 +163,7 @@ bytes, and every ingest path to them compiles through a re-export.
 | `docs/CONTEXT-MAP.md` | docs | changed: the crate's line, ingest's edge, its paragraph |
 | `docs/LEXICON.md` | docs | changed: the crate's terms |
 | `docs/schematics/context-map.md` | docs | changed: the node and ingest's arrow |
+| `docs/schematics/the-app-campaigns-surfaces-each-carry-a-stride-table-whose-every-control-cites-a-line-that-holds.md` | docs | changed: its citations of the internal lane workflow and its test, each re-anchored one line down to where the added line moved it |
 | `.github/workflows/ci.yml` | ci | changed: the wasm32 build step, and the rust job's first step frees runner disk |
 | `.github/workflows/xcframework.yml` | ci | changed: the iOS build step |
 | `.github/workflows/testflight-internal.yml` | ci | changed: the push filter line |
