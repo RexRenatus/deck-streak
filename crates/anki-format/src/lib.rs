@@ -10,6 +10,7 @@ pub mod blob;
 pub mod fields;
 pub mod opener;
 pub mod read;
+pub mod statements;
 pub mod wire;
 
 pub use opener::{Kind, Limits, Reader, Refusal, open};

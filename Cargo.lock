@@ -1312,6 +1312,7 @@ version = "0.3.0"
 dependencies = [
  "anki",
  "chrono",
+ "deck-streak-anki-format",
  "deck-streak-collection",
  "deck-streak-kernel",
  "deck-streak-search",

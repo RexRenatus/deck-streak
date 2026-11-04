@@ -34,5 +34,5 @@ pub mod sync;
 pub mod sync_runs;
 pub mod tier;
 pub mod window;
-pub mod wire;
+pub use deck_streak_anki_format::wire;
 pub mod write_class_stop;
