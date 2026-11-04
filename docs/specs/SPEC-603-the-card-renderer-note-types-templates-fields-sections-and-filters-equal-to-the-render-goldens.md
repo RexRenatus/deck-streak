@@ -105,6 +105,7 @@ A10: test -s docs/clean-room/card-renderer.md
 | `docs/red-first/SPEC-603.md` | docs | new: the red-first record |
 | `docs/clean-room/card-renderer.md` | docs | new: what was read, the similarity method and its scores |
 | `changelog.d/card-renderer-603.md` | docs | new: the changelog fragment |
+| `scripts/mutation-rows.d/S39400-S39499.json` | rows | changed: row S39406 re-anchored to the header this delivery sets; every other row unchanged |
 
 ## 5. What this does NOT cover
 
