@@ -32,7 +32,7 @@ sequenceDiagram
     Sync->>Engine: sync(hostKey, endpoint)
     alt a full sync is needed
         Sync->>Engine: unsynced(), then countChoice()
-        Sync-->>Learner: the counts wait in the account sheet; nothing is written
+        Sync-->>Learner: the counts wait in the account sheet#59; nothing is written
     else no full sync is needed
         Sync->>App: completed()
         App->>Engine: decks()
