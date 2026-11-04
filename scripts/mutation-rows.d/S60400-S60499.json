@@ -1,0 +1,86 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S60401-THE-QUEUE-TESTS-SIX-TOGETHER",
+        ".mergify.yml",
+        "batch_size: 6",
+        "batch_size: 5",
+        "the queue tests up to six pull requests together; a batch size of five is not the size the queue rule states (SPEC-604 R1)",
+        "test_merge_queue.TheQueueFile.test_the_queue_tests_six_together_and_merges_each_by_a_merge_commit"
+      ],
+      [
+        "S60402-EACH-MEMBER-MERGES-BY-A-MERGE-COMMIT",
+        ".mergify.yml",
+        "merge_method: merge",
+        "merge_method: squash",
+        "each member of a batch merges by a merge commit; a squash method rewrites the commits of every member (SPEC-604 R1, R3)",
+        "test_merge_queue.TheQueueFile.test_the_queue_tests_six_together_and_merges_each_by_a_merge_commit"
+      ],
+      [
+        "S60403-THE-QUEUE-LABEL-ADMITS",
+        ".mergify.yml",
+        "      - label = queue\n      - -draft\n",
+        "      - label = queued\n      - -draft\n",
+        "a pull request enters only with the queue label; a condition on another label name keeps every labelled pull request out (SPEC-604 R2)",
+        "test_merge_queue.TheQueueConditions.test_a_pull_request_enters_the_queue_only_into_dev_labelled_ready_resolved_and_green"
+      ],
+      [
+        "S60404-A-DRAFT-STAYS-OUT",
+        ".mergify.yml",
+        "      - -draft\n",
+        "      - draft\n",
+        "a draft never enters the queue; a condition that asks for a draft refuses every pull request ready for review (SPEC-604 R2)",
+        "test_merge_queue.TheQueueConditions.test_a_pull_request_enters_the_queue_only_into_dev_labelled_ready_resolved_and_green"
+      ],
+      [
+        "S60405-NO-UNRESOLVED-THREAD-ENTERS",
+        ".mergify.yml",
+        "\"#review-threads-unresolved = 0\"",
+        "\"#review-threads-unresolved >= 0\"",
+        "a pull request with an unresolved review thread stays out; a bound every count meets admits it (SPEC-604 R2, R4)",
+        "test_merge_queue.TheQueueConditions.test_a_pull_request_enters_the_queue_only_into_dev_labelled_ready_resolved_and_green"
+      ],
+      [
+        "S60406-A-BATCH-WAITS-FOR-CI",
+        ".mergify.yml",
+        "    merge_conditions:\n      - check-success = ci\n",
+        "    merge_conditions:\n      - check-success = cj\n",
+        "a batch merges only after ci passes on it; a merge condition on a check no workflow produces never lets a green batch merge (SPEC-604 R3)",
+        "test_merge_queue.TheQueueConditions.test_a_batch_merges_only_after_ci_fragment_and_dependency_review_pass_on_it"
+      ],
+      [
+        "S60407-ONLY-THE-QUEUE-LOGIN-TAKES-THE-ARM",
+        ".github/workflows/changelog.yml",
+        "[ \"$AUTHOR\" = \"mergify[bot]\" ]",
+        "[ \"$AUTHOR\" = \"$AUTHOR\" ]",
+        "only the queue login takes the batch arm; a comparison every login meets lets a person on a queue branch skip the fragment (SPEC-604 R8)",
+        "test_merge_queue.TheBatchFragment.test_only_the_queue_login_on_a_queue_branch_takes_the_batch_arm"
+      ],
+      [
+        "S60408-ONLY-THE-QUEUE-PREFIX-TAKES-THE-ARM",
+        ".github/workflows/changelog.yml",
+        "queue=\"mergify/merge-queue/\"",
+        "queue=\"mergify/\"",
+        "only a head branch under the queue prefix takes the batch arm; a shorter prefix lets the queue login on another branch skip the fragment (SPEC-604 R8)",
+        "test_merge_queue.TheBatchFragment.test_only_the_queue_login_on_a_queue_branch_takes_the_batch_arm"
+      ],
+      [
+        "S60409-THE-WHOLE-PREFIX-IS-COMPARED",
+        ".github/workflows/changelog.yml",
+        "${GITHUB_HEAD_REF:0:${#queue}}",
+        "${GITHUB_HEAD_REF:0:8}",
+        "the head branch is compared over the whole queue prefix; a cut of another length never equals it, so a dependency-only batch is refused (SPEC-604 R8)",
+        "test_merge_queue.TheBatchFragment.test_a_queue_batch_of_dependency_updates_alone_needs_no_fragment"
+      ],
+      [
+        "S60410-THE-BATCH-READS-THE-DEPENDENCY-RULE",
+        ".github/workflows/changelog.yml",
+        "            AUTHOR=\"dependabot[bot]\"\n",
+        "            AUTHOR=\"mergify[bot]\"\n",
+        "a queue batch is handed to the dependency-file rule; left with its own login it never reaches that rule, so a dependency-only batch is refused (SPEC-604 R8)",
+        "test_merge_queue.TheBatchFragment.test_a_queue_batch_of_dependency_updates_alone_needs_no_fragment"
+      ]
+    ]
+  }
+}

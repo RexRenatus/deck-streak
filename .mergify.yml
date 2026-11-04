@@ -1,0 +1,25 @@
+# The Mergify merge queue for pull requests into dev (SPEC-604, ADR-625).
+queue_rules:
+  - name: dev
+    batch_size: 6
+    merge_method: merge
+    queue_conditions:
+      - base = dev
+      - label = queue
+      - -draft
+      - "#review-threads-unresolved = 0"
+      - check-success = ci
+      - check-success = fragment
+      - check-success = dependency-review
+    merge_conditions:
+      - check-success = ci
+      - check-success = fragment
+      - check-success = dependency-review
+pull_request_rules:
+  - name: a labelled pull request into dev enters the queue
+    conditions:
+      - base = dev
+      - label = queue
+    actions:
+      queue:
+        name: dev
