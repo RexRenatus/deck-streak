@@ -272,6 +272,22 @@
         "\"tools/parity-oracle/generate.py\": (3, 2, 2),",
         "tools/parity-oracle/generate.py's scoped mutant figure is the price run's (SPEC-421 R6, A9)",
         "test_mutation_python_shard_binding.AScopedLegIsPricedByItsTriple.test_the_scoped_table_is_the_verbs_output_over_the_recorded_price_run"
+      ],
+      [
+        "S42135-MUTATION-VERDICT-PY-MUTANT-FIGURE-IS-THE-PRICE-RUNS",
+        "scripts/mutation-verdict.py",
+        "\"scripts/mutation-verdict.py\": (311, 351, 128),",
+        "\"scripts/mutation-verdict.py\": (311, 351, 129),",
+        "scripts/mutation-verdict.py's scoped mutant figure is the price run's (SPEC-421 R6, A9)",
+        "test_mutation_python_shard_binding.AScopedLegIsPricedByItsTriple.test_the_scoped_table_is_the_verbs_output_over_the_recorded_price_run"
+      ],
+      [
+        "S42136-MUTATION-CARRY-PY-MUTANT-FIGURE-IS-THE-PRICE-RUNS",
+        "scripts/mutation-verdict.py",
+        "\"scripts/mutation_carry.py\": (52, 55, 28),",
+        "\"scripts/mutation_carry.py\": (52, 55, 29),",
+        "scripts/mutation_carry.py's scoped mutant figure is the price run's (SPEC-421 R6, A9)",
+        "test_mutation_python_shard_binding.AScopedLegIsPricedByItsTriple.test_the_scoped_table_is_the_verbs_output_over_the_recorded_price_run"
       ]
     ]
   }
