@@ -141,3 +141,31 @@ protocol, state machine, interleaving or engine path gains or changes.
 
 SPEC-618; SPEC-038 and ADR-055 (the gate jobs and the aggregate `ci`); ADR-017 (hosted runners);
 ADR-589 (the deprecated code the exclusions name); ADR-613 (coverage stays advisory).
+
+## Amendment for the second part of the delivery, and what it was chosen against
+
+Three facts of the second part differ from the text above, and each is recorded here; no decision
+above is withdrawn.
+
+The Rust upload job installs one tool. D2 says an upload job builds and installs nothing; the Rust
+upload job installs the pinned `cargo-codspeed` release binary through `taiki-e/install-action`
+with `fallback: none`, so the install downloads a published binary at one version and never
+compiles. It runs no package install and no build script, and the web upload job installs nothing
+(SPEC-618 R14).
+
+The record check runs on each pull request in `bench-rust-build`, which holds `contents: read`
+only, and checks only the records that pull request adds or changes under `perf/regressions.d/`
+(SPEC-618 R11). A refused record fails the build job and so `ci`.
+
+The benchmark list the check passes is `perf/benchmarks.txt`, one `<file stem>::<bench>` name per
+line, and a test holds it equal to the names the bench files define (SPEC-618 R12).
+
+- Carry the `cargo-codspeed` binary in the build archive: not taken in this delivery, because the
+  pinned release download with no fallback already runs no compile and no build script beside the
+  token, and moving the tool into the archive is a change of its own.
+- Check every record in `perf/regressions.d/` on each pull request: rejected, because a record kept
+  for an earlier change names that change's branch, so the branch arm would refuse it on every
+  later pull request.
+- Derive the benchmark names inside the record step: rejected, because the step would then run a
+  parser the gate does not test, while the committed list is held equal to the bench files by a
+  test the gate runs.

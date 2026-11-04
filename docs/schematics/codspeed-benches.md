@@ -4,7 +4,9 @@ Kind: data flow. Citations read at dev `de4c4d4d`.
 
 Every run of `ci.yml` starts the four bench jobs. Each build job runs the plan, then builds with no
 token; its upload job reads the plan's outputs, unpacks the archive and uploads by OIDC. The
-aggregate `ci` needs all four (`.github/workflows/ci.yml:1162`, 17 jobs before this delivery).
+aggregate `ci` needs all four (`.github/workflows/ci.yml:1162`, 17 jobs before this delivery and 21
+with it). On a pull request the Rust build job also runs the record check over the records that pull
+request adds or changes, so a refused record fails the build job and with it `ci`.
 
 ```mermaid
 flowchart LR
@@ -15,10 +17,14 @@ flowchart LR
   build -->|"applicable true"| archive["tar archive, one-day artifact"]
   build -->|"needs outputs"| upload["bench-rust or bench-web: contents read, id-token write"]
   archive --> upload
+  tool["bench-rust only: the pinned cargo-codspeed release binary, fallback none"] --> upload
   upload -->|"upload true"| action["CodSpeed action, mode simulation"]
   action --> check["CodSpeed Performance Analysis check, outside every ruleset"]
-  record[("perf/regressions.d/branch-slug.json")] --> rec["perf-record.py check"]
-  names[("the benchmark list")] --> rec
+  record[("the records the pull request adds or changes under perf/regressions.d")] --> rec["perf-record.py check, a step of bench-rust-build on a pull request"]
+  names[("perf/benchmarks.txt, held equal to the bench files")] --> rec
+  rec -->|"a refusal fails the build job"| build
+  build --> ci["the aggregate ci, which needs all four bench jobs"]
+  upload --> ci
   check --> merge["the merge step reads the check and the record"]
   rec --> merge
 ```
@@ -41,3 +47,9 @@ flowchart LR
 - The token: OIDC on the upload jobs alone; the workflow default stays `contents: read`
   (`.github/workflows/ci.yml:19-20`), as `release.yml` scopes its own grant
   (`.github/workflows/release.yml:36-39`).
+- The records: `git diff --name-only --diff-filter=AM HEAD^1 HEAD -- perf/regressions.d`, copied
+  into `$RUNNER_TEMP/records`, checked against the head ref `github.head_ref` passes through the
+  step's environment.
+- The benchmark list: `perf/benchmarks.txt`, one `<file stem>::<bench>` name per line.
+- The Rust upload job's one tool: `cargo-codspeed`, installed by `taiki-e/install-action` at a
+  pinned version with `fallback: none`; the web upload job installs nothing.
