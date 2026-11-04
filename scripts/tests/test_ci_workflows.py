@@ -5216,6 +5216,42 @@ NOT_WORKFLOW_READS = {
         ),
     ),
     **allowed(
+        "the two suite configurations, which the three-engine check hands to suite_text for their projects; never handed to the reader",
+        (
+            "test_ci_workflows",
+            "TheEngineAndStudySuitesRunInFirefox.test_the_engine_and_study_configurations_declare_three_engines",
+            "suite_text(path)",
+            1,
+        ),
+    ),
+    **allowed(
+        "the two suite configurations, which the install check hands to suite_text for the projects each suite step runs; never handed to the reader",
+        (
+            "test_ci_workflows",
+            "TheEngineAndStudySuitesRunInFirefox.test_the_web_engine_job_installs_every_engine_before_each_suite",
+            "suite_text(path)",
+            1,
+        ),
+    ),
+    **allowed(
+        "the engine configuration, which the sync-user check hands to suite_text for its sync users; never handed to the reader",
+        (
+            "test_ci_workflows",
+            "TheEngineAndStudySuitesRunInFirefox.test_each_engine_project_syncs_as_a_user_of_its_own",
+            "suite_text(FIREFOX_SUITE_CONFIGS['engine'])",
+            1,
+        ),
+    ),
+    **allowed(
+        "the sync spec, which the sync-user check hands to suite_text for its account rule; never handed to the reader",
+        (
+            "test_ci_workflows",
+            "TheEngineAndStudySuitesRunInFirefox.test_each_engine_project_syncs_as_a_user_of_its_own",
+            "suite_text(FIREFOX_SYNC_SPEC)",
+            1,
+        ),
+    ),
+    **allowed(
         "the web shard script, whose shard count and artifact prefix the SPEC-419 pin reads; never handed to the reader",
         (
             "test_ci_workflows",
