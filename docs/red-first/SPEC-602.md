@@ -43,4 +43,36 @@ exist.
 ```red-first
 A1: not red: the crate is born with its dependencies; its planted manifest reads red
 A10: not red: the inert opener's in-place open is a connection in opener.rs; the census is red at the base, where that file is absent
+A2: red at 810a248e: crates/anki-format/tests/opener.rs:103: assertion `left == right` failed: the settings on the copy
+A2: green at 836162d8
+A3: red at 810a248e: crates/anki-format/tests/refusals.rs:42: assertion `left == right` failed: the digest check
+A3: green at 836162d8
+A4: red at 810a248e: crates/anki-format/tests/refusals.rs:97: assertion `left == right` failed: the planted view
+A4: green at 836162d8
+A5: red at 810a248e: crates/anki-format/tests/tables.rs:113: assertion `left == right` failed: the columns kept
+A5: green at 836162d8
+A6: red at 810a248e: crates/anki-format/tests/collation.rs:63: assertion `left == right` failed: the collation order
+A6: green at 836162d8
+A7: red at 810a248e: crates/anki-format/tests/blobs.rs:144: assertion `left == right` failed: the blob views
+A7: green at c4458f40
+A8: red at 810a248e: crates/anki-format/tests/collection_view.rs:172: assertion `left == right` failed: the per-table views
+A8: green at 836162d8
+A9: red at 810a248e: crates/ingest/tests/collection_read.rs:301: assertion `left == right` failed: the moved statements
+A9: green at b7664eeb
+A11: red at 810a248e: crates/anki-format/tests/wire_walk.rs:27: assertion `left == right` failed: [08]
+A11: green at 836162d8
+A12: red at 810a248e: scripts/tests/test_context_map_schematic.py: test_every_crate_directory_is_one_node_named_by_it: anki-format: no node
+A12: green at 836162d8
 ```
+
+## The greens
+
+Each green line names the first commit whose tree reads its criterion's tests green, measured by `cargo test
+--locked --offline` one test target at a time (A2 to A9, A11) and by the Python tests one module at a time (A12).
+A9 reads green at the commit that moves the 19 statements and the wire walk here, where the walk half of A11 also
+turns green; the field codec half of A11 and A2 to A6, A8 and A12 read green at the commit that fills the inert
+crate. A7's golden-case test changed once between its red and its green, in commit c4458f4: its templates.config
+default case had read the view type's own default, which no reader of the golden's bytes can satisfy, and it now
+names the golden's default values (both templates, no font size), as the default case of every other column
+already did; its assertion, its other cases and the raw-bytes test are unchanged. No other test file changed
+between a red and its green.
