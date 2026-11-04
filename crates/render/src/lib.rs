@@ -12,6 +12,8 @@
 
 #![forbid(unsafe_code)]
 
+mod filters;
+mod render;
 pub mod template;
 
 /// The largest template, in bytes, the renderer reads; a longer one is [`RenderIssue::TooLarge`].
@@ -131,15 +133,46 @@ impl RenderIssue {
     /// `DeckStreak`'s English text for this issue.
     #[must_use]
     pub fn message(&self) -> String {
-        let _ = self;
-        String::new()
+        match self {
+            Self::UnknownField { name } => format!(
+                "The template asks for a field named \"{name}\", and this note type has no such \
+                 field."
+            ),
+            Self::UnclosedSection { name } => {
+                format!("The section \"{name}\" is opened in the template but never closed.")
+            }
+            Self::StrayClose { name } => {
+                format!("The template closes a section \"{name}\" that is not open.")
+            }
+            Self::EmptyFront => {
+                "Nothing to ask: this card's front uses no field that holds text.".to_owned()
+            }
+            Self::TooDeep => format!("The template nests sections more than {MAX_DEPTH} deep."),
+            Self::TooLarge => format!("The template is longer than {MAX_TEMPLATE_BYTES} bytes."),
+            Self::NoTemplate { ordinal } => format!(
+                "This note type has no card template number {}.",
+                u32::from(*ordinal) + 1
+            ),
+            Self::FrontNamesNoField { ordinal } => {
+                format!("Card template {} shows no field on its front.", ordinal + 1)
+            }
+            Self::DuplicateFront { ordinal } => format!(
+                "Card template {} has the same front as an earlier template.",
+                ordinal + 1
+            ),
+            Self::NoClozeFilter => "A cloze note type needs a cloze field on both the front and \
+                                    the back of its template."
+                .to_owned(),
+        }
     }
 
     /// The face shown in place of a card that cannot render: the message, escaped, in a `div`.
     #[must_use]
     pub fn face(&self) -> String {
-        let _ = self;
-        String::new()
+        format!(
+            "<div class=\"ds-render-issue\">{}</div>",
+            filters::escape(&self.message())
+        )
     }
 }
 
@@ -154,11 +187,7 @@ pub fn render(
     note: &NoteContent<'_>,
     card: &CardContext<'_>,
 ) -> Result<Rendered, RenderIssue> {
-    let _ = (note_type, note, card);
-    Ok(Rendered {
-        question: String::new(),
-        answer: String::new(),
-    })
+    render::card(note_type, note, card)
 }
 
 /// Checks that every template of `note_type` can render.
@@ -167,6 +196,5 @@ pub fn render(
 ///
 /// The [`RenderIssue`] class of the first problem met, template by template.
 pub fn check_note_type(note_type: &NoteType) -> Result<(), RenderIssue> {
-    let _ = note_type;
-    Ok(())
+    render::check(note_type)
 }

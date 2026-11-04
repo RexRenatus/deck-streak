@@ -64,3 +64,49 @@ Not red at the test commit, each by design: A1 (the crate is born without depend
 refused inside the test), A6 (the inert seam never panics, so the totality test holds; it guards the shipped
 render), A7 (VOID: the verifier is not installed), A8 (a build step, read green by name in the green run) and A10
 (a record).
+
+## The greens at the implementation commit
+
+The implementation commit adds the renderer and the context-map, lexicon and schematic lines, and changes no test.
+Each green below is quoted from a run of the render crate's test targets on one thread, and of
+`scripts/tests/test_context_map_schematic.py`, on that commit's tree.
+
+A2, `goldens_render_card_equal`:
+
+```text
+test goldens_render_card_equal ... examined 447 case(s) of anki.render.card: equal by text 378, refused as the golden refuses 24, blank-front by EmptyFront 45, differ 0; set aside: hint 241, cloze note type 326, cloze class 0, cloze filter 0
+ok
+```
+
+A3, `goldens_note_type_check_equal`:
+
+```text
+test goldens_note_type_check_equal ... examined 880 case(s) of anki.render.note_type_check: refused by the golden 30, differ 0
+ok
+```
+
+A4, `hint_is_details`:
+
+```text
+test hint_is_details ... ok
+```
+
+A5, `error_face_is_ds_text`:
+
+```text
+test error_face_is_ds_text ... examined 10 issue class(es)
+ok
+```
+
+A9, `test_context_map_schematic` (4 tests, among them the two named above), with `test_context_map_register` OK
+beside it:
+
+```text
+OK
+examined 43 fence rows
+examined 91 arrows
+examined 39 crate directories
+```
+
+Green at both commits, as designed: A1 (`test crate_has_no_dependencies ... examined 20 manifest line(s): dependency
+entries 0`, then `ok`) and A6 (`test render_total_proptest ... examined 10000`, then `ok`).
