@@ -24,8 +24,9 @@ exist.
 - A5: `crates/anki-format/tests/tables.rs:113`: assertion `left == right` failed: the columns kept;
   `tables.rs:154`: the counts.
 - A6: `crates/anki-format/tests/collation.rs:63`: assertion `left == right` failed: the collation order;
-  `collation.rs:87`: the crate's connection orders by the registration; `crates/anki-format/tests/blobs.rs:144`: the
-  blob views; `blobs.rs:193`: the raw bytes kept.
+  `collation.rs:87`: the crate's connection orders by the registration.
+- A7: `crates/anki-format/tests/blobs.rs:144`: assertion `left == right` failed: the blob views; `blobs.rs:193`: the
+  raw bytes kept.
 - A8: `crates/anki-format/tests/collection_view.rs:172`: assertion `left == right` failed: the per-table views.
 - A9: `crates/ingest/tests/collection_read.rs:301`: assertion `left == right` failed: the moved statements.
 - A11: `crates/anki-format/tests/wire_walk.rs:27`: assertion `left == right` failed: [08];

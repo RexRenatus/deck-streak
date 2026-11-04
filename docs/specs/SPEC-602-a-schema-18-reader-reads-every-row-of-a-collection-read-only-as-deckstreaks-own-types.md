@@ -70,7 +70,8 @@
 | A3 | R3: the five refusals, each by name | the inert opener refuses nothing | ADR-622 D3 |
 | A4 | R4: the four planted objects and the bound refused, the snapshot file read | the inert opener refuses nothing and the inert reader answers no row | ADR-622 D3 |
 | A5 | R5: every column of the 14 tables kept, each count equal | the inert reader answers no row | ADR-622 D2 |
-| A6 | R6 and R7: the collation golden's order and the unregistered control; each blob golden case both ways, raw bytes kept | the inert opener registers no collation, and the inert codec answers a fixed wrong value | ADR-623, ADR-622 D2 |
+| A6 | R6: the collation golden's order and the unregistered control | the inert opener registers no collation | ADR-623, ADR-622 D2 |
+| A7 | R7: each blob golden case both ways, raw bytes kept | the inert codec answers a fixed wrong value | ADR-622 D2 |
 | A8 | R8: each collection view golden case | the inert reader answers no row | ADR-622 D2 |
 | A9 | R9: each statement defined once over the workspace's sources, in `statements.rs` | the statements sit in ingest's adapter | ADR-622 D4 |
 | A10 | R10: two opener files, a planted third refused by file and line | not red: the inert opener builds a connection in `opener.rs` | ADR-622 D2 |
@@ -99,8 +100,8 @@ A5: cargo test -p deck-streak-anki-format --test tables -- --exact every_column_
 A5: cargo test -p deck-streak-anki-format --test tables -- --exact each_table_count_equals_its_select_count
 A6: cargo test -p deck-streak-anki-format --test collation -- --exact the_unicase_order_equals_the_collation_golden
 A6: cargo test -p deck-streak-anki-format --test collation -- --exact a_connection_without_the_registration_has_no_unicase
-A6: cargo test -p deck-streak-anki-format --test blobs -- --exact each_blob_golden_case_encodes_and_decodes_both_ways
-A6: cargo test -p deck-streak-anki-format --test blobs -- --exact an_unchanged_view_keeps_its_raw_bytes
+A7: cargo test -p deck-streak-anki-format --test blobs -- --exact each_blob_golden_case_encodes_and_decodes_both_ways
+A7: cargo test -p deck-streak-anki-format --test blobs -- --exact an_unchanged_view_keeps_its_raw_bytes
 A8: cargo test -p deck-streak-anki-format --test collection_view -- --exact each_golden_collection_reads_as_its_per_table_view
 A9: cargo test -p deck-streak-ingest --test collection_read -- --exact the_moved_statements_live_once_in_the_schema_18_adapter
 A10: cargo test -p deck-streak-collection --test statement_census -- --exact no_other_file_of_the_workspace_builds_a_sqlite_connection
@@ -146,7 +147,7 @@ bytes, and every ingest path to them compiles through a re-export.
 | `crates/anki-format/tests/refusals.rs` | tests | new: A3, A4 |
 | `crates/anki-format/tests/tables.rs` | tests | new: A5 |
 | `crates/anki-format/tests/collation.rs` | tests | new: A6 |
-| `crates/anki-format/tests/blobs.rs` | tests | new: A6, the blobs |
+| `crates/anki-format/tests/blobs.rs` | tests | new: A7 |
 | `crates/anki-format/tests/collection_view.rs` | tests | new: A8 |
 | `crates/anki-format/tests/wire_walk.rs` | tests | new: A11, the walk |
 | `crates/anki-format/tests/field_codec.rs` | tests | new: A11, the codec |
@@ -161,8 +162,8 @@ bytes, and every ingest path to them compiles through a re-export.
 | `crates/collection/tests/statement_census.rs` | collection | changed: the second opener file admitted |
 | `docs/CONTEXT-MAP.md` | docs | changed: the crate's line, ingest's edge, its paragraph |
 | `docs/LEXICON.md` | docs | changed: the crate's terms |
-| `docs/schematics/context-map.md` | docs | changed: the node, ingest's arrow, the header commit |
-| `.github/workflows/ci.yml` | ci | changed: the wasm32 build step |
+| `docs/schematics/context-map.md` | docs | changed: the node and ingest's arrow |
+| `.github/workflows/ci.yml` | ci | changed: the wasm32 build step, and the rust job's first step frees runner disk |
 | `.github/workflows/xcframework.yml` | ci | changed: the iOS build step |
 | `.github/workflows/testflight-internal.yml` | ci | changed: the push filter line |
 | `scripts/tests/test_testflight_workflows.py` | ci | changed: the internal path list line |

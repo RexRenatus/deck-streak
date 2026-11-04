@@ -8,6 +8,8 @@
 
 pub mod blob;
 pub mod fields;
+#[cfg(kani)]
+mod kani_proofs;
 pub mod opener;
 pub mod read;
 pub mod statements;

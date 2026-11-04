@@ -26,6 +26,7 @@ leech in deck-streak-curriculum: hardcard
 review in deck-streak-collection: revlog
 preset in deck-streak-collection: deckconfig, dconf
 notetype in deck-streak-collection: model
+history entry in deck-streak-anki-format: review
 media_hash in deck-streak-media: checksum, fingerprint
 binding in deck-streak-media: attachment
 sweep in deck-streak-media: purge, cleanup
