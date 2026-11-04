@@ -1,0 +1,30 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S60500-THE-FILE-NAMES-ANOTHER-KANI-RUN-BUDGET",
+        "config/formal.json",
+        "\"kani_seconds\": 300",
+        "\"kani_seconds\": 30",
+        "the settings file names a Kani run budget other than the declared one, which the committed-file census refuses (SPEC-605 A1)",
+        "test_formal_config.FormalConfig.test_the_committed_file_holds_exactly_the_declared_fields"
+      ],
+      [
+        "S60501-THE-TABLE-NAMES-ANOTHER-KANI-RUN-BUDGET",
+        "scripts/tests/test_formal_config.py",
+        "\"kani_seconds\": 300,",
+        "\"kani_seconds\": 30,",
+        "the test table names a Kani run budget other than the settings file, which the committed-file census refuses (SPEC-605 A1)",
+        "test_formal_config.FormalConfig.test_the_committed_file_holds_exactly_the_declared_fields"
+      ],
+      [
+        "S60502-THE-READER-FORGETS-THE-KANI-RUN-BUDGET",
+        "scripts/tests/test_formal_config.py",
+        "((\"budgets\", \"kani_seconds\"), \"posint\", False)",
+        "((\"budgets\", \"kani_second\"), \"posint\", False)",
+        "the reader no longer knows the Kani run budget, so the committed file is refused as naming an unknown field (SPEC-605 A2)",
+        "test_formal_config.FormalConfig.test_the_reader_refuses_each_planted_fault"
+      ]
+    ]
+  }
+}

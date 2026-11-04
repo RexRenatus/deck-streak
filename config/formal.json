@@ -3,6 +3,7 @@
   "budgets": {
     "tla_seconds": 480,
     "lean_seconds": 600,
+    "kani_seconds": 300,
     "entry_seconds": 300,
     "entries": {
       "tla/FullSyncChoice": 60,
