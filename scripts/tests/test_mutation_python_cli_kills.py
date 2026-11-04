@@ -139,6 +139,37 @@ class TheRunPrintsAndWritesItsReport(unittest.TestCase):
         target.unlink()
         return code, out, err, text
 
+    def test_the_cli_report_helper_writes_its_report_and_costs_into_a_directory_of_its_own(self):
+        """SPEC-610 A2"""
+        tree = Tree(self, {"calc": CALC})
+        recorded = []
+
+        def fake(tree, *args):
+            target = Path(args[args.index("--report") + 1])
+            recorded.append(target)
+            target.write_text('{"exit": 0, "selection": "all"}\n', encoding="utf-8")
+            with (target.parent / "costs.jsonl").open("a", encoding="utf-8") as costs:
+                costs.write('{"kind": "control"}\n')
+            return 0, "", ""
+
+        with mock.patch.object(sys.modules[__name__], "call", fake):
+            code, out, err, text = self.report_of(tree, "--all")
+        self.assertEqual((code, out, err, text), (0, "", "", '{"exit": 0, "selection": "all"}\n'))
+        self.assertEqual(len(recorded), 1)
+        home = recorded[0].parent
+        self.assertFalse(
+            home == tree.root.parent, "the report was written into the parent of the scenario tree"
+        )
+        self.assertFalse(
+            home == tree.root or tree.root in home.parents,
+            "the report was written inside the scenario tree",
+        )
+        self.assertTrue(
+            (home / "costs.jsonl").is_file(), "the costs record is not beside the report"
+        )
+        self.doCleanups()
+        self.assertFalse(home.exists(), "the report directory outlived its test")
+
     def test_a_clean_run_is_exit_zero_and_prints_the_counts_and_the_selection_it_ran(self):
         tree = Tree(self, {"calc": CALC})
         plan = tree.root.parent / f"{tree.root.name}-plan.json"

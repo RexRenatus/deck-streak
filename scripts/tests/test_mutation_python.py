@@ -280,6 +280,39 @@ def by_text(report, path):
     return {m["mutant"]: m for m in mutants_of(report, path)}
 
 
+class TheTreeReportHelperWritesIntoItsOwnDirectory(unittest.TestCase):
+    def test_the_tree_report_helper_writes_its_report_and_costs_into_a_directory_of_its_own(self):
+        """SPEC-610 A1"""
+        tree = Tree(self, {"calc": CALC})
+        recorded = []
+
+        def fake(*args, **kwargs):
+            target = Path(args[args.index("--report") + 1])
+            recorded.append(target)
+            target.write_text('{"exit": 0, "selection": "all"}\n', encoding="utf-8")
+            with (target.parent / "costs.jsonl").open("a", encoding="utf-8") as costs:
+                costs.write('{"kind": "control"}\n')
+            return subprocess.CompletedProcess(list(args), 0, "", "")
+
+        tree.runner = fake
+        done, document = tree.report("--all")
+        self.assertEqual((done.returncode, document), (0, {"exit": 0, "selection": "all"}))
+        self.assertEqual(len(recorded), 1)
+        home = recorded[0].parent
+        self.assertFalse(
+            home == tree.root.parent, "the report was written into the parent of the scenario tree"
+        )
+        self.assertFalse(
+            home == tree.root or tree.root in home.parents,
+            "the report was written inside the scenario tree",
+        )
+        self.assertTrue(
+            (home / "costs.jsonl").is_file(), "the costs record is not beside the report"
+        )
+        self.doCleanups()
+        self.assertFalse(home.exists(), "the report directory outlived its test")
+
+
 class TheRunnerListsItsMutants(unittest.TestCase):
     def test_the_runner_lists_exactly_the_operator_sets_mutants(self):
         """A1"""
