@@ -194,6 +194,7 @@ census refuses the forbidden shape.
 | `scripts/tests/fixtures/coverage/provider-mismatch.txt` | tests | added: a planted mixed lock |
 | `scripts/mutation-python.json` | mutation | changed: one entry, the new script and its test module |
 | `scripts/mutation-verdict.py` | mutation | changed: the scoped price table, each line regenerated from one price run over every population file |
+| `scripts/mutation-equivalent.d/python.json` | mutation | changed: fourteen equivalence records for the coverage-report survivors no test can observe, each bound to one mutant |
 | `scripts/tests/fixtures/mutation-scoped-prices-41760230352/` | mutation | added: that run's cost records, one `costs.jsonl` per price leg |
 | `scripts/tests/fixtures/mutation-scoped-prices-39439842824/` | mutation | removed: the earlier run's records, as the table test holds exactly one run |
 | `scripts/mutation-rows.d/S42100-S42199.json` | rows | changed: the fifteen table rows re-pinned on their regenerated lines |
