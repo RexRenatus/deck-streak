@@ -1,0 +1,33 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S60601-PILLAR-ABOUT-LEECH-STEP",
+        "analytics",
+        "src/constants.rs",
+        "pub const MASTERY_LEECH_PENALTY: f64 = 3.0;",
+        "pub const MASTERY_LEECH_PENALTY: f64 = 4.0;",
+        "pillar_about::each_pillar_sentence_states_its_pillars_own_figures",
+        "each active leech takes 4 points off the score mastery pillar while its sentence still says 3, so the screen states a figure the score does not use (SPEC-606 R4, A4)"
+      ],
+      [
+        "S60602-PILLAR-ABOUT-VOLUME-CAP",
+        "analytics",
+        "src/constants.rs",
+        "pub const VOLUME_CAP_RATIO: f64 = 1.25;",
+        "pub const VOLUME_CAP_RATIO: f64 = 1.5;",
+        "pillar_about::each_pillar_sentence_states_its_pillars_own_figures",
+        "the volume cap moves to one and a half times the usual day, so a usual day scores 67 while its sentence still says 80 (SPEC-606 R4, A4)"
+      ],
+      [
+        "S60603-PILLAR-ABOUT-RETENTION-FLOOR",
+        "analytics",
+        "src/constants.rs",
+        "pub const RETENTION_FLOOR_PCT: f64 = 50.0;",
+        "pub const RETENTION_FLOOR_PCT: f64 = 55.0;",
+        "pillar_about::each_pillar_sentence_states_its_pillars_own_figures",
+        "the retention floor moves to 55%, so every retention up to 55% scores 0 while its sentence still says 50% or less (SPEC-606 R4, A4)"
+      ]
+    ]
+  }
+}
