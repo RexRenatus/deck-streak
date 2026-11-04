@@ -110,3 +110,29 @@ examined 39 crate directories
 
 Green at both commits, as designed: A1 (`test crate_has_no_dependencies ... examined 20 manifest line(s): dependency
 entries 0`, then `ok`) and A6 (`test render_total_proptest ... examined 10000`, then `ok`).
+
+## The sha lines
+
+The test commit is bfb41c0b and the implementation commit is 459ab9f4. The record commit after them changes no file
+under `crates/`, `Cargo.lock`, `.github/` or the three context-map files, so the head CI runs holds the implementation
+commit's code and tests byte for byte.
+
+```red-first
+A1: not red: the crate is born without dependencies; its planted manifest is refused inside the test
+A1: green at 459ab9f4
+A2: red at bfb41c0b: crates/render/tests/golden.rs:201: 447 of 447 compared case(s) differ; the first, by index: [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+A2: green at 459ab9f4
+A3: red at bfb41c0b: crates/render/tests/golden.rs:236: 30 of 880 case(s) differ; the first, by index: [0, 1, 2, 3, 4, 5, 6, 7, 14, 16, 17, 18, 19, 20, 21, 22, 23, 34, 40, 41]
+A3: green at 459ab9f4
+A4: red at bfb41c0b: crates/render/tests/renderer.rs:55: assertion `left == right` failed, left: ""
+A4: green at 459ab9f4
+A5: red at bfb41c0b: crates/render/tests/renderer.rs:155: assertion `left == right` failed: the class of UnknownField { name: "Nowhere" }, left: Ok(())
+A5: green at 459ab9f4
+A6: not red: the inert seam never panics, so the totality test holds at the test commit; it guards the shipped render
+A6: green at 459ab9f4
+A7: VOID: the verifier is not installed; both harnesses sit behind cfg(kani), unratcheted
+A8: not red: a build step, read green by name in the green run
+A9: red at bfb41c0b: scripts/tests/test_context_map_schematic.py: test_every_crate_directory_is_one_node_named_by_it: findings: 1 / render: no node; test_every_arrow_is_a_manifest_edge_the_fence_names: findings: 1 / render: no fence row
+A9: green at 459ab9f4
+A10: not red: a record
+```
