@@ -364,9 +364,17 @@ final class Probe {
         _ start: (@escaping @MainActor @Sendable (Value) -> Void) -> Void
     ) async throws -> Value {
         let asked = Date()
+        let probe = probing
         let value: Value = try await withCheckedThrowingContinuation {
             (continuation: CheckedContinuation<Value, any Error>) in
             let once = AskGuard(continuation)
+            once.timer = Task { @MainActor in
+                try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                guard !Task.isCancelled else {
+                    return
+                }
+                _ = once.take(.failure(ProbeStall(label: label, probe: probe, seconds: seconds)))
+            }
             start { answer in
                 _ = once.take(.success(answer))
             }
