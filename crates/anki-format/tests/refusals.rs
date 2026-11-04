@@ -168,6 +168,73 @@ fn a_source_over_its_bound_is_refused_while_copied() {
 }
 
 #[test]
+fn a_source_exactly_at_its_bound_is_read() {
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let source = engine_collection(dir.path());
+    let length = fs::metadata(&source).expect("the source's length").len();
+    let limits = Limits {
+        max_bytes: length,
+        ..Limits::default()
+    };
+    let reader = open(&source, &recorded(&source), Kind::Collection, &limits)
+        .expect("a source of exactly its bound opens");
+    let rows = read::collection(&reader).expect("it reads");
+    assert_eq!(rows.col.len(), 1, "the one col row");
+}
+
+#[test]
+fn a_source_whose_write_ahead_log_cannot_be_checked_is_refused() {
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let made = engine_collection(dir.path());
+    // A name of 253 bytes is a file; with `-wal` it is 257, past the 255 a name may hold, so the
+    // log beside it cannot be looked up, and the opener refuses rather than read past it.
+    let source = dir.path().join("c".repeat(253));
+    fs::copy(&made, &source).expect("the source under a long name");
+    let opened = open_file(&source, Kind::Collection);
+    assert!(
+        matches!(opened, Err(Refusal::Io(_))),
+        "an unchecked write-ahead log is refused, not {:?}",
+        opened.map(|reader| reader.copy_path().display().to_string())
+    );
+}
+
+#[test]
+fn a_media_database_missing_meta_is_refused_at_meta() {
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let source = dir.path().join("collection.media.db2");
+    let connection = plain(
+        &source,
+        OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE,
+    );
+    connection
+        .execute_batch("CREATE TABLE media (fname TEXT NOT NULL PRIMARY KEY);")
+        .expect("a media table alone");
+    drop(connection);
+    assert_eq!(
+        open_file(&source, Kind::Media).err(),
+        Some(Refusal::TableSet {
+            table: "meta".to_owned()
+        }),
+        "the missing table is named"
+    );
+}
+
+#[test]
+fn a_table_whose_name_holds_a_wide_space_is_refused_as_outside_the_set() {
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    // SQLite reads every byte past ASCII as part of a name, so this is one table whose stored SQL
+    // splits on the space into `CREATE TABLE table ...`: an ordinary table, not a virtual one.
+    let source = planted(dir.path(), "CREATE TABLE table\u{2003}x (a);");
+    assert_eq!(
+        refusal_of(&source),
+        Some(Refusal::TableSet {
+            table: "table\u{2003}x".to_owned()
+        }),
+        "the table outside the set"
+    );
+}
+
+#[test]
 fn the_snapshot_file_opens_and_reads_its_one_col_row() {
     let dir = tempfile::tempdir().expect("a temporary directory");
     let source = dir.path().join("snapshot.anki2");

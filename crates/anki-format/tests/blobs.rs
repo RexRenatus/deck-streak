@@ -199,3 +199,46 @@ fn an_unchanged_view_keeps_its_raw_bytes() {
     findings.extend(kept::<DeckCommonView>(&[0x10, 0x01, 0x08, 0x01]));
     assert_eq!(findings, Vec::<String>::new(), "the raw bytes kept");
 }
+
+#[test]
+fn a_deck_config_id_other_than_one_is_written_and_read_as_its_own_value() {
+    // Field 1 of decks.kind holds the normal deck, whose field 1 is the config id as a varint:
+    // 300 takes two groups, and -1 takes ten as its two's complement, the engine's int64 form.
+    let cases: [(i64, Vec<u8>); 2] = [
+        (300, vec![0x0a, 0x03, 0x08, 0xac, 0x02]),
+        (
+            -1,
+            [vec![0x0a, 0x0b, 0x08], vec![0xff; 9], vec![0x01]].concat(),
+        ),
+    ];
+    let mut findings = Vec::new();
+    for (config_id, golden) in examined("config id(s)", cases.to_vec()) {
+        let view = DeckKindView {
+            filtered: false,
+            config_id,
+            review_limit: None,
+            new_limit: None,
+        };
+        findings.extend(both_ways(&view, &[], &golden));
+    }
+    assert_eq!(findings, Vec::<String>::new(), "the config ids");
+}
+
+#[test]
+fn a_tag_config_keeps_every_field_it_does_not_model_and_refuses_a_cut_message() {
+    let base = [0x08, 0x01, 0x78, 0x01];
+    assert_eq!(
+        TagConfigView {}.encode_onto(&base).ok(),
+        Some(base.to_vec()),
+        "the fields no view models are written back"
+    );
+    assert!(
+        TagConfigView::decode(&[0x0a, 0x05]).is_err(),
+        "a length past the message's end is refused"
+    );
+    assert_eq!(
+        TagConfigView::decode(&base).ok(),
+        Some(TagConfigView {}),
+        "a whole message decodes"
+    );
+}

@@ -188,3 +188,40 @@ fn a_copy_with_a_damaged_page_is_refused_at_the_quick_check() {
         opened.map(|reader| reader.copy_path().display().to_string())
     );
 }
+
+#[test]
+fn two_readers_held_at_once_each_hold_their_own_private_copy() {
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let source = engine_collection(dir.path());
+    let first = open_file(&source, Kind::Collection).expect("the first reader opens");
+    let second = open_file(&source, Kind::Collection).expect("the second reader opens");
+    let folders = [first.copy_path(), second.copy_path()].map(|copy| {
+        copy.parent()
+            .expect("the copy sits in a folder")
+            .to_path_buf()
+    });
+    assert_ne!(folders[0], folders[1], "each reader its own folder");
+    for folder in &folders {
+        assert!(folder.is_dir(), "{} is held", folder.display());
+    }
+    let read =
+        [&first, &second].map(|reader| read::collection(reader).expect("the copy reads").col.len());
+    assert_eq!(read, [1, 1], "both copies read their one col row");
+}
+
+#[test]
+fn dropping_the_reader_removes_its_copy_and_its_folder() {
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let source = engine_collection(dir.path());
+    let reader = open_file(&source, Kind::Collection).expect("the reader opens");
+    let copy = reader.copy_path().to_path_buf();
+    let folder = copy
+        .parent()
+        .expect("the copy sits in a folder")
+        .to_path_buf();
+    assert!(copy.is_file(), "the copy is held while the reader lives");
+    drop(reader);
+    assert!(!copy.exists(), "the copy is removed with the reader");
+    assert!(!folder.exists(), "the folder is removed with the reader");
+    assert!(source.is_file(), "the source stays");
+}

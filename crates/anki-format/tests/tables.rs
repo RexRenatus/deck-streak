@@ -153,3 +153,32 @@ fn each_table_count_equals_its_select_count() {
     }
     assert_eq!(findings, Vec::<String>::new(), "the counts");
 }
+
+#[test]
+fn a_grave_row_and_a_tag_row_are_each_read() {
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let collection = support::engine_collection(dir.path());
+    support::with_engine(&collection, |connection| {
+        connection
+            .execute_batch(
+                "INSERT INTO graves (oid, type, usn) VALUES (7, 1, -1); \
+                 INSERT INTO tags (tag, usn, collapsed, config) VALUES ('kept', 0, 0, NULL);",
+            )
+            .expect("one grave and one tag");
+    });
+    let rows = read::collection(&open_file(&collection, Kind::Collection).expect("it opens"))
+        .expect("the collection reads");
+    let graves: Vec<(i64, i64, i64)> = rows
+        .graves
+        .iter()
+        .map(|grave| (grave.oid, grave.r#type, grave.usn))
+        .collect();
+    assert_eq!(graves, [(7, 1, -1)], "the one grave");
+    let tags: Vec<&str> = rows.tags.iter().map(|tag| tag.tag.as_str()).collect();
+    assert_eq!(tags, ["kept"], "the one tag");
+    assert_eq!(
+        [rows.graves.len(), rows.tags.len()],
+        [count(&collection, "graves"), count(&collection, "tags")],
+        "each read count is the table's own"
+    );
+}

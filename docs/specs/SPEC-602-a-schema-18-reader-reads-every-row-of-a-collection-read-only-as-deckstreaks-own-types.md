@@ -133,6 +133,7 @@ bytes, and every ingest path to them compiles through a re-export.
 | `docs/red-first/SPEC-602.md` | docs | new: the red-first record |
 | `changelog.d/anki-format-602.md` | docs | new: the changelog fragment |
 | `scripts/mutation-rows.d/S60200-S60299.json` | rows | new: rows S60201 and S60202 |
+| `scripts/mutation-equivalent.d/deck-streak-anki-format.json` | rows | new: the equivalent mutants the verdict named, each with its evidence |
 | `crates/anki-format/Cargo.toml` | crate | new: the manifest of R1 |
 | `crates/anki-format/src/lib.rs` | crate | new: the crate's doc and modules |
 | `crates/anki-format/src/opener.rs` | crate | new: the defensive opener and its refusals |
@@ -151,6 +152,7 @@ bytes, and every ingest path to them compiles through a re-export.
 | `crates/anki-format/tests/collection_view.rs` | tests | new: A8 |
 | `crates/anki-format/tests/wire_walk.rs` | tests | new: A11, the walk |
 | `crates/anki-format/tests/field_codec.rs` | tests | new: A11, the codec |
+| `crates/anki-format/tests/kani_harnesses.rs` | tests | new: A11, each Kani harness held to its written text |
 | `crates/anki-format/tests/support/mod.rs` | tests | new: the fixtures the tests share |
 | `Cargo.toml` | workspace | changed: the member entry, `unicase`, the rusqlite comment |
 | `Cargo.lock` | workspace | changed: the new member and ingest's edge |
