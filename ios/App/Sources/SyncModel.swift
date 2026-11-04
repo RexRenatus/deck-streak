@@ -85,6 +85,7 @@ final class SyncModel {
             let required = try await engine.sync(hostKey: hostKey, endpoint: endpoint)
             guard required >= Self.fullSync else {
                 message = "Synced."
+                await completed()
                 return
             }
             unsynced = try await engine.unsynced()

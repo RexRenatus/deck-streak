@@ -75,15 +75,18 @@ final class AppModel {
         sync = SyncModel(engine: engine, store: store, endpoint: configuration.endpoint)
         data = DataModel(engine: session)
         moments = SyncMoments(sync: sync)
+        sync.completed = { [weak self] in await self?.reread() }
     }
 
-    /// Opens the collection and lists its decks, once per model (R7).
+    /// Opens the collection and lists its decks, once per model (R7), then runs the launch's
+    /// sync moment (SPEC-600 R1 (a)).
     func start() async {
         guard !started else { return }
         started = true
         do {
             try await engine.open(arguments: ProcessInfo.processInfo.arguments)
             decks = try await engine.decks()
+            await moments.opened(signedIn: signedIn, reviewOpen: review != nil)
         } catch {
             refusal = sentence(error)
         }
@@ -96,13 +99,18 @@ final class AppModel {
         await review?.start()
     }
 
-    /// The review screen's own close: the chosen deck is cleared (SPEC-600 R1 (d)).
+    /// The review screen's own close: the chosen deck is cleared, the review closes, and one
+    /// sync runs (SPEC-600 R1 (d)).
     func closeReview() async {
         chosenDeck = nil
+        review = nil
+        await moments.closed(signedIn: signedIn)
     }
 
     /// The scene's phase, as the shell hands it over (SPEC-600 R1 (b)).
-    func phaseChanged(_ phase: ScenePhase) async {}
+    func phaseChanged(_ phase: ScenePhase) async {
+        await moments.entered(phase, signedIn: signedIn, reviewOpen: review != nil)
+    }
 
     /// Signs in as the configured user at the configured endpoint with the typed password (R8).
     /// On success the host key is stored; on a refusal the engine's message shows and nothing is
@@ -118,6 +126,7 @@ final class AppModel {
                 user: configuration.user, password: typed, endpoint: configuration.endpoint)
             try store.save(hostKey: hostKey)
             signedIn = true
+            await moments.stored(signedIn: signedIn)
         } catch {
             message = sentence(error)
         }
@@ -130,6 +139,17 @@ final class AppModel {
             signedIn = false
         } catch {
             message = sentence(error)
+        }
+    }
+
+    /// Lists the decks again after a sync that completes, and keeps the chosen deck only while
+    /// the new list holds it; that clearing is no close, so it starts no sync (SPEC-600 R5).
+    private func reread() async {
+        do {
+            decks = try await engine.decks()
+            chosenDeck = moments.kept(chosenDeck, in: decks)
+        } catch {
+            refusal = sentence(error)
         }
     }
 
