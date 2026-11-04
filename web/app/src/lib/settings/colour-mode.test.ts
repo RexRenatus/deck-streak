@@ -1,7 +1,14 @@
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { compileTokens } from '../../../scripts/build-tokens';
-import { applyColourMode, applyStoredColourMode, COLOUR_MODE_KEY, type ModeRoot } from './colour-mode';
+import {
+  applyColourMode,
+  applyStoredColourMode,
+  COLOUR_MODE_KEY,
+  deviceStorage,
+  storeColourMode,
+  type ModeRoot
+} from './colour-mode';
 
 // SPEC-593 A7, R8; ADR-616 D1. Until the app mounts, the stylesheet alone paints the system mode: a
 // rule in layout.css gives every colour role the dark fallback the compile emits under .dark, unless
@@ -142,5 +149,63 @@ describe('the web colour mode', () => {
       'stored dark'
     ]);
     expect(applyFindings(applyStoredColourMode), 'the control').toEqual([]);
+  });
+});
+
+// SPEC-593 R8; ADR-616 D1. Mutation coverage: how the choice reaches the device's storage and back.
+// The key is spelled out here, never read from the module, so a changed key fails these tests.
+describe('the web colour mode on the device', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('the choice is kept under the key deckstreak.colour-mode', () => {
+    expect(COLOUR_MODE_KEY).toBe('deckstreak.colour-mode');
+  });
+
+  it("the device storage is the browser's local storage, or none where the browser has none", () => {
+    const kept = { getItem: (): string | null => null, setItem: (): void => undefined };
+    vi.stubGlobal('localStorage', kept);
+    expect(deviceStorage()).toBe(kept);
+    vi.stubGlobal('localStorage', undefined);
+    expect(deviceStorage()).toBeUndefined();
+  });
+
+  it('storage the browser refuses to open reads as none', () => {
+    let opened = 0;
+    vi.stubGlobal('localStorage', undefined);
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      get: () => {
+        opened += 1;
+        throw new Error('storage is denied');
+      }
+    });
+    expect(deviceStorage()).toBeUndefined();
+    expect(opened).toBe(1);
+  });
+
+  it('a chosen mode is written under its key and applied to the root element', () => {
+    const writes: string[][] = [];
+    const root = fakeRoot('light', 'page');
+    storeColourMode({ setItem: (key: string, value: string) => void writes.push([key, value]) }, root, 'dark');
+    expect(writes).toEqual([['deckstreak.colour-mode', 'dark']]);
+    expect(root.classes()).toEqual(['dark', 'page']);
+  });
+
+  it('a chosen mode that storage refuses, or that no storage keeps, still applies to the page', () => {
+    let tried = 0;
+    const refusing = {
+      setItem: (): void => {
+        tried += 1;
+        throw new Error('the storage quota is full');
+      }
+    };
+    const refused = fakeRoot('dark', 'page');
+    expect(() => storeColourMode(refusing, refused, 'light')).not.toThrow();
+    expect([tried, refused.classes()]).toEqual([1, ['light', 'page']]);
+    const bare = fakeRoot('dark', 'light', 'page');
+    expect(() => storeColourMode(undefined, bare, 'system')).not.toThrow();
+    expect(bare.classes()).toEqual(['page']);
   });
 });
