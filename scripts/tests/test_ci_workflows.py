@@ -2649,6 +2649,282 @@ class TheCardSandboxOutlastsItsThreeEngines(unittest.TestCase):
         )
 
 
+# --- the engine and study suites in Firefox (SPEC-613 A1, A2, A3; ADR-635)
+# Firefox is the third engine of the engine suite and of the study suite, both run by the
+# web-engine job: each configuration declares it after WebKit, the job installs it on its one
+# install line before each suite, and each engine project syncs as a server user of its own.
+FIREFOX_SUITE_ENGINES = ["chromium", "webkit", "firefox"]
+FIREFOX_DESKTOP_DEVICES = {
+    "chromium": "Desktop Chrome",
+    "webkit": "Desktop Safari",
+    "firefox": "Desktop Firefox",
+}
+FIREFOX_SUITE_CONFIGS = {
+    "engine": "web/app/playwright.engine.config.ts",
+    "study": "web/app/playwright.study.config.ts",
+}
+FIREFOX_SYNC_SPEC = "web/app/tests-engine/sync.spec.ts"
+FIREFOX_SUITE_INSTALL = "pnpm --dir web/app exec playwright install "
+FIREFOX_SUITE_STEPS = ("test:engine", "test:study")
+FIREFOX_PROJECT_LINE = ",\n    { name: 'firefox', use: { ...devices['Desktop Firefox'] } }\n"
+# Each sync user of the engine configuration: its index, then the suffix after the run's base user.
+SYNC_USER_ENTRY = re.compile(
+    r"SYNC_USER(\d+): `\$\{process\.env\.ENGINE_SYNC_USER\}([^:`]*):"
+    r"\$\{process\.env\.ENGINE_SYNC_PASSWORD\}`"
+)
+SYNC_USER_ANY = re.compile(r"\bSYNC_USER\d+:")
+# The one return line of the sync suite's `account()`: a ternary on the project's browser name.
+ACCOUNT_RETURN = re.compile(
+    r"return \{ user: browserName === '(\w+)' \? (\S+) : (\S+), password \};"
+)
+
+
+def suite_text(path):
+    """The text of a file the Firefox checks judge: a suite's configuration or the sync spec."""
+    return (REPO / path).read_text(encoding="utf-8")
+
+
+def suite_projects(text):
+    """Each (project name, device) a Playwright configuration's text declares, in order."""
+    return re.findall(r"\{\s*name:\s*'(\w+)',\s*use:\s*\{\s*\.\.\.devices\['([^']+)'\]", text)
+
+
+def suite_engines(projects):
+    """Chromium, WebKit and Firefox, then each other project named, once each, in order."""
+    engines = list(FIREFOX_SUITE_ENGINES)
+    for project in projects:
+        if project not in engines:
+            engines.append(project)
+    return engines
+
+
+def firefox_planted(text, old, new):
+    """`text` with its one `old` replaced by `new`; a plant that changes nothing fails by name."""
+    if text.count(old) != 1:
+        raise AssertionError(f"the text holds {old!r} {text.count(old)} times")
+    return text.replace(old, new)
+
+
+def three_engine_problems(name, text):
+    """What a suite's configuration gets wrong about its engines (SPEC-613 A1): projects other
+    than chromium, webkit and firefox in that order, or a project that spreads a device other
+    than its own desktop one."""
+    declared = suite_projects(text)
+    names = [project for project, _device in declared]
+    problems = []
+    if names != FIREFOX_SUITE_ENGINES:
+        problems.append(
+            f"the {name} configuration declares {', '.join(names) or 'no project'}, "
+            f"not {', '.join(FIREFOX_SUITE_ENGINES)}"
+        )
+    for project, device in declared:
+        if FIREFOX_DESKTOP_DEVICES.get(project) != device:
+            problems.append(f"the {name} configuration's {project} project spreads {device}")
+    return problems
+
+
+def suite_install_problems(workflow, projects):
+    """What the web-engine job gets wrong about its engines (SPEC-613 A2): a suite it does not
+    run, or one of chromium, webkit and firefox, or a project a configuration declares, that no
+    install step before that suite's step installs."""
+    job = (workflow.get("jobs") or {}).get(WEB_ENGINE_JOB)
+    if job is None:
+        return ["there is no web-engine job"]
+    runs = [str(step.get("run", "")).strip() for step in job.get("steps") or []]
+    problems = []
+    for suite in FIREFOX_SUITE_STEPS:
+        at = next((index for index, run in enumerate(runs) if suite in run), None)
+        if at is None:
+            problems.append(f"the web-engine job runs no {suite}")
+            continue
+        installed = " ".join(run for run in runs[:at] if run.startswith(FIREFOX_SUITE_INSTALL))
+        problems += [
+            f"no install step before {suite} installs {engine}"
+            for engine in suite_engines(projects)
+            if engine not in installed.split()
+        ]
+    return problems
+
+
+def account_user(spec, project):
+    """The suffix after the run's base user that the sync suite's `account()` gives `project`:
+    '' for the base user itself, or None when its one return line is not the judged form."""
+    found = ACCOUNT_RETURN.findall(spec)
+    if len(found) != 1:
+        return None
+    browser, chosen, other = found[0]
+    branch = chosen if project == browser else other
+    if branch == "user":
+        return ""
+    form = re.fullmatch(r"`\$\{user\}([^`]*)`", branch)
+    return None if form is None else form.group(1).replace("${browserName}", project)
+
+
+def sync_user_problems(config, spec, projects):
+    """What the engine suite gets wrong about its sync users (SPEC-613 A3): an entry of another
+    form, entries the server does not number from 1 without a gap, a user count other than one
+    per engine project, two entries for one user, or a project that `account()` maps to no
+    entry's user or to another project's."""
+    entries = SYNC_USER_ENTRY.findall(config)
+    users = [suffix for _index, suffix in entries]
+    problems = []
+    if len(SYNC_USER_ANY.findall(config)) != len(entries):
+        problems.append("a SYNC_USER entry is not the base user, a suffix and the run's password")
+    if [int(index) for index, _suffix in entries] != list(range(1, len(entries) + 1)):
+        problems.append("the SYNC_USER entries are not numbered from 1 without a gap")
+    if len(users) != len(projects):
+        problems.append(
+            f"the engine configuration makes {len(users)} sync user(s) "
+            f"for {len(projects)} project(s)"
+        )
+    if len(set(users)) != len(users):
+        problems.append("two SYNC_USER entries make one user")
+    mapped = {}
+    for project in projects:
+        user = account_user(spec, project)
+        if user is None:
+            return [*problems, "the sync suite's account() has no return line of the judged form"]
+        if user not in users:
+            problems.append(
+                f"account('{project}') gives <base>{user}, which no SYNC_USER entry makes"
+            )
+        elif user in mapped:
+            problems.append(f"account('{project}') gives <base>{user}, {mapped[user]}'s user")
+        mapped.setdefault(user, project)
+    return problems
+
+
+class TheEngineAndStudySuitesRunInFirefox(unittest.TestCase):
+    def test_the_engine_and_study_configurations_declare_three_engines(self):
+        for name, path in examined("suite configurations", FIREFOX_SUITE_CONFIGS.items()):
+            text = suite_text(path)
+            examined(f"{name} configuration projects", suite_projects(text))
+            self.assertEqual(three_engine_problems(name, text), [])
+            # Each planted copy of the real configuration breaks one rule, refused by name.
+            two = f"the {name} configuration declares chromium, webkit, "
+            plants = {
+                "no firefox project": (
+                    [(FIREFOX_PROJECT_LINE, "\n")],
+                    [two + "not chromium, webkit, firefox"],
+                ),
+                "firefox before webkit": (
+                    [
+                        ("name: 'webkit'", "name: 'SWAPPED'"),
+                        ("name: 'firefox'", "name: 'webkit'"),
+                        ("name: 'SWAPPED'", "name: 'firefox'"),
+                    ],
+                    [
+                        f"the {name} configuration declares chromium, firefox, webkit, "
+                        "not chromium, webkit, firefox",
+                        f"the {name} configuration's firefox project spreads Desktop Safari",
+                        f"the {name} configuration's webkit project spreads Desktop Firefox",
+                    ],
+                ),
+                "firefox on another device": (
+                    [("devices['Desktop Firefox']", "devices['Desktop Chrome']")],
+                    [f"the {name} configuration's firefox project spreads Desktop Chrome"],
+                ),
+            }
+            for plant, (changes, refusal) in examined(
+                f"planted {name} configuration defect(s)", plants.items()
+            ):
+                with self.subTest(name=name, plant=plant):
+                    planted = text
+                    for old, new in changes:
+                        planted = firefox_planted(planted, old, new)
+                    self.assertEqual(three_engine_problems(name, planted), refusal)
+
+    def test_the_web_engine_job_installs_every_engine_before_each_suite(self):
+        text = workflow_file_text(WORKFLOWS / "ci.yml")
+        projects = [
+            project
+            for path in FIREFOX_SUITE_CONFIGS.values()
+            for project, _device in suite_projects(suite_text(path))
+        ]
+        examined("projects the suite configurations declare", projects)
+        examined("engines each suite needs installed", suite_engines(projects))
+        self.assertEqual(suite_install_problems(read_workflow(text), projects), [])
+        # Each planted copy of the real job breaks one rule, and the judge refuses it by name.
+        install = FIREFOX_SUITE_INSTALL + "--with-deps --only-shell chromium webkit firefox"
+        browsers = "pnpm --dir web/app test:engine"
+        plants = {
+            "an install line without firefox": (
+                [("--only-shell chromium webkit firefox\n", "--only-shell chromium webkit\n")],
+                projects,
+                [
+                    f"no install step before {suite} installs firefox"
+                    for suite in FIREFOX_SUITE_STEPS
+                ],
+            ),
+            "the install step after the engine suite": (
+                [(install, "SWAPPED"), (browsers, install), ("SWAPPED", browsers)],
+                projects,
+                [
+                    f"no install step before test:engine installs {engine}"
+                    for engine in FIREFOX_SUITE_ENGINES
+                ],
+            ),
+            "a project no install step installs": (
+                [],
+                [*projects, "msedge"],
+                [
+                    f"no install step before {suite} installs msedge"
+                    for suite in FIREFOX_SUITE_STEPS
+                ],
+            ),
+        }
+        for plant, (changes, declared, refusal) in examined(
+            "planted web-engine install defect(s)", plants.items()
+        ):
+            with self.subTest(plant):
+                planted = planted_job(text, WEB_ENGINE_JOB, *changes)
+                self.assertEqual(suite_install_problems(planted, declared), refusal)
+
+    def test_each_engine_project_syncs_as_a_user_of_its_own(self):
+        config = suite_text(FIREFOX_SUITE_CONFIGS["engine"])
+        spec = suite_text(FIREFOX_SYNC_SPEC)
+        projects = suite_engines(project for project, _device in suite_projects(config))
+        examined("engine projects", projects)
+        examined("sync users of the engine configuration", SYNC_USER_ENTRY.findall(config))
+        self.assertEqual(sync_user_problems(config, spec, projects), [])
+        # Each planted copy of the real configuration or spec breaks one rule, refused by name.
+        third = "SYNC_USER3: `${process.env.ENGINE_SYNC_USER}-firefox:"
+        now = "browserName === 'chromium' ? user : `${user}-${browserName}`"
+        before = "browserName === 'webkit' ? `${user}-webkit` : user"
+        plants = {
+            "firefox syncing as the chromium user": (
+                [(third, "SYNC_USER3: `${process.env.ENGINE_SYNC_USER}:")],
+                [],
+                [
+                    "two SYNC_USER entries make one user",
+                    "account('firefox') gives <base>-firefox, which no SYNC_USER entry makes",
+                ],
+            ),
+            "a gap in the numbering": (
+                [("SYNC_USER3:", "SYNC_USER4:")],
+                [],
+                ["the SYNC_USER entries are not numbered from 1 without a gap"],
+            ),
+            "an account that gives firefox the chromium user": (
+                [],
+                [(now, before)],
+                ["account('firefox') gives <base>, chromium's user"],
+            ),
+        }
+        for plant, (config_changes, spec_changes, refusal) in examined(
+            "planted sync user defect(s)", plants.items()
+        ):
+            with self.subTest(plant):
+                planted_config, planted_spec = config, spec
+                for old, new in config_changes:
+                    planted_config = firefox_planted(planted_config, old, new)
+                for old, new in spec_changes:
+                    planted_spec = firefox_planted(planted_spec, old, new)
+                self.assertEqual(
+                    sync_user_problems(planted_config, planted_spec, projects), refusal
+                )
+
+
 def cache_scan(directory):
     """`cache_problems` over every workflow of a directory: the problems, then the saves found."""
     problems, saves = [], []
@@ -4927,6 +5203,15 @@ NOT_WORKFLOW_READS = {
             "test_ci_workflows",
             "card_projects",
             "(REPO / CARD_PLAYWRIGHT_CONFIG).read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
+        "the two suite configurations and the sync spec, which suite_text reads for their projects, sync users and account rule; never handed to the reader",
+        (
+            "test_ci_workflows",
+            "suite_text",
+            "(REPO / path).read_text(encoding='utf-8')",
             1,
         ),
     ),
