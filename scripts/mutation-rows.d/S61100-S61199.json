@@ -1,0 +1,94 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S61100-K-IS-BOUNDED-BY-THE-READERS-32-BIT-WIDTH",
+        "scripts/tests/test_formal_config.py",
+        "K_BOUND = 2**32 - 1",
+        "K_BOUND = 2**64 - 1",
+        "a k past the unsigned 32-bit range is read as stated, though the formal checker refuses the file (SPEC-611 R1)",
+        "test_formal_config.BoundedReading.test_each_bounded_value_is_one_the_checkers_reader_takes"
+      ],
+      [
+        "S61101-A-BUDGET-IS-BOUNDED-BY-THE-READERS-64-BIT-WIDTH",
+        "scripts/tests/test_formal_config.py",
+        "BUDGET_BOUND = 2**64 - 1",
+        "BUDGET_BOUND = 2**65",
+        "a budget past the unsigned 64-bit range is read as stated, though the formal checker refuses the file (SPEC-611 R1)",
+        "test_formal_config.BoundedReading.test_each_bounded_value_is_one_the_checkers_reader_takes"
+      ],
+      [
+        "S61102-K-TAKES-ITS-OWN-BOUND",
+        "scripts/tests/test_formal_config.py",
+        "bound = K_BOUND if path == (\"k\",) else BUDGET_BOUND",
+        "bound = BUDGET_BOUND",
+        "k is judged against the budget range, so a k past the 32-bit range is read as stated (SPEC-611 R1)",
+        "test_formal_config.BoundedReading.test_each_bounded_value_is_one_the_checkers_reader_takes"
+      ],
+      [
+        "S61103-A-VALUE-AT-ITS-BOUND-IS-ADMITTED",
+        "scripts/tests/test_formal_config.py",
+        "if value > bound:",
+        "if value >= bound:",
+        "a value equal to its bound is refused, though the formal checker reads it as stated (SPEC-611 R1)",
+        "test_formal_config.BoundedReading.test_each_bounded_value_is_one_the_checkers_reader_takes"
+      ],
+      [
+        "S61104-THE-FIRST-VALUE-PAST-ITS-BOUND-IS-REFUSED",
+        "scripts/tests/test_formal_config.py",
+        "if value > bound:",
+        "if value > bound + 1:",
+        "the first integer past a bound is read as stated, though the formal checker refuses the file (SPEC-611 R1)",
+        "test_formal_config.BoundedReading.test_each_bounded_value_is_one_the_checkers_reader_takes"
+      ],
+      [
+        "S61105-AN-ENTRY-BUDGET-PAST-ITS-BOUND-IS-REFUSED",
+        "scripts/tests/test_formal_config.py",
+        "if seconds > BUDGET_BOUND:",
+        "if seconds > BUDGET_BOUND + 1:",
+        "a per-entry budget one past the 64-bit range is read as stated, though the formal checker refuses the file (SPEC-611 R1)",
+        "test_formal_config.BoundedReading.test_each_bounded_value_is_one_the_checkers_reader_takes"
+      ],
+      [
+        "S61106-AN-ENTRY-KEY-WITHOUT-THE-PREFIX-IS-REFUSED",
+        "scripts/tests/test_formal_config.py",
+        "if not key.startswith(ENTRY_PREFIX):",
+        "if False:",
+        "a per-entry key such as OpLog is read as a budget, though the formal checker refuses the file (SPEC-611 R2)",
+        "test_formal_config.BoundedReading.test_a_budget_entry_key_that_names_no_tla_entry_is_refused"
+      ],
+      [
+        "S61107-THE-ENTRY-PREFIX-NAMES-A-TLA-ENTRY",
+        "scripts/tests/test_formal_config.py",
+        "ENTRY_PREFIX = \"tla/\"",
+        "ENTRY_PREFIX = \"\"",
+        "the per-entry prefix admits every key, so a key that names no TLA+ entry is read as a budget (SPEC-611 R2)",
+        "test_formal_config.BoundedReading.test_a_budget_entry_key_that_names_no_tla_entry_is_refused"
+      ],
+      [
+        "S61108-THE-READING-IS-THE-FILES-OWN-VALUE",
+        "scripts/tests/test_formal_config.py",
+        "reading[name] = value",
+        "reading[name] = bound",
+        "the bounded reading takes the bound in place of the value the file states (SPEC-611 R3)",
+        "test_formal_config.FormalConfig.test_the_bounded_reading_is_the_files_own_values"
+      ],
+      [
+        "S61109-AN-ENTRY-READING-IS-THE-FILES-OWN-VALUE",
+        "scripts/tests/test_formal_config.py",
+        "reading[entry] = seconds",
+        "reading[entry] = BUDGET_BOUND",
+        "a per-entry reading takes the bound in place of the value the file states (SPEC-611 R3)",
+        "test_formal_config.FormalConfig.test_the_bounded_reading_is_the_files_own_values"
+      ],
+      [
+        "S61110-THE-SLOT-IS-LEFT-TO-ITS-OWN-RULE",
+        "scripts/tests/test_formal_config.py",
+        "if path[0] == \"tlc_slot\" or not present:",
+        "if not present:",
+        "the bounded rule also reads the slot keys, which the slot rule alone judges (SPEC-611 R3)",
+        "test_formal_config.FormalConfig.test_the_bounded_reading_is_the_files_own_values"
+      ]
+    ]
+  }
+}
