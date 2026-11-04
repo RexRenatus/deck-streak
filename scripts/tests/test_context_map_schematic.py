@@ -46,12 +46,17 @@ def workspace_dependencies(text):
 
 
 def dependency_name(key, value, inherited):
-    """The crate an entry names: its `package` value when it is a table that has one, else its key.
-
-    `inherited` is the root manifest's `[workspace.dependencies]` table (SPEC-617 R2).
+    """The crate an entry names: its own `package` value when it is a table that has one; else,
+    for a table written `workspace = true`, the `package` value of the entry of its key in
+    `inherited`, the root manifest's `[workspace.dependencies]` table, when that entry is a table
+    that has one; else its key (SPEC-617 R1).
     """
     if isinstance(value, dict) and isinstance(value.get("package"), str):
         return value["package"]
+    if isinstance(value, dict) and value.get("workspace") is True:
+        source = inherited.get(key)
+        if isinstance(source, dict) and isinstance(source.get("package"), str):
+            return source["package"]
     return key
 
 
