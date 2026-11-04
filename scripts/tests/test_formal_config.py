@@ -26,6 +26,7 @@ EXPECTED = {
     "budgets": {
         "tla_seconds": 480,
         "lean_seconds": 600,
+        "kani_seconds": 300,
         "entry_seconds": 300,
         "entries": {
             "tla/FullSyncChoice": 60,
@@ -53,6 +54,7 @@ FIELDS = [
     (("k",), "posint", True),
     (("budgets", "tla_seconds"), "posint", True),
     (("budgets", "lean_seconds"), "posint", True),
+    (("budgets", "kani_seconds"), "posint", False),
     (("budgets", "entry_seconds"), "posint", False),
     (("budgets", "entries"), "posint-map", False),
     (("axioms",), "strings", True),
