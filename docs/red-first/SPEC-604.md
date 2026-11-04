@@ -51,3 +51,13 @@ The criteria were committed with the tests alone (4a4acbf6) and read red by name
 request's own run. The queue file and the batch arm of the fragment check landed in 1ecc86c1 with
 the tests unchanged, and the run at this delivery's head reads them green. The commit after
 1ecc86c1 changes only this record.
+
+After dev was merged into this branch, one commit tuned the queue file and changed A1, A3 and A11
+with it, together with this paragraph: the queue checks one batch at a time, gives the checks of a
+batch a fixed timeout, and repeats its queue conditions as its merge conditions, so a lone pull
+request that holds the tip of dev merges directly. Run by their acceptance commands against the
+previous queue file, the three changed tests each read red by assertion (A1: `None != 1 : the queue
+checks one batch at a time`; A3: the merge conditions differ from the queue conditions; A11:
+`examined 0 merge queue settings`), and against the tuned file all eleven read green. The tuned file
+read 0 errors against the same schema, and a planted copy whose parallel check count is a string
+read 1 error.

@@ -38,7 +38,17 @@ Pull requests into dev merge through the Mergify merge queue, configured in one 
 - its `queue_conditions` admit a pull request only when its base is dev, it carries the label
   `queue`, it is not a draft, it has no unresolved review thread, and `ci`, `fragment` and
   `dependency-review` each succeeded on it;
-- its `merge_conditions` require the same three checks on the batch pull request;
+- its `merge_conditions` are the same list as its `queue_conditions`: the checks among them are read
+  on the batch pull request, and the queue is single-step, so a lone queued pull request that
+  already contains the tip of dev merges directly, with no batch pull request (Direct Merge, Draft
+  Pull Requests); a merge list that differs would make the queue two-step and rule that out;
+- `merge_queue.max_parallel_checks: 1`, so the queue checks one batch at a time and never starts
+  speculative batches side by side, each a full `ci` run (Merge Queue Performance);
+- a fixed `checks_timeout` of six hours on the queue rule, in place of `auto`, which applies no
+  timeout until the queue has a history of about twenty runs and then follows the usual run, which
+  a long batch can outlast (Merge Queue Lifecycle);
+- no `priority_rules`: no pull request into dev is marked release-blocking, so no rule ranks one
+  above another;
 - one `pull_request_rules` entry with the `queue` action puts a labelled pull request into dev in
   the queue. This form needs nothing outside the file, posts nothing of its own, and its conditions
   are read beside the queue's, so the label alone never admits a pull request the queue conditions
@@ -60,10 +70,13 @@ Dependabot, so without the arm it could never merge; every member of a batch alr
 
 ## Consequences
 
-- A labelled, green pull request into dev waits for the queue rather than a person. The queue keeps
-  Mergify's documented defaults for how many batches it checks at once, `max_parallel_checks`
-  (default 5), and how long it waits to fill a batch, `batch_max_wait_time` (default thirty seconds, as Mergify's configuration schema
-  states it).
+- A labelled, green pull request into dev waits for the queue rather than a person. The queue checks
+  one batch at a time, in place of Mergify's documented default of five for `max_parallel_checks`,
+  and keeps the default for how long it waits to fill a batch, `batch_max_wait_time` (thirty
+  seconds, as Mergify's configuration schema states it).
+- A lone pull request that already contains the tip of dev merges with no batch pull request and no
+  queue `ci` run of its own; a batch whose checks are still pending after six hours is dequeued
+  with the reason `checks-timeout`.
 - Each batch runs `ci` in full over the union of its members, so a green batch of six costs one
   full run instead of six, and a red batch costs further runs while the queue splits it to find
   the failing member.

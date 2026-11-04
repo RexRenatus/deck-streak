@@ -47,6 +47,8 @@ AUTHOR = "github.event.pull_request.user.login"
 QUEUE_LOGIN = "mergify[bot]"
 QUEUE_PREFIX = "mergify/merge-queue/"
 QUEUE_REF = QUEUE_PREFIX + "5f" * 5
+# The fixed bound on how long the queue waits for the checks of a batch.
+CHECKS_TIMEOUT = "360 minutes"
 REFUSED = "Add a fragment under changelog.d/ (see changelog.d/README.md).\n"
 PASSED = "A Dependabot pull request that changes only dependency files needs no fragment.\n"
 
@@ -111,6 +113,19 @@ SCHEMA_ACTIONS = {
     "update",
 }
 SCHEMA_QUEUE_ACTION = {"name"}
+SCHEMA_MERGE_QUEUE = {
+    "batch_pull_request",
+    "checking_label",
+    "dequeued_label",
+    "max_parallel_checks",
+    "mode",
+    "queue_controls_comment",
+    "queued_label",
+    "reset_on_external_merge",
+    "resolve_conflicts",
+    "skip_intermediate_results",
+    "status_comments",
+}
 
 IDENTITY = (
     "-c",
@@ -282,10 +297,49 @@ def enters(config, state):
     return False
 
 
-def merges(config, state):
-    """Whether a batch pull request in `state` meets the merge conditions of the one queue rule."""
+def merges(config, batch, members):
+    """Whether a batch pull request in `batch`, holding pull requests in `members`, meets the merge
+    conditions of the one queue rule. A condition on a check reads the batch pull request and every
+    other condition reads each member, as Mergify's configuration file format page states for a
+    draft pull request."""
     rules = queue_rules(config)
-    return len(rules) == 1 and all_hold(rules[0].get("merge_conditions") or [], state)
+    conditions = (rules[0].get("merge_conditions") or []) if len(rules) == 1 else []
+    on_batch = [c for c in conditions if attribute(c).startswith("check-")]
+    on_members = [c for c in conditions if c not in on_batch]
+    return (
+        bool(conditions)
+        and bool(members)
+        and all(holds(c, batch) for c in on_batch)
+        and all(holds(c, member) for member in members for c in on_members)
+    )
+
+
+def attribute(condition):
+    found = CONDITION.fullmatch(str(condition))
+    if found is None:
+        raise AssertionError(f"a condition the evaluator refuses: {condition}")
+    return found.group(3)
+
+
+def direct_merge_blockers(config):
+    """Each documented reason the queue would test a lone queued pull request that already holds
+    the tip of dev on a batch pull request rather than merge it directly (Mergify's Direct Merge
+    page): a two-step queue, whose merge conditions differ from its queue conditions; the
+    `merge-batch` method; and in-place checks, where no batch pull request exists to skip."""
+    rules = queue_rules(config)
+    rule = rules[0] if len(rules) == 1 else {}
+    merged = rule.get("merge_conditions") or []
+    blockers = []
+    if not rule:
+        blockers.append("no single queue rule")
+    if merged and merged != rule.get("queue_conditions"):
+        blockers.append("two-step: merge_conditions differ from queue_conditions")
+    if rule.get("merge_method") == "merge-batch":
+        blockers.append("merge_method merge-batch")
+    parallel = (config.get("merge_queue") or {}).get("max_parallel_checks", 5)
+    if rule.get("batch_size", 1) == 1 and parallel == 1:
+        blockers.append("in-place checks: no batch pull request")
+    return blockers
 
 
 READY = {
@@ -482,6 +536,21 @@ class TheQueueFile(unittest.TestCase):
         self.assertEqual(rule.get("merge_method"), "merge", "each member merges by a merge commit")
         self.assertNotIn("draft_bot_account", rule, "a batch is opened by the queue login")
         self.assertEqual(rule.get("queue_branch_prefix", QUEUE_PREFIX), QUEUE_PREFIX)
+        self.assertEqual(
+            (config.get("merge_queue") or {}).get("max_parallel_checks"),
+            1,
+            "the queue checks one batch at a time",
+        )
+        self.assertEqual(
+            rule.get("checks_timeout"),
+            CHECKS_TIMEOUT,
+            "the checks of a batch have a fixed timeout, not the computed auto",
+        )
+        self.assertNotIn(
+            "priority_rules",
+            config,
+            "no pull request is marked release-blocking, so no rule ranks one above another",
+        )
         entries = config.get("pull_request_rules") or []
         for entry in examined("pull request rules", entries):
             self.assertEqual(
@@ -505,6 +574,8 @@ class TheQueueFile(unittest.TestCase):
     def test_every_key_the_queue_file_uses_is_one_the_published_schema_lists(self):
         config = queue_file()
         used = [("top", key) for key in config]
+        settings = config.get("merge_queue") or {}
+        used += [("merge queue", key) for key in examined("merge queue settings", settings)]
         for rule in queue_rules(config):
             used += [("queue rule", key) for key in rule]
             self.assertIn("name", rule)
@@ -517,6 +588,7 @@ class TheQueueFile(unittest.TestCase):
                 used += [("queue action", key) for key in actions["queue"]]
         listed = {
             "top": SCHEMA_TOP,
+            "merge queue": SCHEMA_MERGE_QUEUE,
             "queue rule": SCHEMA_QUEUE_RULE,
             "pull request rule": SCHEMA_PULL_REQUEST_RULE,
             "action": SCHEMA_ACTIONS,
@@ -550,13 +622,39 @@ class TheQueueConditions(unittest.TestCase):
 
     def test_a_batch_merges_only_after_ci_fragment_and_dependency_review_pass_on_it(self):
         config = queue_file()
-        self.assertTrue(merges(config, BATCH), "a draft batch with the three checks green merges")
+        rules = queue_rules(config)
+        rule = rules[0] if len(rules) == 1 else {}
+        self.assertEqual(
+            rule.get("merge_conditions"),
+            rule.get("queue_conditions"),
+            "the merge conditions repeat the queue conditions, so the queue is single-step",
+        )
+        self.assertEqual(
+            direct_merge_blockers(config),
+            [],
+            "a lone queued pull request that holds the tip of dev merges without a batch",
+        )
+        members = examined("batch members", [READY] * 6)
+        self.assertTrue(
+            merges(config, BATCH, members), "a draft batch with the three checks green merges"
+        )
         for check in examined("required checks", CHECKS):
             with self.subTest(check):
                 green = [name for name in CHECKS if name != check]
                 state = {**BATCH, "check-success": green}
-                self.assertFalse(merges(config, state), f"a batch without {check} waits")
-        self.assertEqual(queue_rules(config)[0].get("merge_method"), "merge")
+                self.assertFalse(merges(config, state, members), f"a batch without {check} waits")
+        self.assertEqual(rule.get("merge_method"), "merge")
+        planted = []
+        for what, change in (
+            ("two-step", {"merge_conditions": [f"check-success = {c}" for c in CHECKS]}),
+            ("merge-batch", {"merge_method": "merge-batch"}),
+        ):
+            changed = copy.deepcopy(config)
+            queue_rules(changed)[0].update(change)
+            planted.append((what, changed))
+        for what, changed in examined("planted queue copies", planted):
+            with self.subTest(what):
+                self.assertNotEqual(direct_merge_blockers(changed), [], f"a {what} queue refused")
 
     def test_the_queue_requires_every_check_and_rule_the_dev_ruleset_file_requires(self):
         ruleset = json.loads(RULESET.read_bytes().decode("utf-8"))

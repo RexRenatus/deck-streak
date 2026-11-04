@@ -40,14 +40,20 @@ pull request. Measured on dev before this change:
 
 R1. `.mergify.yml` at the root is the one Mergify configuration. It holds one queue rule, with
 `batch_size: 6` and `merge_method: merge`, and nothing that comments, labels, closes, assigns,
-deletes a branch or posts anything.
+deletes a branch or posts anything. The queue checks one batch at a time
+(`merge_queue.max_parallel_checks: 1`), gives the checks of a batch a fixed `checks_timeout` of six
+hours in place of the computed `auto`, and holds no `priority_rules`, since no pull request into dev
+is marked release-blocking.
 
 R2. A pull request enters the queue only when its base is dev, it carries the label `queue`, it is
 not a draft, it has no unresolved review thread, and `ci`, `fragment` and `dependency-review` each
 succeeded on it.
 
 R3. A batch merges only after `ci`, `fragment` and `dependency-review` each succeeded on the batch
-pull request; each member then merges by a merge commit.
+pull request; each member then merges by a merge commit. The queue rule's `merge_conditions` are the
+same list as its `queue_conditions`, so the queue is single-step: a lone queued pull request that
+already contains the tip of dev merges directly, on its own green checks, with no batch pull request
+(Mergify's Direct Merge page).
 
 R4. The queue requires every check the committed dev ruleset file requires, and its review-thread
 rule, so a pull request the queue merges meets the bar of one merged by hand. A check added to the
@@ -80,9 +86,9 @@ Each criterion is one test of `scripts/tests/test_merge_queue.py`, named in the 
 
 | criterion | what it decides | test |
 |---|---|---|
-| A1 | the one queue rule tests up to six together and merges each member by a merge commit, and every rule only queues (R1) | `test_merge_queue.py` |
+| A1 | the one queue rule tests up to six together, one batch at a time under a fixed checks timeout, and merges each member by a merge commit; no rule ranks pull requests, and every rule only queues (R1) | `test_merge_queue.py` |
 | A2 | a pull request enters the queue only into dev, labelled `queue`, ready for review, with no unresolved thread and the three checks green (R2) | `test_merge_queue.py` |
-| A3 | a batch merges only after `ci`, `fragment` and `dependency-review` pass on it (R3) | `test_merge_queue.py` |
+| A3 | a batch merges only after `ci`, `fragment` and `dependency-review` pass on it; the merge conditions repeat the queue conditions, so a lone pull request that holds the tip of dev merges directly; planted two-step and `merge-batch` copies are refused (R3) | `test_merge_queue.py` |
 | A4 | the queue requires every check and rule the dev ruleset file requires; a planted ruleset copy holding a fourth check is refused (R4) | `test_merge_queue.py` |
 | A5 | the three required workflows run on a queue batch pull request into dev; planted copies with a `paths` filter and with a job-level draft condition are refused (R6) | `test_merge_queue.py` |
 | A6 | a batch whose members each add a fragment passes `fragment` (R7) | `test_merge_queue.py` |
@@ -142,6 +148,8 @@ A11: python3 -m unittest discover -s scripts/tests -p test_merge_queue.py -k tes
 - **A batch's `ci` run is a full run.** A batch pull request runs every `ci` job over the union of
   its members, so one batch costs about one full run, not one per member. A red batch is split and
   retried by the queue, which costs further runs; detected in the run list of the batch branch.
+- **A batch that outruns its timeout.** A batch whose checks are still pending at `checks_timeout`
+  is dequeued with the reason `checks-timeout`; detected in the queue's own summary check.
 - **A dependency-only batch.** The batch arm trusts the queue's own login and branch prefix; a
   person cannot open a pull request as `mergify[bot]`, and A9 refuses every near miss of either.
 - **A ruleset that drifts from the queue.** A check added to the ruleset file without the queue
