@@ -67,3 +67,12 @@ screens opened by their paths. Each edited test was replayed red in its final fo
 The colour-mode replay carried the colour-mode module of 14ae9e5f in place of the inert seam, so that the
 test reaches its changed assertion, and it read red there because that copy's root layout does not import
 the module.
+
+Mutation coverage after the green commit. The diff-scoped mutation job 126573943000 at 6dd440ed
+found 38 mutants of the new web code that no test killed. The tests added in e1799f5d kill each
+of them that a test can observe, and 781e2421 records as equivalent the six in colour-mode.ts
+that no test can observe, each with the measurement that shows it. These cases answer that job,
+not a criterion: none is red first, and none takes a red or green line. So the commits after
+14ae9e5f change tests and the miniapp equivalence register as well as documents, and 303fcefe
+refilled the miniapp campaign row of SPEC-057 from its battery pair, runs 41851868090 and
+41857399766.
