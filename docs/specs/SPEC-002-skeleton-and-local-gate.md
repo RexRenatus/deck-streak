@@ -143,3 +143,11 @@ Insert-only under ruling (i) of SPEC-038 section 8: every earlier byte is kept i
 - this section.
 
 The rule: ADR-016's move from `docs/specs/planned/` to `docs/specs/` makes a SPEC judged, and its Status then names the delivery that moved it and never reads "planned". A11's test, `test_no_judged_spec_reads_planned` in `scripts/tests/test_planned_specs.py`, reads the Status line of every judged SPEC with its struck spans removed. It was red on two files, SPEC-076 and SPEC-094, whose Status each still read "planned"; their one insertion each, naming #446 and #403, is the fix.
+
+## 9. Amendment: the short Apple jobs may run on a self-hosted runner behind a repository variable
+
+Insert-only: every earlier byte is kept in order. It inserts:
+
+- this section.
+
+R10 holds every workflow to GitHub-hosted runners. SPEC-621 and ADR-643 admit one exception, by file and job: the `xcframework`, `harness-wire` and `card-isolation` jobs of `xcframework.yml` run on the labels `self-hosted`, `macOS`, `ARM64` and `ds-mini` for a push, a `workflow_dispatch` and a pull request whose head repository is this repository, and only when the repository variable `DS_MINI` is `on` and the actor is not `dependabot[bot]`. In every other case, and for every other job and workflow, R10 stands: with the variable unset every job runs on its hosted runner. The workflow hardening test in `scripts/tests/test_ci_workflows.py` admits the one routing expression to exactly those three jobs and refuses it on any other job or file. The token stays read-only and every action pinned by its full commit SHA.
