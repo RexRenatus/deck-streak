@@ -37,3 +37,13 @@ A1: green at b28d20d8bd3412d0e462ae85f5ab82ecb7cb4bb1
 A2: green at b28d20d8bd3412d0e462ae85f5ab82ecb7cb4bb1
 A3: green at b28d20d8bd3412d0e462ae85f5ab82ecb7cb4bb1
 ```
+
+This record reaches dev through one merge commit, 775c1894, which carries the commits above
+unchanged. After it, one commit lists the two formal ledger paths in the SPEC's file manifest,
+and three commits change the tests or the ledger, none of them the deploy scripts or the entry:
+93b5c69e compares the vectors test's proceeding settings with the script's list as bytes, so
+the test decodes no key and asserts the same equality; d4917551 names the entry among the formal
+ledger test's new entries; 8abe309c adds the entry's ledger row, keep with no obligation. The
+ledger test reads red by name at 775c1894 and at d4917551, and green at 8abe309c. Nothing after
+8abe309c changes the deploy scripts, the tests, the ledger or the entry:
+`git diff --quiet 8abe309c HEAD -- deploy scripts formal` exits 0.
