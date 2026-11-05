@@ -36,3 +36,13 @@ A13: not red: the census of every committed row and the group tests pin the base
 
 Rows S46500 to S46504 and S46510 to S46519 are companions of the killing tests of A1 to A4,
 A6 to A8, A10 and A14, and S02506 is re-anchored in place; each was proved KILLED by its full id.
+
+The rebuild onto current dev merged the original branch unchanged (f26632b1). Since the original
+base, dev gained the formal obligations ledger, which refuses a tree entry that has no row, and
+survivor tests whose stand-in for the runner's signal handling patches the end_on_sigterm that R9
+removes. So at that merge alone `test_the_ledger_exists_in_schema_v1` and
+`test_every_existing_entry_has_its_disposition_row` read red by name in the pull request run
+42080329268, and the three tests of the survivor tests' TheMain errored in the same run. The commit
+that carries this paragraph adds the Lean entry's row, lists it among the ledger tests' new entries
+and points that stand-in at ending_on_signals; it adds no criterion, and the tests of A1 to A14 are
+unchanged.

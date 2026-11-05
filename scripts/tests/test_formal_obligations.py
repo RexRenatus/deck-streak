@@ -210,6 +210,7 @@ SYNC_CORE_TIES = [
 NEW_ENTRIES = {
     "lean/CompanionDecide": ("keep", {"O6"}),
     "lean/SearchHolds": ("keep", {"O14"}),
+    "lean/RetiredListShape": ("keep", set()),
     "lean/MediaBind": ("keep", {"O13"}),
     "lean/MediaGc": ("keep", {"O13"}),
     "lean/IdSlot": ("keep", {"O12"}),
