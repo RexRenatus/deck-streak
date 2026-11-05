@@ -40,7 +40,7 @@ A4: red at 81ad67da: AssertionError: Tuples differ: (0, ['examined 7 locales, 4 
 A4: green at 60750d67
 A5: red at 81ad67da: AssertionError: Tuples differ: (0, ['examined 7 locales, 4 keys'], '') != (1, ['not-nfc fr summary', 'examined 7 locales, 4 keys'], '')
 A5: green at 60750d67
-A6: red at 81ad67da: AssertionError: Tuples differ: (0, ['examined 7 locales, 4 keys'], '') != (1, ['locale-set base "fr"', 'examined 7 locales, 4 keys'], '')
+A6: red at 81ad67da: AssertionError: Tuples differ: (0, ['examined 6 locales, 4 keys'], '') != (1, ['locale-set locales ["en", "zh-Hans",[61 chars], '')
 A6: green at 60750d67
 A7: red at 81ad67da: AssertionError: Tuples differ: (0, ['examined 6 locales, 4 keys'], '') != (1, ['file-missing fr', 'examined 6 locales, 4 keys'], '')
 A7: green at 60750d67
@@ -49,8 +49,10 @@ A8: green at 60750d67
 A9: not red: the control: a complete planted tree reads green under the stub and under the census; rows S57101 to S57108, S57110 and S57111 are killed by it
 A10: red at 81ad67da: AssertionError: Tuples differ: (0, ['examined 0 locales, 0 keys'], '') != (3, ['file-missing en', 'file-missing es',[135 chars], '')
 A10: green at 60750d67
-A11: red at 60750d67: 600 finding lines, the first three: ['missing es study_day', 'missing es loading', 'missing es reopen_from_telegram']
-A11: green at 483661ff
+A11: red at 790b5fda: 48 finding lines, the first three: ['unreadable es repeats score_title', 'unreadable es repeats score_pillars', 'unreadable es repeats pillar_consistency']
+A11: green at fba8974c
+A12: red at 4124bdba: AssertionError: Tuples differ: (1, [], 'Traceback (most recent call last)[1184 chars])\n') != (3, ['unreadable settings not-json', 'exam[24 chars], '')
+A12: green at 3d535be3
 ```
 
 ## How each red was read
@@ -140,3 +142,57 @@ English does not carry. Four of the keys are accessible names: `level_today` is 
 as its visible heading; `level_progress` names a meter whose visible text, `level_progress_text`,
 uses the same words for the next level in every locale; and `score_pillars` and `streak_calendar`
 name a list and a calendar that carry no visible label of their own.
+
+## The rebuild on current dev
+
+This delivery was rebuilt on current dev. Its first commit (790b5fda) merges the first branch with
+every one of its commits unchanged, and its tree equals the tree `git merge-tree --write-tree`
+computes for dev and that branch's head. Since the first branch's base, English had gained 65
+messages and lost one, `study_card_escaped`, which left every catalog in the merge. dev's six other
+catalogs had gained 35 of those 65 and eight of the first fill's own messages (`score_title`,
+`score_pillars`, the five `pillar_` messages and `retention_absent`). The other 30 were in no other
+catalog: the 28 `card_health_` messages of the card information panel and the answer labels
+`answer_hard` and `answer_easy`.
+
+- At the merge, A11 read red with 48 finding lines, each `unreadable <locale> repeats <key>`, eight
+  per catalog.
+- 29533b03 dropped the first fill's copy of the eight repeated messages and kept dev's lines byte for
+  byte. It also removed the spaces the first fill had typed between a CJK character and a Latin
+  letter, a digit, a placeholder or a percent sign: 36 in 22 Japanese values, 28 in 18 Simplified
+  Chinese values and 28 in 18 Traditional Chinese values. The stylesheet's `text-autospace` draws
+  that gap. A11 then read 180 finding lines, each `missing <locale> <key>`, 30 per catalog.
+- fba8974c filled those 30 messages in each of the six catalogs, appended in English's order with no
+  typed space at a CJK and Latin boundary, and A11 read green, the census printing
+  `examined 7 locales, 379 keys` and no finding.
+- A12 was committed over the census as the first branch left it (4124bdba) and read red by its own
+  assertion in both subtests, the census stopping on a traceback; 3d535be3 made the census refuse
+  both settings files by name, with the test unchanged.
+- Before the rebuild, A11 read red at 60750d67 with 600 finding lines and green at 483661ff; the
+  A11 lines above now name the rebuild's red and green.
+- A run of the whole test module at 81ad67da, over that commit's census and test module, fails A6
+  first in its subtest `six locales`, and A6's red line above quotes that failure. The first branch's record quoted its subtest `another base` instead.
+
+The greens the first branch recorded were measured on the code and catalogs its own pull request's
+CI ran at d9c87dd8; each of these exits 0:
+
+- `git diff --quiet 60750d67 d9c87dd8 -- scripts/locale_census.py scripts/tests/test_locale_census.py`
+- `git diff --quiet 483661ff d9c87dd8 -- scripts/locale_census.py scripts/tests/test_locale_census.py web/app/messages web/app/project.inlang`
+
+The run at this delivery's head reads every criterion green by name. A11's and A12's greens name
+commits that run did not run on their own; each of these exits 0 at the head:
+
+- `git diff --quiet fba8974c HEAD -- scripts web`
+- `git diff --quiet 3d535be3 HEAD -- scripts/locale_census.py scripts/tests/test_locale_census.py`
+- `git diff --quiet 4124bdba HEAD -- scripts/tests/test_locale_census.py`
+
+The rebuild's filled messages, for the fluent reader's review (tracked on #1053): each of the six
+catalogs gained the same 30 keys in fba8974c, in this order: `card_health_open`, `card_health_title`,
+`card_health_close`, `card_health_unreadable`, `card_health_reviews`, `card_health_lapses`,
+`card_health_time_total`, `card_health_time_mean`, `card_health_time_median`,
+`card_health_seconds`, `card_health_no_answers`, `card_health_logged`, `card_health_recall_title`,
+`card_health_estimates`, `card_health_recall_chance`, `card_health_days_to_90`,
+`card_health_absent`, `card_health_fixture`, `card_health_unready`, `card_health_stale`,
+`card_health_origin_title`, `card_health_origin_collection`, `card_health_history_title`,
+`card_health_history_shown`, `card_health_col_date`, `card_health_col_answer`,
+`card_health_col_time`, `card_health_manual`, `answer_hard` and `answer_easy`. Each value keeps
+English's placeholders as a multiset, is in NFC and uses the terms its catalog already used.
