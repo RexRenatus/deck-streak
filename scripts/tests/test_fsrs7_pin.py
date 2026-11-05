@@ -125,7 +125,7 @@ def crate_findings(crate):
         return [f"{CRATE} has no manifest"]
     manifest = tomllib.loads(crate)
     found = []
-    for table, allowed in (("dependencies", ["fsrs7"]), ("dev-dependencies", ["fsrs6"])):
+    for table, allowed in (("dependencies", ["fsrs7"]), ("dev-dependencies", ["divan", "fsrs6"])):
         names = sorted(manifest.get(table, {}))
         if names != allowed:
             found.append(f"{CRATE}'s [{table}] are {names}, not {allowed}")
@@ -177,7 +177,7 @@ def planted_lock(users=None, pinned=pinned_source()):
     return body
 
 
-def planted_crate(dependencies="fsrs7", dev_dependencies="fsrs6"):
+def planted_crate(dependencies="fsrs7", dev_dependencies="divan fsrs6"):
     def table(names):
         return "".join(f"{name}.workspace = true\n" for name in names.split())
 
@@ -193,6 +193,15 @@ class EachResolvesItsOwnScheduler(unittest.TestCase):
             scheduler_findings(planted_manifest(), planted_lock(), planted_crate()), []
         )
         refusals = {
+            "a dev-dependency past the bench harness and the released scheduler": (
+                planted_manifest(),
+                planted_lock(),
+                planted_crate(dev_dependencies="divan fsrs6 tempfile"),
+                [
+                    f"{CRATE}'s [dev-dependencies] are ['divan', 'fsrs6', 'tempfile'], "
+                    "not ['divan', 'fsrs6']"
+                ],
+            ),
             "one scheduler package": (
                 planted_manifest(),
                 planted_lock({"anki": ["fsrs"], CRATE: ["fsrs"]}, pinned=None),
@@ -284,7 +293,7 @@ class EachResolvesItsOwnScheduler(unittest.TestCase):
                 planted_manifest(),
                 planted_lock(),
                 planted_crate(dev_dependencies="fsrs6 tempfile"),
-                [f"{CRATE}'s [dev-dependencies] are ['fsrs6', 'tempfile'], not ['fsrs6']"],
+                [f"{CRATE}'s [dev-dependencies] are ['fsrs6', 'tempfile'], not ['divan', 'fsrs6']"],
             ),
             "no crate manifest": (
                 planted_manifest(),

@@ -51,6 +51,9 @@ A24: green at b3f776ba
 A26: red at fff4d401: test_mutation_verdict.py:1090: AssertionError: {'ci': 189, 'battery': 234} != {'ci': 185, 'battery': 234} (read on the box: 3 of 44 failing, each on the ceiling)
 A27: red at fff4d401: test_release_rust_ceiling.py:308: AssertionError: Tuples differ: (1, '[71 chars]00 is outside 189..256; a ceiling outside it is never dealt\n') != (1, '[71 chars]00 is outside 185..256; a ceiling outside it is never dealt\n') (read on the box: 7 of 13 failing, each on the ceiling)
 A28: red at fff4d401: test_release_python_ceiling.py:345: AssertionError: Tuples differ: (0, '[366 chars]ng 189\nmutation: shards: run legs 4 of 221: p[68 chars]0\n') != (0, '[366 chars]ng 185\nmutation: shards: run legs 4 of 217: p[68 chars]0\n') (read on the box: 1 of 19 failing)
+A25: red at ab8ee5ee: test_the_ceiling_is_the_runs_job_budget: AssertionError: {'ci': 189, 'battery': 234} != {'ci': 185, 'battery': 234} (job 127064675575)
+A29: red at ab8ee5ee: test_the_engine_and_the_fsrs7_crate_each_resolve_their_own_scheduler, read red by name (job 127064675575)
+A30: red at ab8ee5ee: test_every_exclusion_is_one_row_with_its_reason, read red by name (job 127064675575)
 ```
 
 A1 and A3 to A14 were committed with two stub scripts that keep every argument and decide
