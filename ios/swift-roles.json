@@ -29,6 +29,7 @@
   "ios/App/Sources/UndoDialogView.swift": {"role": "view", "decisions": 0},
   "ios/App/Sources/VoicePickerView.swift": {"role": "view", "decisions": 3},
   "ios/AppTests/AnswerClockTests.swift": {"role": "test"},
+  "ios/AppTests/AppModelTests.swift": {"role": "test"},
   "ios/AppTests/CardRefusalWordsTests.swift": {"role": "test"},
   "ios/AppTests/CredentialStoreTests.swift": {"role": "test"},
   "ios/AppTests/DataModelTests.swift": {"role": "test"},

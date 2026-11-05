@@ -52,12 +52,13 @@ final class AppModel {
         data = DataModel(engine: session)
     }
 
-    /// Opens the collection and lists its decks, once per model (R7).
-    func start() async {
+    /// Opens the collection and lists its decks, once per model (R7). The arguments are the
+    /// launch arguments the session reads, so a test can name a collection directory of its own.
+    func start(arguments: [String] = CommandLine.arguments) async {
         guard !started else { return }
         started = true
         do {
-            try await session.open()
+            try await session.open(arguments: arguments)
             decks = try await session.decks()
         } catch {
             refusal = sentence(error)
