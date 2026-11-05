@@ -97,3 +97,11 @@ committed.
 
 With one more actor, `Bystanders = {"a", "b"}`, the main configuration's three properties read
 clean over 3242 distinct states, to a depth of 19.
+
+## The rebuild onto dev
+
+The delivery was carried onto dev by the merge commit 71c9744e, which git made with no conflict.
+The formal ledger census in `scripts/tests/test_formal_obligations.py` read red there, naming
+`tla/LogCaptureFloor` as a formal entry with no row. The row, the new entry line and SPEC-475 R10
+were added in e36a7c44, with no other line of the ledger or its test changed, and the census read
+green there.
