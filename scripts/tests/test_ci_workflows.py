@@ -5210,6 +5210,21 @@ NOT_WORKFLOW_READS = {
         ),
     ),
     **allowed(
+        "runs each split job's report step under bash in a scratch directory, with a planted xcrun that answers for the planted suite's bundle, and reads the report it writes; a report, never a workflow",
+        (
+            "test_ci_workflows",
+            "TheReportListsThePlantedSuiteOnEachSimulator.test_a_planted_card_test_that_fails_on_one_simulator_is_named_by_its_simulator",
+            "subprocess.run(['bash', '--noprofile', '--norc', '-e', '-o', 'pipefail', '-c', step['run']], cwd=where, env=env, capture_output=True, text=True, timeout=120, check=False)",
+            1,
+        ),
+        (
+            "test_ci_workflows",
+            "TheReportListsThePlantedSuiteOnEachSimulator.test_a_planted_card_test_that_fails_on_one_simulator_is_named_by_its_simulator",
+            "(report / 'report.md').read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
         "calls umbrella_closure, which reads a workspace's Cargo manifests for the umbrella's build closure; manifests, never a workflow",
         (
             "test_ci_workflows",
@@ -10274,6 +10289,13 @@ CARD_PROBE_NEEDS = (
     "-disable-concurrent-destination-testing",
     '-resultBundlePath "$RESULTS/card-probe.xcresult"',
 )
+# The report's lines for the planted suite's bundle (SPEC-608 R1 to R3): its cases read, listed
+# under their own label, and named to `harness` in the report of the job that runs no planted suite.
+CARD_PROBE_REPORT_NEEDS = (
+    'cases_in("card-probe")',
+    '("Card probe", card_probe_cases)',
+    '"card-probe": "harness"',
+)
 # The actions a planted card-view job uses; their refs are placeholders the checker never reads.
 PLANTED_CHECKOUT = "actions/checkout@" + "0" * 40
 PLANTED_UPLOAD = "actions/upload-artifact@" + "0" * 40
@@ -10433,6 +10455,133 @@ class TheCardViewIsProvedOnBothSimulators(unittest.TestCase):
         for name, (jobs, wanted) in examined("planted card-view jobs", list(plants.items())):
             with self.subTest(plant=name):
                 self.assertEqual(card_probe_problems(jobs), wanted, name)
+
+
+# The two simulators a planted bundle's case ran on, as A2's report runs name them, and the one case
+# the planted `xcrun` answers with (SPEC-608 A2).
+PLANTED_IPHONE_SIM = "iPhone 16"
+PLANTED_IPAD_SIM = "iPad (A16)"
+PLANTED_CARD_CASE = "CardProbeTests/test_a_planted_card_reaches_from_the_reference_view()"
+# The rows each job's report writes for that bundle: `harness` names each simulator with its result,
+# and `release-and-app`, which holds no such bundle, names `harness`.
+CARD_PROBE_ROWS = {
+    "harness": [
+        f"| Card probe `{PLANTED_CARD_CASE}` | {PLANTED_IPHONE_SIM}: Passed; "
+        f"{PLANTED_IPAD_SIM}: Failed |"
+    ],
+    "release-and-app": ["| Card probe: no test result was read | in `harness` |"],
+}
+
+
+def card_probe_report_problems(jobs):
+    """SPEC-608 R1 to R3: each report body of the split reads the planted suite's bundle, lists its
+    cases under their own label, and names `harness` for them in the job that runs no planted
+    suite."""
+    problems = []
+    for name in ("harness", SPLIT_JOB):
+        text = "\n".join(
+            str(step.get("run", ""))
+            for step in (jobs.get(name) or {}).get("steps") or []
+            if step.get("name") == HARNESS_REPORT
+        )
+        problems += [
+            f"{name}: the report lacks {need}"
+            for need in CARD_PROBE_REPORT_NEEDS
+            if need not in text
+        ]
+    return problems
+
+
+class TheReportListsThePlantedSuiteOnEachSimulator(unittest.TestCase):
+    def test_the_report_reads_the_planted_suite_bundle_in_both_jobs(self):
+        """SPEC-608 A1 (R1 to R3): each report body, in `harness` and in `release-and-app`, reads
+        the planted suite's bundle, lists its cases under `Card probe` and names `harness` for
+        them; each of the three removed from either body is refused by its own line."""
+        jobs = load("xcframework.yml")["jobs"]
+        self.assertEqual(card_probe_report_problems(jobs), [])
+
+        def without(name, piece):
+            steps = jobs[name]["steps"]
+            reports = [s for s in steps if s.get("name") == HARNESS_REPORT]
+            assert len(reports) == 1, f"{name} holds {len(reports)} report steps"
+            assert reports[0]["run"].count(piece) == 1, f"{piece!r} is not in {name}'s report once"
+            planted = [
+                {**s, "run": s["run"].replace(piece, "")} if s.get("name") == HARNESS_REPORT else s
+                for s in steps
+            ]
+            return {**jobs, name: {**jobs[name], "steps": planted}}
+
+        plants = {
+            f"{name} without {need}": (without(name, need), [f"{name}: the report lacks {need}"])
+            for name in ("harness", SPLIT_JOB)
+            for need in CARD_PROBE_REPORT_NEEDS
+        }
+        for name, (body, wanted) in examined("planted report bodies", list(plants.items())):
+            with self.subTest(plant=name):
+                self.assertEqual(card_probe_report_problems(body), wanted, name)
+
+    def test_a_planted_card_test_that_fails_on_one_simulator_is_named_by_its_simulator(self):
+        """SPEC-608 A2 (R1 to R3): each job's live report step, run under GitHub's default bash with
+        a planted `xcrun` that answers for the planted suite's bundle with one case that passes on
+        the iPhone and fails on the iPad, writes in `harness` the one row naming each simulator
+        with its result, and in `release-and-app`, which holds no such bundle, the row that names
+        `harness`. The planted `xcrun` exits non-zero for every other call."""
+        jobs = load("xcframework.yml")["jobs"]
+        devices = [
+            {"nodeType": "Device", "name": PLANTED_IPHONE_SIM, "result": "Passed"},
+            {"nodeType": "Device", "name": PLANTED_IPAD_SIM, "result": "Failed"},
+        ]
+        case = {
+            "nodeType": "Test Case",
+            "nodeIdentifier": PLANTED_CARD_CASE,
+            "result": "Failed",
+            "children": devices,
+        }
+        tree = {
+            "testNodes": [
+                {"nodeType": "Unit test bundle", "name": "CardProbeTests", "children": [case]}
+            ]
+        }
+        for name in examined("jobs of the split", ["harness", SPLIT_JOB]):
+            step = next(s for s in jobs[name]["steps"] if s.get("name") == HARNESS_REPORT)
+            with self.subTest(job=name), tempfile.TemporaryDirectory() as scratch:
+                where = Path(scratch)
+                results, report, planted = where / "results", where / "report", where / "bin"
+                results.mkdir()
+                planted.mkdir()
+                if name == "harness":
+                    (results / "card-probe.xcresult").mkdir()
+                answer = where / "tree.json"
+                answer.write_text(json.dumps(tree), encoding="utf-8")
+                asked = f"xcresulttool get test-results tests --path {results}/card-probe.xcresult"
+                xcrun = planted / "xcrun"
+                xcrun.write_text(
+                    f'#!/bin/bash\nif [ "$*" = "{asked}" ]; then exec cat "{answer}"; fi\nexit 1\n',
+                    encoding="utf-8",
+                )
+                xcrun.chmod(0o700)
+                env = {
+                    "PATH": f"{planted}{os.pathsep}{os.environ['PATH']}",
+                    "REPORT": str(report),
+                    "RESULTS": str(results),
+                    "GITHUB_JOB": name,
+                    "GITHUB_STEP_SUMMARY": str(where / "summary.md"),
+                    "IPHONE_SIM": PLANTED_IPHONE_SIM,
+                    "IPAD_SIM": PLANTED_IPAD_SIM,
+                }
+                done = subprocess.run(
+                    ["bash", "--noprofile", "--norc", "-e", "-o", "pipefail", "-c", step["run"]],
+                    cwd=where,
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                    timeout=120,
+                    check=False,
+                )
+                self.assertEqual(done.returncode, 0, done.stderr[-2000:])
+                text = (report / "report.md").read_text(encoding="utf-8")
+                rows = [line for line in text.splitlines() if line.startswith("| Card probe")]
+                self.assertEqual(rows, CARD_PROBE_ROWS[name])
 
 
 class TheReleaseJobOutlastsItsSlowestRun(unittest.TestCase):

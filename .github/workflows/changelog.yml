@@ -33,12 +33,18 @@ jobs:
         run: |
           if git diff --name-only "$BASE" HEAD -- CHANGELOG.md | grep -q .; then exit 0; fi
           if git diff --name-only --diff-filter=A "$BASE" HEAD -- changelog.d/ | grep -v README.md | grep -q .; then exit 0; fi
+          # SPEC-604 R8: a batch the merge queue opens from its own branch reads the dependency-file rule below.
+          queue="mergify/merge-queue/"
+          if [ "$AUTHOR" = "mergify[bot]" ] && [ "${GITHUB_HEAD_REF:0:${#queue}}" = "$queue" ]; then
+            AUTHOR="dependabot[bot]"
+          fi
           if [ "$AUTHOR" = "dependabot[bot]" ]; then
             cargo="Cargo\.lock|Cargo\.toml|crates/[^/]+/Cargo\.toml"
             npm="package\.json|web/app/package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml"
             actions="\.github/workflows/[^/]+\.ya?ml"
+            pip="tools/coverage/requirements\.txt"
             changed="$(git diff --name-only --no-renames "$BASE" HEAD)"
-            other="$(printf "%s\n" "$changed" | grep -v -x -E "$cargo|$npm|$actions" || true)"
+            other="$(printf "%s\n" "$changed" | grep -v -x -E "$cargo|$npm|$actions|$pip" || true)"
             if [ -n "$changed" ] && [ -z "$other" ]; then
               echo "A Dependabot pull request that changes only dependency files needs no fragment."
               exit 0

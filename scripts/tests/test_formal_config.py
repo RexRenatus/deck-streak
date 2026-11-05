@@ -26,6 +26,7 @@ EXPECTED = {
     "budgets": {
         "tla_seconds": 480,
         "lean_seconds": 600,
+        "kani_seconds": 300,
         "entry_seconds": 300,
         "entries": {
             "tla/FullSyncChoice": 60,
@@ -53,6 +54,7 @@ FIELDS = [
     (("k",), "posint", True),
     (("budgets", "tla_seconds"), "posint", True),
     (("budgets", "lean_seconds"), "posint", True),
+    (("budgets", "kani_seconds"), "posint", False),
     (("budgets", "entry_seconds"), "posint", False),
     (("budgets", "entries"), "posint-map", False),
     (("axioms",), "strings", True),
@@ -216,6 +218,42 @@ def slot_reading(doc):
             raise Refused("slot-range", "tlc_slot." + key + " is past its range")
         reading.append(lever[key])
     return tuple(reading)
+
+
+# SPEC-611 R1 and R2 (#802): the largest value the formal checker's reader takes for each bounded
+# field outside `tlc_slot`, an unsigned 32-bit integer for `k` and an unsigned 64-bit integer for
+# each budget and each per-entry budget, and the prefix every per-entry key carries, which names a
+# TLA+ entry.
+K_BOUND = 2**32 - 1
+BUDGET_BOUND = 2**64 - 1
+ENTRY_PREFIX = "tla/"
+
+
+def bounded_reading(doc):
+    """The bounded values as the formal checker reads them from a document `read` admits
+    (SPEC-611): `k`, each budget and each per-entry budget, keyed by its dotted name and read as
+    stated. A value past its reader's range, or a per-entry key that names no TLA+ entry, is
+    refused, because the checker would refuse the whole file and read none of it."""
+    reading = {}
+    for path, kind, _ in FIELDS:
+        value, present = get(doc, path)
+        if path[0] == "tlc_slot" or not present:
+            continue
+        name = ".".join(path)
+        if kind == "posint":
+            bound = K_BOUND if path == ("k",) else BUDGET_BOUND
+            if value > bound:
+                raise Refused("bound-range", name + " is past its range")
+            reading[name] = value
+        if kind == "posint-map":
+            for key, seconds in value.items():
+                entry = name + "." + key
+                if not key.startswith(ENTRY_PREFIX):
+                    raise Refused("entry-unnamed", entry + " names no TLA+ entry")
+                if seconds > BUDGET_BOUND:
+                    raise Refused("bound-range", entry + " is past its range")
+                reading[entry] = seconds
+    return reading
 
 
 def toolchain_sources(doc, root):
@@ -445,6 +483,74 @@ def reader_arms():
     ]
 
 
+class BoundedReading(unittest.TestCase):
+    """SPEC-611 A1 and A2: the bounded rule over documents built from the expected table. Neither
+    test reads the committed file, so neither sits in `FormalConfig`, the class the presence
+    harness runs against each refused file; each call of the reader here is still held to the
+    harness's rule that a refusal fails the test by assertion."""
+
+    def test_each_bounded_value_is_one_the_checkers_reader_takes(self):
+        """A1 (SPEC-611): for `k`, each budget and one per-entry budget, the document holding the
+        bound is admitted and read as that value, and the document holding the first integer past
+        it is refused by the range arm naming the field. The values are spelled here, never
+        derived from the rule."""
+        values = [
+            (("k",), 4294967295, True),
+            (("k",), 4294967296, False),
+            (("budgets", "tla_seconds"), 18446744073709551615, True),
+            (("budgets", "tla_seconds"), 18446744073709551616, False),
+            (("budgets", "lean_seconds"), 18446744073709551615, True),
+            (("budgets", "lean_seconds"), 18446744073709551616, False),
+            (("budgets", "entry_seconds"), 18446744073709551615, True),
+            (("budgets", "entry_seconds"), 18446744073709551616, False),
+            (("budgets", "entries", "tla/OpLog"), 18446744073709551615, True),
+            (("budgets", "entries", "tla/OpLog"), 18446744073709551616, False),
+        ]
+        reached = 0
+        for path, value, admitted in values:
+            name = ".".join(path)
+            plant = with_value(path, value)
+            try:
+                read(plant)
+            except Refused as refusal:
+                self.fail(f"presence control: {name} = {value} is refused by the reader: {refusal}")
+            if admitted:
+                try:
+                    reading = bounded_reading(plant)
+                except Refused as refusal:
+                    self.fail(f"{name} = {value} is within the range, yet refused: {refusal}")
+                self.assertEqual(reading[name], value)
+            else:
+                with self.assertRaises(Refused, msg=f"{name} = {value} was read") as caught:
+                    bounded_reading(plant)
+                self.assertEqual(caught.exception.arm, "bound-range")
+                self.assertEqual(str(caught.exception), f"{name} is past its range")
+            reached += 1
+        print(f"examined {reached} of {len(values)} bounded values")
+        self.assertEqual(reached, len(values), "a bounded value did not reach its assertion")
+
+    def test_a_budget_entry_key_that_names_no_tla_entry_is_refused(self):
+        """A2 (SPEC-611): a per-entry budget whose key lacks the `tla/` prefix, planted beside the
+        declared entries with a value within the range, is admitted by the test's reader and
+        refused by the rule's entry arm naming the key. The keys are spelled here."""
+        keys = ["OpLog", "lean/OpLog", "TLA/OpLog", "tla-OpLog"]
+        reached = 0
+        for key in keys:
+            name = "budgets.entries." + key
+            plant = with_value(("budgets", "entries", key), 60)
+            try:
+                read(plant)
+            except Refused as refusal:
+                self.fail(f"presence control: {name} is refused by the reader: {refusal}")
+            with self.assertRaises(Refused, msg=f"{name} was read as a budget") as caught:
+                bounded_reading(plant)
+            self.assertEqual(caught.exception.arm, "entry-unnamed")
+            self.assertEqual(str(caught.exception), f"{name} names no TLA+ entry")
+            reached += 1
+        print(f"examined {reached} of {len(keys)} entry keys")
+        self.assertEqual(reached, len(keys), "an entry key did not reach its assertion")
+
+
 class FormalConfig(unittest.TestCase):
     def test_every_value_type_a_kind_refuses_is_planted_and_refused_by_name(self):
         """A4: for each field kind the reader judges, the object kind included at every object
@@ -644,6 +750,28 @@ class FormalConfig(unittest.TestCase):
             reached += 1
         print(f"examined {reached} of {len(values)} slot values")
         self.assertEqual(reached, len(values), "a slot value did not reach its assertion")
+
+    def test_the_bounded_reading_is_the_files_own_values(self):
+        """A3 (SPEC-611): the committed file's bounded reading is its own `k`, each of its budgets
+        and each of its per-entry budgets, read from the loaded file and never from the expected
+        table, and the rule admits every per-entry key the committed file names."""
+        doc = load()
+        try:
+            read(doc)
+        except Refused as refusal:
+            self.fail(f"presence control: the committed file is refused by the reader: {refusal}")
+        try:
+            reading = bounded_reading(doc)
+        except Refused as refusal:
+            self.fail(f"the bounded rule refuses the committed file: {refusal}")
+        budgets = doc["budgets"]
+        entries = budgets.get("entries", {})
+        expected = {"k": doc["k"]}
+        expected.update({"budgets." + key: v for key, v in budgets.items() if key != "entries"})
+        expected.update({"budgets.entries." + key: v for key, v in entries.items()})
+        self.assertEqual(reading, expected)
+        print(f"examined {len(reading)} bounded values of the committed file")
+        self.assertGreater(len(entries), 0, "the committed file names no per-entry budget")
 
     def test_the_toolchain_identity_is_named_and_a_malformed_one_is_refused(self):
         """A6: the committed file names the checker's toolchain by one 64-digit lowercase hex

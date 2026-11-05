@@ -149,3 +149,37 @@ SPEC-399 A1 to A3 and `docs/red-first/SPEC-399.md`.
 ## More Information
 
 #661; SPEC-341 R8 and A8; ADR-352 D7; SPEC-399; the schematic's new last section.
+
+## Amendment: an unclosed projects array is refused by its own reason (SPEC-399 section 8), and the alternatives it was chosen against
+
+The read of the card configuration's text refuses it in two places, when the text holds no
+`projects: [` and when the one it holds never closes, and both gave the refusal `no projects
+array`. A3's plants reach only the first, so the second could be deleted with every assertion
+still green (#805). D1 to D5 stand.
+
+### D6. The unclosed array is refused as `projects array never closes`, seen red first on the old refusal
+
+A configuration text whose `projects: [` has no matching `]` is refused as `projects array never
+closes`, with no engine read, and a text with no `projects: [` keeps `no projects array`. A4
+plants two unclosed arrays in test-local text, one of them holding a nested pair of brackets that
+does close, so the depth count is what refuses them, and reads the missing array beside them. The
+test is committed with the parse unchanged, where an unclosed plant reads the old refusal, so it is
+red by assertion in a local run of the whole file, as D3 reads its reds; the next commit changes
+that one refusal and nothing else. The record also reads A4 red with the arm deleted from a local
+copy, which is the drift #805 names. No mutation row, for D3's reasons.
+
+Chosen against:
+
+- Keeping one refusal for both arms and planting the unclosed case alone: rejected because that test is green at the base, so it is never seen red for its criterion's reason, and a failure would not say which arm refused.
+- A hand mutation row that deletes the arm: rejected for D3's reasons: no row table takes this runner's killers, and a row on a test file mutates the proof, not the product.
+- Moving the parse into a module of its own with its own tests: rejected because it adds a path to a delivery that changes no shipped file (SPEC-399 R7), to hold one line.
+- Reading strings and comments in the configuration's text apart from its code: rejected because the card configuration holds no bracket in either, and R2 already refuses a configuration whose projects carry no literal name.
+
+### Consequences of this amendment
+
+- Good, because deleting either refusal of the configuration read now reads red, and a failure names which arm refused.
+- Bad, because a bracket inside a string or a comment in the projects array is still counted as code.
+
+### What would make this amendment wrong
+
+- The card configuration came to hold a bracket inside a string or a comment in its projects array: the depth count would then misread it, and the read would be reconsidered by an ADR.

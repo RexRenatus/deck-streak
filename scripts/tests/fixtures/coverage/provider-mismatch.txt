@@ -1,0 +1,9 @@
+lockfileVersion: '9.0'
+
+packages:
+
+  '@vitest/coverage-v8@5.0.4':
+    resolution: {integrity: sha512-planted}
+
+  vitest@5.0.5:
+    resolution: {integrity: sha512-planted}
