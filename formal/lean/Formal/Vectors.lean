@@ -1,5 +1,6 @@
 import Formal.ChestVectors
 import Formal.CompanionDecideVectors
+import Formal.DocsMermaidReadVectors
 import Formal.DueReorderVectors
 import Formal.ExchangeVectors
 import Formal.Fsrs7MemoryStateVectors
@@ -44,6 +45,7 @@ def main (args : List String) : IO UInt32 := do
   match args with
   | ["Chest"] => Formal.ChestVectors.run
   | ["CompanionDecide"] => Formal.CompanionDecideVectors.run
+  | ["DocsMermaidRead"] => Formal.DocsMermaidReadVectors.run
   | ["DueReorder"] => Formal.DueReorderVectors.run
   | ["Exchange"] => Formal.ExchangeVectors.run
   | ["Fsrs7MemoryState"] => Formal.Fsrs7MemoryStateVectors.run
