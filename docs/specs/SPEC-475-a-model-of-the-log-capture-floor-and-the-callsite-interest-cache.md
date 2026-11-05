@@ -65,6 +65,11 @@ mutation rows file changes, and the census's routed count and every other pin ke
 
 R9. The entry is checked within the repository's default entry budget.
 
+R10. The formal ledger names the entry: `formal/obligations.json` gains its row (disposition
+`keep`, no obligation), and the ledger's census `scripts/tests/test_formal_obligations.py` gains
+its one `NEW_ENTRIES` line, as the census requires of every entry built after the designed ones.
+That line is the one `scripts/tests` change this SPEC makes, an exception to R8; the census, which CI runs, decides R10.
+
 ## 3. Acceptance criteria of SPEC-475
 
 This delivery adds no test, so its acceptance fence names no command. Its three results, A1 to
@@ -103,6 +108,8 @@ checker's run inside the default budget.
 | `docs/schematics/log-capture-floor-and-the-callsite-interest-cache.md` | docs | added: the two threads, the cache and the model's actions |
 | `docs/red-first/SPEC-475.md` | docs | added: the red-first record |
 | `changelog.d/log-capture-floor-model-475.md` | docs | added: the changelog fragment |
+| `formal/obligations.json` | formal | changed: the `tla/LogCaptureFloor` row added to the entries, insert-only (R10) |
+| `scripts/tests/test_formal_obligations.py` | repo | changed: `tla/LogCaptureFloor` added to the new entries with no obligation, insert-only (R10) |
 
 ## 5. What this does NOT cover
 
