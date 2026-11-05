@@ -32,6 +32,8 @@ A11: green at ba3b30b0
 A12: green at 0668e8ac
 A13: green at 0668e8ac
 A14: green at 73a6bda1
+A16: red at cb6b5916: run 42046391860, job `release-and-app`, on the iPhone and on the iPad: AppModelTests.swift:45: error: -[DeckStreakTests.AppModelTests test_a16_a_chosen_decks_review_shows_once_its_first_answer_is_in] : XCTAssertEqual failed: ("Optional(DeckStreak.ReviewPhase.loading)") is not equal to ("Optional(DeckStreak.ReviewPhase.finished)") - A16: the pane is handed the review of
+A16: green at 75617018
 ```
 
 - A1 and A2 were read on R1's tree before rustfmt rewrapped two statements of `login.rs` below
@@ -125,3 +127,5 @@ opens the collection and keeps the host key, as their reds were read at 3cea6a34
 - At ba3b30b0 the step "the app, archived unsigned for a device" built again
   (`** ARCHIVE SUCCEEDED **`), and the executable imports the same required-reason categories,
   DiskSpace and FileTimestamp, both declared and none undeclared.
+
+A16 was committed with the seam alone and the open unchanged (313e71c1), its collection directory was created before the open in cb6b5916, and it read red by name on both simulators in the run of the pull request at cb6b5916. The open changed in 75617018, with the test unchanged since cb6b5916, and the run at this delivery head reads it green on both simulators. The commits after 75617018 change only documents.
