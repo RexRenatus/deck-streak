@@ -1,0 +1,494 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S43000-THE-READER-FINDS-CARGO-AFTER-A-WRAPPER-SEPARATOR",
+        "scripts/tests/test_ci_workflows.py",
+        "|[ \\t]--[ \\t])\"",
+        ")\"",
+        "The cargo reader finds cargo after a wrapper's ` -- ` (SPEC-430 R2, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43001-THE-READER-FINDS-CARGO-AFTER-AN-ENV-ASSIGNMENT",
+        "scripts/tests/test_ci_workflows.py",
+        "{keywords}{assigns}cargo",
+        "{keywords}cargo",
+        "The cargo reader finds cargo after a `NAME=value` assignment (SPEC-430 R2, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43002-THE-READER-FINDS-CARGO-AFTER-IF",
+        "scripts/tests/test_ci_workflows.py",
+        "(?:(?:if|then|do|",
+        "(?:(?:then|do|",
+        "The cargo reader finds cargo after `if` (SPEC-430 R2, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43003-THE-READER-JOINS-CONTINUATIONS",
+        "scripts/tests/test_ci_workflows.py",
+        "joined = re.sub(r\"\\\\\\n\", \" \", str(script))",
+        "joined = str(script)",
+        "The cargo reader joins backslash continuations before it reads a call (SPEC-430 R2, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43004-A-SHELL-SCRIPT-THE-STEP-CALLS-IS-READ",
+        "scripts/tests/test_ci_workflows.py",
+        "calls += [shape_kind(sub, words) for sub, words in shape_cargo(shape_bare(called))]",
+        "calls += []",
+        "A shell script the step calls is read for its cargo calls (SPEC-430 R2, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43005-A-PYTHON-CARGO-ARGV-IS-READ",
+        "scripts/tests/test_ci_workflows.py",
+        "calls += [shape_kind(sub, list(words)) for _, sub, words in lists]",
+        "calls += []",
+        "A called Python script's cargo argument lists are read (SPEC-430 R2, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43006-A-CHECK-STAGE-IS-READ-FROM-ITS-BODY",
+        "scripts/tests/test_ci_workflows.py",
+        "for stage in gate.group(1).split() or STAGES.search(check).group(1).split():",
+        "for stage in STAGES.search(check).group(1).split():",
+        "A check.sh call is read stage by stage from the stages it names (SPEC-430 R2, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43007-A-STAGE-THAT-NEEDS-CARGO-UNSEEN-BUILDS",
+        "scripts/tests/test_ci_workflows.py",
+        "inner = [\"cache\"]",
+        "inner = []",
+        "A stage that calls need_cargo and shows no cargo command counts as one build (SPEC-430 R2, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43008-A-SCRIPT-THE-TREE-LACKS-IS-A-PROBLEM",
+        "scripts/tests/test_ci_workflows.py",
+        "problems.append(f\"{where}: calls {name}, which the tree lacks\")",
+        "pass",
+        "A called script the tree lacks is a problem by name (SPEC-430 R2, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43009-A-LISTING-COMPILES-NOTHING",
+        "scripts/tests/test_ci_workflows.py",
+        "if subcommand == \"mutants\" and \"--list\" in words:",
+        "if False:",
+        "A mutants listing compiles nothing (SPEC-430 R3, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43010-FMT-COMPILES-NOTHING",
+        "scripts/tests/test_ci_workflows.py",
+        "(\"fmt\", \"fetch\",",
+        "(\"fetch\",",
+        "Cargo fmt compiles nothing (SPEC-430 R3, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43011-FETCH-COMPILES-NOTHING",
+        "scripts/tests/test_ci_workflows.py",
+        "\"fmt\", \"fetch\", \"deny\"",
+        "\"fmt\", \"deny\"",
+        "Cargo fetch compiles nothing (SPEC-430 R3, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43012-DENY-COMPILES-NOTHING",
+        "scripts/tests/test_ci_workflows.py",
+        "\"fetch\", \"deny\", \"clean\"",
+        "\"fetch\", \"clean\"",
+        "Cargo deny compiles nothing (SPEC-430 R3, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43013-CLEAN-COMPILES-NOTHING",
+        "scripts/tests/test_ci_workflows.py",
+        "\"deny\", \"clean\", \"metadata\"",
+        "\"deny\", \"metadata\"",
+        "Cargo clean compiles nothing (SPEC-430 R3, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43014-METADATA-COMPILES-NOTHING",
+        "scripts/tests/test_ci_workflows.py",
+        "\"clean\", \"metadata\")",
+        "\"clean\")",
+        "Cargo metadata compiles nothing (SPEC-430 R3, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43015-RELEASE-BUILDS-ANOTHER-PROFILE",
+        "scripts/tests/test_ci_workflows.py",
+        "if flag in (\"--release\", ",
+        "if flag in (",
+        "A --release call builds another profile than the cache's (SPEC-430 R3, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43016-A-TARGET-BUILDS-ANOTHER-TARGET",
+        "scripts/tests/test_ci_workflows.py",
+        "\"-r\", \"--target\") or",
+        "\"-r\") or",
+        "A --target call builds another target (SPEC-430 R3, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43017-A-LOCKED-BUILD-IS-THE-CACHE-PROFILE",
+        "scripts/tests/test_ci_workflows.py",
+        "(\"--release\", \"-r\", \"--target\")",
+        "(\"--release\", \"-r\", \"--target\", \"--locked\")",
+        "A --locked build is the cache's profile (SPEC-430 R3, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43018-AN-UNKNOWN-SUBCOMMAND-BUILDS",
+        "scripts/tests/test_ci_workflows.py",
+        "return \"other\" if other else \"cache\"",
+        "return \"other\" if other else (\"cache\" if subcommand in (\"build\", \"check\", \"clippy\", \"mutants\", \"nextest\", \"run\", \"rustc\", \"test\") else \"nothing\")",
+        "A subcommand no rule names builds the cache's profile (SPEC-430 R3, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43019-A-TAG-PUSH-MAKES-THE-RELEASE-CLASS",
+        "scripts/tests/test_ci_workflows.py",
+        "(\"tags\" in push or ",
+        "(",
+        "A workflow a tag push starts takes the release class (SPEC-430 R4, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43020-A-RELEASE-EVENT-MAKES-THE-RELEASE-CLASS",
+        "scripts/tests/test_ci_workflows.py",
+        "if \"release\" in events or tagged:",
+        "if tagged:",
+        "A workflow a release event starts takes the release class (SPEC-430 R4, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43021-A-RELEASE-WORKFLOWS-CALLEE-IS-RELEASE-CLASS",
+        "scripts/tests/test_ci_workflows.py",
+        "while grew:",
+        "while False:",
+        "A workflow a release workflow calls takes the release class (SPEC-430 R4, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43022-A-MACOS-RUNNER-IS-ANOTHER-RUNNER",
+        "scripts/tests/test_ci_workflows.py",
+        "((\"macos-\", \"windows-\"))",
+        "((\"windows-\",))",
+        "A job on a macos- runner is on another runner (SPEC-430 R4, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43023-A-RELEASE-JOB-RESTORES-NO-CACHE",
+        "scripts/tests/test_ci_workflows.py",
+        "if shape_reads_a_cache(step)",
+        "if False",
+        "A release-class job restores no cache (SPEC-430 R5, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43024-THE-RESTORE-PRECEDES-THE-FIRST-BUILD",
+        "scripts/tests/test_ci_workflows.py",
+        "if at > first:",
+        "if False:",
+        "The shared restore sits before the job's first build of the cache's profile (SPEC-430 R5, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43025-A-LOOKUP-ONLY-STEP-RESTORES-NOTHING",
+        "scripts/tests/test_ci_workflows.py",
+        "and str((step.get(\"with\") or {}).get(\"lookup-only\", \"\")) != \"true\"",
+        "and True",
+        "A lookup-only restore restores nothing (SPEC-430 R5, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43026-THE-RESTORE-SHARES-THE-BUILDS-CONDITION",
+        "scripts/tests/test_ci_workflows.py",
+        "if \"if\" in restore and restore.get(\"if\") != steps[first].get(\"if\"):",
+        "if False:",
+        "The shared restore runs under its first build's condition (SPEC-430 R5, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43027-THE-SHARED-KEY-IS-RESTORED-ONCE",
+        "scripts/tests/test_ci_workflows.py",
+        "if len(shared) != 1:",
+        "if not shared:",
+        "A shared job restores the shared key exactly once (SPEC-430 R5, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43028-THE-RESTORED-KEY-IS-THE-SHARED-KEY",
+        "scripts/tests/test_ci_workflows.py",
+        "if str((step.get(\"with\") or {}).get(\"key\", \"\")) == SHAPE_KEY",
+        "if True",
+        "A shared job's restore carries the shared key byte for byte (SPEC-430 R5, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43029-A-CACHE-NAMED-ACTION-IS-A-WRITER",
+        "scripts/tests/test_ci_workflows.py",
+        "named = \"cache\" in uses.lower() and uses != \"actions/cache/restore\"",
+        "named = False",
+        "An action whose path names a cache is a writer (SPEC-430 R6, A4)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_writer_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43030-A-RUST-SAVE-KEYS-ON-A-SHARED-RESTORE",
+        "scripts/tests/test_ci_workflows.py",
+        "if rust and keyed != SHAPE_KEY:",
+        "if False:",
+        "A Rust save keys on an earlier shared restore's primary key (SPEC-430 R6, A4)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_writer_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43031-THE-SAVE-SCENARIOS-JUDGE-EVERY-WRITER",
+        "scripts/tests/test_ci_workflows.py",
+        "problems += cache_problems(path.name, workflow)[0]",
+        "problems += []",
+        "Every workflow's writers are judged by the module's save scenarios (SPEC-430 R6, A4)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_writer_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43032-THE-RUST-KEY-IS-MATCHED-WHOLE",
+        "scripts/tests/test_ci_workflows.py",
+        "if key != SHAPE_KEY:",
+        "if SHAPE_KEY not in key:",
+        "The Rust key equals the shared key whole (SPEC-430 R7, A6)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_key_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43033-THE-RUST-FALLBACK-KEEPS-THE-TOOLCHAIN",
+        "scripts/tests/test_ci_workflows.py",
+        "if line != SHAPE_RUST_FALLBACK:",
+        "if False:",
+        "The Rust fallback keeps the toolchain's hash (SPEC-430 R7, A6)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_key_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43034-THE-PNPM-KEY-HASHES-ITS-LOCKFILE",
+        "scripts/tests/test_ci_workflows.py",
+        "if key != SHAPE_PNPM_KEY:",
+        "if False:",
+        "The pnpm key hashes its lockfile (SPEC-430 R7, A6)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_key_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43035-THE-BROWSER-VERSION-STEP-READS-THE-LOCKFILE",
+        "scripts/tests/test_ci_workflows.py",
+        "elif not any(\"pnpm-lock.yaml\" in str(s.get(\"run\", \"\")) for s in steps):",
+        "elif False:",
+        "The browser key's version step reads the lockfile (SPEC-430 R7, A6)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_key_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43036-AN-UNKNOWN-CACHE-IS-A-PROBLEM",
+        "scripts/tests/test_ci_workflows.py",
+        "problems.append(f\"{where}: caches {', '.join(paths(step))}, which no key rule knows\")",
+        "pass",
+        "A cache no key rule knows is a problem (SPEC-430 R7, A6)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_key_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43037-A-SAVE-RESOLVES-THROUGH-A-RESTORE-OF-ITS-PATHS",
+        "scripts/tests/test_ci_workflows.py",
+        "and paths(restore) == paths(step)",
+        "and True",
+        "A save's key resolves only through a restore of its own paths (SPEC-430 R7, A6)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_key_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43038-AN-UNPLACED-EXPRESSION-IS-A-PROBLEM",
+        "scripts/tests/test_ci_workflows.py",
+        "elif not re.fullmatch(",
+        "elif False and not re.fullmatch(",
+        "An expression no key rule places is a problem (SPEC-430 R8, A8)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_run_unique_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43039-RUN-ID-IS-NAMED",
+        "scripts/tests/test_ci_workflows.py",
+        "(run_id|run_number|",
+        "(run_number|",
+        "A key naming github.run_id is refused by name (SPEC-430 R8, A8)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_run_unique_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43040-RUN-NUMBER-IS-NAMED",
+        "scripts/tests/test_ci_workflows.py",
+        "run_id|run_number|run_attempt",
+        "run_id|run_attempt",
+        "A key naming github.run_number is refused by name (SPEC-430 R8, A8)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_run_unique_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43041-RUN-ATTEMPT-IS-NAMED",
+        "scripts/tests/test_ci_workflows.py",
+        "run_number|run_attempt|sha",
+        "run_number|sha",
+        "A key naming github.run_attempt is refused by name (SPEC-430 R8, A8)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_run_unique_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43042-THE-COMMIT-SHA-IS-NAMED",
+        "scripts/tests/test_ci_workflows.py",
+        "|run_attempt|sha)",
+        "|run_attempt)",
+        "A key or fallback naming github.sha is refused by name (SPEC-430 R8, A8)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_run_unique_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43043-AN-ENV-INDIRECTION-IS-RESOLVED",
+        "scripts/tests/test_ci_workflows.py",
+        "problems += shape_unique_problems(inner, str(value), envs[scopes[0] + 1 :], steps)",
+        "problems += []",
+        "An env.<NAME> in a key is resolved and judged (SPEC-430 R8, A8)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_run_unique_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43044-GITHUB-RUN-ID-IN-A-PRODUCING-STEP",
+        "scripts/tests/test_ci_workflows.py",
+        "(GITHUB_RUN_ID|GITHUB_RUN_NUMBER|",
+        "(GITHUB_RUN_NUMBER|",
+        "A producing step naming GITHUB_RUN_ID is refused (SPEC-430 R8, A8)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_run_unique_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43045-GITHUB-RUN-NUMBER-IN-A-PRODUCING-STEP",
+        "scripts/tests/test_ci_workflows.py",
+        "GITHUB_RUN_ID|GITHUB_RUN_NUMBER|GITHUB_RUN_ATTEMPT",
+        "GITHUB_RUN_ID|GITHUB_RUN_ATTEMPT",
+        "A producing step naming GITHUB_RUN_NUMBER is refused (SPEC-430 R8, A8)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_run_unique_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43046-GITHUB-RUN-ATTEMPT-IN-A-PRODUCING-STEP",
+        "scripts/tests/test_ci_workflows.py",
+        "GITHUB_RUN_NUMBER|GITHUB_RUN_ATTEMPT|GITHUB_SHA",
+        "GITHUB_RUN_NUMBER|GITHUB_SHA",
+        "A producing step naming GITHUB_RUN_ATTEMPT is refused (SPEC-430 R8, A8)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_run_unique_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43047-GITHUB-SHA-IN-A-PRODUCING-STEP",
+        "scripts/tests/test_ci_workflows.py",
+        "GITHUB_RUN_ATTEMPT|GITHUB_SHA|date",
+        "GITHUB_RUN_ATTEMPT|date",
+        "A producing step naming GITHUB_SHA is refused (SPEC-430 R8, A8)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_run_unique_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43048-DATE-IN-A-PRODUCING-STEP",
+        "scripts/tests/test_ci_workflows.py",
+        "|GITHUB_SHA|date\"",
+        "|GITHUB_SHA\"",
+        "A producing step naming date is refused (SPEC-430 R8, A8)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_run_unique_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43049-EPOCHSECONDS-IN-A-PRODUCING-STEP",
+        "scripts/tests/test_ci_workflows.py",
+        "r\"|EPOCHSECONDS|EPOCHREALTIME|",
+        "r\"|EPOCHREALTIME|",
+        "A producing step naming EPOCHSECONDS is refused (SPEC-430 R8, A8)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_run_unique_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43050-EPOCHREALTIME-IN-A-PRODUCING-STEP",
+        "scripts/tests/test_ci_workflows.py",
+        "|EPOCHSECONDS|EPOCHREALTIME|RANDOM",
+        "|EPOCHSECONDS|RANDOM",
+        "A producing step naming EPOCHREALTIME is refused (SPEC-430 R8, A8)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_run_unique_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43051-RANDOM-IN-A-PRODUCING-STEP",
+        "scripts/tests/test_ci_workflows.py",
+        "EPOCHREALTIME|RANDOM|uuidgen",
+        "EPOCHREALTIME|uuidgen",
+        "A producing step naming RANDOM is refused (SPEC-430 R8, A8)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_run_unique_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43052-UUIDGEN-IN-A-PRODUCING-STEP",
+        "scripts/tests/test_ci_workflows.py",
+        "|RANDOM|uuidgen)",
+        "|RANDOM)",
+        "A producing step naming uuidgen is refused (SPEC-430 R8, A8)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_run_unique_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43053-A-PYTHON-READ-FOLLOWS-THE-NAMED-SUBCOMMAND",
+        "scripts/tests/test_ci_workflows.py",
+        "taken = node.body if word in words else node.orelse",
+        "taken = node.body + node.orelse",
+        "The Python read follows the subcommand the call names (SPEC-430 R13, A9)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_python_read_follows_the_subcommand_the_step_names"
+      ],
+      [
+        "S43054-A-SUBCOMMAND-REACHES-WHAT-ITS-HANDLER-CALLS",
+        "scripts/tests/test_ci_workflows.py",
+        "todo.extend(defs[name])",
+        "todo.extend([])",
+        "A subcommand's read reaches what its handler calls (SPEC-430 R13, A9)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_python_read_follows_the_subcommand_the_step_names"
+      ],
+      [
+        "S43055-A-DISPATCH-TUPLE-NAMES-ITS-SUBCOMMANDS",
+        "scripts/tests/test_ci_workflows.py",
+        "isinstance(op, ast.In)",
+        "isinstance(op, ast.NotIn)",
+        "A dispatch over a tuple of strings names its subcommands (SPEC-430 R13, A9)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_python_read_follows_the_subcommand_the_step_names"
+      ],
+      [
+        "S43056-A-CALL-WITH-NO-SUBCOMMAND-KEEPS-EVERY-BRANCH",
+        "scripts/tests/test_ci_workflows.py",
+        "word is not None and len(subjects) == 1",
+        "len(subjects) == 1",
+        "A call that names no subcommand keeps every branch (SPEC-430 R13, A9)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_python_read_follows_the_subcommand_the_step_names"
+      ],
+      [
+        "S43057-A-DISPATCH-OVER-TWO-EXPRESSIONS-KEEPS-EVERY-BRANCH",
+        "scripts/tests/test_ci_workflows.py",
+        "len(subjects) == 1:",
+        "len(subjects) >= 1:",
+        "A dispatch over two expressions keeps every branch (SPEC-430 R13, A9)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_python_read_follows_the_subcommand_the_step_names"
+      ],
+      [
+        "S43058-A-RUN-TIME-LOOKUP-READS-THE-WHOLE-SCRIPT",
+        "scripts/tests/test_ci_workflows.py",
+        "if SHAPE_RUN_TIME_LOOKUPS & shape_names(tree):",
+        "if set() & shape_names(tree):",
+        "A script naming a run-time lookup is read whole (SPEC-430 R13, A9)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_python_read_follows_the_subcommand_the_step_names"
+      ],
+      [
+        "S43059-A-CARGO-CALL-NEEDS-A-SUBCOMMAND-WORD",
+        "scripts/tests/test_ci_workflows.py",
+        "if not words or not SHAPE_SUBCOMMAND.match(words[0]):",
+        "if not words:",
+        "A cargo call needs a subcommand word (SPEC-430 R2, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43060-AN-OPTION-BEFORE-THE-SUBCOMMAND-IS-SKIPPED",
+        "scripts/tests/test_ci_workflows.py",
+        "while words and words[0].startswith((\"-\", \"+\")):",
+        "while False:",
+        "An option before the subcommand is skipped (SPEC-430 R2, A2)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ]
+    ]
+  }
+}
