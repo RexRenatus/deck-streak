@@ -21,9 +21,16 @@ sqlx.workspace = true
 # The parity oracle's golden reader, compiled into this crate's tests by path (ADR-029). Test
 # support only: no production dependency of this context changes.
 [dev-dependencies]
+# The CPU benchmarks under benches/, run by CodSpeed in CI (.github/workflows/codspeed.yml).
+divan.workspace = true
 serde.workspace = true
 # The goldens' floats are compared bit for bit, so the reader parses them exactly (SPEC-071 section 7).
 serde_json = { workspace = true, features = ["float_roundtrip"] }
 # ADR-020's temporary database, for the erase's test.
 tempfile.workspace = true
 tokio = { workspace = true, features = ["macros", "rt"] }
+
+# The CodSpeed benchmarks (.github/workflows/codspeed.yml); divan supplies their main.
+[[bench]]
+name = "streaks"
+harness = false

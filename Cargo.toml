@@ -79,6 +79,9 @@ tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt", "json", "env-filter"] }
 # ADR-020: a temporary database or collection, in tests only.
 tempfile = "3.27.0"
+# CodSpeed's divan compatibility layer, renamed to divan: the CPU benchmarks under a member's
+# `benches/`, in dev-dependencies only, measured in CI by .github/workflows/codspeed.yml.
+divan = { package = "codspeed-divan-compat", version = "6.0.0" }
 # ADR-293: the agent's source pins read Rust as tokens (SPEC-043 R12b, R16b): proc-macro2's lexer
 # and syn's literal values, both already in the lock through the workspace's derive macros (serde's,
 # thiserror's and tokio's), with no default feature. In tests only.

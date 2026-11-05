@@ -1,0 +1,52 @@
+name: codspeed
+
+# The CPU benchmarks under the members' benches/ (divan, through CodSpeed's compatibility layer),
+# built with cargo-codspeed and measured by CodSpeed's CPU simulation on every pull request into dev
+# and every push to dev. CodSpeed is authenticated by OpenID Connect, so no secret is read; the
+# workflow's token is read-only, only the job adds id-token, and every action is pinned by its full
+# commit SHA.
+on:
+  pull_request:
+    branches: [dev]
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [dev]
+  # Lets CodSpeed trigger a backtest run to build the first history.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A pull request's runs share its ref's group, and a newer push to it cancels the run it supersedes.
+# Any other event has a group of its own, its run id, so it is never cancelled.
+concurrency:
+  group: codspeed-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  benchmarks:
+    name: Run benchmarks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      # OpenID Connect authentication with CodSpeed: the job's one write, a token it never stores.
+      id-token: write
+    env:
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: the pinned Rust toolchain (rust-toolchain.toml)
+        run: rustup show
+      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+        with:
+          tool: cargo-codspeed
+      - name: build the benchmarks
+        run: cargo codspeed build -m simulation --locked -p deck-streak-streaks
+      - name: run the benchmarks
+        uses: CodSpeedHQ/action@af75f77f17a054769abefaa42fe8dc2975469b5f # v5.6.3
+        with:
+          mode: simulation
+          run: cargo codspeed run
