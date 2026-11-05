@@ -35,7 +35,7 @@ COMPILES = [
     "cargo clippy --workspace --all-targets --locked",
     "cargo nextest run --workspace --locked --no-run",
 ]
-TOOLS = "cargo-nextest,cargo-deny"
+TOOLS = "cargo-nextest@0.9.146,cargo-deny@0.20.2"
 
 
 def workflow_text(name):
