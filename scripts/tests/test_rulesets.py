@@ -12,6 +12,8 @@ RULESETS = REPO / ".github" / "rulesets"
 ENFORCEABLE = {"deletion", "non_fast_forward", "update", "pull_request", "required_status_checks"}
 # The GitHub Actions app: measured as the app id of every ci, fragment and base-is-dev run on dev.
 GITHUB_ACTIONS = 15368
+# The merge queue app: measured as the live dev ruleset's one bypass actor.
+MERGE_QUEUE_APP = 10562
 
 
 def load(name):
@@ -53,10 +55,17 @@ class TheCommittedRulesetsAreTheReleaseWorkflow(unittest.TestCase):
         self.assertEqual(tags["conditions"]["ref_name"]["include"], ["refs/tags/v*"])
         self.assertEqual(set(rules(tags)), {"deletion", "update", "non_fast_forward"})
 
-    def test_no_ruleset_has_a_bypass_actor_or_a_refused_rule(self):
+    def test_the_dev_ruleset_exempts_only_the_merge_queue_app(self):
+        expected = [
+            {"actor_id": MERGE_QUEUE_APP, "actor_type": "Integration", "bypass_mode": "exempt"}
+        ]
+        self.assertEqual(load("dev")["bypass_actors"], expected)
+
+    def test_no_other_ruleset_has_a_bypass_actor_and_none_has_a_refused_rule(self):
         for path in examined("ruleset file(s)", sorted(RULESETS.glob("*.json"))):
             ruleset = json.loads(path.read_text(encoding="utf-8"))
-            self.assertEqual(ruleset["bypass_actors"], [], path.name)
+            if path.name != "dev.json":
+                self.assertEqual(ruleset["bypass_actors"], [], path.name)
             self.assertLessEqual(set(rules(ruleset)), ENFORCEABLE, path.name)
 
     def test_main_does_not_require_an_up_to_date_head(self):
@@ -66,9 +75,11 @@ class TheCommittedRulesetsAreTheReleaseWorkflow(unittest.TestCase):
         found = rules(load("main"))["required_status_checks"]
         self.assertIs(found["strict_required_status_checks_policy"], False)
 
-    def test_dev_requires_an_up_to_date_head(self):
+    def test_dev_does_not_require_an_up_to_date_head(self):
+        # The merge queue tests each batch on the tip of dev before it merges (ADR-625, ADR-642),
+        # so a pull request needs no update of its own to stay current.
         found = rules(load("dev"))["required_status_checks"]
-        self.assertIs(found["strict_required_status_checks_policy"], True)
+        self.assertIs(found["strict_required_status_checks_policy"], False)
 
     def test_every_required_check_comes_from_github_actions(self):
         required = [
