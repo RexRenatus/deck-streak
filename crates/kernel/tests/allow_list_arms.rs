@@ -591,8 +591,8 @@ fn every_arm_site_on_the_tree_is_listed_with_its_reason() {
         "the sites equal ARMS, file by file and arm by arm"
     );
     assert_eq!(
-        census.examined, 349,
-        "the three source sets hold 349 sources"
+        census.examined, 419,
+        "the three source sets hold 419 sources"
     );
 }
 
