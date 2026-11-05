@@ -500,8 +500,8 @@
       [
         "S19063-THE-ARM-MATCHES-WHOLE-PATHS",
         ".github/workflows/changelog.yml",
-        "grep -v -x -E \"$cargo|$npm|$actions\"",
-        "grep -v -E \"$cargo|$npm|$actions\"",
+        "grep -v -x -E \"$cargo|$npm|$actions|$pip\"",
+        "grep -v -E \"$cargo|$npm|$actions|$pip\"",
         "the fragment arm matches each changed path whole, so a manifest no ecosystem updates is not read as a dependency file (SPEC-190 R13)",
         "test_changelog_fragment.EveryOtherPullRequestReadsAsItDid.test_a_dependabot_pull_request_that_changes_another_path_is_refused"
       ],

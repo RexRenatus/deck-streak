@@ -30,8 +30,8 @@ The release pull request's required `ci` is its own run, and the push run on `de
 `main`'s ruleset does not require an up-to-date head. Only this repository's `dev` can reach
 `main`, and GitHub keeps one open pull request per head and base, so `main` cannot move between the
 release pull request's checks and its merge. Those checks run on the pull request's merge ref,
-which already contains `main` (ADR-034). `dev`'s ruleset does require an up-to-date head, because
-many pull requests land there.
+which already contains `main` (ADR-034). `dev`'s ruleset does not require an up-to-date head,
+because the merge queue tests each batch on the tip of `dev` before it merges (ADR-642).
 
 Measured before `v0.1.0` was tagged (SPEC-034 R6, probe pull request #193):
 - **The release pull request merges.** `dev` lacked `main`'s release merge commit (behind by 1,

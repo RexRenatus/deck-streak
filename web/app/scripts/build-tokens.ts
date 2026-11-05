@@ -10,11 +10,14 @@
  *
  * Every colour of the `color` tier becomes `--<name>: var(--tg-theme-<parameter>, <hex>)`: inside
  * Telegram the chat's theme paints it, and outside Telegram its own colour does. A colour that
- * names no Telegram theme parameter fails the compile, so no build can ship one. Each colour is
+ * names no Telegram theme parameter fails the compile, so no build can ship one. Each colour also
+ * names the Tide role it falls back to (SPEC-593 R2; ADR-615): its own colour is that role's light
+ * value, and a `.dark` block gives it `var(--tg-theme-<parameter>, var(--tide-dark-<role>))`. A
+ * colour with no Tide role fails the compile. Each colour is
  * also mapped into Tailwind's theme as `--color-<name>`; the radius becomes `--radius`, and each
  * font family `--font-<name>`. The `ref` tier is never emitted: only the tokens that alias it are.
  *
- * The `modes` tier (SPEC-578; ADR-597) holds a product palette by mode, and Telegram's theme paints
+ * The `modes` tier (SPEC-578, SPEC-593; ADR-597) holds a product palette by mode, and Telegram's theme paints
  * none of it. Every role of every mode of every palette becomes `--<palette>-<mode>-<role>: <hex>`,
  * mapped into Tailwind's theme as `--color-<palette>-<mode>-<role>`. A palette missing its `dark` or
  * its `light` mode, a mode missing a role, and a mode or role outside the known ones fail the compile.
@@ -62,9 +65,10 @@ const GENERIC_FAMILIES = new Set([
   'fangsong'
 ]);
 
-// The modes and roles a palette of the `modes` tier holds (SPEC-578 R2).
+// The modes and roles a palette of the `modes` tier holds (SPEC-578 R2, SPEC-593 R1).
 const MODES: readonly string[] = ['dark', 'light'];
-const ROLES: readonly string[] = ['background', 'ink', 'accent'];
+const ROLES: readonly string[] = ['background', 'ink', 'accent', 'card', 'muted', 'border'];
+const ROLE_LIST = 'background, ink, accent, card, muted or border';
 
 type Node = Readonly<Record<string, unknown>>;
 
@@ -152,7 +156,7 @@ function compileModes(document: Node, modes: Node, root: string[], theme: string
       const roles = node(group[mode], where);
       for (const [role] of members(roles)) {
         if (!ROLES.includes(role)) {
-          throw new Error(`tokens: ${where}.${role} is not a role (background, ink or accent)`);
+          throw new Error(`tokens: ${where}.${role} is not a role (${ROLE_LIST})`);
         }
       }
       for (const role of ROLES) {
@@ -171,6 +175,7 @@ export function compileTokens(input: unknown): string {
   const root: string[] = [];
   const theme: string[] = [];
 
+  const dark: string[] = [];
   const colours = node(document.color, 'color');
   typed(colours, 'color', 'color');
   for (const [name, token] of members(colours)) {
@@ -183,12 +188,19 @@ export function compileTokens(input: unknown): string {
         `tokens: ${where} names no Telegram theme parameter (its deck-streak extension's telegram), so Telegram's theme cannot paint it`
       );
     }
+    const tide = (own as Node).tide;
+    if (typeof tide !== 'string' || !ROLES.includes(tide)) {
+      throw new Error(`tokens: ${where} names no Tide role (its deck-streak extension's tide: ${ROLE_LIST})`);
+    }
+    const variable = `--tg-theme-${parameter.replaceAll('_', '-')}`;
     const fallback = hexOf(document, token.$value, where);
-    root.push(`  --${name}: var(--tg-theme-${parameter.replaceAll('_', '-')}, ${fallback});`);
+    root.push(`  --${name}: var(${variable}, ${fallback});`);
+    dark.push(`  --${name}: var(${variable}, var(--tide-dark-${tide}));`);
     theme.push(`  --color-${name}: var(--${name});`);
   }
 
-  if (document.modes !== undefined) compileModes(document, node(document.modes, 'modes'), root, theme);
+  const modes = document.modes === undefined ? undefined : node(document.modes, 'modes');
+  if (modes !== undefined) compileModes(document, modes, root, theme);
 
   const radius = node(document.radius, 'radius');
   if (radius.$type !== 'dimension') throw new Error('tokens: radius is not a dimension token');
@@ -200,12 +212,16 @@ export function compileTokens(input: unknown): string {
     theme.push(`  --font-${name}: ${fontFamily(token.$value, `font.${name}`)};`);
   }
 
+  // The dark fallbacks (SPEC-593 R2): only a document whose modes tier holds the Tide palette has them.
+  const darkBlock = modes !== undefined && modes.tide !== undefined ? ['.dark {', ...dark, '}', ''] : [];
+
   return [
     '/* Compiled from tokens.json by scripts/build-tokens.ts (ADR-028). Edit the tokens, not this file. */',
     ':root {',
     ...root,
     '}',
     '',
+    ...darkBlock,
     '@theme inline {',
     ...theme,
     '}',

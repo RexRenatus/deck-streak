@@ -30,7 +30,7 @@
   <h1 class="text-3xl font-semibold tracking-tight">DeckStreak</h1>
   <p class="mt-3 text-lg">{m.tagline()}</p>
 
-  <section class="mt-8 rounded-lg bg-card p-4 text-card-foreground" aria-labelledby="study-day">
+  <section class="mt-8 rounded-lg border bg-card p-4 text-card-foreground" aria-labelledby="study-day">
     <h2 id="study-day" class="text-sm font-medium">{m.study_day()}</h2>
     {#if today === undefined}
       <div class="mt-1" role="status">{m.loading()}</div>
@@ -48,5 +48,6 @@
   <nav class="mt-8 flex flex-wrap gap-x-6 gap-y-2">
     <a href="/about">{m.about()}</a>
     <a href="/sign-in-methods">{m.methods_title()}</a>
+    <a href="/settings">{m.settings_link()}</a>
   </nav>
 </main>

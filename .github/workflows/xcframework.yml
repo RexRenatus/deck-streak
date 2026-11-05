@@ -505,7 +505,8 @@ jobs:
           # measured in one job, and the other job names that job for its rows.
           here = os.environ["GITHUB_JOB"]
           owners = {"debug": "harness", "release": "release-and-app", "app": "release-and-app",
-                    "review": "release-and-app", "review-actions": "release-and-app"}
+                    "review": "release-and-app", "review-actions": "release-and-app",
+                    "card-probe": "harness"}
           if here not in owners.values():
               raise SystemExit(f"the report runs in {here!r}, not in a job of the split")
           def elsewhere(label):
@@ -572,6 +573,7 @@ jobs:
           app_cases = cases_in("app")
           review_cases = cases_in("review")
           review_actions_cases = cases_in("review-actions")
+          card_probe_cases = cases_in("card-probe")
           release = results / "release.xcresult"
           metrics = tool("metrics", "--path", str(release)) if release.exists() else None
           found = []
@@ -718,6 +720,7 @@ jobs:
               ("Debug", debug_cases), ("Release", release_cases), ("App", app_cases),
               ("Review", review_cases),
               ("Review actions", review_actions_cases),
+              ("Card probe", card_probe_cases),
           ):
               lines += [f"| {label} `{c.get('nodeIdentifier')}` | {per_simulator(c)} |" for c in cases]
               if not cases:
@@ -1138,7 +1141,8 @@ jobs:
           # measured in one job, and the other job names that job for its rows.
           here = os.environ["GITHUB_JOB"]
           owners = {"debug": "harness", "release": "release-and-app", "app": "release-and-app",
-                    "review": "release-and-app", "review-actions": "release-and-app"}
+                    "review": "release-and-app", "review-actions": "release-and-app",
+                    "card-probe": "harness"}
           if here not in owners.values():
               raise SystemExit(f"the report runs in {here!r}, not in a job of the split")
           def elsewhere(label):
@@ -1205,6 +1209,7 @@ jobs:
           app_cases = cases_in("app")
           review_cases = cases_in("review")
           review_actions_cases = cases_in("review-actions")
+          card_probe_cases = cases_in("card-probe")
           release = results / "release.xcresult"
           metrics = tool("metrics", "--path", str(release)) if release.exists() else None
           found = []
@@ -1351,6 +1356,7 @@ jobs:
               ("Debug", debug_cases), ("Release", release_cases), ("App", app_cases),
               ("Review", review_cases),
               ("Review actions", review_actions_cases),
+              ("Card probe", card_probe_cases),
           ):
               lines += [f"| {label} `{c.get('nodeIdentifier')}` | {per_simulator(c)} |" for c in cases]
               if not cases:

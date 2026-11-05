@@ -29,6 +29,8 @@ notetype in deck-streak-collection: model
 media_hash in deck-streak-media: checksum, fingerprint
 binding in deck-streak-media: attachment
 sweep in deck-streak-media: purge, cleanup
+note_type in deck-streak-render: model
+card_template in deck-streak-render: cardtype
 operation in deck-streak-sync: mutation, changeset
 conflict in deck-streak-sync: clash
 ```

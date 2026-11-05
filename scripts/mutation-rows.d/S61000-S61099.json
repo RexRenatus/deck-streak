@@ -1,0 +1,22 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S61000-THE-TREE-REPORT-HELPER-WRITES-INTO-ITS-OWN-DIRECTORY",
+        "scripts/tests/test_mutation_python.py",
+        "        self.test.addCleanup(scratch.cleanup)\n        target = Path(scratch.name) / \"report.json\"\n",
+        "        self.test.addCleanup(scratch.cleanup)\n        target = self.root.parent / f\"{self.root.name}-report.json\"\n",
+        "the tree report helper writes its report and its costs record into a directory of its own, never the parent of the scenario tree (SPEC-610 R1, A1)",
+        "test_mutation_python.TheTreeReportHelperWritesIntoItsOwnDirectory.test_the_tree_report_helper_writes_its_report_and_costs_into_a_directory_of_its_own"
+      ],
+      [
+        "S61001-THE-CLI-REPORT-HELPER-WRITES-INTO-ITS-OWN-DIRECTORY",
+        "scripts/tests/test_mutation_python_cli_kills.py",
+        "        self.addCleanup(scratch.cleanup)\n        target = Path(scratch.name) / \"cli.json\"\n",
+        "        self.addCleanup(scratch.cleanup)\n        target = tree.root.parent / f\"{tree.root.name}-cli.json\"\n",
+        "the command line report helper writes its report and its costs record into a directory of its own, never the parent of the scenario tree (SPEC-610 R2, A2)",
+        "test_mutation_python_cli_kills.TheRunPrintsAndWritesItsReport.test_the_cli_report_helper_writes_its_report_and_costs_into_a_directory_of_its_own"
+      ]
+    ]
+  }
+}

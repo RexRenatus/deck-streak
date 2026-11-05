@@ -21,7 +21,7 @@
     data-kind={item.kind}
     data-tier={item.tier}
     data-motion={motion}
-    class="rounded-lg bg-card p-4 text-card-foreground"
+    class="rounded-lg border bg-card p-4 text-card-foreground"
   >
     {#each beats as beat (beat)}
       {#if beat === 'placeholder'}
@@ -38,7 +38,7 @@
         <div data-beat={beat} class="ladder-card mt-3 flex justify-end">
           <button
             type="button"
-            class="rounded-md border px-3 py-1 text-sm text-link"
+            class="rounded-md border px-3 py-1 text-sm text-card-foreground underline decoration-link"
             onclick={() => (dismissed = true)}
           >
             {m.ladder_dismiss()}

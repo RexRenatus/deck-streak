@@ -1496,6 +1496,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "deck-streak-render"
+version = "0.3.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "deck-streak-search"
 version = "0.3.0"
 dependencies = [

@@ -49,6 +49,7 @@ deck-streak-companion-slot  (the one substitutable companion body; the public bo
 deck-streak-collection    (the collection store, dormant: one file per user, its one opener, schema and migrations, the append-only review log and its erase gate, the read port and the store's data-rights port; ADR-530)  depends on: nothing
 deck-streak-anki-format   (anti-corruption layer for Anki's file formats: the defensive opener of every foreign schema-18 file, the read-only row readers and blob views, the schema-18 statements and the wire walk; ADR-622)  depends on: nothing
 deck-streak-media         (a media file known by its SHA-256, certified and imported names, write-once bindings, the one grammar of media names, the sweep plan, with no I/O; ADR-531)  depends on: nothing
+deck-streak-render        (the card renderer: note types, templates, fields, sections and filters drawn into a card's two faces, with DeckStreak's own text for each template problem, with no I/O; ADR-624)  depends on: nothing
 deck-streak-sync          (the sync core: typed operations, one encoding, the hybrid clock, the id allocator, the key, the field merge and the pending queue, with no I/O, for the server and both clients; ADR-527)  depends on: nothing
 miniapp   web/app/src     (the SvelteKit Mini App)  depends on: nothing internal
 ios-harness  ios/  (the SwiftUI harness over deck-streak-ffi's XCFramework; ADR-335)  depends on: nothing internal
@@ -127,6 +128,13 @@ CSS write, and a sweep plan keeps every live, pinned, in-grace and imported file
 workspace's `sha2` alone and does no I/O, so it has no edge to the kernel. A collection implements
 its `MediaIndex` port, and the renderer reads names through its grammar; each gains its edge to it
 in the change that first uses it.
+
+`deck-streak-render` is the card renderer (SPEC-603, ADR-624): a note type's templates are
+tokenized and parsed, and a card's question and answer are drawn from its fields, its sections and
+inverted sections, the special fields, `{{FrontSide}}` and the text filters. Every template problem
+is a class with DeckStreak's own words, and a note type whose templates cannot render is refused
+before any card is drawn. It has no dependency and does no I/O, so the server and both clients link
+one rule. No crate depends on it yet: the first change that calls the renderer gains its edge.
 
 `deck-streak-sync` is the sync core (SPEC-509, ADR-527): the typed operations every device and the
 server write in, their one byte encoding, the hybrid clock and the id allocator beside it, the key

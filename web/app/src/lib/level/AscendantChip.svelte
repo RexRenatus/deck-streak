@@ -5,6 +5,6 @@
   // alone.
 </script>
 
-<p class="mt-4 inline-block rounded-full bg-muted px-3 py-1 text-sm" data-ascendant>
+<p class="mt-4 inline-block rounded-full border bg-card px-3 py-1 text-sm" data-ascendant>
   ✨ {m.level_ascendant()}
 </p>

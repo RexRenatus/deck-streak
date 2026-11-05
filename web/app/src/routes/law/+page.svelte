@@ -22,7 +22,7 @@
 <main class="mx-auto max-w-prose px-6 py-12">
   <h1 class="text-3xl font-semibold tracking-tight">DeckStreak</h1>
 
-  <div class="mt-8 rounded-lg bg-card p-4 text-card-foreground">
+  <div class="mt-8 rounded-lg border bg-card p-4 text-card-foreground">
     {#if read === undefined}
       <div role="status">{m.loading()}</div>
     {:else if read.law.kind === 'ok'}
