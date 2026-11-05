@@ -198,6 +198,40 @@ def wait_for_scope(unit: str, proc_cgroup: Path, reads: int) -> str:
     return group_of(proc_cgroup)
 
 
+def others_after(group: Path, pid: int) -> int | None:
+    """How many processes besides `pid` the scope's `cgroup.procs` lists, or None unless whole.
+
+    The kernel writes one process ID per line. A list that is unreadable or empty, that holds a
+    line which is not one to twenty ASCII digits, or that names an ID twice is not whole.
+    """
+    lines = lines_of(group / "cgroup.procs")
+    if not lines:
+        return None
+    pids = [counter_of(line) for line in lines]
+    if None in pids:
+        return None
+    if len(set(pids)) != len(pids):
+        return None
+    return len(set(pids) - {pid})
+
+
+def alone_after(group: Path, pid: int, reads: int) -> str | None:
+    """Why the scope holds more than this process after the command, or None once it does not.
+
+    `cgroup.procs` is read at most `reads` times, 0.1 s apart as `wait_for_scope` reads, and a
+    list that is not whole is read once. Another process listed at the last read is the reason.
+    """
+    for read in range(reads):
+        others = others_after(group, pid)
+        if others is None:
+            return "cgroup.procs is not whole after the command"
+        if others == 0:
+            return None
+        if read + 1 < reads:
+            time.sleep(0.1)
+    return f"cgroup.procs holds {others} other process(es) after the command"
+
+
 def check_in_force(
     unit: str,
     cap: int,
@@ -299,7 +333,8 @@ def run(
         },
     )
     code = subprocess.run(command, check=False).returncode
-    why, counts = counts_after(here, cap)
+    why = alone_after(here, pid, reads)
+    why, counts = counts_after(here, cap) if why is None else (why, {})
     percent = counts.get("peak_percent", 0)
     record = {
         "in_force": why is None,
