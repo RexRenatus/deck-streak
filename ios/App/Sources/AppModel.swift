@@ -65,11 +65,19 @@ final class AppModel {
         }
     }
 
-    /// Opens the chosen deck's review, which makes it the current deck (7,22) and shows its first
-    /// card, or closes the review when no deck is chosen (SPEC-348 R9).
+    /// Opens the review of the chosen deck, which makes it the current deck (7,22), and hands it to
+    /// the detail pane once its start has answered, at its first card or its designed end, so the
+    /// pane never builds a card view over a review still loading; no deck chosen closes the review.
+    /// A changed choice cancels the task that opened the last one, which then hands nothing over
+    /// (SPEC-348 R9, SPEC-347 section 11).
     func openReview() async {
-        review = chosenDeck.map { ReviewModel(deck: $0, session: ReviewSession(engine: session)) }
-        await review?.start()
+        let opening = chosenDeck.map { deck in
+            ReviewModel(deck: deck, session: ReviewSession(engine: session))
+        }
+        review = nil
+        await opening?.start()
+        guard !Task.isCancelled else { return }
+        review = opening
     }
 
     /// Signs in as the configured user at the configured endpoint with the typed password (R8).
