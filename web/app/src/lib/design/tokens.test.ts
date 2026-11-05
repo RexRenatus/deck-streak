@@ -102,9 +102,80 @@ function contrast(a: string, b: string): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-/** The roles every Tide mode holds, and the two modes (SPEC-578 R2). */
+/** The two Tide modes, and the three roles SPEC-578 R2 gave each of them. */
 const TIDE_MODES = ['dark', 'light'] as const;
 const TIDE_ROLES = ['background', 'ink', 'accent'] as const;
+
+// SPEC-593 R1 to R3, ADR-615 D1 and D2, spelt here and never read from the token file or the
+// compile: the six roles of each Tide mode and their values, the Tide role each colour role falls
+// back to, and the declared pairs with their WCAG 2.2 bars (1.4.3 for text, 1.4.11 for the rest).
+const SIX_ROLES = ['background', 'ink', 'accent', 'card', 'muted', 'border'] as const;
+type SixRole = (typeof SIX_ROLES)[number];
+const R1: Record<(typeof TIDE_MODES)[number], Record<SixRole, string>> = {
+  dark: {
+    background: '#0f161d',
+    ink: '#f4f7fa',
+    accent: '#34c6c0',
+    card: '#21282f',
+    muted: '#8f9499',
+    border: '#74797e'
+  },
+  light: {
+    background: '#f4f7fa',
+    ink: '#0f161d',
+    accent: '#0b6a67',
+    card: '#ffffff',
+    muted: '#5f656a',
+    border: '#82868c'
+  }
+};
+const R2_TIDE_ROLE: Record<string, SixRole> = {
+  background: 'background',
+  foreground: 'ink',
+  'card-foreground': 'ink',
+  card: 'card',
+  'muted-foreground': 'muted',
+  border: 'border',
+  link: 'accent',
+  ring: 'accent'
+};
+const R3_PAIRS: readonly { readonly pair: string; readonly on: SixRole; readonly of: SixRole; readonly bar: number }[] = [
+  { pair: 'ink on background', of: 'ink', on: 'background', bar: 4.5 },
+  { pair: 'ink on card', of: 'ink', on: 'card', bar: 4.5 },
+  { pair: 'muted on background', of: 'muted', on: 'background', bar: 4.5 },
+  { pair: 'muted on card', of: 'muted', on: 'card', bar: 4.5 },
+  { pair: 'accent on background', of: 'accent', on: 'background', bar: 4.5 },
+  { pair: 'accent on card', of: 'accent', on: 'card', bar: 4.5 },
+  { pair: 'background on ink', of: 'background', on: 'ink', bar: 4.5 },
+  { pair: 'border on background', of: 'border', on: 'background', bar: 3 },
+  { pair: 'border on card', of: 'border', on: 'card', bar: 3 },
+  { pair: 'focus ring on background', of: 'accent', on: 'background', bar: 3 },
+  { pair: 'focus ring on card', of: 'accent', on: 'card', bar: 3 }
+];
+const SIX_HEX = /^#[0-9a-f]{6}$/;
+
+/** The custom properties the compiled stylesheet's `.dark` blocks declare (SPEC-593 R2). */
+function darkProperties(css: string): Map<string, string> {
+  const properties = new Map<string, string>();
+  for (const [, block] of css.matchAll(/(?:^|\n)\.dark\s*\{([^}]*)\}/g)) {
+    for (const [, name, value] of block.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
+      properties.set(name, value.trim());
+    }
+  }
+  return properties;
+}
+
+/** Each declared Tide pair under its bar in either mode of `document`, as `<pair> (<mode>): <why>`. */
+function tidePairFailures(document: unknown): string[] {
+  return TIDE_MODES.flatMap((mode) =>
+    R3_PAIRS.flatMap(({ pair, of, on, bar }) => {
+      const [text, back] = [of, on].map((role) => hexOf(member(tideMode(document, mode)?.[role], '$value')));
+      if (!SIX_HEX.test(text) || !SIX_HEX.test(back)) return [`${pair} (${mode}): a role holds no colour`];
+      const ratio = contrast(text, back);
+      return ratio >= bar ? [] : [`${pair} (${mode}): ${ratio.toFixed(2)} is under ${bar}`];
+    })
+  );
+}
 
 /** An Tide mode of a token document, or undefined when the document holds none. */
 function tideMode(document: unknown, mode: string): Record<string, unknown> | undefined {
@@ -195,9 +266,21 @@ describe('the design tokens', () => {
         `  --color-tide-${mode}-${role}: var(${name});`
       );
     }
-    expect([...properties.keys()].filter((name) => name.startsWith('--tide-')).sort()).toEqual(
-      roles.map(({ mode, role }) => `--tide-${mode}-${role}`).sort()
-    );
+    // the closure, as SPEC-593 R1 and R2 widen it: the twelve properties of the six roles, a literal
+    expect([...properties.keys()].filter((name) => name.startsWith('--tide-')).sort()).toEqual([
+      '--tide-dark-accent',
+      '--tide-dark-background',
+      '--tide-dark-border',
+      '--tide-dark-card',
+      '--tide-dark-ink',
+      '--tide-dark-muted',
+      '--tide-light-accent',
+      '--tide-light-background',
+      '--tide-light-border',
+      '--tide-light-card',
+      '--tide-light-ink',
+      '--tide-light-muted'
+    ]);
   });
 
   it('a role missing from either Tide mode fails the compile by name', () => {
@@ -212,10 +295,10 @@ describe('the design tokens', () => {
     delete tideMode(withoutDarkInk, 'dark')?.ink;
     expect(() => compileTokens(withoutDarkInk)).toThrow(/modes\.tide\.dark\.ink/);
 
-    const withFourthRole = planted();
-    const dark = tideMode(withFourthRole, 'dark');
-    if (dark !== undefined) dark.muted = structuredClone(dark.ink);
-    expect(() => compileTokens(withFourthRole)).toThrow(/modes\.tide\.dark\.muted/);
+    const withUnknownRole = planted();
+    const dark = tideMode(withUnknownRole, 'dark');
+    if (dark !== undefined) dark.glow = structuredClone(dark.ink);
+    expect(() => compileTokens(withUnknownRole)).toThrow(/modes\.tide\.dark\.glow/);
 
     const withoutDark = planted();
     delete (member(member(withoutDark, 'modes'), 'tide') as Record<string, unknown> | undefined)?.dark;
@@ -270,11 +353,11 @@ describe('the design tokens', () => {
     withDusk.modes.tide.dusk = structuredClone(withDusk.modes.tide.dark);
     expect(messageOf(withDusk)).toBe('tokens: modes.tide.dusk is not a mode (dark or light)');
 
-    // a role outside the three, in the exact words
-    const withMuted = planted();
-    withMuted.modes.tide.dark.muted = structuredClone(withMuted.modes.tide.dark.ink);
-    expect(messageOf(withMuted)).toBe(
-      'tokens: modes.tide.dark.muted is not a role (background, ink or accent)'
+    // a role outside the six, in the exact words
+    const withGlow = planted();
+    withGlow.modes.tide.dark.glow = structuredClone(withGlow.modes.tide.dark.ink);
+    expect(messageOf(withGlow)).toBe(
+      'tokens: modes.tide.dark.glow is not a role (background, ink, accent, card, muted or border)'
     );
 
     // a role absent, in the exact words (not the message of a role that is no token)
@@ -304,5 +387,97 @@ describe('the design tokens', () => {
     const css = compileTokens(withoutModes);
     expect(css).not.toContain('--tide-');
     expect(css).toContain('--radius:');
+  });
+
+  it('the Tide palette compiles to twelve custom properties in both modes', () => {
+    // SPEC-593 A1: the token file holds the R1 values, and the compile carries each into its property
+    const expected = examined(
+      'Tide properties',
+      TIDE_MODES.flatMap((mode) => SIX_ROLES.map((role) => ({ mode, role, hex: R1[mode][role] })))
+    );
+    const css = compileTokens(TOKENS);
+    const properties = rootProperties(css);
+    const theme = /@theme inline\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+
+    for (const { mode, role, hex } of expected) {
+      const name = `--tide-${mode}-${role}`;
+      expect(hexOf(member(tideMode(TOKENS, mode)?.[role], '$value')), `${name}'s token`).toBe(hex);
+      expect(properties.get(name), name).toBe(hex);
+      expect(theme, `${name} is not mapped into the theme`).toContain(`  --color-tide-${mode}-${role}: var(${name});`);
+    }
+    expect(expected).toHaveLength(12);
+  });
+
+  it('a role outside the six or missing from either Tide mode fails the compile by name', () => {
+    // SPEC-593 A2: each planted document breaks one thing, and the compile names it
+    const planted = () => structuredClone(TOKENS) as Record<string, Record<string, Record<string, unknown>>>;
+
+    const withGlow = planted();
+    const dark = tideMode(withGlow, 'dark');
+    if (dark !== undefined) dark.glow = structuredClone(dark.ink);
+    expect(() => compileTokens(withGlow)).toThrow(/modes\.tide\.dark\.glow/);
+
+    const cases = examined(
+      'roles SPEC-593 adds, by mode',
+      TIDE_MODES.flatMap((mode) => (['card', 'muted', 'border'] as const).map((role) => ({ mode, role })))
+    );
+    for (const { mode, role } of cases) {
+      const without = planted();
+      delete tideMode(without, mode)?.[role];
+      expect(() => compileTokens(without), `${mode} ${role}`).toThrow(new RegExp(`modes\\.tide\\.${mode}\\.${role}\\b`));
+    }
+
+    // a colour role whose deck-streak extension names no Tide role
+    const withoutTide = planted();
+    const own = member(member(member(withoutTide, 'color'), 'background'), '$extensions');
+    delete (member(own, 'deck-streak') as Record<string, unknown> | undefined)?.tide;
+    expect(() => compileTokens(withoutTide)).toThrow(/color\.background/);
+
+    // the control: the unmodified file compiles
+    expect(() => compileTokens(TOKENS)).not.toThrow();
+  });
+
+  it('every declared Tide pair meets its contrast bar in both modes', () => {
+    // SPEC-593 A3: the formula on WCAG's own values, then every R3 pair over the token file
+    expect(contrast('#767676', '#ffffff')).toBeCloseTo(4.54, 2);
+    examined(
+      'declared Tide pairs, by mode',
+      TIDE_MODES.flatMap((mode) => R3_PAIRS.map(({ pair }) => `${pair} (${mode})`))
+    );
+    expect(tidePairFailures(TOKENS)).toEqual([]);
+  });
+
+  it('a planted low-contrast Tide value is refused', () => {
+    // SPEC-593 A3: the light muted text planted as the light background fails both of its pairs,
+    // and nothing else fails
+    const planted = structuredClone(TOKENS);
+    const light = tideMode(planted, 'light');
+    if (light !== undefined) light.muted = { $value: '{ref.tide.neutral.50}' };
+    expect(tidePairFailures(planted).map((failure) => failure.replace(/:.*$/, ''))).toEqual([
+      'muted on background (light)',
+      'muted on card (light)'
+    ]);
+  });
+
+  it('every colour role falls back to its Tide role in each mode', () => {
+    // SPEC-593 A4: light in :root and dark under .dark, each inside its role's Telegram variable
+    const css = compileTokens(TOKENS);
+    const root = rootProperties(css);
+    const dark = darkProperties(css);
+    const tokens = examined('colour roles', colourTokens());
+    expect(tokens.map(({ name }) => name).sort()).toEqual(Object.keys(R2_TIDE_ROLE).sort());
+
+    for (const token of tokens) {
+      const tide = R2_TIDE_ROLE[token.name];
+      const own = member(member(member(member(TOKENS, 'color'), token.name), '$extensions'), 'deck-streak');
+      expect(member(own, 'tide'), `color.${token.name}'s Tide role`).toBe(tide);
+      const variable = `--tg-theme-${String(token.telegram).replaceAll('_', '-')}`;
+      expect(root.get(`--${token.name}`), `--${token.name} in :root`).toBe(`var(${variable}, ${R1.light[tide]})`);
+      expect(dark.get(`--${token.name}`), `--${token.name} under .dark`).toBe(
+        `var(${variable}, var(--tide-dark-${tide}))`
+      );
+      expect(root.get(`--tide-dark-${tide}`), `--tide-dark-${tide}`).toBe(R1.dark[tide]);
+    }
+    expect([...dark.keys()].sort()).toEqual(Object.keys(R2_TIDE_ROLE).map((name) => `--${name}`).sort());
   });
 });
