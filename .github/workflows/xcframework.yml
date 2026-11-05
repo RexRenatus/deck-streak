@@ -19,6 +19,15 @@ name: xcframework
 # tests on one iPhone and one iPad simulator, measures, and uploads its report and result bundles.
 # The card view (SPEC-349): `card-isolation` runs the CardIsolation package's tests and its Swift
 # mutant sweep on the host, as `harness-wire` does for the codec.
+#
+# Where each job runs (SPEC-621, ADR-643): `xcframework`, `harness-wire` and `card-isolation`, the
+# three short jobs, run on this repository's self-hosted runner, the labels self-hosted, macOS,
+# ARM64 and ds-mini, only when the repository variable DS_MINI is `on`, the actor is not
+# dependabot[bot], and the event is a push, a dispatch or a pull request whose head repository is
+# this repository. In every other case they run on xcode-27, so with the variable unset every job
+# runs there. `harness` and `release-and-app`, the long jobs, and `verdict` run on xcode-27 on every
+# event, and a fork's pull request runs every job on xcode-27. A called workflow reads its caller's
+# event, actor and pull request, so each caller's runs are routed the same way.
 on:
   workflow_call:
   workflow_dispatch:
@@ -28,7 +37,7 @@ permissions:
 
 jobs:
   xcframework:
-    runs-on: xcode-27
+    runs-on: ${{ (vars.DS_MINI == 'on' && github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository))) && fromJSON('["self-hosted","macOS","ARM64","ds-mini"]') || 'xcode-27' }}
     timeout-minutes: 120
     env:
       REPORT: ${{ github.workspace }}/xcframework-report
@@ -68,6 +77,10 @@ jobs:
       # bundled SQLite compiles against the iOS SDK this image carries.
       - name: the collection store for the iOS target
         run: cargo build --locked -p deck-streak-collection --lib --target aarch64-apple-ios
+      # The format crate's library for an iPhone and an iPad (SPEC-602 R12; ADR-622 D2): it reads
+      # every foreign schema-18 file through the same bundled SQLite.
+      - name: the format crate for the iOS target
+        run: cargo build --locked -p deck-streak-anki-format --lib --target aarch64-apple-ios
       - name: the Swift bindings, in library mode over the device library
         run: |
           export PROTOC="$RUNNER_TEMP/protoc/bin/protoc"
@@ -157,7 +170,7 @@ jobs:
               path, size = line.rsplit(" ", 1)
               rows.append((f"slice `{path.split('/')[1]}`", f"{int(size) / 1048576:.1f} MiB"))
           lines = [
-              f"`xcframework.yml` on a GitHub-hosted runner with {read('runner-cpus')} CPUs:",
+              f"`xcframework.yml` on a {os.environ.get('RUNNER_ENVIRONMENT', 'github-hosted')} runner with {read('runner-cpus')} CPUs:",
               "",
               "| measure | measured |",
               "|---|---|",
@@ -182,7 +195,7 @@ jobs:
           if-no-files-found: warn
 
   harness-wire:
-    runs-on: xcode-27
+    runs-on: ${{ (vars.DS_MINI == 'on' && github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository))) && fromJSON('["self-hosted","macOS","ARM64","ds-mini"]') || 'xcode-27' }}
     timeout-minutes: 30
     env:
       REPORT: ${{ github.workspace }}/harness-wire-report
@@ -271,7 +284,7 @@ jobs:
           if-no-files-found: warn
 
   card-isolation:
-    runs-on: xcode-27
+    runs-on: ${{ (vars.DS_MINI == 'on' && github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository))) && fromJSON('["self-hosted","macOS","ARM64","ds-mini"]') || 'xcode-27' }}
     timeout-minutes: 30
     env:
       REPORT: ${{ github.workspace }}/card-isolation-report
@@ -501,7 +514,8 @@ jobs:
           # measured in one job, and the other job names that job for its rows.
           here = os.environ["GITHUB_JOB"]
           owners = {"debug": "harness", "release": "release-and-app", "app": "release-and-app",
-                    "review": "release-and-app", "review-actions": "release-and-app"}
+                    "review": "release-and-app", "review-actions": "release-and-app",
+                    "card-probe": "harness"}
           if here not in owners.values():
               raise SystemExit(f"the report runs in {here!r}, not in a job of the split")
           def elsewhere(label):
@@ -568,6 +582,7 @@ jobs:
           app_cases = cases_in("app")
           review_cases = cases_in("review")
           review_actions_cases = cases_in("review-actions")
+          card_probe_cases = cases_in("card-probe")
           release = results / "release.xcresult"
           metrics = tool("metrics", "--path", str(release)) if release.exists() else None
           found = []
@@ -714,6 +729,7 @@ jobs:
               ("Debug", debug_cases), ("Release", release_cases), ("App", app_cases),
               ("Review", review_cases),
               ("Review actions", review_actions_cases),
+              ("Card probe", card_probe_cases),
           ):
               lines += [f"| {label} `{c.get('nodeIdentifier')}` | {per_simulator(c)} |" for c in cases]
               if not cases:
@@ -1134,7 +1150,8 @@ jobs:
           # measured in one job, and the other job names that job for its rows.
           here = os.environ["GITHUB_JOB"]
           owners = {"debug": "harness", "release": "release-and-app", "app": "release-and-app",
-                    "review": "release-and-app", "review-actions": "release-and-app"}
+                    "review": "release-and-app", "review-actions": "release-and-app",
+                    "card-probe": "harness"}
           if here not in owners.values():
               raise SystemExit(f"the report runs in {here!r}, not in a job of the split")
           def elsewhere(label):
@@ -1201,6 +1218,7 @@ jobs:
           app_cases = cases_in("app")
           review_cases = cases_in("review")
           review_actions_cases = cases_in("review-actions")
+          card_probe_cases = cases_in("card-probe")
           release = results / "release.xcresult"
           metrics = tool("metrics", "--path", str(release)) if release.exists() else None
           found = []
@@ -1347,6 +1365,7 @@ jobs:
               ("Debug", debug_cases), ("Release", release_cases), ("App", app_cases),
               ("Review", review_cases),
               ("Review actions", review_actions_cases),
+              ("Card probe", card_probe_cases),
           ):
               lines += [f"| {label} `{c.get('nodeIdentifier')}` | {per_simulator(c)} |" for c in cases]
               if not cases:

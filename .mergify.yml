@@ -1,0 +1,36 @@
+# The Mergify merge queue for pull requests into dev (SPEC-604, ADR-625).
+# Mergify reads this file from dev, the default branch (SPEC-620, ADR-642).
+# The one queue rule is dev; the pull request rule below sends each labelled pull request to it.
+merge_queue:
+  max_parallel_checks: 1
+queue_rules:
+  - name: dev
+    batch_size: 6
+    merge_method: merge
+    checks_timeout: 360 minutes
+    queue_conditions:
+      - base = dev
+      - label = queue
+      - -draft
+      - "#review-threads-unresolved = 0"
+      - check-success = ci
+      - check-success = fragment
+      - check-success = dependency-review
+    # The same list as queue_conditions, so the queue is single-step: a lone queued pull request
+    # that already holds the tip of dev merges without a batch pull request.
+    merge_conditions:
+      - base = dev
+      - label = queue
+      - -draft
+      - "#review-threads-unresolved = 0"
+      - check-success = ci
+      - check-success = fragment
+      - check-success = dependency-review
+pull_request_rules:
+  - name: a labelled pull request into dev enters the queue
+    conditions:
+      - base = dev
+      - label = queue
+    actions:
+      queue:
+        name: dev

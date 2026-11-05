@@ -1,11 +1,11 @@
-"""The Tide palette's six role values and the app's colour sets that copy them (SPEC-578 A4 to A8;
-ADR-597 D2, D3).
+"""The Tide palette's role values and the app's colour sets that copy them (SPEC-578 A4 to A8;
+ADR-597 D2, D3; SPEC-593 A5, ADR-615 D1, D4).
 
-The token file holds the six values once, as `modes.tide`: a background, an ink and an accent for a
-dark and a light mode, each an alias of a raw colour in `ref.tide`. The iPhone and iPad app copies
-them as three colour sets, `TideBackground`, `TideInk` and `TideAccent`, each with a universal
-entry that carries the light value and an entry with the `luminosity` appearance `dark` that carries
-the dark value. `findings(root)` reads both and returns one `"<reason>: <path>: <detail>"` line for
+The token file holds the values once, as `modes.tide`: a background, an ink, an accent, a card, a
+muted text and a border for a dark and a light mode, each an alias of a raw colour in `ref.tide`.
+The iPhone and iPad app copies them as six colour sets, `TideBackground`, `TideInk`, `TideAccent`,
+`TideCard`, `TideMuted` and `TideBorder`, each with a universal entry that carries the light value
+and an entry with the `luminosity` appearance `dark` that carries the dark value. `findings(root)` reads both and returns one `"<reason>: <path>: <detail>"` line for
 each role missing from the token file, colour set or entry missing, value that differs from its
 token, and raw colour literal outside the token route (the compile, the page's stylesheet and every
 Swift file of the app's sources). The tests run it over this repository, and over fixture trees in a
@@ -27,8 +27,15 @@ COMPILE = Path("web/app/scripts/build-tokens.ts")
 STYLESHEET = Path("web/app/src/routes/layout.css")
 SWIFT_SOURCES = Path("ios/App/Sources")
 MODES = ("dark", "light")
-ROLES = ("background", "ink", "accent")
-SETS = {"TideBackground": "background", "TideInk": "ink", "TideAccent": "accent"}
+ROLES = ("background", "ink", "accent", "card", "muted", "border")
+SETS = {
+    "TideBackground": "background",
+    "TideInk": "ink",
+    "TideAccent": "accent",
+    "TideCard": "card",
+    "TideMuted": "muted",
+    "TideBorder": "border",
+}
 ALIAS = re.compile(r"^\{([\w.-]+)\}$")
 HEX = re.compile(r"^#[0-9a-f]{6}$")
 COMPONENT = re.compile(r"^0x[0-9A-F]{2}$")
@@ -183,6 +190,8 @@ def findings(root):
 # roles that alias them, and the three colour sets that copy the roles.
 NEUTRAL_50, NEUTRAL_950 = (0xF4, 0xF7, 0xFA), (0x0F, 0x16, 0x1D)
 ACCENT_400, ACCENT_700 = (0x34, 0xC6, 0xC0), (0x0B, 0x6A, 0x67)
+NEUTRAL_0, NEUTRAL_400, NEUTRAL_500 = (0xFF, 0xFF, 0xFF), (0x8F, 0x94, 0x99), (0x82, 0x86, 0x8C)
+NEUTRAL_600, NEUTRAL_700, NEUTRAL_900 = (0x74, 0x79, 0x7E), (0x5F, 0x65, 0x6A), (0x21, 0x28, 0x2F)
 
 
 def raw_colour(rgb):
@@ -199,7 +208,16 @@ def planted_tokens():
     return {
         "ref": {
             "tide": {
-                "neutral": {"50": raw_colour(NEUTRAL_50), "950": raw_colour(NEUTRAL_950)},
+                "neutral": {
+                    "0": raw_colour(NEUTRAL_0),
+                    "50": raw_colour(NEUTRAL_50),
+                    "400": raw_colour(NEUTRAL_400),
+                    "500": raw_colour(NEUTRAL_500),
+                    "600": raw_colour(NEUTRAL_600),
+                    "700": raw_colour(NEUTRAL_700),
+                    "900": raw_colour(NEUTRAL_900),
+                    "950": raw_colour(NEUTRAL_950),
+                },
                 "accent": {"400": raw_colour(ACCENT_400), "700": raw_colour(ACCENT_700)},
             }
         },
@@ -210,11 +228,17 @@ def planted_tokens():
                     "background": {"$value": "{ref.tide.neutral.950}"},
                     "ink": {"$value": "{ref.tide.neutral.50}"},
                     "accent": {"$value": "{ref.tide.accent.400}"},
+                    "card": {"$value": "{ref.tide.neutral.900}"},
+                    "muted": {"$value": "{ref.tide.neutral.400}"},
+                    "border": {"$value": "{ref.tide.neutral.600}"},
                 },
                 "light": {
                     "background": {"$value": "{ref.tide.neutral.50}"},
                     "ink": {"$value": "{ref.tide.neutral.950}"},
                     "accent": {"$value": "{ref.tide.accent.700}"},
+                    "card": {"$value": "{ref.tide.neutral.0}"},
+                    "muted": {"$value": "{ref.tide.neutral.700}"},
+                    "border": {"$value": "{ref.tide.neutral.500}"},
                 },
             },
         },
@@ -244,6 +268,9 @@ def planted_sets():
         "TideBackground": (NEUTRAL_50, NEUTRAL_950),
         "TideInk": (NEUTRAL_950, NEUTRAL_50),
         "TideAccent": (ACCENT_700, ACCENT_400),
+        "TideCard": (NEUTRAL_0, NEUTRAL_900),
+        "TideMuted": (NEUTRAL_700, NEUTRAL_400),
+        "TideBorder": (NEUTRAL_500, NEUTRAL_600),
     }
     return {
         name: {
@@ -278,16 +305,17 @@ def plant(root, tokens=None, sets=None):
 
 class TheAppCopiesTheTokens(unittest.TestCase):
     def test_each_colour_set_holds_its_tokens_values(self):
-        """A4: the repository's three colour sets hold their tokens' light and dark values."""
+        """SPEC-578 A4, SPEC-593 A5: the repository's six colour sets hold their tokens' light and
+        dark values."""
         values, _ = token_values(REPO)
         examined("Tide roles", values)
-        self.assertEqual(len(values), 6, "the token file holds six role values")
+        self.assertEqual(len(values), 12, "the token file holds six role values in each mode")
         entries, _ = set_entries(REPO)
         examined("colour-set entries", entries)
         self.assertEqual(
-            len({name for name, _ in entries}), 3, "three colour sets, each with two entries"
+            len({name for name, _ in entries}), 6, "six colour sets, each with two entries"
         )
-        self.assertEqual(len(entries), 6)
+        self.assertEqual(len(entries), 12)
         examined("files the literal scan reads", literal_files(REPO))
         self.assertEqual(findings(REPO), [])
 

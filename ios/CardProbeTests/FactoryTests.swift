@@ -53,8 +53,8 @@ extension Probe {
 
     /// The seconds the card document `view` was handed at `url` took to finish loading, counted
     /// from that document's first answer, or nil (SPEC-361 R16, SPEC-349 R12).
-    static func loadTime(_ view: WKWebView, handed url: URL) async -> TimeInterval? {
-        await loadTime(asking: asking({ script, answer in
+    static func loadTime(_ view: WKWebView, handed url: URL) async throws -> TimeInterval? {
+        try await loadTime(asking: asking({ script, answer in
             view.evaluateJavaScript(script) { result, _ in answer(result as? String) }
         }, handed: url))
     }
@@ -100,10 +100,19 @@ final class HandedPage {
 
 final class FactoryTests: XCTestCase {
     /// SPEC-361 R16: WebKit has started before any measured wait, once per process (ADR-372 D11).
+    /// SPEC-609 R3, R5: each test starts with no probe and no ask counted.
     override func setUp() async throws {
         try await super.setUp()
-        let warmedUp = await Probe.warmUp()
+        await Probe.resetRecord()
+        let warmedUp = try await Probe.warmUp()
         XCTAssertTrue(warmedUp, "the card probe warm-up: WebKit never started, so no card could load")
+    }
+
+    /// SPEC-609 R5: the asks this test's pages answered, and the slowest, against the ask bound.
+    override func tearDown() async throws {
+        let line = await Probe.asksLine(self.name)
+        print(line)
+        try await super.tearDown()
     }
 
     /// Prints how many were judged, and refuses zero (the tdd pack's contract).
@@ -119,7 +128,7 @@ final class FactoryTests: XCTestCase {
             html: Planted.document(id: "factory", head: "", body: "<p>a card</p>"))
         Probe.mount(view)
         defer { view.removeFromSuperview() }
-        let loaded = await Probe.loaded(view)
+        let loaded = try await Probe.loaded(view)
         let observed = ObservableLayers(
             persistentStore: view.configuration.websiteDataStore.isPersistent,
             pageJavaScript: view.configuration.defaultWebpagePreferences.allowsContentJavaScript,
@@ -217,7 +226,7 @@ final class FactoryTests: XCTestCase {
         // followed the previous row's teardown paid their relaunch. One kept card, loaded before
         // the first row's view is built and taken down after the last row, holds them. It is not a
         // row: nothing is read from it, and it starts no load inside any row's wait (ADR-372 D11).
-        let keeper = await Probe.keeper(ruleList: probe.ruleList)
+        let keeper = try await Probe.keeper(ruleList: probe.ruleList)
         XCTAssertNotNil(keeper, "the keeper never loaded, so WebKit's shared processes were not held across the rows")
         defer { keeper?.removeFromSuperview() }
         for row in rows {
@@ -227,12 +236,12 @@ final class FactoryTests: XCTestCase {
             // first answer, not from the view's empty first document (SPEC-349 R12).
             let took: TimeInterval?
             if row.load == .baseURL, let handed = FactoryTests.cardBase {
-                took = await Probe.loadTime(view, handed: handed)
+                took = try await Probe.loadTime(view, handed: handed)
             } else {
-                took = await Probe.loadTime(view)
+                took = try await Probe.loadTime(view)
             }
             let loaded = took != nil
-            let ran = await Probe.evaluate(view, "String(document.documentElement.dataset.ran === '1')") == "true"
+            let ran = try await Probe.evaluate(view, "String(document.documentElement.dataset.ran === '1')") == "true"
             let verdict = CardWebViewFactory.verdict(of: view)
             view.configuration.userContentController.removeAllScriptMessageHandlers()
             view.removeFromSuperview()
@@ -260,8 +269,8 @@ final class FactoryTests: XCTestCase {
         var ran: [String: Bool] = [:]
         for (name, view) in examined("views", [("reference", reference), ("default", shipped)]) {
             Probe.mount(view)
-            loaded[name] = await Probe.loaded(view)
-            ran[name] = await Probe.evaluate(view, "String(document.documentElement.dataset.ran === '1')") == "true"
+            loaded[name] = try await Probe.loaded(view)
+            ran[name] = try await Probe.evaluate(view, "String(document.documentElement.dataset.ran === '1')") == "true"
             view.removeFromSuperview()
         }
         let switchedOn = CardScripts.switchedOn
@@ -292,7 +301,7 @@ final class FactoryTests: XCTestCase {
         Probe.mount(view)
         defer { view.removeFromSuperview() }
         let start = Date()
-        let loaded = await Probe.loaded(view)
+        let loaded = try await Probe.loaded(view)
         let elapsed = Date().timeIntervalSince(start)
         let line = "card probe never loads: loaded=\(loaded) elapsed=\(String(format: "%.2f", elapsed))"
             + " bound=\(Probe.loadSeconds)"
@@ -322,7 +331,7 @@ final class FactoryTests: XCTestCase {
         let handed = try XCTUnwrap(Self.cardBase, "the card base is not a URL")
         let page = HandedPage(handed: handed, commitSeconds: 4, loadSeconds: 2)
         let start = Date()
-        let took = await Probe.loadTime(
+        let took = try await Probe.loadTime(
             asking: Probe.asking({ script, answer in page.ask(script, answer) }, handed: handed),
             answerSeconds: 8, loadSeconds: 3)
         let elapsed = Date().timeIntervalSince(start)
@@ -341,7 +350,7 @@ final class FactoryTests: XCTestCase {
         let handed = try XCTUnwrap(Self.cardBase, "the card base is not a URL")
         let page = HandedPage(handed: handed, commitSeconds: 6, loadSeconds: 0)
         let start = Date()
-        let took = await Probe.loadTime(
+        let took = try await Probe.loadTime(
             asking: Probe.asking({ script, answer in page.ask(script, answer) }, handed: handed),
             answerSeconds: 3, loadSeconds: 1)
         let elapsed = Date().timeIntervalSince(start)

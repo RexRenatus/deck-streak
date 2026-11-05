@@ -160,6 +160,60 @@ fn hex(bytes: &[u8]) -> String {
     })
 }
 
+/// The format crate's file that holds the 19 statements (SPEC-602 R9).
+const STATEMENTS_FILE: &str = "crates/anki-format/src/statements.rs";
+
+fn rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries {
+        let path = entry.expect("an entry").path();
+        if path.is_dir() {
+            rust_files(&path, out);
+        } else if path.extension().is_some_and(|extension| extension == "rs") {
+            out.push(path);
+        }
+    }
+}
+
+/// Each `pub const <NAME>: &str` definition of `names` over every `crates/*/src` file under
+/// `root`: the name and the defining file, relative to `root`.
+fn definitions(root: &Path, names: &[&str]) -> Vec<(String, String)> {
+    let mut crates: Vec<PathBuf> = fs::read_dir(root.join("crates"))
+        .map(|entries| {
+            entries
+                .filter_map(|entry| Some(entry.ok()?.path()))
+                .collect()
+        })
+        .unwrap_or_default();
+    crates.sort();
+    let mut files = Vec::new();
+    for dir in crates {
+        rust_files(&dir.join("src"), &mut files);
+    }
+    let mut found = Vec::new();
+    for path in files {
+        let text = fs::read_to_string(&path).expect("a readable source");
+        let file = path
+            .strip_prefix(root)
+            .expect("under the root")
+            .to_string_lossy()
+            .into_owned();
+        for line in text.lines() {
+            for name in names {
+                if line
+                    .trim_start()
+                    .starts_with(&format!("pub const {name}: &str"))
+                {
+                    found.push(((*name).to_owned(), file.clone()));
+                }
+            }
+        }
+    }
+    found
+}
+
 #[test]
 fn the_moved_statements_live_once_in_the_schema_18_adapter() {
     let mut findings = Vec::new();
@@ -198,17 +252,36 @@ fn the_moved_statements_live_once_in_the_schema_18_adapter() {
             sources.push((name, fs::read_to_string(&path).expect("a readable source")));
         }
     }
+    // Each is defined once over every `src` file of the workspace, in the format crate's
+    // statements file; a planted second definition is read red.
+    let defined = examined(
+        "statement definition(s)",
+        definitions(&root(), &MOVED.map(|(_, name, _)| name)),
+    );
     for (_, name, _) in MOVED {
-        let definition = format!("const {name}: &str");
-        let defining: Vec<&str> = sources
+        let defining: Vec<&str> = defined
             .iter()
-            .filter(|(_, text)| text.contains(&definition))
-            .map(|(file, _)| file.as_str())
+            .filter(|(found, _)| found == name)
+            .map(|(_, file)| file.as_str())
             .collect();
-        if defining != ["schema18.rs"] {
+        if defining != [STATEMENTS_FILE] {
             findings.push(format!("{name} is defined in {defining:?}"));
         }
     }
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    for (file, text) in [
+        (STATEMENTS_FILE, "pub const CARDS: &str = \"SELECT 1\";\n"),
+        (ADAPTER, "pub const CARDS: &str = \"SELECT 2\";\n"),
+    ] {
+        let path = planted.path().join(file);
+        fs::create_dir_all(path.parent().expect("a folder")).expect("a planted folder");
+        fs::write(&path, text).expect("a planted source");
+    }
+    assert_eq!(
+        definitions(planted.path(), &["CARDS"]).len(),
+        2,
+        "the planted second definition is found"
+    );
     let seven: BTreeSet<&str> = MOVED.iter().map(|(file, _, _)| *file).collect();
     for (file, text) in &sources {
         if !seven.contains(file.as_str()) {

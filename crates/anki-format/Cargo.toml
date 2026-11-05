@@ -1,0 +1,28 @@
+[package]
+name = "deck-streak-anki-format"
+description = "DeckStreak's anti-corruption layer for Anki's file formats: one defensive opener for every foreign schema-18 file, and a read-only reader of every row as DeckStreak's own types. See docs/CONTEXT-MAP.md."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# ADR-622 D1: the driver, with the two features the opener needs: `collation` registers unicase,
+# `limits` sets the length and SQL-length limits.
+rusqlite = { workspace = true, features = ["collation", "limits"] }
+# ADR-623: the comparator of the collation schema-18 names carry.
+unicase.workspace = true
+# ADR-622 D3: the copy's digest, checked against the caller's recorded one.
+sha2.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+# ADR-622 D5: the engine makes the fixtures, in tests only.
+anki.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true

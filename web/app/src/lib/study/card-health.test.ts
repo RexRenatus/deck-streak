@@ -271,6 +271,7 @@ const ROUTES = [
   'records/+page.svelte',
   'remote/+page.svelte',
   'score/+page.svelte',
+  'settings/+page.svelte',
   'sign-in-methods/+page.svelte',
   'signin/+page.svelte',
   'streak/+page.svelte',

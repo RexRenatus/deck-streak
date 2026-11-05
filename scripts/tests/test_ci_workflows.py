@@ -41,8 +41,28 @@ THIS_REPOSITORY = "RexRenatus/deck-streak"
 # The one workflow admitted to a runner that is not a pinned Ubuntu image, and the one runner it is
 # admitted to (SPEC-336, ADR-345 D4): the XCFramework job needs Apple's SDKs, which only a macOS
 # runner holds. The admission is by the workflow's file name, so the same runner under any other
-# name is refused, and this workflow on any other runner is refused.
+# name is refused, and this workflow on any other runner is refused. Three of its jobs are taken
+# out of the file's admission by file and job (SPEC-621, ADR-643): SHORT_APPLE_JOBS below.
 ADMITTED_RUNNERS = {"xcframework.yml": "xcode-27"}
+# The one `runs-on` value of the three short Apple jobs (SPEC-621 R1, R2, R4, R5): the self-hosted
+# labels when the repository variable DS_MINI is `on`, the actor is not Dependabot, and the event is
+# a push, a dispatch or a pull request whose head repository is this repository; the file's
+# admitted runner in every other case. A called workflow reads its caller's event, actor and pull
+# request, so each caller's runs are routed by the same expression.
+SHORT_APPLE_RUNNER = (
+    "${{ (vars.DS_MINI == 'on' && github.actor != 'dependabot[bot]' && "
+    "(github.event_name == 'push' || github.event_name == 'workflow_dispatch' || "
+    "(github.event_name == 'pull_request' && "
+    "github.event.pull_request.head.repo.full_name == github.repository))) && "
+    'fromJSON(\'["self-hosted","macOS","ARM64","ds-mini"]\') || \'xcode-27\' }}'
+)
+# The jobs admitted to that expression, by file and job, and to it alone; every other job of the
+# file stays on the file's admitted runner (SPEC-621 R3).
+SHORT_APPLE_JOBS = frozenset(
+    ("xcframework.yml", job) for job in ("xcframework", "harness-wire", "card-isolation")
+)
+# The labels a job of SHORT_APPLE_JOBS resolves to when it is routed to the self-hosted runner.
+SELF_HOSTED_LABELS = ["self-hosted", "macOS", "ARM64", "ds-mini"]
 # The jobs admitted to that runner by file and job (SPEC-352 R15, ADR-363): each TestFlight lane's
 # `app` job archives, signs and uploads the app, which only a macOS runner can. The lane's plan
 # job, a job of the same name in any other file, and the job on any other runner are refused.
@@ -97,15 +117,27 @@ CACHE_BY_THEMSELVES = (
 
 def admitted_runner(name, job=None):
     """The pattern every runner of the workflow `name` must match: a pinned Ubuntu image (SPEC-002
-    A9), or, for the one workflow ADMITTED_RUNNERS names, its one runner exactly (SPEC-336 R9), or,
-    for a job ADMITTED_JOB_RUNNERS names by file and job, its one runner exactly (SPEC-352 R15).
+    A9), or, for a job SHORT_APPLE_JOBS names by file and job, the expression SHORT_APPLE_RUNNER
+    exactly and nothing else (SPEC-621), or, for the one workflow ADMITTED_RUNNERS names, its one
+    runner exactly (SPEC-336 R9), or, for a job ADMITTED_JOB_RUNNERS names by file and job, its one
+    runner exactly (SPEC-352 R15).
     `job` is the job whose own `runs-on` the runner is, or None for a value placed anywhere else,
     which only the file's own admission or the Ubuntu pattern can admit."""
+    if (name, job) in SHORT_APPLE_JOBS:
+        return f"^{re.escape(SHORT_APPLE_RUNNER)}$"
     if name in ADMITTED_RUNNERS:
         return f"^{re.escape(ADMITTED_RUNNERS[name])}$"
     if (name, job) in ADMITTED_JOB_RUNNERS:
         return f"^{re.escape(ADMITTED_JOB_RUNNERS[name, job])}$"
     return r"^ubuntu-\d\d\.\d\d$"
+
+
+def apple_job_runner(job):
+    """The one `runs-on` value the xcframework.yml job `job` must hold: SHORT_APPLE_RUNNER for a job
+    SHORT_APPLE_JOBS names, and the file's admitted runner for every other job (SPEC-621 R3)."""
+    if ("xcframework.yml", job) in SHORT_APPLE_JOBS:
+        return SHORT_APPLE_RUNNER
+    return ADMITTED_RUNNERS["xcframework.yml"]
 
 
 def workflow_file_text(path):
@@ -916,14 +948,22 @@ class TheAppleBuildRunsFromOneBody(unittest.TestCase):
         self.assertEqual(sorted(callee["on"]), ["workflow_call", "workflow_dispatch"])
         self.assertNotIn("concurrency", callee)
         for job_id, job in examined("callee jobs", callee["jobs"].items()):
-            self.assertEqual(job["runs-on"], ADMITTED_RUNNERS["xcframework.yml"], job_id)
+            self.assertEqual(job["runs-on"], apple_job_runner(job_id), job_id)
         text = workflow_file_text(WORKFLOWS / "xcframework.yml")
-        self.assertEqual(pull_request_reads(text), [])
+        # The routing expression of the three short jobs (SPEC-621) reads the pull request's head
+        # repository, which is null on a push, a tag and a dispatch, so their `runs-on` lines are
+        # the only reads of a pull request context the body may hold, one for each job it routes.
+        routed = [f"runs-on: {SHORT_APPLE_RUNNER}"] * len(SHORT_APPLE_JOBS)
+        self.assertEqual(pull_request_reads(text), routed)
         plant = text.replace(
             "    steps:\n", '    steps:\n      - run: echo "${{ github.head_ref }}"\n', 1
         )
         self.assertNotEqual(plant, text)
-        self.assertEqual(pull_request_reads(plant), ['- run: echo "${{ github.head_ref }}"'])
+        # The plant lands in the first job's steps, after that job's own `runs-on` line.
+        self.assertEqual(
+            pull_request_reads(plant),
+            [routed[0], '- run: echo "${{ github.head_ref }}"', *routed[1:]],
+        )
 
     def test_the_apple_build_resolves_only_the_locked_graph(self):
         text = workflow_file_text(WORKFLOWS / "xcframework.yml")
@@ -934,6 +974,191 @@ class TheAppleBuildRunsFromOneBody(unittest.TestCase):
         plant = text + "      - run: cargo build -p deck-streak-ffi\n"
         unlocked = [c for c in cargo_commands(plant) if "--locked" not in c.split(" -- ")[0]]
         self.assertEqual(unlocked, ["cargo build -p deck-streak-ffi"])
+
+
+def short_apple_scenarios():
+    """Each (scenario, its github context, whether the short Apple jobs reach the self-hosted labels
+    there), over every event a caller can hand xcframework.yml, every value of DS_MINI and both
+    actors (SPEC-621 R1, R2, R4, R5). The labels are wanted exactly when the variable is on, the
+    actor is not Dependabot and the event is one of this repository's own, as the three tables below
+    state it. GitHub's `==` ignores case, so `ON` is on; an unset variable is absent from the
+    context, and the reader reads it as an empty string. A called workflow reads its caller's event
+    and pull request, and the pull request's head repository is in every context, null where there
+    is none, since the reader evaluates every operand and refuses a name no scenario models."""
+    none = {"github.event.pull_request.head.repo.full_name": None}
+    events = (
+        ("a push to dev", {**push("refs/heads/dev"), **none}, True),
+        (
+            "a dispatch",
+            {**push("refs/heads/dev"), **none, "github.event_name": "workflow_dispatch"},
+            True,
+        ),
+        ("this repository's pull request into dev", pull_request("dev"), True),
+        (
+            "a fork's pull request into dev",
+            pull_request("dev", head_repository="someone/deck-streak"),
+            False,
+        ),
+        (
+            "a scheduled run",
+            {**push("refs/heads/dev"), **none, "github.event_name": "schedule"},
+            False,
+        ),
+    )
+    values = (("on", True), ("ON", True), (None, False), ("off", False))
+    actors = (("a person", "someone", True), ("Dependabot", "dependabot[bot]", False))
+    scenarios = []
+    for event, context, own in events:
+        for value, on in values:
+            variable = {} if value is None else {"vars.DS_MINI": value}
+            for who, actor, person in actors:
+                name = f"{event}, DS_MINI {'unset' if value is None else value}, {who}"
+                scenarios.append(
+                    (name, {**context, **variable, "github.actor": actor}, own and on and person)
+                )
+    return scenarios
+
+
+def resolved_runner(runs_on, context):
+    """Where a job's `runs-on` value sends it in one scenario: a whole expression's value, or the
+    value itself."""
+    whole = EXPRESSION.fullmatch(str(runs_on).strip())
+    return evaluate(whole.group(1), context) if whole else runs_on
+
+
+def runner_words(runner):
+    """A runner as a refusal names it."""
+    return "the self-hosted labels" if runner == SELF_HOSTED_LABELS else repr(runner)
+
+
+def short_apple_route_problems(jobs):
+    """Every scenario in which a job of xcframework.yml runs elsewhere than SPEC-621 wants: a job
+    SHORT_APPLE_JOBS names on the self-hosted labels exactly when its scenario routes it there, and
+    every other job on the file's admitted runner in every scenario."""
+    hosted = ADMITTED_RUNNERS["xcframework.yml"]
+    problems = []
+    for job_id, job in jobs.items():
+        short = ("xcframework.yml", job_id) in SHORT_APPLE_JOBS
+        for scenario, context, routed in short_apple_scenarios():
+            wants = SELF_HOSTED_LABELS if short and routed else hosted
+            resolved = resolved_runner(job.get("runs-on"), context)
+            if resolved != wants:
+                problems.append(
+                    f"{job_id}: {scenario} resolves to {runner_words(resolved)}, "
+                    f"wants {runner_words(wants)}"
+                )
+    return problems
+
+
+class TheShortAppleJobsReachTheMiniOnlyBehindTheVariable(unittest.TestCase):
+    """SPEC-621: the three short Apple jobs, evaluated for each event a caller can hand
+    xcframework.yml, each value of the repository variable DS_MINI and each actor, reach the
+    self-hosted labels only for a push, a dispatch and this repository's own pull request with the
+    variable on and an actor that is not Dependabot; the long jobs and the verdict never do."""
+
+    def test_the_short_apple_jobs_reach_the_mini_only_on_this_repositorys_own_events_with_the_variable_on(
+        self,
+    ):
+        jobs = load("xcframework.yml")["jobs"]
+        scenarios = examined("routing scenarios", short_apple_scenarios())
+        # Five events, four values of the variable and two actors; the labels are wanted in two
+        # values (`on`, `ON`), for one actor, on three events.
+        self.assertEqual(len(scenarios), 40)
+        self.assertEqual(sum(routed for _scenario, _context, routed in scenarios), 6)
+        for name, job_id in examined("short Apple jobs", sorted(SHORT_APPLE_JOBS)):
+            self.assertEqual(name, "xcframework.yml")
+            self.assertIn(job_id, jobs)
+            for scenario, context, routed in scenarios:
+                wants = SELF_HOSTED_LABELS if routed else ADMITTED_RUNNERS["xcframework.yml"]
+                with self.subTest(job=job_id, scenario=scenario):
+                    self.assertEqual(resolved_runner(jobs[job_id]["runs-on"], context), wants)
+
+    def test_the_long_apple_jobs_and_the_verdict_stay_hosted_on_every_event(self):
+        jobs = load("xcframework.yml")["jobs"]
+        others = sorted(job for job in jobs if ("xcframework.yml", job) not in SHORT_APPLE_JOBS)
+        self.assertEqual(others, ["harness", "release-and-app", "verdict"])
+        scenarios = examined("routing scenarios", short_apple_scenarios())
+        hosted = ADMITTED_RUNNERS["xcframework.yml"]
+        for job_id in examined("hosted Apple jobs", others):
+            for scenario, context, _routed in scenarios:
+                with self.subTest(job=job_id, scenario=scenario):
+                    self.assertEqual(resolved_runner(jobs[job_id]["runs-on"], context), hosted)
+
+    def test_a_planted_route_is_refused_by_its_scenario(self):
+        """Each planted expression, on a copy of the jobs, is refused by a scenario in which the
+        live expression routes as SPEC-621 wants."""
+        jobs = load("xcframework.yml")["jobs"]
+        # The control: the live jobs route as SPEC-621 wants in every scenario.
+        self.assertEqual(short_apple_route_problems(jobs), [])
+        live = jobs["xcframework"]["runs-on"]
+        same_repository = (
+            "(github.event_name == 'pull_request' && "
+            "github.event.pull_request.head.repo.full_name == github.repository)"
+        )
+        short = sorted(job for _name, job in SHORT_APPLE_JOBS)
+        pushed = "a push to dev, DS_MINI on, a person"
+        plants = (
+            (
+                "without the variable clause",
+                short,
+                ("vars.DS_MINI == 'on' && ", ""),
+                "a push to dev, DS_MINI unset, a person resolves to the self-hosted labels, "
+                "wants 'xcode-27'",
+            ),
+            (
+                "without the Dependabot clause",
+                short,
+                ("github.actor != 'dependabot[bot]' && ", ""),
+                "a push to dev, DS_MINI on, Dependabot resolves to the self-hosted labels, "
+                "wants 'xcode-27'",
+            ),
+            (
+                "without the same-repository clause",
+                short,
+                (same_repository, "github.event_name == 'pull_request'"),
+                "a fork's pull request into dev, DS_MINI on, a person resolves to the self-hosted "
+                "labels, wants 'xcode-27'",
+            ),
+            (
+                "another label list",
+                short,
+                (',"ds-mini"]', "]"),
+                f"{pushed} resolves to ['self-hosted', 'macOS', 'ARM64'], wants the self-hosted "
+                "labels",
+            ),
+            (
+                "harness routed to the runner",
+                ["harness"],
+                None,
+                f"{pushed} resolves to the self-hosted labels, wants 'xcode-27'",
+            ),
+        )
+        for name, planted_jobs, edit, refusal in examined("planted routes", plants):
+            expression = live if edit is None else live.replace(*edit, 1)
+            with self.subTest(plant=name):
+                if edit is not None:
+                    self.assertNotEqual(expression, live)
+                planted = {
+                    **jobs,
+                    **{job: {**jobs[job], "runs-on": expression} for job in planted_jobs},
+                }
+                problems = short_apple_route_problems(planted)
+                for job_id in planted_jobs:
+                    self.assertIn(f"{job_id}: {refusal}", problems)
+        self.assertEqual(len(plants), 5)
+
+    def test_the_reader_reads_fromjson_of_a_string_literal_only(self):
+        self.assertEqual(
+            evaluate('fromJSON(\'["self-hosted","ds-mini"]\')', {}), ["self-hosted", "ds-mini"]
+        )
+        self.assertEqual(evaluate("fromJSON('true') && 'on'", {}), "on")
+        unread = ("fromJSON(vars.LABELS)", "fromJSON()", "fromJSON('[1]', '[2]')")
+        for expression in examined("unread fromJSON forms", unread):
+            with self.subTest(expression=expression):
+                with self.assertRaisesRegex(
+                    AssertionError, "this reader models no such expression"
+                ):
+                    evaluate(expression, {"vars.LABELS": '["self-hosted"]'})
 
 
 class TheAppHasOneRustStaticLibrary(unittest.TestCase):
@@ -2232,8 +2457,11 @@ def equal(left, right):
 
 def evaluate(expression, context):
     """The value of one expression (without `${{ }}`) over `context`, {dotted name: value}. `&&`
-    and `||` return an operand, as GitHub's do. A `github.` name no scenario models refuses, and a
-    step's output nobody set is null. Only the forms the workflows use are read."""
+    and `||` return an operand, as GitHub's do. A `github.` name no scenario models refuses, a
+    step's output nobody set is null, and a `vars.` name the context does not set reads as an empty
+    string, as GitHub reads an unset configuration variable. Only the forms the workflows use are
+    read: of the functions, `fromJSON` of a string literal alone, whose value is that literal's
+    JSON (SPEC-621)."""
     tokens, at, text = [], 0, expression.strip()
     while at < len(text):
         match = TOKEN.match(text, at)
@@ -2270,12 +2498,21 @@ def evaluate(expression, context):
             return not truthy(primary())
         if kind == "str":
             return value
+        if (kind, value) == ("name", "fromJSON") and peek() == ("op", "("):
+            # The one function form read: `fromJSON` of a string literal is that literal's JSON.
+            take()
+            argument = take()
+            if argument[0] != "str" or take() != ("op", ")"):
+                raise AssertionError(f"this reader models no such expression: {expression!r}")
+            return json.loads(argument[1])
         if kind == "name" and value in ("true", "false", "null"):
             return {"true": True, "false": False, "null": None}[value]
         if kind == "name" and value.startswith("steps."):
             return context.get(value)
         if kind == "name" and value in context:
             return context[value]
+        if kind == "name" and value.startswith("vars."):
+            return ""
         raise AssertionError(f"{expression!r} reads {value}, which no scenario models")
 
     def comparison():
@@ -5215,6 +5452,21 @@ NOT_WORKFLOW_READS = {
         ),
     ),
     **allowed(
+        "runs each split job's report step under bash in a scratch directory, with a planted xcrun that answers for the planted suite's bundle, and reads the report it writes; a report, never a workflow",
+        (
+            "test_ci_workflows",
+            "TheReportListsThePlantedSuiteOnEachSimulator.test_a_planted_card_test_that_fails_on_one_simulator_is_named_by_its_simulator",
+            "subprocess.run(['bash', '--noprofile', '--norc', '-e', '-o', 'pipefail', '-c', step['run']], cwd=where, env=env, capture_output=True, text=True, timeout=120, check=False)",
+            1,
+        ),
+        (
+            "test_ci_workflows",
+            "TheReportListsThePlantedSuiteOnEachSimulator.test_a_planted_card_test_that_fails_on_one_simulator_is_named_by_its_simulator",
+            "(report / 'report.md').read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
         "calls umbrella_closure, which reads a workspace's Cargo manifests for the umbrella's build closure; manifests, never a workflow",
         (
             "test_ci_workflows",
@@ -7821,6 +8073,15 @@ DYNAMIC_IMPORTS = {
         ("test_mutation_verdict", "verdict_module", "sys.modules", 1),
     ),
     **allowed(
+        "a patch of this module's call, taken from sys.modules; it points the CLI report helper at a fake runner, reading nothing",
+        (
+            "test_mutation_python_cli_kills",
+            "TheRunPrintsAndWritesItsReport.test_the_cli_report_helper_writes_its_report_and_costs_into_a_directory_of_its_own",
+            "sys.modules",
+            1,
+        ),
+    ),
+    **allowed(
         "drops a production module the judge re-imports from a copy, so each test imports it afresh",
         ("test_mutation_python_judge_kills", "Base.setUp", "sys.modules.pop", 1),
         (
@@ -10270,6 +10531,13 @@ CARD_PROBE_NEEDS = (
     "-disable-concurrent-destination-testing",
     '-resultBundlePath "$RESULTS/card-probe.xcresult"',
 )
+# The report's lines for the planted suite's bundle (SPEC-608 R1 to R3): its cases read, listed
+# under their own label, and named to `harness` in the report of the job that runs no planted suite.
+CARD_PROBE_REPORT_NEEDS = (
+    'cases_in("card-probe")',
+    '("Card probe", card_probe_cases)',
+    '"card-probe": "harness"',
+)
 # The actions a planted card-view job uses; their refs are placeholders the checker never reads.
 PLANTED_CHECKOUT = "actions/checkout@" + "0" * 40
 PLANTED_UPLOAD = "actions/upload-artifact@" + "0" * 40
@@ -10301,7 +10569,7 @@ def card_probe_problems(jobs):
     job = jobs.get("card-isolation")
     if job is None:
         return problems + ["card-isolation: no such job"]
-    if job.get("runs-on") != ADMITTED_RUNNERS["xcframework.yml"]:
+    if job.get("runs-on") != apple_job_runner("card-isolation"):
         problems.append(
             f"card-isolation: it runs on {job.get('runs-on')!r}, not the admitted runner"
         )
@@ -10350,7 +10618,7 @@ class TheCardViewIsProvedOnBothSimulators(unittest.TestCase):
             "run": 'package = pathlib.Path("ios/CardIsolation")\n(package / "swift-mutants.json")'
         }
         host = {
-            "runs-on": ADMITTED_RUNNERS["xcframework.yml"],
+            "runs-on": apple_job_runner("card-isolation"),
             "steps": [
                 {"uses": PLANTED_CHECKOUT, "with": {"persist-credentials": "false"}},
                 {"run": "swift test --package-path ios/CardIsolation"},
@@ -10429,6 +10697,133 @@ class TheCardViewIsProvedOnBothSimulators(unittest.TestCase):
         for name, (jobs, wanted) in examined("planted card-view jobs", list(plants.items())):
             with self.subTest(plant=name):
                 self.assertEqual(card_probe_problems(jobs), wanted, name)
+
+
+# The two simulators a planted bundle's case ran on, as A2's report runs name them, and the one case
+# the planted `xcrun` answers with (SPEC-608 A2).
+PLANTED_IPHONE_SIM = "iPhone 16"
+PLANTED_IPAD_SIM = "iPad (A16)"
+PLANTED_CARD_CASE = "CardProbeTests/test_a_planted_card_reaches_from_the_reference_view()"
+# The rows each job's report writes for that bundle: `harness` names each simulator with its result,
+# and `release-and-app`, which holds no such bundle, names `harness`.
+CARD_PROBE_ROWS = {
+    "harness": [
+        f"| Card probe `{PLANTED_CARD_CASE}` | {PLANTED_IPHONE_SIM}: Passed; "
+        f"{PLANTED_IPAD_SIM}: Failed |"
+    ],
+    "release-and-app": ["| Card probe: no test result was read | in `harness` |"],
+}
+
+
+def card_probe_report_problems(jobs):
+    """SPEC-608 R1 to R3: each report body of the split reads the planted suite's bundle, lists its
+    cases under their own label, and names `harness` for them in the job that runs no planted
+    suite."""
+    problems = []
+    for name in ("harness", SPLIT_JOB):
+        text = "\n".join(
+            str(step.get("run", ""))
+            for step in (jobs.get(name) or {}).get("steps") or []
+            if step.get("name") == HARNESS_REPORT
+        )
+        problems += [
+            f"{name}: the report lacks {need}"
+            for need in CARD_PROBE_REPORT_NEEDS
+            if need not in text
+        ]
+    return problems
+
+
+class TheReportListsThePlantedSuiteOnEachSimulator(unittest.TestCase):
+    def test_the_report_reads_the_planted_suite_bundle_in_both_jobs(self):
+        """SPEC-608 A1 (R1 to R3): each report body, in `harness` and in `release-and-app`, reads
+        the planted suite's bundle, lists its cases under `Card probe` and names `harness` for
+        them; each of the three removed from either body is refused by its own line."""
+        jobs = load("xcframework.yml")["jobs"]
+        self.assertEqual(card_probe_report_problems(jobs), [])
+
+        def without(name, piece):
+            steps = jobs[name]["steps"]
+            reports = [s for s in steps if s.get("name") == HARNESS_REPORT]
+            assert len(reports) == 1, f"{name} holds {len(reports)} report steps"
+            assert reports[0]["run"].count(piece) == 1, f"{piece!r} is not in {name}'s report once"
+            planted = [
+                {**s, "run": s["run"].replace(piece, "")} if s.get("name") == HARNESS_REPORT else s
+                for s in steps
+            ]
+            return {**jobs, name: {**jobs[name], "steps": planted}}
+
+        plants = {
+            f"{name} without {need}": (without(name, need), [f"{name}: the report lacks {need}"])
+            for name in ("harness", SPLIT_JOB)
+            for need in CARD_PROBE_REPORT_NEEDS
+        }
+        for name, (body, wanted) in examined("planted report bodies", list(plants.items())):
+            with self.subTest(plant=name):
+                self.assertEqual(card_probe_report_problems(body), wanted, name)
+
+    def test_a_planted_card_test_that_fails_on_one_simulator_is_named_by_its_simulator(self):
+        """SPEC-608 A2 (R1 to R3): each job's live report step, run under GitHub's default bash with
+        a planted `xcrun` that answers for the planted suite's bundle with one case that passes on
+        the iPhone and fails on the iPad, writes in `harness` the one row naming each simulator
+        with its result, and in `release-and-app`, which holds no such bundle, the row that names
+        `harness`. The planted `xcrun` exits non-zero for every other call."""
+        jobs = load("xcframework.yml")["jobs"]
+        devices = [
+            {"nodeType": "Device", "name": PLANTED_IPHONE_SIM, "result": "Passed"},
+            {"nodeType": "Device", "name": PLANTED_IPAD_SIM, "result": "Failed"},
+        ]
+        case = {
+            "nodeType": "Test Case",
+            "nodeIdentifier": PLANTED_CARD_CASE,
+            "result": "Failed",
+            "children": devices,
+        }
+        tree = {
+            "testNodes": [
+                {"nodeType": "Unit test bundle", "name": "CardProbeTests", "children": [case]}
+            ]
+        }
+        for name in examined("jobs of the split", ["harness", SPLIT_JOB]):
+            step = next(s for s in jobs[name]["steps"] if s.get("name") == HARNESS_REPORT)
+            with self.subTest(job=name), tempfile.TemporaryDirectory() as scratch:
+                where = Path(scratch)
+                results, report, planted = where / "results", where / "report", where / "bin"
+                results.mkdir()
+                planted.mkdir()
+                if name == "harness":
+                    (results / "card-probe.xcresult").mkdir()
+                answer = where / "tree.json"
+                answer.write_text(json.dumps(tree), encoding="utf-8")
+                asked = f"xcresulttool get test-results tests --path {results}/card-probe.xcresult"
+                xcrun = planted / "xcrun"
+                xcrun.write_text(
+                    f'#!/bin/bash\nif [ "$*" = "{asked}" ]; then exec cat "{answer}"; fi\nexit 1\n',
+                    encoding="utf-8",
+                )
+                xcrun.chmod(0o700)
+                env = {
+                    "PATH": f"{planted}{os.pathsep}{os.environ['PATH']}",
+                    "REPORT": str(report),
+                    "RESULTS": str(results),
+                    "GITHUB_JOB": name,
+                    "GITHUB_STEP_SUMMARY": str(where / "summary.md"),
+                    "IPHONE_SIM": PLANTED_IPHONE_SIM,
+                    "IPAD_SIM": PLANTED_IPAD_SIM,
+                }
+                done = subprocess.run(
+                    ["bash", "--noprofile", "--norc", "-e", "-o", "pipefail", "-c", step["run"]],
+                    cwd=where,
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                    timeout=120,
+                    check=False,
+                )
+                self.assertEqual(done.returncode, 0, done.stderr[-2000:])
+                text = (report / "report.md").read_text(encoding="utf-8")
+                rows = [line for line in text.splitlines() if line.startswith("| Card probe")]
+                self.assertEqual(rows, CARD_PROBE_ROWS[name])
 
 
 class TheReleaseJobOutlastsItsSlowestRun(unittest.TestCase):

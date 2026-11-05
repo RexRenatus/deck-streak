@@ -256,3 +256,12 @@ No row's killer is a planted simulator test: the native mutation sweep runs the 
 tests only. The identity stub of `LinkStrip.stripped(_:)` is the "no strip" mutant, and the
 red-first record carries A5's and A6's red against it, read in CI's `harness` job on the first
 push.
+
+## 9. Amendments by SPEC-461: the web suite reads a followed link at the connection
+
+Section 1's last bullet and section 5's bullet on the web suite's blindness to a followed link's
+bare connection (#761) describe the tree before SPEC-461. SPEC-461 points every web planted card
+that acts on a click, `nav-self` among them, at the web suite's TCP listener, which counts every
+connection it accepts with or without a request, so the web suite now reads a followed link at the
+connection from the reference frame, from the card frame and from the shipped frame with its
+refusal alone removed, in Chromium, WebKit and Firefox (#761). Nothing above this section changes.

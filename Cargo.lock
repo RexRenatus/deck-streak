@@ -1128,6 +1128,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "deck-streak-anki-format"
+version = "0.3.0"
+dependencies = [
+ "anki",
+ "rusqlite",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror 2.0.21",
+ "unicase",
+]
+
+[[package]]
 name = "deck-streak-api"
 version = "0.3.0"
 dependencies = [
@@ -1386,6 +1399,7 @@ version = "0.3.0"
 dependencies = [
  "anki",
  "chrono",
+ "deck-streak-anki-format",
  "deck-streak-collection",
  "deck-streak-kernel",
  "deck-streak-search",
@@ -1566,6 +1580,14 @@ dependencies = [
  "thiserror 2.0.21",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "deck-streak-render"
+version = "0.3.0"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
