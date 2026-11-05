@@ -108,3 +108,12 @@ in the run at this delivery head, and the two files it reads are the same there 
 A29's green commit, a22d2b21, also moves the existing planted `fsrs6` and `tempfile` case of the
 same test, whose finding now names the admitted `divan` and `fsrs6`. The commit after a22d2b21
 changes only this record and the three SPECs.
+
+The fourth part's criterion, A31, gives each web bench its own bound on its test call, a module
+constant of its bench file sized from that bench's measured CI time. The four benches shared one
+bound, and `frameCard` ran past that 60000 ms bound at 62995 ms (job 127198761633). A31's test
+names each web bench beside its two measured times and their job ids, and asserts that its bound
+is at least the larger of that floor and 1.5 times its worst time, rounded up to the next step,
+which takes `frameCard` to 100000 ms (job 127198761633). It reads red at the delivery head before
+this part, where no bench passes a bound, and its red and green lines join the fence when each is
+read.

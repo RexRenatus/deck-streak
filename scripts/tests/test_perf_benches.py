@@ -154,3 +154,66 @@ class TheBenchesAreInTheTree(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# A31: each web bench's own bound. Its two measured CI times in ms, each keyed by its job id.
+WEB_BENCH_TIMES = {
+    "frame-document::frameDocument": {
+        127064902478: 49068,
+        127198761633: 50255,
+    },
+    "frame-host::frameCard": {
+        127064902478: 60195,
+        127198761633: 62995,
+    },
+    "review-screen::ReviewScreen": {
+        127064902478: 23082,
+        127198761633: 22721,
+    },
+    "review::step": {
+        127064902478: 1709,
+        127198761633: 1710,
+    },
+}
+BOUND_FLOOR_MS = 60000  # the bound frameCard ran past at 62995 ms (job 127198761633)
+BOUND_STEP_MS = 10000  # frameCard's bound rounds up to 100000 ms by it (job 127198761633)
+TEST_CALL = re.compile(r"^test\(\s*(['\"]).+?\1\s*,(?P<rest>.*)$", re.M)
+TIMEOUT_OPTION = re.compile(r"\s*\{\s*timeout:\s*(\w+)\s*\}\s*,")
+MODULE_CONSTANT = re.compile(r"^const\s+(\w+)\s*=\s*(\d[\d_]*)\s*;", re.M)
+
+
+def required_bound(times):
+    """The larger of the floor and 1.5 times the worst measured time, rounded up to the step."""
+    worst = max(times.values())
+    return max(BOUND_FLOOR_MS, -(-worst * 3 // (2 * BOUND_STEP_MS)) * BOUND_STEP_MS)
+
+
+class EachWebBenchPassesItsOwnBound(unittest.TestCase):
+    def test_each_web_bench_passes_its_own_measured_bound(self):
+        files = {web_stem(path): path for path in web_bench_files()}
+        names = [name for name in derived_names() if name.split("::")[0] in files]
+        for name in sorted(set(WEB_BENCH_TIMES) - set(names)):
+            with self.subTest(bench=name):
+                self.fail(f"{name} has a table row and no bench")
+        for name in examined("web benches", names):
+            with self.subTest(bench=name):
+                self.assertIn(name, WEB_BENCH_TIMES, f"{name} has no table row")
+                stem, bench = name.split("::", 1)
+                path = files[stem]
+                text = path.read_text(encoding="utf-8")
+                at = next(m.start() for m in WEB_BENCH.finditer(text) if m.group(2) == bench)
+                calls = [m for m in TEST_CALL.finditer(text) if m.start() < at]
+                self.assertTrue(calls, f"{name}: no test call holds the bench")
+                option = TIMEOUT_OPTION.match(calls[-1].group("rest"))
+                self.assertIsNotNone(option, f"{name}: its test call passes no bound")
+                constants = dict(MODULE_CONSTANT.findall(text))
+                self.assertIn(
+                    option.group(1),
+                    constants,
+                    f"{name}: its bound is no module constant of {path.name}",
+                )
+                bound = int(constants[option.group(1)].replace("_", ""))
+                wanted = required_bound(WEB_BENCH_TIMES[name])
+                self.assertGreaterEqual(
+                    bound, wanted, f"{name}: its bound {bound} is under {wanted}"
+                )
