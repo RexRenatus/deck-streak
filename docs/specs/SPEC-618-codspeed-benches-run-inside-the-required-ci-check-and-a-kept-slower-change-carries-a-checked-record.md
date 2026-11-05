@@ -367,3 +367,38 @@ A30: python3 -m unittest discover -s scripts/tests -p test_coverage_report.py -k
 
 Every red and green of A25 to A30 is recorded in `docs/red-first/SPEC-618.md`. A25's tests, and the
 call register's own test, are read in CI by name, from the job that runs `scripts/tests`.
+
+## 10. Each web bench passes its own bound, sized from its measured CI time
+
+In the run at the delivery head before this part, `frameCard` ran past its bound alone. Its log
+read "Test timed out in 60000ms" at `web/app/bench/card/frame-host.bench.ts:64` (job 127198761633),
+the bench at 62995 ms (job 127198761633), where the run before read 60195 ms (job 127064902478).
+It is the branch's own bench at its bound, so each web bench takes a bound of its own, sized from
+its own measured times.
+
+1. Each web bench's test call passes its own bound in the per-test form the repository's pinned
+   Vitest documents, `test(name, { timeout }, fn)`, and that bound is a module constant of the
+   bench file. No timeout set for the whole bench run stands in for it.
+2. Each bound is at least the larger of 60000 ms (job 127198761633) and 1.5 times the bench's
+   worst measured CI time, rounded up to the next 10000 ms (jobs 127064902478 and 127198761633).
+3. The inputs of R9 and R13 stand: the bench inputs, bodies and names and `vitest.bench.config.ts`
+   are as section 2 states them, and no input is dropped.
+
+| bench | measured CI times | bound |
+|---|---|---|
+| `frame-host::frameCard` | 60195 ms (job 127064902478), 62995 ms (job 127198761633) | 100000 ms |
+| `frame-document::frameDocument` | 49068 ms (job 127064902478), 50255 ms (job 127198761633) | 80000 ms |
+| `review-screen::ReviewScreen` | 23082 ms (job 127064902478), 22721 ms (job 127198761633) | 60000 ms |
+| `review::step` | 1709 ms (job 127064902478), 1710 ms (job 127198761633) | 60000 ms |
+
+### Acceptance criteria of section 10
+
+| id | criterion | red it must show first | decided by |
+|---|---|---|---|
+| A31 | each web bench's test call passes its own bound, a module constant of its bench file, at least the larger of 60000 ms and 1.5 times its worst measured CI time rounded up to the next 10000 ms, and every web bench has a row of the bench table and every row a bench (requirements 1 and 2; jobs 127064902478 and 127198761633) | red at a commit whose web bench test calls pass no bound: each of the four benches is named with no bound | `EachWebBenchPassesItsOwnBound.test_each_web_bench_passes_its_own_measured_bound` |
+
+```acceptance
+A31: python3 -m unittest discover -s scripts/tests -p test_perf_benches.py -k test_each_web_bench_passes_its_own_measured_bound
+```
+
+The red and green of A31 are recorded in `docs/red-first/SPEC-618.md`.

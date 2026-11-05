@@ -52,8 +52,8 @@ A26: red at fff4d401: test_mutation_verdict.py:1090: AssertionError: {'ci': 189,
 A27: red at fff4d401: test_release_rust_ceiling.py:308: AssertionError: Tuples differ: (1, '[71 chars]00 is outside 189..256; a ceiling outside it is never dealt\n') != (1, '[71 chars]00 is outside 185..256; a ceiling outside it is never dealt\n') (read locally: 7 of 13 failing, each on the ceiling)
 A28: red at fff4d401: test_release_python_ceiling.py:345: AssertionError: Tuples differ: (0, '[366 chars]ng 189\nmutation: shards: run legs 4 of 221: p[68 chars]0\n') != (0, '[366 chars]ng 185\nmutation: shards: run legs 4 of 217: p[68 chars]0\n') (read locally: 1 of 19 failing)
 A25: red at ab8ee5ee: test_the_ceiling_is_the_runs_job_budget: AssertionError: {'ci': 189, 'battery': 234} != {'ci': 185, 'battery': 234} (job 127064675575)
-A29: red at ab8ee5ee: test_the_engine_and_the_fsrs7_crate_each_resolve_their_own_scheduler, read red by name (job 127064675575)
-A30: red at ab8ee5ee: test_every_exclusion_is_one_row_with_its_reason, read red by name (job 127064675575)
+A29: red at ab8ee5ee: test_the_engine_and_the_fsrs7_crate_each_resolve_their_own_scheduler: AssertionError: Lists differ: ["deck-streak-fsrs7's [dev-dependencies] are ['divan', 'fsrs6'], not ['fsrs6']"] != [] (job 127064675575)
+A30: red at ab8ee5ee: test_every_exclusion_is_one_row_with_its_reason: AssertionError: Lists differ: ['crates/*/benches/** has an unknown kind'[36 chars]ind'] != [] (job 127064675575)
 A25: green at ab29cc97: read by name in CI at this delivery head, where git diff --quiet ab29cc97 HEAD -- scripts/mutation-verdict.py scripts/tests/test_dispatch_shards.py reads rc 0
 A26: green at ab29cc97: test_mutation_verdict.py, 44 tests OK (read locally)
 A27: green at ab29cc97: test_release_rust_ceiling.py, 13 tests OK (read locally)
@@ -61,6 +61,7 @@ A28: green at ab29cc97: test_release_python_ceiling.py, 19 tests OK (read locall
 A29: green at a22d2b21: test_fsrs7_pin.py, 1 test OK, the planted tempfile case included (read locally)
 A30: green at a22d2b21: test_coverage_report.py, 41 tests OK (read locally)
 A31: red at 32d50501: test_each_web_bench_passes_its_own_measured_bound: AssertionError: unexpectedly None : frame-host::frameCard: its test call passes no bound (read locally: 4 of 4 benches failing, each with no bound)
+A31: green at 22aae9f5: test_perf_benches.py, 6 tests OK, 4 web benches examined (read locally)
 ```
 
 A1 and A3 to A14 were committed with two stub scripts that keep every argument and decide
