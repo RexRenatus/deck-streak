@@ -11,6 +11,12 @@
       "test_companion_site_census"
     ]
   },
+  "scripts/coverage-report.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_coverage_report"
+    ]
+  },
   "scripts/create-issues.py": {
     "dir": "scripts/tests",
     "modules": []
