@@ -20,6 +20,8 @@ A2: not red: guards what dev already holds; harness, release-and-app and verdict
 A4: not red: the reader reads planted text only; fromJSON of a string literal is read and every other fromJSON form is refused by name, before and after the change
 A1: red at f88a6c7: AssertionError: 'xcode-27' != ['self-hosted', 'macOS', 'ARM64', 'ds-mini']
 A3: red at f88a6c7: AssertionError: Lists differ: ["xcframework: a push to dev, DS_MINI on, [2005 chars]els"] != []
+A1: green at 01f7eee
+A3: green at 01f7eee
 ```
 
 The runner admission changes in the same commit as the tests: `admitted_runner` admits the routing
@@ -38,3 +40,10 @@ any plant was read. The three runner pins failed beside them:
 (`'xcode-27' != ` the expression) and `test_the_card_probe_suite_runs_on_both_simulators`
 (`card-isolation: it runs on 'xcode-27', not the admitted runner`). A2 and A4 passed in the same
 run. The workflow change follows in the next commit, with the tests unchanged.
+
+The workflow change landed in 01f7eee with the tests unchanged: it gives the three short jobs the
+routing expression and adds the changelog fragment and the two red lines above. The commit after
+01f7eee changes only this record, so `git diff --quiet 01f7eee HEAD --
+scripts/tests/test_ci_workflows.py .github/workflows/xcframework.yml` exits 0 at the head, and A1,
+A3 and the three runner pins are read green by name in the `ci` run of the head that carries these
+lines, with A2 and A4 still passing.
