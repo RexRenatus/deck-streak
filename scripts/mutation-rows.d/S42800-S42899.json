@@ -4,7 +4,7 @@
       [
         "S42800-THE-RUST-SITE-PINS-NEXTEST",
         ".github/workflows/ci.yml",
-        "tool: cargo-nextest@0.9.146,",
+        "tool: cargo-nextest@0.9.149,",
         "tool: cargo-nextest,",
         "the rust job's install names cargo-nextest at its exact version (SPEC-428 R5, A1)",
         "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_every_install_action_tool_names_an_exact_version"
@@ -20,7 +20,7 @@
       [
         "S42802-THE-ENGINE-SITE-PINS-NEXTEST",
         ".github/workflows/ci.yml",
-        "        slice: [1, 2]\n    env:\n      CARGO_INCREMENTAL: \"0\"\n    steps:\n      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          persist-credentials: false\n      - name: the pinned Rust toolchain (rust-toolchain.toml)\n        run: rustup show\n      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32\n        with:\n          tool: cargo-nextest@0.9.146\n",
+        "        slice: [1, 2]\n    env:\n      CARGO_INCREMENTAL: \"0\"\n    steps:\n      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          persist-credentials: false\n      - name: the pinned Rust toolchain (rust-toolchain.toml)\n        run: rustup show\n      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32\n        with:\n          tool: cargo-nextest@0.9.149\n",
         "        slice: [1, 2]\n    env:\n      CARGO_INCREMENTAL: \"0\"\n    steps:\n      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          persist-credentials: false\n      - name: the pinned Rust toolchain (rust-toolchain.toml)\n        run: rustup show\n      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32\n        with:\n          tool: cargo-nextest\n",
         "the engine job's install names cargo-nextest at its exact version (SPEC-428 R5, A1)",
         "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_every_install_action_tool_names_an_exact_version"
@@ -28,7 +28,7 @@
       [
         "S42803-THE-RELEASE-SITE-PINS-NEXTEST",
         ".github/workflows/ci.yml",
-        "  release:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 100\n    env:\n      CARGO_INCREMENTAL: \"0\"\n    steps:\n      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          persist-credentials: false\n      - name: the pinned Rust toolchain (rust-toolchain.toml)\n        run: rustup show\n      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32\n        with:\n          tool: cargo-nextest@0.9.146\n",
+        "  release:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 100\n    env:\n      CARGO_INCREMENTAL: \"0\"\n    steps:\n      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          persist-credentials: false\n      - name: the pinned Rust toolchain (rust-toolchain.toml)\n        run: rustup show\n      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32\n        with:\n          tool: cargo-nextest@0.9.149\n",
         "  release:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 100\n    env:\n      CARGO_INCREMENTAL: \"0\"\n    steps:\n      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          persist-credentials: false\n      - name: the pinned Rust toolchain (rust-toolchain.toml)\n        run: rustup show\n      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32\n        with:\n          tool: cargo-nextest\n",
         "the release job's install names cargo-nextest at its exact version (SPEC-428 R5, A1)",
         "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_every_install_action_tool_names_an_exact_version"
@@ -44,7 +44,7 @@
       [
         "S42805-THE-WORKFLOW-LINT-SITE-PINS-ZIZMOR",
         ".github/workflows/ci.yml",
-        "tool: zizmor@1.30.1\n",
+        "tool: zizmor@1.31.1\n",
         "tool: zizmor\n",
         "the workflow-lint job's install names zizmor at its exact version (SPEC-428 R5, A1)",
         "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_every_install_action_tool_names_an_exact_version"
@@ -68,7 +68,7 @@
       [
         "S42808-THE-WARM-SITE-PINS-NEXTEST",
         ".github/workflows/rust-cache.yml",
-        "tool: cargo-nextest@0.9.146,",
+        "tool: cargo-nextest@0.9.149,",
         "tool: cargo-nextest,",
         "rust-cache.yml's install names cargo-nextest at its exact version (SPEC-428 R5, A1)",
         "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_every_install_action_tool_names_an_exact_version"
@@ -232,6 +232,14 @@
         "ENGINE_NEXTEST_PIN = \"cargo-nextest\"",
         "the pin record holds cargo-nextest at its exact version (SPEC-428 R7, A7)",
         "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_the_engine_check_counts_only_the_pinned_nextest"
+      ],
+      [
+        "S42829-THE-COVERAGE-SITE-PINS-DENY",
+        ".github/workflows/coverage.yml",
+        "tool: cargo-deny@0.20.2\n",
+        "tool: cargo-deny\n",
+        "the coverage-python job's install names cargo-deny at its exact version (SPEC-428 R10, A1)",
+        "test_ci_workflows.CiToolsArePinnedAndJobsBounded.test_every_install_action_tool_names_an_exact_version"
       ]
     ]
   }
