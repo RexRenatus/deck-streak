@@ -73,6 +73,7 @@ conflict in deck-streak-sync: clash
 | slot | collection | a store's id slot: 0 for the server, 1 to 63 for an enrolled device |
 | erase gate | collection | the one switch under which a review, a retraction, a client record or a field history row may leave; only an erase opens it |
 | read port | collection | `CollectionRead`, what the server's contexts read of a collection, answered by the store or by ingest's schema-18 adapter |
+| review | anki-format | one row of a schema-18 collection's revlog table, read as Anki stored it |
 | media hash | media | the SHA-256 of a media file's bytes: the one identity the media store knows a file by |
 | certified name | media | `ds-`, a file's media hash in lowercase hex, and an optional extension: a name that carries its file's hash and reads back to itself |
 | imported name | media | any other plain media name, brought by an import and kept exactly as written; it claims no hash |

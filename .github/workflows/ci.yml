@@ -34,6 +34,13 @@ jobs:
       # A fresh checkout rebuilds the workspace anyway; incremental state would only fill the cache.
       CARGO_INCREMENTAL: "0"
     steps:
+      # SPEC-602: the test build outgrew the hosted image's free disk (no space left on device), so the
+      # job first removes toolsets it never uses and prints the free space before and after.
+      - name: free runner disk by removing the .NET, Android, Haskell and CodeQL toolsets
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /usr/local/.ghcup "$RUNNER_TOOL_CACHE/CodeQL"
+          df -h /
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -1073,6 +1080,12 @@ jobs:
         run: |
           CC_wasm32_unknown_unknown=clang-18 AR_wasm32_unknown_unknown=llvm-ar-18 \
             cargo build --locked -p deck-streak-collection --lib --target wasm32-unknown-unknown
+      # The format crate, which reads every foreign schema-18 file (SPEC-602 R12; ADR-622 D2),
+      # built for the web client's wasm32 target with the same C compiler and archiver.
+      - name: the format crate for the web client's target (wasm32)
+        run: |
+          CC_wasm32_unknown_unknown=clang-18 AR_wasm32_unknown_unknown=llvm-ar-18 \
+            cargo build --locked -p deck-streak-anki-format --lib --target wasm32-unknown-unknown
       # The sync core, which the server and both clients link (SPEC-509 R10; ADR-527 D1), built
       # for the same two targets: it depends on nothing, so a library build is the whole check.
       - name: the sync core for both clients' targets (wasm32 and iOS)

@@ -73,6 +73,7 @@ flowchart TB
     fsrs7
     companion
     collection
+    anki_format["anki-format"]
     media
     render
     sync
@@ -173,6 +174,7 @@ flowchart TB
   ingest --> kernel
   ingest --> collection
   ingest --> search
+  ingest --> anki_format
   vault --> kernel
   identity --> kernel
   agent --> kernel

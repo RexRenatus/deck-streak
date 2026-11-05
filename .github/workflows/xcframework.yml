@@ -68,6 +68,10 @@ jobs:
       # bundled SQLite compiles against the iOS SDK this image carries.
       - name: the collection store for the iOS target
         run: cargo build --locked -p deck-streak-collection --lib --target aarch64-apple-ios
+      # The format crate's library for an iPhone and an iPad (SPEC-602 R12; ADR-622 D2): it reads
+      # every foreign schema-18 file through the same bundled SQLite.
+      - name: the format crate for the iOS target
+        run: cargo build --locked -p deck-streak-anki-format --lib --target aarch64-apple-ios
       - name: the Swift bindings, in library mode over the device library
         run: |
           export PROTOC="$RUNNER_TEMP/protoc/bin/protoc"

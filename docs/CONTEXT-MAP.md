@@ -11,7 +11,7 @@ that amends this file in the same change. Never add an edge to make code compile
 
 ```context-map
 deck-streak-kernel        (shared kernel: ids, study day, track, verdict, errors, config, Db, data-rights port)  depends on: study-day
-deck-streak-ingest        (anti-corruption layer for Anki: sync, read, change gate, new-card queue, skip day)  depends on: kernel, collection, search
+deck-streak-ingest        (anti-corruption layer for Anki: sync, read, change gate, new-card queue, skip day)  depends on: kernel, collection, search, anki-format
 deck-streak-identity      (Telegram initData, the owner allow-list, sessions, linked sign-in)  depends on: kernel
 deck-streak-analytics     (daily rollup, per-language stats, five-pillar score, today snapshot)  depends on: kernel, ingest
 deck-streak-progression   (XP ledger and grant port, levels, tiers, badges, records, seasons)  depends on: kernel, ingest, xp
@@ -47,6 +47,7 @@ deck-streak-search        (the product's own search: one typed query, a closed g
 deck-streak-companion     (the scheduling companion's documented interface: schema v1, its codec, the handshake, the decision that fails closed, the Absent default; ADR-519)  depends on: nothing
 deck-streak-companion-slot  (the one substitutable companion body; the public body opens Absent; ADR-519)  depends on: companion
 deck-streak-collection    (the collection store, dormant: one file per user, its one opener, schema and migrations, the append-only review log and its erase gate, the read port and the store's data-rights port; ADR-530)  depends on: nothing
+deck-streak-anki-format   (anti-corruption layer for Anki's file formats: the defensive opener of every foreign schema-18 file, the read-only row readers and blob views, the schema-18 statements and the wire walk; ADR-622)  depends on: nothing
 deck-streak-media         (a media file known by its SHA-256, certified and imported names, write-once bindings, the one grammar of media names, the sweep plan, with no I/O; ADR-531)  depends on: nothing
 deck-streak-render        (the card renderer: note types, templates, fields, sections and filters drawn into a card's two faces, with DeckStreak's own text for each template problem, with no I/O; ADR-624)  depends on: nothing
 deck-streak-sync          (the sync core: typed operations, one encoding, the hybrid clock, the id allocator, the key, the field merge and the pending queue, with no I/O, for the server and both clients; ADR-527)  depends on: nothing
@@ -108,6 +109,17 @@ read port the server's contexts read a collection through: the store answers it,
 schema-18 adapter answers it over Anki's file. It depends on nothing and reads no clock, so both
 clients can link it. It is dormant: nothing live reads or writes the store, and ingest's live
 readers keep their drivers until the cut-over switches them to the port.
+
+`deck-streak-anki-format` is the anti-corruption layer for Anki's file formats (SPEC-602, ADR-622):
+every foreign schema-18 file, a collection or its media database, opens only through its defensive
+opener, which copies the bytes to a private file under a size bound, opens the copy read-only with
+SQLite's defensive settings and the `unicase` collation (ADR-623), and refuses a file whose digest,
+version, table set or planted objects differ from the schema snapshot before any row is read. It
+reads every row of all fourteen tables as DeckStreak's own types, each blob column as a typed view
+beside its raw bytes, and it holds the schema-18 statements and the wire walk that ingest's adapter
+imports, so ingest still translates Anki's rows into the product's. It depends on nothing and reads
+no clock, so both clients can link it. The store's foreign opener is the one left to re-point to it
+when the read port switches.
 
 `deck-streak-media` is the media core (SPEC-513, ADR-531): a file is known by the SHA-256 of its
 bytes, a certified `ds-` name carries that hash and an imported name is kept as written, a name is

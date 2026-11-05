@@ -24,8 +24,12 @@ const SQL_WORDS: [&str; 10] = [
     "SELECT", "INSERT", "UPDATE", "DELETE", "PRAGMA", "VACUUM", "CREATE", "WITH", "BEGIN", "DROP",
 ];
 
-/// The one file that may build a connection.
+/// The store's opener, one of the two files that may build a connection.
 const OPENER: &str = "crates/collection/src/store.rs";
+
+/// The two files that may build a connection: the store's opener and the format crate's
+/// defensive opener for foreign files (ADR-622 D2).
+const OPENERS: [&str; 2] = [OPENER, "crates/anki-format/src/opener.rs"];
 
 /// The calls that build a `SQLite` connection.
 const CONSTRUCTORS: [&str; 4] = [
@@ -184,7 +188,7 @@ fn every_sql_text_of_the_crate_is_a_registered_statement() {
 fn builders(sources: &[(String, String)]) -> Vec<String> {
     let mut found = Vec::new();
     for (path, text) in sources {
-        if path == OPENER {
+        if OPENERS.contains(&path.as_str()) {
             continue;
         }
         for (index, line) in text.lines().enumerate() {
@@ -206,36 +210,59 @@ fn no_other_file_of_the_workspace_builds_a_sqlite_connection() {
         Vec::<String>::new(),
         "connection builders"
     );
-    let opener = sources
-        .iter()
-        .find(|(path, _)| path == OPENER)
-        .map(|(_, text)| text.as_str())
-        .unwrap_or_default();
-    let calls = opener
-        .lines()
-        .filter(|line| CONSTRUCTORS.iter().any(|call| line.contains(call)))
-        .count();
+    let calls_in = |file: &str| {
+        sources
+            .iter()
+            .find(|(path, _)| path == file)
+            .map(|(_, text)| text.as_str())
+            .unwrap_or_default()
+            .lines()
+            .filter(|line| CONSTRUCTORS.iter().any(|call| line.contains(call)))
+            .count()
+    };
     assert!(
-        calls >= 2,
-        "the opener builds the store's and the foreign file's connections"
+        calls_in(OPENER) >= 2,
+        "the store's opener builds the store's and the foreign file's connections"
+    );
+    let openers = examined("opener file(s)", OPENERS.to_vec());
+    let silent: Vec<&str> = openers
+        .iter()
+        .copied()
+        .filter(|file| calls_in(file) == 0)
+        .collect();
+    assert_eq!(
+        silent,
+        Vec::<&str>::new(),
+        "each opener file builds at least one connection"
     );
 
-    // A planted tree: a second builder is refused by file and line, a comment is prose.
+    // A planted tree: a builder outside the two opener files is refused by file and line, in
+    // ingest's adapter and in another file of the format crate; a comment is prose.
     let planted = tempfile::tempdir().expect("a temporary directory");
-    plant(
-        planted.path(),
-        OPENER,
-        "fn open() { Connection::open(path); }\n",
-    );
+    for opener in OPENERS {
+        plant(
+            planted.path(),
+            opener,
+            "fn open() { Connection::open(path); }\n",
+        );
+    }
     plant(
         planted.path(),
         "crates/ingest/src/schema18.rs",
         "// Connection::open( is the opener's alone\nfn read() { \
          rusqlite::Connection::open_with_flags(path, flags); }\n",
     );
+    plant(
+        planted.path(),
+        "crates/anki-format/src/read.rs",
+        "fn rows() {\n    let c = Connection::open_in_memory();\n}\n",
+    );
     assert_eq!(
         builders(&workspace_sources(planted.path())),
-        ["crates/ingest/src/schema18.rs:2"],
-        "the planted builder"
+        [
+            "crates/anki-format/src/read.rs:2",
+            "crates/ingest/src/schema18.rs:2"
+        ],
+        "the planted builders"
     );
 }

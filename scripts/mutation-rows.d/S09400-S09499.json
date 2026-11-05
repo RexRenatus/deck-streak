@@ -49,7 +49,7 @@
       [
         "S09406-WIRE-VARINT-LIMIT",
         "ingest",
-        "src/wire.rs",
+        "../anki-format/src/wire.rs",
         "        if shift >= VARINT_LIMIT {",
         "        if shift > VARINT_LIMIT {",
         "structure::the_wire_walk_matches_the_predecessors_golden",
@@ -148,7 +148,7 @@
       [
         "S09418-WIRE-STALLED-STEP-IS-REFUSED",
         "ingest",
-        "src/wire.rs",
+        "../anki-format/src/wire.rs",
         "if next <= at {",
         "if next < at {",
         "wire_progress::a_reader_that_stays_is_refused_with_nothing_kept",
@@ -175,7 +175,7 @@
       [
         "S09421-WIRE-REFUSAL-IS-NOT-A-BREAK",
         "ingest",
-        "src/wire.rs",
+        "../anki-format/src/wire.rs",
         "return Err(WireError(NO_PROGRESS.to_owned()));",
         "break;",
         "wire_progress::a_reader_that_stays_is_refused_with_nothing_kept",
