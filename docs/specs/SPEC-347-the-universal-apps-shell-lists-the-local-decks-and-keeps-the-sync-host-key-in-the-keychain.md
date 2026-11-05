@@ -207,6 +207,7 @@ R14. **What the lane receives (#634).** The scheme `DeckStreak`, its Release arc
 | A13 | R12 over the tree, and planted trees breaking each rule refused by name | `python3 -m unittest discover -s scripts/tests -p test_ios_app_tree.py -k test_the_app_tree_carries_the_seam_and_keeps_the_credential_in_the_keychain` |
 | A14 | The `harness` job generates both specs, runs the app's tests on both simulators and archives the app for a generic iOS device with code signing off, all after the harness's steps and before the report; no other job, workflow or runner changes | `python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_app_is_generated_tested_and_archived_in_the_harness_job` |
 | A15 | The Release archive builds, and its executable's required-reason imports are all declared | `xcodebuild archive -project ios/DeckStreak.xcodeproj -scheme DeckStreak -configuration Release -destination generic/platform=iOS -archivePath "$RUNNER_TEMP/DeckStreak.xcarchive" CODE_SIGNING_ALLOWED=NO` (`harness`, step "the app, archived unsigned for a device") |
+| A16 | Choosing a deck hands the detail pane its review only once the review start has answered, so the default deck of a fresh install, which holds no card, is first handed over at its designed end and never while it is still loading, on the iPhone and on the iPad | the same shape, `-only-testing:DeckStreakTests/AppModelTests/test_a16_a_chosen_decks_review_shows_once_its_first_answer_is_in` |
 
 A1 and A2 are red over the lists without (1,3). A3 and A4 are red over a stub guard that admits
 every endpoint, wired where the guard will sit and committed alone before the guard. A5 is #623's
@@ -235,6 +236,7 @@ A11: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -desti
 A12: python3 -m unittest discover -s scripts/tests -p test_ios_thin_swift.py -k test_every_swift_file_keeps_its_role_its_doors_and_its_budget
 A13: python3 -m unittest discover -s scripts/tests -p test_ios_app_tree.py -k test_the_app_tree_carries_the_seam_and_keeps_the_credential_in_the_keychain
 A14: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_app_is_generated_tested_and_archived_in_the_harness_job
+A16: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:DeckStreakTests/AppModelTests/test_a16_a_chosen_decks_review_shows_once_its_first_answer_is_in
 ```
 
 ## 4. File manifest
@@ -470,3 +472,20 @@ Part 1's rows, which this part leaves as they are:
 - `Cargo.toml`: unchanged in this part; delivered by part 1
 - `Cargo.lock`: unchanged in this part; delivered by part 1
 - `changelog.d/ios-app-347.md`: unchanged in this part; delivered by part 1
+
+## 11. Amendments: a chosen deck review is handed to the detail pane once its first answer is in
+
+This amendment was cut at `dev` `549e4a52`. It changes R6 detail pane and adds A16; ADR-358 D11 decides it.
+
+- **What was measured.** In the step `app-tests` of the job `release-and-app`, A8, A9 and A11 failed on the iPhone simulator alone in 7 of 23 jobs, and A9 once on the iPad simulator alone (job 126751046067). No failure was an assertion on what the app showed: each was XCTest losing its automation channel to the app (a lost idle notification, a timed-out query, a failed launch or end).
+- **Where it starts.** The iPhone branch of A11 is the one act of the step that opens a review: it taps the default deck, and the pane then builds the card view of a review still loading, which the empty deck at once ends. After that tap the app did not idle for 55 s or more in 6 of the 7 jobs whose iPhone run failed (jobs 125950229908, 126670406983, 127069831839, 126946117990, 126669104649 and 126876461020), and in 1 of the 16 jobs whose iPhone run passed (job 125907410984). The iPad branch of A11 taps nothing, and A8 and A9 open no review.
+- **R6, the detail pane.** The pane shows the chosen deck review once the review start has answered: its first card, or its designed end for a deck with nothing to study. Until then it reads as it does with no deck chosen. `AppModel.openReview` builds the review, closes the one shown, awaits the start of the new one, and hands it to the pane unless the task that opened it was cancelled, as a changed choice cancels it. So the pane never builds a card view for a review still loading, and an empty deck never builds one.
+- **A16.** Section 3 gains A16, read in the step `app-tests` on both simulators, in `ios/AppTests/AppModelTests.swift`. The test opens a fresh collection through the launch argument the app reads (`-DSCollectionDirectory`), chooses its default deck, and records the phase of each review the model hands the pane at every turn of the main actor until the open returns; the first is the designed end. Its red comes first, over the seam alone with the open unchanged, where the first review handed over is still loading.
+- **The seam.** `AppModel.start(arguments:)` passes its arguments to `EngineSession.open(arguments:)` and keeps its default, so the app opens its collection exactly as before.
+- **R11.** `ios/swift-roles.json` records `ios/App/Sources/AppModel.swift` at 6 decisions, the ceiling of a model, for the one `guard` the open adds, and `ios/AppTests/AppModelTests.swift` as a test.
+- **What does not change.** No wait, timeout, retry, skip or job bound changes. A8, A9 and A11, their tests and their fence lines are unchanged, and no workflow line changes.
+
+Files this amendment changes that section 4 does not name:
+
+- `ios/AppTests/AppModelTests.swift`: A16, a new file
+- `changelog.d/ios-shell-review-after-first-answer.md`: this amendment entry, a new file

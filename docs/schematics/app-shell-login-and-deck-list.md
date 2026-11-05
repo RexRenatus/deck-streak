@@ -236,3 +236,30 @@ flowchart TB
 
 No job, workflow, runner or cargo command is added. The harness's own steps are unchanged, so a
 failure in them stops the job before the app's steps run, and the report still runs.
+
+## 9. Choosing a deck, after SPEC-347 section 11 (ADR-358 D11)
+
+Read at `dev` `549e4a52e2175626898d6b709b0d88d48a87027e`: the task keyed by the choice is
+`ios/App/Sources/DeckListView.swift:34`, the open `ios/App/Sources/AppModel.swift:69`, the review start
+`ios/App/Sources/ReviewModel.swift:64` and the card view in every phase but the end
+`ios/App/Sources/ReviewView.swift:33`. Section 7 ends where this begins.
+
+```mermaid
+sequenceDiagram
+  participant V as ShellView
+  participant M as AppModel
+  participant R as ReviewModel
+  participant S as EngineSession (app)
+  V->>M: the choice changes, then openReview() in the task keyed by it
+  M->>M: review set to nil, so the pane reads Choose a deck
+  M->>R: the review of the chosen deck, not yet handed to the pane
+  R->>S: choose the deck, run(7, 22)
+  R->>S: the next card from the queue
+  S-->>R: the first card, or nothing to study
+  R-->>M: start returns at a question, or at the end
+  M->>M: the task not cancelled, so review set to the opened one
+  M-->>V: the pane shows ReviewView, with the card view at a question and the designed end at the end
+```
+
+Before this amendment the open handed the pane the review first and awaited its start after, so the
+pane built a card view in the loading phase, and an empty deck then removed it at the end.
