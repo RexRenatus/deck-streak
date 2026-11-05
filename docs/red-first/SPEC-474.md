@@ -39,3 +39,12 @@ A3: green at 7acab2713d0ffd78abfd3ce7562142d2f06ff0e9
 - Each fence line selected its one test: one failed and one skipped at the red commit, one passed
   and one skipped at the green commit. The whole web suite ran 685 tests at the red commit, of which
   683 passed and exactly these two failed, and all 685 passed at the green commit.
+
+This record reaches dev through one merge commit, 501d9a9a, which carries the commits above
+unchanged and keeps both sides' lines in `formal/lean/Formal/Vectors.lean`, each import and each
+arm in sorted place. After it, one commit adds R10 and the formal ledger paths to the SPEC, and
+the rest change only the ledger census, the ledger and this record, never the reader, the entry
+or its vectors: 10e86b7b names the entry among the ledger test's new entries, and c18dc727 adds
+the entry's ledger row, keep with no obligation. The ledger test reads red by name at 501d9a9a and
+at 10e86b7b, and green at c18dc727. Nothing after c18dc727 changes the tests, the ledger, the entry
+or the web suite: `git diff --quiet c18dc727 HEAD -- formal scripts web` exits 0.
