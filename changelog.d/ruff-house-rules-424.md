@@ -12,3 +12,4 @@
 - A guard, `scripts/tests/test_computed_roots.py`, reads the syntax tree of every Python file under
   the same roots and proves that each repository root computed from `Path(__file__)` resolves to
   the repository root (SPEC-424, ADR-438).
+- The release carry's request helper now refuses any address that is not http or https.

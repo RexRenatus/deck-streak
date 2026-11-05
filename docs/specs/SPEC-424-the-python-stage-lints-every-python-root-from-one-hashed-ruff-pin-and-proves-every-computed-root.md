@@ -67,7 +67,7 @@ R3. **The install in CI.** Each job that runs the python stage (today `hygiene`)
     workflow installs ruff.
 R4. **The tool check.** `stage_python` checks `ruff` after `python3` and `cargo`; a missing ruff
     fails the stage with `missing tool: ruff (<install hint>)`, and the hint names the pin file and
-    the install command (SPEC-038 R4, as section 17 of SPEC-038 amends it).
+    the install command (SPEC-038 R4, as section 19 of SPEC-038 amends it).
 R5. **The arm's VOID readings.** After the three suites, whatever they found, the stage's ruff arm
     reads the pin from `scripts/ruff-requirements.txt`, compares `ruff --version` with
     `ruff <pin>`, lists the files with `ruff check --show-files`, and then runs `ruff check` and
@@ -160,7 +160,7 @@ R11 has no test, and R12 is judged by the `mutation-rows` check-run.
 | `scripts/mutation-rows.d/S42400-S42499.json` | `repo` | added: section 8's rows |
 | `docs/specs/SPEC-424-the-python-stage-lints-every-python-root-from-one-hashed-ruff-pin-and-proves-every-computed-root.md` | `repo` | added: this SPEC |
 | `docs/decisions/ADR-438-ruff-runs-in-the-python-stage-from-one-hashed-pin-and-a-run-off-its-pin-or-over-nothing-is-void.md` | `repo` | added: its ADR |
-| `docs/specs/SPEC-038-ci-runs-the-gate-in-parallel-jobs-and-only-dev-and-main-save-a-cache.md` | `repo` | changed: section 17, insert-only (R4's tools) |
+| `docs/specs/SPEC-038-ci-runs-the-gate-in-parallel-jobs-and-only-dev-and-main-save-a-cache.md` | `repo` | changed: section 19, insert-only (R4's tools) |
 | `docs/schematics/ci-jobs-and-caches.md` | `repo` | changed: a new last section, insert-only |
 | `docs/red-first/SPEC-424.md` | `repo` | added: the red-first record |
 | `changelog.d/ruff-house-rules-424.md` | `repo` | added: the fragment |
@@ -245,3 +245,65 @@ no ruff arm, `ruff.toml` selects nothing, the workflow installs no ruff, the gua
 nothing). A12's fence is in the guard from its first commit, so its red is the stub's empty skip
 list. A13 is `not red`: it pins the tree's nine computed roots, which resolve at the base, and
 arrives with the green commit.
+
+## 10. Amendments: the sites the settled set finds at the rebuild's dev, and their acceptance criteria
+
+Insert-only: this section is added, and the only other edits are the two SPEC-038 section numbers
+of R4 and section 4, which the merge moves from 17 to 19. Made by ADR-438 D10.
+
+This delivery was rebuilt by merging its branch onto current `dev`. Measured there, over the
+merged tree, with the pinned ruff and the merged `ruff.toml`: `ruff check` finds 11 sites, and
+`ruff format --check` would change one file. Each site is in code `dev` added after section 1 was
+measured.
+
+R13. **The cures.** At the head the gate's ruff finds nothing, and no family, rule, ignore,
+    per-file entry or banned name of R2 changes. By place:
+    - S324: `scripts/mutation_carry.py:268` (`blob_id`),
+      `scripts/tests/test_mutation_carry_census.py:40` (`blob`) and
+      `scripts/tests/test_mutation_carry_kills.py:1813` (`ADDED_ID`) pass `usedforsecurity=False`
+      to `hashlib.sha1`, each in the formatter's wrapping. Each digest is a git object name, never
+      a secret's, and the keyword changes no byte of it.
+    - TID251 (`os.chdir`): `scripts/tests/test_coverage_report.py:1453`, `:1457`, `:1475`,
+      `:1479`, `:1495` and `:1509`, in the three tests of `KillTheDefaultsInTheWorkingFolder`.
+      Each test starts the script in its temporary folder through the child, by `cwd=`, instead of
+      changing the test process's directory: the module's `run` takes `cwd=None` and passes it to
+      `subprocess.run`, and every assertion of the three tests keeps its bytes.
+    - S310: `scripts/mutation_carry.py:121` and `:129`, in the request helper `fetch`, cured by
+      R14.
+    - Format: `ruff format` rewraps the print calls of `tools/rust-baseline-budget/size_budget.py`,
+      and the script's output is byte-equal before and after.
+R14. **The request helper refuses every scheme but http and https.** `fetch` in
+    `scripts/mutation_carry.py` raises `ValueError` with the text `not an http or https address: `
+    followed by the address for every address whose scheme is not exactly `http` or `https`
+    followed by `://`, before it opens anything; the base step's caller prints it as a failed
+    request. An `http` or `https` address opens as it was given, with the same three headers and
+    `timeout=60`, through one branch per scheme in which `urllib.request.urlopen` takes a
+    `urllib.request.Request` whose address is that literal scheme and `://` followed by the rest:
+    the shape S310 accepts as an http or https open.
+
+**Computed roots.** `dev` added two computed repository roots after section 1 item 4 was measured:
+`scripts/coverage-report.py:24` (`REPO`) and `scripts/mutation_carry.py:55` (`ROOT`). Each is
+`parents[1]` from `scripts/`, so each resolves to the repository root; the guard of R9 proves both,
+and `LISTED_ROOTS` stays empty.
+
+| id | criterion | decided by |
+|---|---|---|
+| A14 | the request helper refuses a `file:` address of a file the test writes, `ftp://forge/x`, `data:,x`, `forge/x`, and `https` and `http` with no separator, each by `ValueError` with the refusal's whole text, and the planted opener records no call | `test_the_request_helper_refuses_every_scheme_but_http_and_https_before_it_opens` |
+| A15 | the request helper hands `https://forge/x?y=1` and `http://forge/x` to the opener as given, with the three headers and `timeout=60`, and returns the opener's answer | `test_the_request_helper_hands_an_http_or_https_address_to_the_opener_unchanged` |
+
+```acceptance
+A14: python3 -m unittest discover -s scripts/tests -p test_mutation_carry_kills.py -k test_the_request_helper_refuses_every_scheme_but_http_and_https_before_it_opens
+A15: python3 -m unittest discover -s scripts/tests -p test_mutation_carry_kills.py -k test_the_request_helper_hands_an_http_or_https_address_to_the_opener_unchanged
+```
+
+The files this amendment adds to the manifest of section 4, each with its change:
+
+- `scripts/mutation-equivalent.d/python.json`: changed: the merge keeps every record of `dev` and
+  adds the fingerprint keyword's record, and R13 adds the record of the mutant the python runner
+  lists on the keyword of `blob_id`
+- `scripts/mutation_carry.py`: changed: R13's keyword in `blob_id`, and R14 in `fetch`
+- `scripts/tests/test_coverage_report.py`: changed: R13's `cwd=` in `run` and in the three tests
+- `scripts/tests/test_mutation_carry_census.py`: changed: R13's keyword in `blob`
+- `scripts/tests/test_mutation_carry_kills.py`: changed: R13's keyword in `ADDED_ID`, and A14 and
+  A15
+- `tools/rust-baseline-budget/size_budget.py`: changed: R13's formatter rewrap of its print calls

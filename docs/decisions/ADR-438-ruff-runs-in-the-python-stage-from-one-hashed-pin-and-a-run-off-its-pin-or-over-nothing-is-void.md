@@ -290,6 +290,36 @@ Chosen against:
 - The guard in a delivery of its own: rejected because the guard and the lint are one review of the
   python stage's Python checks, decided together, and they share the stage's population.
 
+### D10. The sites the rebuild's dev adds are cured the same way, and the request helper refuses every scheme but http and https
+
+The rebuild merges this delivery's branch onto current `dev` and runs the pinned ruff over the
+merged tree (SPEC-424 section 10). What D3 decided holds: every site is cured in the delivery, and
+the rule set is not changed to admit one. The three S324 sites, `blob_id` in
+`scripts/mutation_carry.py`, `blob` in `scripts/tests/test_mutation_carry_census.py` and
+`ADDED_ID` in `scripts/tests/test_mutation_carry_kills.py`, take `usedforsecurity=False`: each
+digest is a git object name, never a secret's, and the keyword changes no byte of it. The six
+`os.chdir` sites of `scripts/tests/test_coverage_report.py` move into the child by `cwd=`, since
+their subject is the child's working folder, unlike `scripts/tests/test_mutation_rows_refusal.py`,
+whose subject is the process's own path entry and which D2 keeps under its per-file ignore. The two
+S310 sites become the refusal and the two-branch open of SPEC-424 R14: `fetch` refuses every
+address whose scheme is not `http` or `https` before it opens anything, and opens each of those two
+through a request whose address starts with its literal scheme, which S310 accepts as an http or
+https open. D7's kill criteria are unchanged.
+
+D6 and the context, read at the first build's base, are not edited. Three of the places they cite
+sit elsewhere after the merge: `OWNER_LAYOUT`, which D6 cites at
+`scripts/tests/test_ci_workflows.py:62-68`, sits at lines 83-89, and the computed roots the context
+lists at `scripts/dynamic-imports-check.py:27` and `scripts/public-scrub.py:59` sit at lines 31 and
+63.
+
+Chosen against:
+
+- A per-file ignore or a `# noqa` for the new sites: rejected because the set is settled, and a
+  narrowing is a weakening that only a signed ruling admits.
+- `urllib.request.build_opener` in place of `urlopen`: rejected because the opener it builds opens
+  `file:` addresses too, and it hides the call from the rule instead of limiting what it opens.
+- Opening `https` alone: rejected because the tests' local forge answers over http.
+
 ## Decision Outcome
 
 ruff runs in `stage_python` from one hashed pin, over five named roots, with the settled set.
