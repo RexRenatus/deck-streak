@@ -1,0 +1,174 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S39700-KILLED-NEEDS-ONE-FAILED-CASE",
+        "scripts/swift_mutants.py",
+        "mutated.started == 1 and mutated.failed == 1 and mutated.code != 0:",
+        "mutated.started == 1 and mutated.failed >= 0 and mutated.code != 0:",
+        "a row reads KILLED only when its killer started one case and failed exactly one (SPEC-397 R6)",
+        "test_swift_mutants.TheVerdictOverEveryClass.test_the_verdict_over_every_observed_class"
+      ],
+      [
+        "S39701-SURVIVED-NEEDS-A-ZERO-EXIT",
+        "scripts/swift_mutants.py",
+        "mutated.started == 1 and mutated.failed == 0 and mutated.code == 0:",
+        "mutated.started == 1 and mutated.failed == 0 and mutated.code >= 0:",
+        "a row reads SURVIVED only when its killer passed with a zero exit (SPEC-397 R6)",
+        "test_swift_mutants.TheVerdictOverEveryClass.test_the_verdict_over_every_observed_class"
+      ],
+      [
+        "S39702-GREEN-UNMUTATED-NEEDS-EXECUTED-ONE",
+        "scripts/swift_mutants.py",
+        "        and run.executed == \"1\"\n",
+        "        and run.executed != \"\"\n",
+        "an unmutated killer is green only when the runner executed exactly one test (SPEC-397 R6)",
+        "test_swift_mutants.TheVerdictOverEveryClass.test_the_verdict_over_every_observed_class"
+      ],
+      [
+        "S39703-A-FIND-NOT-ONCE-IS-NEVER-INSTALLED",
+        "scripts/swift_mutants.py",
+        "if baseline_green(baseline[row[\"killer\"]]) and occurs == 1:",
+        "if baseline_green(baseline[row[\"killer\"]]) and occurs >= 1:",
+        "a mutant whose find does not occur exactly once is never installed or run (SPEC-397 R5)",
+        "test_swift_mutants.AFakeKillerReadsEachVerdict.test_a_fake_killer_reads_each_verdict_and_the_file_is_restored"
+      ],
+      [
+        "S39704-THE-RESTORE-WRITES-THE-SAVED-BYTES",
+        "scripts/swift_mutants.py",
+        "    path.write_bytes(original)\n",
+        "",
+        "after each mutant the sweep writes the file's saved bytes back before it checks them (SPEC-397 R5)",
+        "test_swift_mutants.AFakeKillerReadsEachVerdict.test_a_fake_killer_reads_each_verdict_and_the_file_is_restored"
+      ],
+      [
+        "S39705-EACH-KILLER-RUN-IS-BOUNDED",
+        "scripts/swift_mutants.py",
+        "out, _ = proc.communicate(timeout=run_seconds)",
+        "out, _ = proc.communicate()",
+        "each killer run is bounded by the run seconds the step passes (SPEC-397 R5)",
+        "test_swift_mutants.AFakeKillerReadsEachVerdict.test_a_fake_killer_reads_each_verdict_and_the_file_is_restored"
+      ],
+      [
+        "S39706-PAST-THE-BOUND-THE-GROUP-ENDS",
+        "scripts/swift_mutants.py",
+        "os.killpg(os.getpgid(proc.pid), signal.SIGKILL)",
+        "proc.kill()",
+        "past its bound a killer's whole process group is ended, not only its own process (SPEC-397 R5)",
+        "test_swift_mutants.AFakeKillerReadsEachVerdict.test_a_fake_killer_reads_each_verdict_and_the_file_is_restored"
+      ],
+      [
+        "S39707-AN-ID-IS-SW-AND-FIVE-DIGITS",
+        "scripts/swift_mutants.py",
+        "ID = re.compile(r\"SW\\d{5}\")",
+        "ID = re.compile(r\"SW\\d+\")",
+        "a Swift row's id is SW and exactly five digits (SPEC-397 R2)",
+        "test_swift_mutants.EachRowDefectIsRefusedByName.test_each_planted_row_defect_is_refused_by_name"
+      ],
+      [
+        "S39708-IDS-ARE-UNIQUE-ACROSS-FILES",
+        "scripts/swift_mutants.py",
+        "        name = path.relative_to(root).as_posix()\n",
+        "        name = path.relative_to(root).as_posix()\n        seen = {}\n",
+        "a Swift row's id is unique across every package's row file, not only within its own (SPEC-397 R2)",
+        "test_swift_mutants.EachRowDefectIsRefusedByName.test_each_planted_row_defect_is_refused_by_name"
+      ],
+      [
+        "S39709-A-METHOD-DECLARED-TWICE-IS-REFUSED",
+        "scripts/swift_mutants.py",
+        "    elif methods > 1:\n",
+        "    elif methods > 2:\n",
+        "a killer whose method is declared twice in its class is refused (SPEC-397 R2)",
+        "test_swift_mutants.EachRowDefectIsRefusedByName.test_each_unresolvable_killer_is_refused_by_name"
+      ],
+      [
+        "S39710-AN-APPROVAL-NEEDS-AN-APPROVER",
+        "scripts/swift_mutants.py",
+        " and str(entry.get(\"approval\", \"\")).strip()",
+        "",
+        "a departure is approved only by an entry holding both a reason and an approval (SPEC-397 R4)",
+        "test_swift_mutants.ARowLeavesOnlyWithItsFileOrAnApproval.test_a_row_leaves_only_with_its_file_or_an_approval"
+      ],
+      [
+        "S39711-AN-EMPTY-ROW-FILE-IS-VOID",
+        "scripts/swift_mutants.py",
+        "    if not rows:\n        return EXIT_VOID\n",
+        "",
+        "a sweep that examined no row exits 3, never 0 (SPEC-397 R5)",
+        "test_swift_mutants.AFakeKillerReadsEachVerdict.test_a_fake_killer_reads_each_verdict_and_the_file_is_restored"
+      ],
+      [
+        "S39712-HARNESS-WIRE-SWEEPS-ITS-PACKAGE",
+        ".github/workflows/xcframework.yml",
+        "swift_mutants.py sweep --package ios/HarnessWire --report",
+        "swift_mutants.py census --package ios/HarnessWire --report",
+        "the harness-wire job sweeps the codec package's rows through the module (SPEC-397 R7)",
+        "test_ci_workflows.EachSwiftRowFileIsSweptByItsPackagesJob.test_each_swift_row_file_is_swept_by_one_job_through_the_module"
+      ],
+      [
+        "S39713-CARD-ISOLATION-SWEEPS-ITS-PACKAGE",
+        ".github/workflows/xcframework.yml",
+        "swift_mutants.py sweep --package ios/CardIsolation --report",
+        "swift_mutants.py census --package ios/CardIsolation --report",
+        "the card-isolation job sweeps the card view's package rows through the module (SPEC-397 R7)",
+        "test_ci_workflows.EachSwiftRowFileIsSweptByItsPackagesJob.test_each_swift_row_file_is_swept_by_one_job_through_the_module"
+      ],
+      [
+        "S39714-HARNESS-WIRE-RUN-BOUND",
+        ".github/workflows/xcframework.yml",
+        "--package ios/HarnessWire --report \"$REPORT\" --run-seconds 60\n",
+        "--package ios/HarnessWire --report \"$REPORT\" --run-seconds 120\n",
+        "the harness-wire sweep's run bound is three times the measured cost per run, rounded up to the minute (SPEC-397 R8)",
+        "test_ci_workflows.EachSwiftRowFileIsSweptByItsPackagesJob.test_each_sweep_is_bounded_from_its_measured_cost"
+      ],
+      [
+        "S39715-CARD-ISOLATION-RUN-BOUND",
+        ".github/workflows/xcframework.yml",
+        "--package ios/CardIsolation --report \"$REPORT\" --run-seconds 60\n",
+        "--package ios/CardIsolation --report \"$REPORT\" --run-seconds 120\n",
+        "the card-isolation sweep's run bound is three times the measured cost per run, rounded up to the minute (SPEC-397 R8)",
+        "test_ci_workflows.EachSwiftRowFileIsSweptByItsPackagesJob.test_each_sweep_is_bounded_from_its_measured_cost"
+      ],
+      [
+        "S39716-THE-MODULE-STARTS-THE-MACOS-JOBS",
+        ".github/workflows/apple-on-change.yml",
+        "      - \"scripts/swift_mutants.py\"\n",
+        "",
+        "a change to the Swift row module starts the macOS jobs (SPEC-397 R9)",
+        "test_ci_workflows.TheAppleBuildRunsFromOneBody.test_the_change_caller_runs_the_build_on_each_apple_path"
+      ],
+      [
+        "S39717-THE-ROWS-JOB-RUNS-THE-SWIFT-RETIRED-CHECK",
+        ".github/workflows/ci.yml",
+        " python3 scripts/swift_mutants.py retired --base HEAD^1 || rc=1;",
+        "",
+        "the rows job's retired step runs the Swift retired check beside the band rows' check (SPEC-397 R10)",
+        "test_mutation_workflows.TheRowsJobHoldsTheSwiftRows.test_the_rows_job_runs_the_swift_retired_check_on_a_diff"
+      ],
+      [
+        "S39718-THE-MODULE-IMPORTS-ONLY-THE-STDLIB",
+        "scripts/swift_mutants.py",
+        "import sys\nimport time\n",
+        "import sys\nimport time\n\nimport yaml\n",
+        "the Swift row module imports only the standard library (SPEC-397 R12)",
+        "test_swift_mutants.TheModuleImportsOnlyTheStandardLibrary.test_the_module_imports_only_the_standard_library"
+      ],
+      [
+        "S39719-HARNESS-WIRE-TIMEOUT-IN-ITS-BAND",
+        ".github/workflows/xcframework.yml",
+        "    timeout-minutes: 5\n    env:\n      REPORT: ${{ github.workspace }}/harness-wire-report\n",
+        "    timeout-minutes: 30\n    env:\n      REPORT: ${{ github.workspace }}/harness-wire-report\n",
+        "the harness-wire job's time limit lies in the band its measured cost gives (SPEC-397 R8)",
+        "test_ci_workflows.EachSwiftRowFileIsSweptByItsPackagesJob.test_each_sweep_is_bounded_from_its_measured_cost"
+      ],
+      [
+        "S39720-CARD-ISOLATION-TIMEOUT-IN-ITS-BAND",
+        ".github/workflows/xcframework.yml",
+        "    timeout-minutes: 10\n    env:\n      REPORT: ${{ github.workspace }}/card-isolation-report\n",
+        "    timeout-minutes: 30\n    env:\n      REPORT: ${{ github.workspace }}/card-isolation-report\n",
+        "the card-isolation job's time limit lies in the band its measured cost gives (SPEC-397 R8)",
+        "test_ci_workflows.EachSwiftRowFileIsSweptByItsPackagesJob.test_each_sweep_is_bounded_from_its_measured_cost"
+      ]
+    ]
+  }
+}
