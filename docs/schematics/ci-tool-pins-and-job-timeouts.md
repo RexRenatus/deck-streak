@@ -82,7 +82,7 @@ and the rulesets) are no input kind zizmor collects.
 flowchart LR
   pr["a push to the pull request"] --> hyg["hygiene job<br/>scripts/tests, A1 to A7"]
   pr --> wl["workflow-lint job<br/>zizmor over .github"]
-  pr --> rows["mutation-rows job<br/>S42800 to S42828"]
+  pr --> rows["mutation-rows job<br/>S42800 to S42829"]
   pr --> jobs["each install job<br/>its install line names its pin"]
   hyg --> ci["ci, the required aggregate"]
   wl --> ci
@@ -95,3 +95,17 @@ there, by name. The rows on the workflow files are killed by the live checks A1,
 rows on the helpers by the planted checks A2, A4 and A6 and by the live ones; and the three on
 the engine check's coupling, its matcher and the pin record, by A7's plants and the live engine
 check.
+
+## 6. Over the rebuild base
+
+The figures above were read over SPEC-428 section 1's base. Over the rebuild base (SPEC-428
+section 10), the pin check reads 23 sites with 25 entries in 6 workflow files, the control 23
+`uses` lines, the timeout check 55 jobs that run steps and 4 call jobs, and zizmor's operand 17
+workflow files and `.github/dependabot.yml`, 18 inputs. One site joins section 3's cures:
+
+| file:line | job | before | after |
+|---|---|---|---|
+| `.github/workflows/coverage.yml:234` | `coverage-python` | `cargo-deny` | the version job 127139849636 installed |
+
+The `cargo-nextest` and `zizmor` entries of section 3 take the versions their own jobs install
+over this base (SPEC-428 R10, the note in ADR-442).

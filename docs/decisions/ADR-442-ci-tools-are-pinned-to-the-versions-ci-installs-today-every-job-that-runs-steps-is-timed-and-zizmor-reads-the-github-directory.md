@@ -262,3 +262,24 @@ refusing 0, and 29 rows show that each check observes what it holds.
 SPEC-428; SPEC-002 R10 (actions pinned by full commit sha); ADR-055 and its note (the
 `workflow-lint` job); SPEC-038 R14 (the engine job's check); SPEC-191 (the warm cache job);
 SPEC-340 (the server audit job).
+
+## Note: the pins re-read over the rebuild base
+
+Recorded by SPEC-428 R10. D1 to D9 are unchanged. The delivery is rebuilt over current dev by one
+merge of its first head, so D4's rule is applied again at that base: each site names the version
+its own job installs there. `cargo-nextest` moves from 0.9.146 to 0.9.149 at the `rust`,
+`engine`, `release` and `warm` sites, and `zizmor` from 1.30.1 to 1.31.1 at the `workflow-lint`
+site, each a re-pin under D6, never a removal; `cargo-deny` stays at 0.20.2. A site the base
+added, `coverage.yml`'s `coverage-python` install, takes `cargo-deny@0.20.2`, the version its own
+job (127139849636) installed. Each version is read from its own job's log at the rebuild base:
+the `rust` job 127116432750, the `engine` job 127116432712, the `release` job 127116432786, the
+`hygiene` job 127116432637, the `workflow-lint` job 127116432676 and `engine-measure.yml`'s
+`measure` job 127103555437. Row S42829 joins rows S42800-S42828 for the `coverage-python` site,
+so the rows number 30.
+
+### Consequences of the note
+
+- Good, because no pin moves a tool back a release: each pinned site installs what its own job
+  installed unpinned.
+- Bad, because a pin read over one base goes stale over the next, so a rebuild reads every site
+  again, as this note does.

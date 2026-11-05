@@ -1,7 +1,6 @@
 # SPEC-428: every install-action tool names an exact version, every job that runs steps sets its own timeout, and zizmor reads the `.github` directory
 
-- **Issue:** none; this delivery lands on dev after the release pull request #822 and closes
-  nothing.
+- **Issue:** none; this delivery closes nothing.
   **Context(s):** CI (`.github/workflows/`) and its tests (`scripts/tests/`); no crate, no Mini
   App source, no script and no ruleset changes.
 - **Decided by:** ADR-442 (exact versions read as a name, `@` and three numbers, at every site the
@@ -134,12 +133,13 @@ All seven are read red and green from CI's `hygiene` job, which runs `scripts/te
 | `.github/workflows/engine-measure.yml` | CI | changed: the `measure` site's `tool` input names its exact version |
 | `.github/workflows/release.yml` | CI | changed: the `audit-sync-server` site's `tool` input names its exact version |
 | `.github/workflows/rust-cache.yml` | CI | changed: the `warm` site's `tool` input names each exact version, equal to `ci.yml`'s `rust` input |
+| `.github/workflows/coverage.yml` | CI | changed: the `coverage-python` site's `tool` input names its exact version (R10) |
 | `.github/workflows/changelog.yml` | CI | changed: `fragment` sets `timeout-minutes: 5` |
 | `.github/workflows/testflight-rerelease-check.yml` | CI | changed: `rerelease` sets `timeout-minutes: 10` |
 | `scripts/tests/test_ci_workflows.py` | CI tests | changed: the class `CiToolsArePinnedAndJobsBounded` (A1 to A7) and its block of helpers before `TheAppleBuildRunsFromOneBody`; `engine_job_problems`' one matcher line (R7) |
 | `scripts/tests/test_rust_cache_workflow.py` | CI tests | changed: `TOOLS` names the pinned entries |
 | `scripts/tests/test_release_workflow.py` | CI tests | changed: the audit job's expected `tool` names its pinned entry |
-| `scripts/mutation-rows.d/S42800-S42899.json` | CI tests | added: rows S42800 to S42828 (section 9) |
+| `scripts/mutation-rows.d/S42800-S42899.json` | CI tests | added: rows S42800 to S42829 (sections 9 and 10) |
 | `docs/specs/SPEC-428-every-install-action-tool-names-an-exact-version-every-job-that-runs-steps-sets-its-own-timeout-and-zizmor-reads-the-github-directory.md` | docs | added: this file |
 | `docs/decisions/ADR-442-ci-tools-are-pinned-to-the-versions-ci-installs-today-every-job-that-runs-steps-is-timed-and-zizmor-reads-the-github-directory.md` | docs | added: the decision |
 | `docs/decisions/ADR-055-the-gate-runs-in-parallel-jobs-and-only-a-push-saves-a-cache.md` | docs | changed: one note inserted after its last line (R9) |
@@ -223,13 +223,63 @@ write. No `@phx covers` line under `formal/` names a file this delivery changes.
 | S42826 | the engine check compares entries with the pin record | the compared operand back to the bare `"cargo-nextest"` | A7 |
 | S42827 | the engine check compares whole entries, the version included | each entry cut to its name before `@` (`t.strip().split("@")[0]`) and compared with the bare name | A7 |
 | S42828 | the pin record holds `cargo-nextest` at its exact version | its value made the bare `"cargo-nextest"` | A7 |
+| S42829 | the `coverage-python` site's `cargo-deny` names its version | the version dropped | A1 |
 
 Each row's anchor is unique in its file and byte-identical to the line or lines the mutant
 replaces; the rows on the `engine` and `release` sites anchor from a line unique to their job
 down to the site's `tool` line. Each killer is the criterion's test, run by CI's `mutation-rows`
-job. The fourteen rows on workflow files are killed by A1, A3 and A5, which read the live tree;
+job. The fifteen rows on workflow files are killed by A1, A3 and A5, which read the live tree;
 the fifteen on `scripts/tests/test_ci_workflows.py` by the planted tests and the live ones, all in a
 module that runs only in CI. S42826 and S42827 anchor on `engine_job_problems`' matcher and
 S42828 on the pin record's line, each find written from the cure's text: A7's record plant kills
 S42826, its another-version plant S42827, and its bare-name plant S42828, which the live engine
 test (SPEC-038 R14) reads red too.
+
+## 10. The rebuild on current dev, measured
+
+The delivery was first written over the base of section 1. It is rebuilt over current dev by one
+merge of its first head, with no commit rebased, and the cures below on top. Every figure here was
+read at the rebuild's base, the merge's first parent.
+
+- **Tools with no version.** `git grep -c -E 'uses:[[:space:]]*taiki-e/install-action@' <base>
+  -- .github/workflows` names 23 sites in 6 workflow files. 14 name an exact version for every
+  tool (`cargo-mutants` at 6, `cargo-nextest` at 7 and `cargo-llvm-cov` at 1). The other 9 name
+  11 entries with none: the 8 sites of section 1, and `coverage.yml`'s `coverage-python` site,
+  `cargo-deny` (`coverage.yml:234`), which a later delivery added.
+- **The versions CI installs today.** Each unversioned install at the base logs
+  `installing <tool>@latest`, then the version it installed. The `rust` job (127116432750)
+  installed `cargo-nextest` 0.9.149 and `cargo-deny` 0.20.2; the `engine` job (127116432712) and
+  the `release` job (127116432786) `cargo-nextest` 0.9.149; the `hygiene` job (127116432637)
+  `cargo-deny` 0.20.2; the `workflow-lint` job (127116432676) `zizmor` 1.31.1; and
+  `coverage.yml`'s `coverage-python` job (127139849636) and `engine-measure.yml`'s `measure` job
+  (127103555437) `cargo-deny` 0.20.2. The first head pinned `cargo-nextest` at 0.9.146 and
+  `zizmor` at 1.30.1, the versions those jobs installed over section 1's base; over this base
+  those pins would move each tool back a release, which ADR-442 D4 refuses.
+- **Jobs with no timeout.** The base holds 59 jobs in 17 workflow files. 4 call a reusable
+  workflow by their own `uses`; of the other 55, 53 set `timeout-minutes` and 2 set none,
+  `fragment` and `rerelease`, as in section 1.
+- **What zizmor audits.** The base's `workflow-lint` job runs zizmor over `.github/workflows`, 17
+  workflow files. `.github/dependabot.yml` holds 4 update entries, each with a cooldown, and is
+  still never audited.
+
+R10. Over the rebuild base, R5 and R7 read with these sites and versions. Each of the 9
+     unversioned sites names each of its 11 entries at the version its own job installed there:
+     `cargo-nextest` at 0.9.149, `cargo-deny` at 0.20.2 and `zizmor` at 1.31.1.
+     `rust-cache.yml`'s `warm` input stays equal to `ci.yml`'s `rust` input, the pin record
+     `ENGINE_NEXTEST_PIN` holds `cargo-nextest@0.9.149`, and R5's timeouts and zizmor operand hold
+     unchanged. No other line of any workflow changes. A1 and the last criterion of section 3
+     hold it.
+
+The cures over the rebuild base, and why each test line moved:
+
+- **The re-pins.** `cargo-nextest` moves from 0.9.146 to 0.9.149 at the `rust`, `engine`,
+  `release` and `warm` sites, and `zizmor` from 1.30.1 to 1.31.1 at the `workflow-lint` site,
+  each a re-pin under ADR-442 D6, never a pin removed. `cargo-deny` stays at 0.20.2.
+- **The new site.** `coverage.yml`'s `coverage-python` install names `cargo-deny@0.20.2`, with
+  its own row, S42829.
+- **The test lines that follow the base,** none of them an assertion's logic: the pin record and
+  the plants' pinned strings take the re-pinned versions; the `rust` site's place in the plants is
+  `step 4`, since the base added a step before it; and the plant that moves a timeout onto a step
+  anchors on `base-is-dev` as the base now spells it. Each moved line is disclosed in
+  `docs/red-first/SPEC-428.md`.
+- **The rows.** Each anchor is read again from the cured text, once in its file.
