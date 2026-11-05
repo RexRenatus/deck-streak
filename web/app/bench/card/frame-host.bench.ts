@@ -61,7 +61,9 @@ const INPUTS: Input[] = [
   ...generated(GENERATED_CARDS)
 ];
 
-test('frameCard', async ({ bench }) => {
+const BOUND_MS = 100_000; // 1.5 x its worst CI time, 62995 ms (job 127198761633), rounded up
+
+test('frameCard', { timeout: BOUND_MS }, async ({ bench }) => {
   await bench('frameCard', () => {
     for (const input of INPUTS) frameCard(input.html, input.css, 'Card', input.classes);
   }).run();

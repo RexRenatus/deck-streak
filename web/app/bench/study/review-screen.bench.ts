@@ -42,7 +42,9 @@ function showAnswer(target: HTMLElement): HTMLButtonElement {
   return found;
 }
 
-test('ReviewScreen', async ({ bench }) => {
+const BOUND_MS = 60_000; // the floor: 1.5 x its worst CI time, 23082 ms (job 127064902478), is less
+
+test('ReviewScreen', { timeout: BOUND_MS }, async ({ bench }) => {
   await bench('ReviewScreen', async () => {
     const target = document.body.appendChild(document.createElement('div'));
     const screen = mount(ReviewScreen, { target, props: { client: async () => CLIENT } });

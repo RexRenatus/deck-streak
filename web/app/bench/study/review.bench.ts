@@ -27,7 +27,9 @@ function session(cards: number): ReviewEvent[] {
 
 const EVENTS = session(100);
 
-test('step', async ({ bench }) => {
+const BOUND_MS = 60_000; // the floor: 1.5 x its worst CI time, 1710 ms (job 127198761633), is less
+
+test('step', { timeout: BOUND_MS }, async ({ bench }) => {
   await bench('step', () => {
     let state: ReviewState = { phase: 'loading', side: 'question' };
     for (const event of EVENTS) state = step(state, event).state;

@@ -61,7 +61,9 @@ const INPUTS: Input[] = [
   ...generated(GENERATED_CARDS)
 ];
 
-test('frameDocument', async ({ bench }) => {
+const BOUND_MS = 80_000; // 1.5 x its worst CI time, 50255 ms (job 127198761633), rounded up
+
+test('frameDocument', { timeout: BOUND_MS }, async ({ bench }) => {
   await bench('frameDocument', () => {
     for (const input of INPUTS) frameDocument(input.html, input.css, input.classes);
   }).run();

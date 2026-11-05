@@ -60,6 +60,7 @@ A27: green at ab29cc97: test_release_rust_ceiling.py, 13 tests OK (read locally)
 A28: green at ab29cc97: test_release_python_ceiling.py, 19 tests OK (read locally)
 A29: green at a22d2b21: test_fsrs7_pin.py, 1 test OK, the planted tempfile case included (read locally)
 A30: green at a22d2b21: test_coverage_report.py, 41 tests OK (read locally)
+A31: red at 32d50501: test_each_web_bench_passes_its_own_measured_bound: AssertionError: unexpectedly None : frame-host::frameCard: its test call passes no bound (read locally: 4 of 4 benches failing, each with no bound)
 ```
 
 A1 and A3 to A14 were committed with two stub scripts that keep every argument and decide
