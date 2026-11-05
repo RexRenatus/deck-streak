@@ -107,6 +107,8 @@ Read from the tree at `dev` 83846ea3 by `git show 83846ea3:<path>`:
 | A4 | the Rust leg's cargo-mutants step ends on R6's line, after the line that records the exit; the exits it passes equal `WHOLE_EXITS` read from the verdict's text, its other arm ends `exit "$rc"`, and the upload after it runs under `always()` (R6, R7) | red at the base: the step has no such line | `test_mutation_workflows.TheMutantLegReadsRedWithNoWholeReport.test_the_rust_leg_fails_its_job_on_every_exit_outside_the_whole_exits` |
 | A5 | the line's reader refuses, by name, each planted shape: no line, an exit 4 added, an exit 2 dropped, an arm ending `true`, the line before the exit is recorded; the fixed shape passes (R6) | not red: it plants its own shapes | `test_mutation_workflows.TheMutantLegReadsRedWithNoWholeReport.test_the_colour_reader_refuses_each_planted_shape` |
 | A6 | SPEC-332's and SPEC-416's tests and `test_rust_cache_workflow.py` pass unchanged (R4, R5, R8) | not red: they pin what the base already did, and guard the change | the four SPEC-332 and SPEC-416 classes, and `test_rust_cache_workflow`, unchanged |
+| A13 | `mutation-rust`'s last step, after the upload under `always()`, fails a leg whose own baseline is not green: its `if:` is R17's, its last line is `exit 1`, and it swallows nothing (R17) | red at the commit that carries the test, with every workflow untouched | `test_mutation_workflows.py`, `test_a_leg_whose_baseline_is_not_green_fails_its_job_after_its_report_is_kept` |
+| A14 | the colour step's reader refuses, by name, each planted shape: no step, the step before the upload, a green-baseline `if:`, the Rust condition dropped, `exit 0`, `\|\| true`, `continue-on-error` and no baseline step; the fixed shape passes (R17) | not red: it plants its own shapes | `test_mutation_workflows.py`, `test_the_baseline_colour_reader_refuses_each_planted_shape` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_rows_jobs_fetch_graph.py -k test_each_baseline_job_of_every_workflow_fetches_after_its_cache_restore_and_before_cargo_mutants
@@ -116,6 +118,8 @@ A4: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py 
 A5: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_the_colour_reader_refuses_each_planted_shape
 A6: python3 -m unittest discover -s scripts/tests -p test_rows_jobs_fetch_graph.py -k EveryRowsJobFetchesTheLockedGraph -k TheJudgeRefusesEachPlantedShape -k EveryMutantsJobFetchesTheLockedGraph -k TheJudgeRefusesEachPlantedBaselineShape
 A6: python3 -m unittest discover -s scripts/tests -p test_rust_cache_workflow.py
+A13: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_a_leg_whose_baseline_is_not_green_fails_its_job_after_its_report_is_kept
+A14: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_the_baseline_colour_reader_refuses_each_planted_shape
 ```
 
 Every criterion is read red and green from CI's `hygiene` job, which runs `scripts/tests`. Each
@@ -253,3 +257,35 @@ SPEC's number and band, with its own red-first lines appended to `docs/red-first
 | A10 | the survivors step passes `--rows-legs` from the size job's output (R14) | `test_mutation_workflows`, a test named for it in the next pull request |
 | A11 | `LEG_CEILING` equals the derivation, `{"ci": 190, "battery": 218}`, and every pin of R15 follows (R15) | `test_dispatch_shards` and `test_mutation_verdict`, their ceiling tests |
 | A12 | each row of R16 is killed by its criterion's test (R16) | CI's `mutation-rows` legs, by id |
+
+## 11. At the leg's own baseline: the colour reads the baseline too
+
+Read at the cut this delivery was rebuilt on. `ci.yml`'s `mutation-rust` runs its own unmutated
+baseline in a step of its own (`id: baseline`, ADR-509) before cargo-mutants, which runs only on a
+green record and with `--baseline=skip`. That step always succeeds and records its exit, so a red,
+unbounded or unrecorded baseline never reaches R6's line, and such a leg concluded success while
+the verdict read it VOID by name. R6's line now judges cargo-mutants' own exits, and R17 carries
+ADR-475 D4's rule to the baseline. With R17 this pull request delivers every item #827 leaves
+open, so it closes #827; #830 stays open for section 10.
+
+- **R17.** `mutation-rust`'s last step, right after its upload under `if: ${{ always() }}`, is
+  named `a leg whose own baseline is not green fails its job, after its report is kept`, runs under
+  `if: ${{ needs.mutation-plan.outputs.rust == 'true' && steps.baseline.outputs.green != 'true' }}`,
+  echoes the shard and the exit its baseline recorded, and ends `exit 1`, swallowing nothing (no
+  `||`, no `set +e`, no `continue-on-error`). The baseline step, its record, the cargo-mutants step
+  and the verdict's reading of the record are unchanged (ADR-509), and R8 holds.
+- **R18.** Rows `S45812` to `S45814` (the table below), each killed by A13.
+
+| stem | file | mutant | killer |
+|---|---|---|---|
+| `S45812-THE-LEG-STAYS-GREEN-ON-A-RED-BASELINE` | `.github/workflows/ci.yml` | the colour step's `exit 1` becomes `exit 0` | A13 |
+| `S45813-THE-COLOUR-STEP-RUNS-ON-A-GREEN-BASELINE` | `.github/workflows/ci.yml` | its `green != 'true'` becomes `green == 'true'` | A13 |
+| `S45814-THE-COLOUR-STEP-RUNS-WITH-NO-RUST-MUTANTS` | `.github/workflows/ci.yml` | its `if:` loses its Rust condition | A13 |
+
+Figures read at the old base and changed since: `ROWS_MAX_LEGS` reads 18 under the owner's signed
+ruling on the rows legs, and `LEG_CEILING` reads `{"ci": 189, "battery": 234}`; section 10's pull
+request re-derives R15 and A11 from the figures at its own cut. A1 to A6 and their rows are
+unchanged, every red and green is read by name in CI's `hygiene` job, and no path beyond section 4
+changes. Beyond section 4's cells, `ci.yml` gains R17's step after the upload, the rows file gains
+rows `S45812` to `S45814`, `test_mutation_workflows.py` gains the colour step's reader, A13 and
+A14, and the red-first record gains A13's red and green, A14's line and their notes.

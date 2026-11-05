@@ -136,3 +136,33 @@ flowchart LR
   rowsOne --> ceil234
   rowsLegs --> ceil218
 ```
+
+## 5. One Rust leg at the cut, from restore to its colour (SPEC-458 section 11)
+
+Section 2 drew the leg at the old base. At the cut, `ci.yml`'s `mutation-rust` runs its own
+bounded baseline before cargo-mutants (ADR-509), and its last step reads that baseline's colour
+(SPEC-458 R17, ADR-475 D10). Each step is named as the workflow names it.
+
+```mermaid
+flowchart TD
+  restore["restore the Rust cache by key, else by prefix"]
+  fetch["cargo fetch, locked, every target's packages"]
+  baseline["this leg's unmutated baseline, bounded by its budget; its exit is recorded"]
+  mutants["cargo-mutants over the shard, its own baseline skipped"]
+  upload["keep the shard's report, under always"]
+  colour["the colour step: the baseline is not green, so exit 1"]
+  failed["the leg concludes failure"]
+  success["the leg concludes success"]
+  verdict["mutation-verdict: a leg with no whole report reads VOID by name"]
+  restore --> fetch
+  fetch --> baseline
+  baseline -->|"green"| mutants
+  baseline -->|"red, over budget or unrecorded"| upload
+  mutants -->|"exit 0, 2 or 3, or any other exit, which fails the step"| upload
+  upload -->|"baseline not green"| colour
+  upload -->|"green, and exit 0, 2 or 3"| success
+  upload -->|"green, and any other exit"| failed
+  colour --> failed
+  failed --> verdict
+  success --> verdict
+```

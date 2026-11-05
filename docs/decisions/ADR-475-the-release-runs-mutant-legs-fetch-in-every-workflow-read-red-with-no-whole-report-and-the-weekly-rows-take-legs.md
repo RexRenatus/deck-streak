@@ -252,3 +252,45 @@ D9 was chosen against:
 SPEC-458, SPEC-416, SPEC-417, SPEC-332, SPEC-191, SPEC-362 R3, ADR-430, ADR-431, ADR-462 D3 and
 D4, `docs/schematics/release-mutant-legs.md`, `docs/schematics/ci-jobs-and-caches.md`,
 `docs/schematics/mutation-testing.md`, #827, #830.
+
+## Re-judged at the leg's own baseline (ADR-509)
+
+This delivery was rebuilt on a `dev` that holds ADR-509: `mutation-rust` runs its own bounded
+baseline in a step that always succeeds and records its exit, and cargo-mutants runs only after a
+green record, with `--baseline=skip`. The original branch was merged unchanged and read against it.
+
+### D10. A leg whose own baseline is not green fails its job, after its upload
+
+`mutation-rust` ends on one more step, after its upload under `always()`: under
+`if: ${{ needs.mutation-plan.outputs.rust == 'true' && steps.baseline.outputs.green != 'true' }}`
+it echoes the shard and the exit its baseline recorded, then `exit 1` (SPEC-458 R17). A red,
+unbounded or unrecorded baseline then fails the leg as D4 promised, and the verdict still reads it
+VOID by name from its record, so what a run admits does not change.
+
+- D4 now judges cargo-mutants' own exits after a green baseline: a usage error, a crash, a signal
+  or the memory scope's own exit. Its `0|2|3` line, its rows and A4 and A5 stand; the red and
+  timed-out baselines it named are D10's.
+- D6's `ROWS_MAX_LEGS = 17` was read at the old base; it reads 18 under the owner's signed ruling
+  on the rows legs, and D5's pull request reads its figures at its own cut.
+- D7: A13 and A14 sit beside D4's tests in `scripts/tests/test_mutation_workflows.py` and read the
+  workflow through the module's own helpers; CI's `hygiene` job reads every red and green by name,
+  as D7 chose.
+- D8: rows `S45812` to `S45814` sit on D10's step, each killed by A13. No formal model, for D8's
+  reason: the step decides a job's colour, not the verdict.
+- D9: the first pull request builds D1, D2, D4 and D10; D5 stays the next one's.
+
+D10 was chosen against:
+
+- **D10, end the baseline step on its own exit**: it rewrites ADR-509's step, which always
+  succeeds so that its record is kept and read, and that decision's tests.
+- **D10, keep the leg green and let the verdict alone fail closed**: D4's own reason holds, as a
+  re-run of failed jobs would pass the leg by.
+- **D10, a branch of D4's line**: the line sits in the cargo-mutants step, which does not run when
+  the baseline is not green.
+- **D10, decide on the baseline's exit file after the upload**: D4 rejected that shape for
+  `cargo-mutants.exit`, as it ties the colour to the report's path. D10 decides on
+  `steps.baseline.outputs.green` and reads the path only in its echo, so that rejection does not
+  bind it.
+
+What would make D10 wrong: a later change lets cargo-mutants run on a baseline that is not green,
+or makes the baseline step fail on its own exit; D10's step and its rows then change with it.
