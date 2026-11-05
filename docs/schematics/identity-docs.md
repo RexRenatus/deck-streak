@@ -7,8 +7,8 @@ Read at dev before this delivery. Decided by ADR-599; built by SPEC-580. The bra
 
 ```mermaid
 flowchart LR
-  DESC["the repository description"] --> OPEN["README.md lines 8 to 10: the first paragraph"]
-  CH22["CHARTER.md:120 and :149, item 22"] --> SCHED["README.md lines 12 and 13: the scheduler until Rex"]
+  DESC["the repository description"] --> OPEN["README.md lines 5 to 7: the first paragraph"]
+  CH22["CHARTER.md:120 and :149, item 22"] --> SCHED["README.md lines 9 and 10: the scheduler until Rex"]
   PIN["Cargo.toml:88-92 and :165-184, the engine pin"] --> ENGINE["Built on: the engine"]
   LIC["ADR-018:19, SPEC-022:13, AGPL-3.0-or-later"] --> ENGINE
   SYNC["deck-streak-sync-server.service:1-2"] --> SERVER["Built on: the sync server"]
@@ -19,7 +19,8 @@ flowchart LR
   POSTER["the brand source's light poster"] --> COPY["copy program: sha256 before and after"]
   COPY --> STILL["docs/assets/deckstreak-hero-poster-tide-light.png"]
   COPY --> LIST["scripts/brand-files.json: the still's entry, first"]
-  STILL --> HERO["README.md lines 3 to 6: the picture"]
+  STILL --> HERO["README.md line 3: the still as the image of a link to the gif"]
+  GIFF["docs/assets/deckstreak-hero-tide-light.gif"] --> HERO
   LIST --> HERO
   REUSEADD["REUSE.toml: the still in the brand annotation"] --> STILL
 ```
@@ -32,7 +33,8 @@ flowchart TD
   README --> BUILTON["test_identity_docs: built_on_findings, the Built on section and the contents"]
   NOTICEF["NOTICE"] --> NOTICECHK["test_identity_docs: notice_findings"]
   AGENTS["AGENTS.md line 8"] --> AGENTSCHK["test_identity_docs: agents_findings"]
-  README --> HEADER["test_brand_files: readme_findings, the title, the picture and the paragraph"]
+  README --> HEADER["test_brand_files: readme_findings, the title, the hero line and the paragraph"]
+  README --> ANIM["test_brand_files: animation_findings, every README image, none of them a gif"]
   LISTF["scripts/brand-files.json"] --> HEADER
   LISTF --> STILLCHK["test_brand_files: still_findings, the pinned sha256 and size"]
   STILLF["the still in the tree"] --> STILLCHK
@@ -47,8 +49,9 @@ flowchart TD
 | NOTICE holds its items | A6, A7 | A7 red at the stub commit; A6 red at the helper commit (no NOTICE at dev) | S58007 (the engine's licence line) |
 | AGENTS.md line 8 is the identity line | A8 | red at the helper commit on dev's line 8 | S58008 (line 8) |
 | the control | A9 | not red: green at every commit, so each planted red is its refusal's | none |
-| the README's hero is the picture with the listed still and gif | A10, A12 | A10 red from the stub commit on (dev's image line); A12 red at the stub commit, whose helper refuses the bare image for another reason | S58001 (the still's path), S58002 (the media query), S57904 re-anchored (the gif's path) |
-| the still is the brand source's poster | A11, A13 | A13 red at the stub commit; A11 red at the helper commit (no still at dev) | S58003 (the still's pinned sha256 in the list) |
+| the README's hero is the still, linked to the listed gif | A10, A12 | A10 red from the stub commit on (dev's image line), and red again at the hero amendment's red commit (the merged hero still shows the gif); A12 red at the stub commit, whose helper refuses the bare image for another reason, and not red at the amendment, whose planted refusals land with their checker | S58001 (the still's path), S57904 re-anchored (the link's gif path) |
+| no README image names a gif | A14 | red at the hero amendment's red commit, where the merged hero's image is the gif | S58002 (the hero's image path) |
+| the still is the brand source's poster | A11, A13 | A13 red at the stub commit; A11 red at the helper commit (no still at dev), and red again at the hero amendment's red commit (the merged hero's image is not the still) | S58003 (the still's pinned sha256 in the list) |
 
 Every test runs locally over a fixture tree it writes; the tree criteria read the checkout.
 

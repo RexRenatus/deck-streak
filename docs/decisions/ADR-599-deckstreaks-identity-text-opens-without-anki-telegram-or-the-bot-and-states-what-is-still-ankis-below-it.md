@@ -5,7 +5,7 @@ status: "proposed"
 # ADR-599: DeckStreak's identity text opens without Anki, Telegram or the bot, and states what is still Anki's below it
 
 Decides SPEC-580. It amends SPEC-579 R4, ADR-598 D4 and `docs/schematics/brand-files.md` insert-only
-for the README's hero, which becomes a picture with a reduced-motion still, and it is cut before
+for the README's hero, which becomes the brand's still linked to the animation, and it is cut before
 SPEC-581, the tagline.
 
 ## Context and Problem Statement
@@ -22,8 +22,8 @@ The texts a reader meets first say otherwise. Read at dev before this delivery:
 - `README.md` (106 lines): its opening paragraph (lines 5 to 9) turns "your Anki reviews" into a
   game "in a Telegram Mini App", reads reviews "through your own Anki sync server", and has "the
   bot" send a digest. Its trademark notice (lines 105 and 106) names the trademark's holder.
-- `README.md` line 3 shows the light hero GIF, which loops for as long as the page is open; no
-  still is offered to a reader who asks for reduced motion.
+- `README.md` line 3 shows the light hero GIF, which loops for as long as the page is open; the
+  README offers no way to pause, stop or hide it.
 - `AGENTS.md` line 8 calls DeckStreak "a Telegram Mini App and bot that gamify Anki reviews".
 - `docs/PRD.md` frames the product as one Telegram Mini App (line 11), and its goals and first open
   question name the Mini App and the bot (lines 21, 22 and 52).
@@ -47,7 +47,8 @@ collection through the same server (ADR-340 line 10).
 - What is still Anki's is stated once, lower down, as facts the tree supports, with a trademark line
   that names no holder.
 - A root `NOTICE` gives the licences and the trademark lines in one place, beside `LICENSE`.
-- A reader who asks for reduced motion sees a still, with no script.
+- Every reader sees a still, with no script, and the animation plays only for a reader who follows
+  its link, so nothing in the README moves on its own.
 - Ruled text keeps its words: an amendment is insert-only, and a signed ruling changes only by the
   owner's ruling.
 - Every new statement is held by a test that refuses its absence, red first.
@@ -64,8 +65,8 @@ the opening paragraph (line 5). The licence and notice files are `LICENSE`, `LIC
 `scripts/tests/test_brand_files.py` (the README's header, lines 295 to 318; the brand list's files,
 lines 41 to 53), `test_privacy_policy.py` (the README's Privacy section, lines 161 to 176),
 `test_fork_rule.py` (AGENTS.md's fork rule) and `test_github_setup.py` (two phrases of
-OWNER-SETUP, lines 95 to 98); mutation row S57904 anchors on README line 3. How the forge renders a
-`<picture>` element with a media query was not measured.
+OWNER-SETUP, lines 95 to 98); mutation row S57904 anchors on README line 3. How the forge renders the
+hero's linked image was not measured.
 
 - Chosen: one fenced census of the tree, then reads of the files it lists, because every claim here cites a line read at one commit
 - A reading of the rendered pages on the forge: rejected because a render is not a tree fact and no test in the tree can hold it
@@ -107,25 +108,29 @@ named item, and an `AGENTS.md` line 8 that is not the identity line.
 - Append the notices to LICENSE: rejected because LICENSE is the AGPL's verbatim text, which a licence check reads by its digest
 - Rewrite AGENTS.md's whole overview paragraph: rejected because only line 8 frames the product, and its other lines name paths an agent needs
 
-## D4, the reduced-motion still: what it was chosen against
+## D4, the still linked to the animation: what it was chosen against
 
-The README's hero becomes a `<picture>` element on four lines after the title and a blank line: its
-one `<source>` names `media="(prefers-reduced-motion: reduce)"` and the still, and its `<img>` names
-the GIF with its width, height and alt text `DeckStreak`, as the brand source's own hero notes
-show. No script runs. The still is the brand source's light poster, committed at
+The README's hero becomes one line after the title and a blank line: an `<a>` element whose `href`
+is the GIF, holding one `<img>` whose `src` is the still, with its width, height and alt text
+`DeckStreak`. Every reader sees the still, and the animation plays only for a reader who follows the
+link, so nothing in the README moves on its own: the Pause, Stop, Hide success criterion of WCAG
+asks that content which moves on its own can be paused, stopped or hidden, and a still that starts
+nothing leaves that choice to the reader. No script runs. The still is the brand source's light
+poster, committed at
 `docs/assets/deckstreak-hero-poster-tide-light.png` under the brand source's own file name. A program
 copies it from the brand source at a pinned head, checks its sha256 against the pinned value before
 the copy and again after, and inserts its entry into `scripts/brand-files.json` (path, sha256, byte
 count, kind and pixels, sorted by path, so it lands first); `REUSE.toml` gains its path in the brand
 annotation; both insert-only. No brand file is edited by hand. `test_brand_files.py` lists the still
-among the brand paths, pins its sha256 and size, reads the picture element in place of the image
-line, and refuses a missing still, a still whose bytes differ from the pin, and a README that shows
-the GIF with no reduced-motion source. Row S57904 is re-anchored on the GIF's new line. SPEC-579
-R4, ADR-598 D4 and the brand-files schematic are amended insert-only.
+among the brand paths, pins its sha256 and size, reads the hero line in place of the image line,
+and refuses a missing still, a still whose bytes differ from the pin, a README whose hero shows the
+GIF as an image, and any README image that names a GIF. Row S57904 is re-anchored on the hero's
+`<a href>`. SPEC-579 R4, ADR-598 D4 and the brand-files schematic are amended insert-only.
 
-- Chosen: a picture element whose reduced-motion source is the brand's own still, because it needs no script and keeps the GIF for every other reader
-- The still alone, with no animation: rejected because it removes the hero from every reader to serve the readers who asked
-- A link under the hero to the still: rejected because a reader who asked for reduced motion still sees the animation first
+- Chosen: the still as the hero's image inside a link to the animation, because every reader sees the still, nothing moves on its own, and a reader who wants the animation opens it by the link
+- A picture element whose reduced-motion source is the still and whose image is the GIF: rejected because a picture element's reduced-motion source still plays the animation on its own for every reader who has not set that preference, and the Pause, Stop, Hide success criterion of WCAG asks that content which moves on its own can be paused, stopped or hidden
+- The still alone, with no link to the animation: rejected because it removes the animation from every reader
+- A link under the animated hero to the still: rejected because every reader still sees the animation play first
 - The dark poster too, under a colour-scheme query: rejected because the README shows the light hero alone today, and a dark pair is its own change
 
 ## D5, the PRD and OWNER-SETUP framing, and the ruled ANK-01 text: what it was chosen against
@@ -149,13 +154,15 @@ collection and records each answer).
 
 One delivery, cut before SPEC-581. Every red runs locally over fixtures the tests write:
 `scripts/tests/test_identity_docs.py` (new: the opening, Built on, NOTICE and AGENTS.md line 8) and
-`scripts/tests/test_brand_files.py` (the still and the picture). The first test commit holds each
+`scripts/tests/test_brand_files.py` (the still and the hero line). The first test commit holds each
 new refusal's helper as an accept-all stub, so every planted refusal is red for its refusal; the
 next commit writes the helpers, and each planted refusal turns green while each tree criterion reads
 red on the unchanged texts; the third changes the texts and copies the still. A planted complete
-tree reads green as the control. Band S58000-S58099 holds script rows on the README's still line,
-the brand list's pinned sha256, the opening's description, a Built on item, the trademark line,
-NOTICE's engine licence and AGENTS.md line 8. One push. FORMAL: not applicable to TLA+ (no
+tree reads green as the control. Row S57904 and the band's rows S58001 and S58002 anchor on the
+README's hero line; the rest of band S58000-S58099 holds script rows on the brand list's pinned
+sha256, the opening's description, a Built on item, the trademark line, NOTICE's engine licence and
+AGENTS.md line 8. The still hero's amendment puts its reds in one commit and the README line in the
+next, each read by CI at its own push. FORMAL: not applicable to TLA+ (no
 interleaving: every check reads files at rest) and not applicable to Lean (no pure algorithm of
 DeckStreak's is added; the checks are string reads in test code).
 
@@ -182,18 +189,19 @@ them; D7 bounds them.
 
 - Good, because a reader meets DeckStreak, its surfaces and Rex first, and finds what is Anki's in one named section.
 - Good, because a redistributor finds every licence and trademark line in `NOTICE`.
-- Good, because a reader who asks for reduced motion sees a still.
+- Good, because every reader sees a still, and the animation plays only for a reader who follows its link.
 - Bad, because the README's header is HTML now, which the brand census reads by its exact lines.
+- Bad, because a reader who wants the animation takes one more step to see it.
 - Bad, because the PRD reads in layers: its earlier lines stay, and the amendment below them binds.
 
 ### Confirmation
 
-SPEC-580's acceptance criteria A1 to A13, its red-first record, its rows S58001 to S58008, row S57904
+SPEC-580's acceptance criteria A1 to A14, its red-first record, its rows S58001 to S58008, row S57904
 re-anchored, and CI's scripts suite at the pull request's head.
 
 ## What would make this wrong
 
-- The forge strips or ignores the picture's media query, so every reader sees the GIF.
+- The forge drops the link around the image, so the README offers no way to the animation.
 - A fact Built on states stops being true: the engine is replaced, or AnkiMobile no longer studies the collection.
 - The repository description changes and the README is not changed with it.
 

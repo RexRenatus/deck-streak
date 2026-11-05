@@ -1,6 +1,6 @@
-# SPEC-580: the README opens with DeckStreak's identity, credits Anki in a Built on section and a NOTICE, and offers a reduced-motion still
+# SPEC-580: the README opens with DeckStreak's identity, credits Anki in a Built on section and a NOTICE, and shows a still linked to the animation
 
-- **Issue:** #1049 (the reduced-motion still); the pull request names the identity text's issue.
+- **Issue:** #1049 (the README's still hero); the pull request names the identity text's issue.
   **Context(s):** the repository's public documents (`README.md`, `NOTICE`, `AGENTS.md`, `docs/`),
   the brand list and its census (`scripts/`).
 - **Decided by:** ADR-599 (DeckStreak's identity text opens without Anki, Telegram or the bot, and
@@ -38,7 +38,7 @@ Read at dev before this delivery, by `git show <dev>:<path>` with `grep -n` and 
   it is AGPL-3.0-or-later. `deploy/systemd/deck-streak-sync-server.service` lines 1 and 2: the sync
   server is the engine's own, built from the pin. ADR-340 line 10: AnkiMobile syncs to the same
   server.
-- The brand source's light poster, the still for `prefers-reduced-motion: reduce`: 960 by 360
+- The brand source's light poster, the still the hero shows and links to the animation: 960 by 360
   pixels, 8,377 bytes, sha256 `92114e135df1b8bafe1a283e7464222c4b81f6de7850558224482acd69334584`.
 - `scripts/tests/test_brand_files.py` (606 lines) holds the README's header to the title, a blank
   line, one image line and the paragraph (lines 295 to 318); row S57904 anchors on README line 3.
@@ -56,12 +56,14 @@ R2. `README.md` holds a `## Built on` section after `## Source code` and before 
     `**AnkiMobile, until the switch.**` and `**The name.**`; the last holds the trademark line
     "Anki® is a registered trademark, and DeckStreak is not affiliated with or endorsed by its
     holder." The trademark notice at the README's foot is removed.
-R3. `README.md`'s hero is a `<picture>` element on lines 3 to 6: one `<source>` with
-    `media="(prefers-reduced-motion: reduce)"` and `srcset="docs/assets/deckstreak-hero-poster-tide-light.png"`,
-    and one `<img>` with `src="docs/assets/deckstreak-hero-tide-light.gif"`, `width="960"`,
-    `height="360"` and `alt="DeckStreak"`. The still is the brand source's light poster byte for
-    byte, copied by a program, listed in `scripts/brand-files.json` and annotated in `REUSE.toml`
-    under `LicenseRef-DeckStreak-Brand`; no brand file is edited by hand.
+R3. `README.md`'s hero is line 3, after the title and a blank line: one `<a>` element whose
+    `href` is `docs/assets/deckstreak-hero-tide-light.gif`, holding one `<img>` with
+    `src="docs/assets/deckstreak-hero-poster-tide-light.png"`, `width="960"`, `height="360"` and
+    `alt="DeckStreak"`; a blank line follows it. Every reader sees the still, and the animation
+    plays only for a reader who follows the link: no image in `README.md` names a GIF, so nothing
+    in it moves on its own. The still is the brand source's light poster byte for byte, copied by
+    a program, listed in `scripts/brand-files.json` and annotated in `REUSE.toml` under
+    `LicenseRef-DeckStreak-Brand`; no brand file is edited by hand.
 R4. A root `NOTICE` states what DeckStreak is and where its source is; that its own code is
     AGPL-3.0-or-later with the text in `LICENSE` and every file's licence in `REUSE.toml`; that it
     includes Anki's Rust engine, through the maintainer's fork, under the same licence and with its
@@ -74,7 +76,7 @@ R6. `docs/PRD.md` and `docs/OWNER-SETUP.md` change insert-only: the PRD gains a 
     `## Problem`, `## Goals` and `## Open questions` and one amendment paragraph after line 65;
     OWNER-SETUP gains one paragraph after line 6. No line of either file is removed or changed.
 R7. SPEC-579 R4, ADR-598 D4 and `docs/schematics/brand-files.md` are amended insert-only, each by an
-    appended section; row S57904 anchors on the hero's `<img>` line, with its killer unchanged.
+    appended section; row S57904 anchors on the hero's `<a href>`, with its killer unchanged.
 R8. No web, Swift or Rust file changes; the two owner rulings dated for the app's surfaces and the
     owner's taps, the bot, the Mini App, every screen, the scheduler, the engine and every
     repository setting are byte-unchanged. SPEC-334 keeps every line it has and gains only an
@@ -94,10 +96,11 @@ R8. No web, Swift or Rust file changes; the two owner rulings dated for the app'
 | A7 | a missing NOTICE, and a NOTICE missing any one item, are refused (R4) | `test_identity_docs.py` |
 | A8 | AGENTS.md line 8 is the identity line (R5) | `test_identity_docs.py` |
 | A9 | a planted complete tree reads green, the control for A2, A4, A5 and A7 | `test_identity_docs.py` |
-| A10 | the README opens with its title, then the hero's picture with the listed still and the listed gif, then its paragraph (R3) | `test_brand_files.py` |
-| A11 | the still is listed and present with the brand source's pinned sha256 and size (R3) | `test_brand_files.py` |
-| A12 | a README whose hero shows the gif with no reduced-motion source is refused (R3) | `test_brand_files.py` |
+| A10 | the README opens with its title, then the hero line, the listed still as an image linked to the listed gif, then its paragraph (R3) | `test_brand_files.py` |
+| A11 | the still is listed and present with the brand source's pinned sha256 and size, and it is the hero's image (R3) | `test_brand_files.py` |
+| A12 | a README whose hero shows the gif as an image, by a bare image, an `<img>` element or a picture source, is refused (R3) | `test_brand_files.py` |
 | A13 | a missing still, and a still whose bytes differ from the pin, are refused (R3) | `test_brand_files.py` |
+| A14 | no image in the README names a gif, so nothing in it moves on its own, and the check examines at least one image (R3) | `test_brand_files.py` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_identity_docs.py -k test_the_readme_opening_is_the_identity
@@ -111,8 +114,9 @@ A8: python3 -m unittest discover -s scripts/tests -p test_identity_docs.py -k te
 A9: python3 -m unittest discover -s scripts/tests -p test_identity_docs.py -k test_a_complete_planted_tree_reads_green
 A10: python3 -m unittest discover -s scripts/tests -p test_brand_files.py -k test_the_readme_opens_with_the_title_then_the_hero
 A11: python3 -m unittest discover -s scripts/tests -p test_brand_files.py -k test_the_still_is_listed_by_its_pinned_sha256
-A12: python3 -m unittest discover -s scripts/tests -p test_brand_files.py -k test_a_hero_with_no_reduced_motion_source_is_refused
+A12: python3 -m unittest discover -s scripts/tests -p test_brand_files.py -k test_a_hero_that_shows_the_animation_is_refused
 A13: python3 -m unittest discover -s scripts/tests -p test_brand_files.py -k test_a_missing_or_altered_still_is_refused
+A14: python3 -m unittest discover -s scripts/tests -p test_brand_files.py -k test_no_readme_image_shows_the_animation
 ```
 
 ## 4. File manifest
@@ -128,8 +132,8 @@ A13: python3 -m unittest discover -s scripts/tests -p test_brand_files.py -k tes
 | `scripts/brand-files.json` | brand | changed insert-only: the still's entry (R3) |
 | `REUSE.toml` | licensing | changed insert-only: the still's path in the brand annotation (R3) |
 | `scripts/tests/test_identity_docs.py` | tests | new: A1 to A9 |
-| `scripts/tests/test_brand_files.py` | tests | changed: the still, the hero's picture, A10 to A13 |
-| `scripts/mutation-rows.d/S57900-S57999.json` | rows | changed: S57904 anchored on the hero's `<img>` line (R7) |
+| `scripts/tests/test_brand_files.py` | tests | changed: the still, the hero line, A10 to A14 |
+| `scripts/mutation-rows.d/S57900-S57999.json` | rows | changed: S57904 anchored on the hero's `<a href>` (R7) |
 | `scripts/mutation-rows.d/S58000-S58099.json` | rows | new: S58001 to S58008 |
 | `docs/red-first/SPEC-580.md` | records | new |
 | `docs/specs/SPEC-580-the-readme-opens-with-deckstreaks-identity-credits-anki-in-a-built-on-section-and-a-notice-and-offers-a-reduced-motion-still.md` | docs | new: this file |
@@ -146,14 +150,15 @@ A13: python3 -m unittest discover -s scripts/tests -p test_brand_files.py -k tes
 
 - The repository's social preview, its description and its topics, which are repository settings (#1048).
 - The README's install, usage and deploy lines and `AGENTS.md` line 10, which name the Mini App or the bot as the code still does; they change with the retirement of the bot and the Mini App (#1046).
-- How the forge renders the picture element and its media query, and what a device shows, read after the pull request (#1047).
+- How the forge renders the hero's still inside its link, and what a device shows, read after the pull request (#1047).
 
 ## 6. Risks
 
-- **The forge ignores the media query.** Then every reader sees the GIF, as at dev; nothing in the
-  tree can show it, and #1047 reads the rendered page.
+- **The forge drops the link around the image.** Then every reader still sees the still, and the
+  README offers no way to the animation; nothing in the tree can show it, and #1047 reads the
+  rendered page.
 - **A test that pins the README's header.** `test_brand_files.py` reads it by exact lines; it
-  changes in the same commit as its red, and A10 to A13 hold the new form.
+  changes in the same commit as its red, and A10 to A14 hold the new form.
 - **A row anchored on a changed line.** S57904 anchors on README line 3; it is re-anchored in the
   commit that changes the README, so no commit holds a find that occurs zero times.
 - **A still carrying metadata.** The copy program reads the PNG's chunks before the copy and A1 of

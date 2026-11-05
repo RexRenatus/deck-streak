@@ -5,4 +5,4 @@
 ### Added
 
 - A root `NOTICE` names DeckStreak's licence, the engine's licence, the vendored copy's licence, the brand files' terms and the trademarks.
-- The README's hero shows a still to a reader who asks for reduced motion, from the DeckStreak brand source byte for byte (#1049).
+- The README's hero shows a still from the DeckStreak brand source, byte for byte, linked to the animation, so nothing in the README moves on its own (#1049).
