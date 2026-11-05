@@ -78,6 +78,9 @@ jobs:
           key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
+      - name: the locked dependency graph, every target's packages (the saved entry holds them for every job that restores it)
+        if: ${{ steps.lookup.outputs.cache-hit != 'true' }}
+        run: cargo fetch --locked --manifest-path Cargo.toml
       - name: build the clippy stage's targets (no lint level, which changes no dependency's artifacts)
         if: ${{ steps.lookup.outputs.cache-hit != 'true' }}
         run: cargo clippy --workspace --all-targets --locked
