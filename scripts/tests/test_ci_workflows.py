@@ -11550,7 +11550,6 @@ BENCH_JOBS = [job for pair in BENCH_LANES.values() for job in pair]
 BENCH_UPLOAD_ACTIONS = {
     "rust": {
         "actions/checkout",
-        "taiki-e/install-action",
         "actions/download-artifact",
         "CodSpeedHQ/action",
     },
@@ -11567,6 +11566,10 @@ BENCH_RUNS = {
     "web": "pnpm exec vitest bench --run --config vitest.bench.config.ts",
 }
 BENCH_BUILDS_NOTHING = ("cargo build", "pnpm install", "npm ", "protoc", "cargo install")
+# SPEC-618 R14: the Rust build job installs the one tool and carries it in its archive.
+BENCH_TOOL_INSTALL = "cargo install --locked cargo-codspeed --version 6.0.0"
+BENCH_TOOL_BINARY = "codspeed-tool/bin/cargo-codspeed"
+BENCH_TOOL_PATH = 'echo "$GITHUB_WORKSPACE/codspeed-tool/bin" >> "$GITHUB_PATH"'
 
 
 def bench_jobs(workflow):
@@ -11643,11 +11646,24 @@ class TheBenchLanes(unittest.TestCase):
                 self.assertEqual(str(codspeed.get("run")).strip(), BENCH_RUNS[lane], upload)
                 self.assertNotIn("token", codspeed, f"{upload} passes the action a token")
                 tools = [s for s in steps if action(s) == "taiki-e/install-action"]
-                for step in tools:
-                    given = step.get("with") or {}
-                    self.assertEqual(str(given.get("tool")), "cargo-codspeed@6.0.0", upload)
-                    self.assertEqual(str(given.get("fallback")), "none", upload)
-                self.assertEqual(len(tools), 1 if lane == "rust" else 0, upload)
+                self.assertEqual(len(tools), 0, upload)
+                if lane == "rust":
+                    build = BENCH_LANES[lane][0]
+                    installs = [
+                        str(s.get("run", ""))
+                        for s in jobs[build]["steps"]
+                        if action(s) == "taiki-e/install-action"
+                        or "cargo install" in str(s.get("run", ""))
+                    ]
+                    self.assertEqual(len(installs), 1, build)
+                    self.assertIn(BENCH_TOOL_INSTALL, installs[0], build)
+                    archive = " ".join(
+                        str(s.get("run", ""))
+                        for s in jobs[build]["steps"]
+                        if "tar -cf" in str(s.get("run", ""))
+                    )
+                    self.assertIn(BENCH_TOOL_BINARY, archive, build)
+                    self.assertIn(BENCH_TOOL_PATH, runs, upload)
 
     def test_each_bench_job_starts_and_its_plan_gates_every_step(self):
         jobs = bench_jobs(load("ci.yml"))
