@@ -21,6 +21,9 @@ const NIGHT: &str = " nightMode night_mode";
 const PLAYS_INLINE: &str = " playsinline";
 /// The opening of a video start tag, its name matched ASCII-case-insensitively.
 const VIDEO_OPEN: &str = "<video";
+/// The line a withheld face's page holds in the card's place (SPEC-380 R4, R6): the web's `en` line,
+/// since the native review shows English alone.
+const WITHHELD: &str = "This image occlusion card cannot be shown here, because this app does not draw its masks. You can still bury or flag it.";
 
 /// One thing a face plays, as a native client receives it.
 #[derive(Debug, Clone, PartialEq, uniffi::Enum)]
@@ -57,6 +60,9 @@ pub struct CardFace {
     pub replay: Vec<Clip>,
     /// The media names the face left out, each once.
     pub omitted: Vec<String>,
+    /// Whether the card's question is an image occlusion question whose masks this app does not
+    /// draw, so the page shows a line in the card's place (SPEC-380 R4).
+    pub withheld: bool,
 }
 
 /// The media folder of the collection the engine opened, read at most a cap and a byte at a time;
@@ -83,9 +89,15 @@ impl Reader for MediaFolder {
 /// The page that holds `face`'s text. Its body's classes are `card card<n>`, `<n>` the card's
 /// template counted from one, then the night classes only when `night` asks for them (SPEC-393
 /// R2), and every video in the text plays inline.
+/// A withheld face's page holds the one line in the text's place, and its CSS is already empty.
 fn document(face: &Face, night: bool) -> String {
     let classes = if night { NIGHT } else { DAY };
     let template = u64::from(face.ordinal) + 1;
+    let text = if face.withheld {
+        WITHHELD
+    } else {
+        face.text.as_str()
+    };
     format!(
         concat!(
             "<!DOCTYPE html><html><head><meta charset=\"utf-8\">",
@@ -96,7 +108,7 @@ fn document(face: &Face, night: bool) -> String {
         css = face.css,
         template = template,
         classes = classes,
-        text = plays_inline(&face.text),
+        text = plays_inline(text),
     )
 }
 
@@ -150,6 +162,7 @@ impl CardFace {
             autoplay: face.autoplay.into_iter().map(clip).collect(),
             replay: face.replay.into_iter().map(clip).collect(),
             omitted: face.omitted,
+            withheld: face.withheld,
         }
     }
 }
