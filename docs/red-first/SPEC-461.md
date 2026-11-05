@@ -38,3 +38,11 @@ Main's control reading: the coverage test's refusing control card (`bare`, the c
 predicate in a scratch edit, never committed, A1 alone reads red: `AssertionError: expected [
 'aimed-at-requests' ] to deeply equal [ 'aimed-at-requests', …(1) ]`, the received list lacking
 `aimed-at-connections`. The file was then restored byte for byte.
+
+The rebuild onto current dev merged the original branch unchanged, after the card frame's target
+ward had moved `nav-top` and `nav-blank` to W4 alone and planted three clicked cards at the TCP
+listener that declared `tcp` alone. The commit that carries this paragraph builds those three cards
+with `clicks()` and declares the bare connection of `nav-blank` in WebKit with W3 off in the table
+and in the schematic. It changes only the planted table, the schematic and this record: A1's test
+and `listeners.spec.ts` are unchanged since the original red commit, and `card.spec.ts` is unchanged
+by this delivery.

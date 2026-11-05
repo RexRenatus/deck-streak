@@ -110,7 +110,7 @@ dash means at least two layers hold it, so no single-layer variant opens it.
 | `base` | `base href` at the listener, then a relative `img` | W3, W2, P | - |
 | `nav-self` | a full-frame link at the listener, clicked | W4 | W4 (SEC01-F13) |
 | `nav-top` | a full-frame link with `target=_top`, clicked | W4, W3 (the target removed, the follow is the frame's own navigation); W1 refuses the top navigation if the target returns | W4 |
-| `nav-blank` | a full-frame link with `target=_blank`, clicked | W4, W3 (the target removed, the follow is the frame's own navigation); W1 refuses the popup if the target returns | W4 |
+| `nav-blank` | a full-frame link with `target=_blank`, clicked | W4, W3 (the target removed, the follow is the frame's own navigation); W1 refuses the popup if the target returns | W4 (BARE in WebKit with W3 off: its click handler preconnects to the link's host when the sandbox refuses the popup) |
 | `nav-blank-area` | a full-frame image map whose `area` has `target=_blank`, at the TCP listener, clicked | W4, W3 (the target removed); W1 refuses the popup if the target returns | W4 (BARE in WebKit with W3 off: its click handler preconnects to the area's host when the sandbox refuses the popup) |
 | `nav-blank-svg` | a full-frame SVG `a` with `target=_blank`, at the TCP listener, clicked (the control: SVG `a`'s handler starts no preconnect) | W4, W3 (the target removed); W1 refuses the popup if the target returns | W4 |
 | `nav-show-new` | a full-frame SVG `a` whose `xlink:show` is `new`, with no `target`, at the TCP listener, clicked (W1's own channel: the link asks for a new window, which the strip leaves and the sandbox refuses) | W1 | W1 |
@@ -975,3 +975,12 @@ Predicted readings at SPEC-461's red commit, where each clicked card declares `t
 still names the HTTP listener: every control above reads nothing at `tcp`, 20 pair tests and 12
 variant tests in all, and the card frame still reads `{}`. At its head every reading is as the
 tables above give it.
+
+**Re-read on the target ward (ADR-498; ADR-478 D8).** The ward moved `nav-top` and `nav-blank` to W4
+alone, so the variant reading above that names them with W1 off reads with W4 off, and the three
+clicked cards it planted, `nav-blank-area`, `nav-blank-svg` and `nav-show-new`, are built by
+`clicks()` and read as the other clicked cards do, `tcp` and their own path, `nav-show-new` with W1
+off. Section 3's cells are unchanged but one: with W3 off, WebKit reads one bare connection for
+`nav-blank`, as for `nav-blank-area`, because the target returns, the sandbox refuses the popup and
+the handler preconnects; section 3 holds it as the `BARE in WebKit with W3 off` cell of
+`nav-blank`'s row.
