@@ -6,7 +6,7 @@
 - **Decided by:** ADR-590 (this SPEC's: the census, the fill, the tests, the shape), ADR-005 (the
   web front end and its message compiler, unchanged).
 - **Mutation band:** `S57100-S57199` (§7).
-- **Status:** one pull request, cut after the release pull request merges. Every path it writes is
+- **Status:** one pull request into dev. Every path it writes is
   under `web/app/messages`, `scripts` or `docs`, plus its changelog fragment.
 
 ## 1. The problem, measured
@@ -40,6 +40,13 @@ standard-library count over the parsed catalogs.
 - Every `scripts/*.py` is named in `scripts/mutation-python.json`
   (`scripts/tests/test_mutation_python.py:435-446`).
 
+Read again at the dev this delivery was rebuilt on, by the same count: `en.json` holds 379 message
+keys and each of the six other catalogs 257. Thirty keys outside the first fill are missing from all six: the 28
+`card_health_` keys of the card information panel and `answer_hard` and `answer_easy`
+(`en.json:352-381`). Eight keys this delivery's first fill wrote are already in all six, with
+dev's own values: `score_title`, `score_pillars`, the five `pillar_` keys and `retention_absent`.
+`study_card_escaped` is gone from every catalog.
+
 ## 2. Requirements
 
 R1. `scripts/locale_census.py` reads `web/app/project.inlang/settings.json` and refuses a locale
@@ -64,10 +71,17 @@ R10. Every `missing` finding at the cut is filled with its locale's text, keepin
     countdown or loss wording English does not carry. Each catalog's existing lines stay
     byte-unchanged; the filled keys are appended in English's order. The filled keys are listed
     per locale in `docs/red-first/SPEC-571.md`.
+    A key a catalog already holds keeps its line, and this delivery's own copy of it is dropped.
+    In `ja`, `zh-Hans` and `zh-Hant` no value this delivery writes holds a space typed between a
+    CJK character and a Latin letter, a digit, a placeholder or a percent sign: the stylesheet's
+    `text-autospace` draws that gap (`web/app/src/lib/styles/cjk.css:68`).
 R11. `web/app/messages/en.json`, `web/app/project.inlang/settings.json`, every file under
     `web/app/src`, every style and the five per-screen tests are byte-unchanged.
 R12. `scripts/mutation-python.json` maps `scripts/locale_census.py` to `test_locale_census`, and
     the band's rows (§7) pin the census's literal constants.
+R13. It refuses a settings file that is not JSON (`unreadable settings not-json`) or not a JSON
+    object (`unreadable settings not-an-object`); it then examines no catalog, prints
+    `examined 0 locales, 0 keys` and exits 3.
 
 ## 3. Acceptance criteria of SPEC-571
 
@@ -84,6 +98,7 @@ R12. `scripts/mutation-python.json` maps `scripts/locale_census.py` to `test_loc
 | A9 | a planted complete tree of seven catalogs reads green with its examined count | `test_locale_census.py`; the control |
 | A10 | a tree with no catalog exits 3 | `test_locale_census.py`; red: the stub exits 0 |
 | A11 | the web app's own catalogs read green | `test_locale_census.py`; red: the tree before the fill |
+| A12 | a settings file that is not JSON, or not an object, is refused by name | `test_locale_census.py`; red: the census stops on a traceback |
 
 ```acceptance
 A1: python3 -m unittest scripts.tests.test_locale_census.TheWebCensus.test_a_key_removed_from_one_locale_is_refused
@@ -97,13 +112,14 @@ A8: python3 -m unittest scripts.tests.test_locale_census.TheWebCensus.test_a_val
 A9: python3 -m unittest scripts.tests.test_locale_census.TheWebCensus.test_a_planted_complete_tree_reads_green
 A10: python3 -m unittest scripts.tests.test_locale_census.TheWebCensus.test_a_tree_with_no_catalog_is_void
 A11: python3 -m unittest scripts.tests.test_locale_census.TheWebTree.test_the_web_apps_catalogs_are_whole
+A12: python3 -m unittest scripts.tests.test_locale_census.TheWebCensus.test_an_unreadable_settings_file_is_refused
 ```
 
 Each planted tree is written by the test into a temporary directory: the settings file and seven
 catalogs of four messages each, one with two placeholders, one with a composed accented letter, one
 in each Chinese script. A1 to A8 assert the census's exact finding lines and exit 1; A9 asserts no
 finding, exit 0 and `examined 7 locales, 4 keys`; A11 asserts no finding, exit 0 and an examined
-key count above 0.
+key count above 0; A12 asserts its finding line, `examined 0 locales, 0 keys` and exit 3.
 
 ## 4. File manifest
 

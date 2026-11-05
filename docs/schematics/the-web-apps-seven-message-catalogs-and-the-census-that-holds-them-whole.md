@@ -55,7 +55,9 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-  start["--root tree"] --> s{"settings: seven locales,<br/>base en, the pattern?"}
+  start["--root tree"] --> rs{"settings: a JSON object?"}
+  rs -->|no| f0["unreadable settings"]
+  rs -->|yes| s{"settings: seven locales,<br/>base en, the pattern?"}
   s -->|no| f1["locale-set"]
   s -->|yes| files{"one catalog per locale,<br/>no stray catalog?"}
   files -->|no| f2["file-missing, file-stray"]
@@ -75,6 +77,7 @@ flowchart TB
 
 | step | test (`scripts/tests/test_locale_census.py`) | red | rows |
 |---|---|---|---|
+| the settings file is a JSON object | `TheWebCensus.test_an_unreadable_settings_file_is_refused` (A12) | the census stops on a traceback | the Python lane |
 | the locale set, base and pattern | `TheWebCensus.test_a_locale_set_other_than_the_seven_is_refused` (A6) | the stub accepts every tree | S57101 to S57107 (each locale), S57108 (base), S57111 (pattern) |
 | one catalog per locale, readable, no repeated key | `TheWebCensus.test_an_unreadable_or_repeating_catalog_is_refused` (A7) | the stub accepts every tree | the Python lane |
 | a key English holds is in every locale | `TheWebCensus.test_a_key_removed_from_one_locale_is_refused` (A1) | the stub accepts every tree | the Python lane |

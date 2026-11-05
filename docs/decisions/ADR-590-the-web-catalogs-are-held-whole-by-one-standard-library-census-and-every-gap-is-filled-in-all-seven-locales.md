@@ -63,6 +63,8 @@ reads are not measured by any of this.
 `scripts/locale_census.py`, standard-library Python, reads `web/app/project.inlang/settings.json`
 and the catalogs it names, and refuses, one finding per line:
 
+- a settings file that is not a JSON object (`unreadable settings`), after which it examines no
+  catalog;
 - a locale set other than the seven, a base locale other than English, or another path pattern;
 - a listed locale with no catalog, and a catalog no listed locale names;
 - a catalog that is not a JSON object of messages, or that repeats a key;
