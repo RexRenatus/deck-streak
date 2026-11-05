@@ -434,6 +434,198 @@ class DynamicImportsCheck(unittest.TestCase):
         ):
             self.assertIn(wanted, section)
 
+    BINDINGS = (
+        ("FunctionDef", "def exec(x):\n    return x\n\nexec(1)\n"),
+        ("AsyncFunctionDef", "async def exec(x):\n    return x\n\nexec(1)\n"),
+        ("ClassDef", "class exec:\n    pass\n\nexec()\n"),
+        ("Name", "exec = print\nexec(1)\n"),
+        ("arg", "def f(exec):\n    return exec(1)\n"),
+        ("Import", "import json as exec\nexec('a')\n"),
+        ("ImportFrom", "from json import dumps as exec\nexec('a')\n"),
+        ("ExceptHandler", "try:\n    pass\nexcept Exception as exec:\n    exec(1)\n"),
+        ("MatchAs", "match 1:\n    case exec:\n        exec(1)\n"),
+        ("MatchStar", "match []:\n    case [*exec]:\n        exec(1)\n"),
+        ("MatchMapping", "match {}:\n    case {**exec}:\n        exec(1)\n"),
+        ("TypeVar", "def f[exec]():\n    return exec(1)\n"),
+        ("ParamSpec", "def f[**exec]():\n    return exec(1)\n"),
+        ("TypeVarTuple", "def f[*exec]():\n    return exec(1)\n"),
+        ("Global", "def f():\n    global exec\n    exec(1)\n"),
+        ("Nonlocal", "def f():\n    def g():\n        nonlocal exec\n        exec(1)\n"),
+    )
+
+    def test_every_binding_the_census_reads_binds_exec_for_the_check(self):
+        tree = ast.parse(REGISTER.read_text(encoding="utf-8"))
+        body = next(
+            node
+            for node in tree.body
+            if isinstance(node, ast.FunctionDef) and node.name == "bindings"
+        )
+        kinds = {
+            node.attr
+            for node in ast.walk(body)
+            if isinstance(node, ast.Attribute)
+            and isinstance(node.value, ast.Name)
+            and node.value.id == "ast"
+        } - {"Load"}
+        self.assertEqual(len(kinds), 16)
+        self.assertEqual({kind for kind, _source in self.BINDINGS}, kinds)
+        for kind, source in examined("binding kinds", self.BINDINGS):
+            with self.subTest(kind):
+                self.assertEqual(self.check.loader_sites(source), [])
+
+    def test_a_module_that_binds_exec_by_a_capture_is_not_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = plant(tmp, {REGISTER_PATH: register_text("test_known")})
+            write(tmp, {NEW: dict(self.BINDINGS)["ExceptHandler"]})
+            commit(tmp, "head")
+            code, lines = run_program(tmp, base)
+        self.assertEqual(code, 0)
+        self.assertIn(
+            "dynamic-imports: examined 1 changed scripts/tests module(s), 0 loader-style", lines
+        )
+        self.assertEqual(lines[-1], "dynamic-imports: OK")
+
+    def test_a_site_added_to_the_register_by_an_augmented_assignment_is_read(self):
+        grow = 'DYNAMIC_IMPORTS |= {**allowed("planted", ("%s", "load", "x", 1))}\n'
+        cases = [
+            ("one addition", register_text("test_known") + grow % "test_new", NEW, 2),
+            (
+                "two additions",
+                register_text("test_known") + grow % "test_a" + grow % "test_b",
+                "scripts/tests/test_b.py",
+                3,
+            ),
+            (
+                "an annotated register and one addition",
+                'DYNAMIC_IMPORTS: dict = {**allowed("planted", ("test_known", "load", "x", 1))}\n'
+                + grow % "test_new",
+                NEW,
+                2,
+            ),
+        ]
+        for name, register, loader, count in examined("register additions", cases):
+            with self.subTest(name), tempfile.TemporaryDirectory() as tmp:
+                base = plant(tmp, {REGISTER_PATH: register})
+                write(tmp, {loader: LOADER_SOURCE})
+                commit(tmp, "head")
+                code, lines = self.run_main("--root", tmp, "--base", base)
+                self.assertEqual(
+                    lines,
+                    [
+                        f"dynamic-imports: register: {count} module(s) in DYNAMIC_IMPORTS at HEAD",
+                        "dynamic-imports: examined 1 changed scripts/tests module(s), 1 loader-style",
+                        "dynamic-imports: OK",
+                    ],
+                )
+                self.assertEqual(code, 0)
+
+    def test_a_register_write_the_check_cannot_read_stops_the_run(self):
+        good = register_text("test_known")
+        site = '{**allowed("r", ("test_new", "l", "t", 1))}'
+        written = "DYNAMIC_IMPORTS is written at line %d in a shape the check does not read"
+        key = '("test_known", "load", "x")'
+        cases = [
+            ("another operator", good + "DYNAMIC_IMPORTS &= " + site + "\n", written % 2),
+            ("a name", good + "DYNAMIC_IMPORTS |= OTHER\n", written % 2),
+            ("before the assignment", "DYNAMIC_IMPORTS |= " + site + "\n" + good, written % 1),
+            (
+                "inside a function",
+                good
+                + "def grow():\n    global DYNAMIC_IMPORTS\n    DYNAMIC_IMPORTS |= "
+                + site
+                + "\n",
+                written % 4,
+            ),
+            ("a subscript store", good + "DYNAMIC_IMPORTS[" + key + "] = (1, 'r')\n", written % 2),
+            ("a subscript delete", good + "del DYNAMIC_IMPORTS[" + key + "]\n", written % 2),
+            ("a del", good + "del DYNAMIC_IMPORTS\n", written % 2),
+        ]
+        members = (
+            "clear",
+            "pop",
+            "popitem",
+            "setdefault",
+            "update",
+            "__delitem__",
+            "__ior__",
+            "__setitem__",
+        )
+        for member in members:
+            cases.append((member, good + "DYNAMIC_IMPORTS." + member + "()\n", written % 2))
+        cases.append(
+            (
+                "another helper",
+                good + 'DYNAMIC_IMPORTS |= {**other("r", ("test_new", "l", "t", 1))}\n',
+                "entry at line 2 is not an allowed group",
+            )
+        )
+        for name, register, cause in examined("unread register writes", cases):
+            with self.subTest(name), tempfile.TemporaryDirectory() as tmp:
+                base = plant(tmp, {REGISTER_PATH: register})
+                write(tmp, {NEW: PLAIN_SOURCE})
+                commit(tmp, "head")
+                code, lines = self.run_main("--root", tmp, "--base", base)
+                self.assertEqual(code, 2)
+                self.assertTrue(lines[-1].startswith("dynamic-imports: VOID: "), lines[-1])
+                self.assertIn(cause, lines[-1])
+
+    def test_a_blob_that_is_not_utf8_reads_void(self):
+        good = register_text("test_known")
+        cases = [
+            (
+                "a changed module",
+                NEW,
+                b"VALUE = '\xff'\n",
+                "scripts/tests/test_new.py is not UTF-8 text",
+            ),
+            (
+                "the register",
+                REGISTER_PATH,
+                good.encode("utf-8") + b"# \xff\n",
+                "scripts/tests/test_ci_workflows.py is not UTF-8 text",
+            ),
+        ]
+        for name, path, blob, cause in examined("blobs that are not UTF-8", cases):
+            with self.subTest(name), tempfile.TemporaryDirectory() as tmp:
+                base = plant(tmp, {REGISTER_PATH: good})
+                (Path(tmp) / path).write_bytes(blob)
+                commit(tmp, "head")
+                code, lines = run_program(tmp, base)
+                self.assertEqual(code, 2)
+                self.assertTrue(lines[-1].startswith("dynamic-imports: VOID: "), lines[-1])
+                self.assertIn(cause, lines[-1])
+
+    def test_the_check_resolves_head_once_and_reads_every_object_from_that_commit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = plant(tmp, {REGISTER_PATH: register_text("test_known", "test_new")})
+            write(tmp, {NEW: LOADER_SOURCE})
+            head = commit(tmp, "head")
+            calls, moved = [], []
+            original = self.check._git
+
+            def recorder(root, *args, **kwargs):
+                result = original(root, *args, **kwargs)
+                calls.append(args)
+                if len(calls) == 1:
+                    write(tmp, {"scripts/tests/test_other.py": LOADER_SOURCE})
+                    moved.append(commit(tmp, "moved"))
+                return result
+
+            self.check._git = recorder
+            code, lines = self.run_main("--root", tmp, "--base", base)
+        self.assertEqual(code, 0)
+        self.assertIn(
+            "dynamic-imports: examined 1 changed scripts/tests module(s), 1 loader-style", lines
+        )
+        self.assertEqual(lines[-1], "dynamic-imports: OK")
+        self.assertEqual(len(calls), 4)
+        self.assertEqual(calls[0], ("rev-parse", "--verify", "HEAD^{commit}"))
+        self.assertEqual(len(moved), 1)
+        for args in examined("git calls after the first", calls[1:]):
+            self.assertFalse(any("HEAD" in arg for arg in args), args)
+            self.assertTrue(any(head in arg for arg in args), args)
+            self.assertFalse(any(moved[0] in arg for arg in args), args)
+
 
 if __name__ == "__main__":
     unittest.main()
