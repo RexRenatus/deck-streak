@@ -89,7 +89,7 @@ def call_main(*argv):
     with (
         contextlib.redirect_stdout(out),
         contextlib.redirect_stderr(err),
-        mock.patch.object(runner, "end_on_sigterm", lambda: None),
+        mock.patch.object(runner, "ending_on_signals", contextlib.nullcontext),
     ):
         try:
             code = runner.main(list(argv))

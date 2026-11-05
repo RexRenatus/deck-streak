@@ -48,8 +48,8 @@
       [
         "S02506-A-SIGTERM-ENDS-THE-RUNNER-THROUGH-ITS-CLEANUP",
         "scripts/mutation_rows.py",
-        "    signal.signal(signal.SIGTERM, lambda signum, _frame: sys.exit(128 + signum))",
-        "    pass",
+        "        signal.signal(signal.SIGTERM, state.handle)",
+        "        pass",
         "a SIGTERM of the runner, to its pid or its group, ends it through its cleanup so the killer's group ends too (#409); without the handler the default action leaves the group running",
         "test_mutation_rows_group.ASignalledRunnerEndsTheKillersGroup.test_sigterm_to_the_runner_ends_the_killers_group"
       ],
