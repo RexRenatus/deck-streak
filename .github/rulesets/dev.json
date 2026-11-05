@@ -10,7 +10,13 @@
       "exclude": []
     }
   },
-  "bypass_actors": [],
+  "bypass_actors": [
+    {
+      "actor_id": 10562,
+      "actor_type": "Integration",
+      "bypass_mode": "exempt"
+    }
+  ],
   "rules": [
     {
       "type": "deletion"
@@ -28,15 +34,17 @@
         ],
         "dismiss_stale_reviews_on_push": true,
         "require_code_owner_review": false,
+        "require_extra_approval_for_unattributed_changes": true,
         "require_last_push_approval": false,
         "required_approving_review_count": 0,
-        "required_review_thread_resolution": true
+        "required_review_thread_resolution": true,
+        "required_reviewers": []
       }
     },
     {
       "type": "required_status_checks",
       "parameters": {
-        "strict_required_status_checks_policy": true,
+        "strict_required_status_checks_policy": false,
         "do_not_enforce_on_create": false,
         "required_status_checks": [
           {

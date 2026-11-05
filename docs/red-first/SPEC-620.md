@@ -15,4 +15,6 @@ A3: python3 -m unittest discover -s scripts/tests -p test_rulesets.py -k test_de
 
 ```red-first
 A2: not red: guards what dev already holds; main and the release tags keep no bypass, and every rule type stays enforceable
+A1: red at fe7cee3: AssertionError: Lists differ: [] != [{'actor_id': 10562, 'actor_type': 'Integration', 'bypass_mode': 'exempt'}]
+A3: red at fe7cee3: AssertionError: True is not False
 ```
