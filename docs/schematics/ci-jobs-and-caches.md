@@ -286,3 +286,81 @@ changes no line of `scripts/mutation-verdict.py`. The fetch step changes no test
 stays the only line of its kind, because the new step's line is the `rust` and `release` jobs' own. The
 weekly battery's `rust` leg and its rehearsal are not changed here; they stay open under the issue SPEC-416
 refers to.
+
+## The cache shape, held by four checks (SPEC-430, ADR-444)
+
+Kind: component and data flow. Read at DeckStreak `dev` b25ed04a, whose workflows and `scripts/check.sh` are those
+of ac7ebd75 (the 15 files under `.github/workflows/`,
+`.github/workflows/ci.yml:12-17`, `:298`, `:351`, `:1018-1021`, `scripts/check.sh:31`, `:179-186`, and
+`scripts/tests/test_ci_workflows.py`). Decided by ADR-444; built by SPEC-430.
+
+The four checks are one test class, `TheCachesHoldTheirShape`, in `scripts/tests/test_ci_workflows.py`. Each reads
+every workflow file through the module's loader `workflow_file_text`, compares its population with a control the
+check did not build, and only then prints what it examined, VOID on zero (SPEC-430 R9). Each has a planted twin that
+writes its workflows under `.yml` and `.yaml` into a temporary root and expects the exact problems SPEC-430 section 8
+names, beside a positive control that passes (R10); check 1 has a second, A9, for the Python read (R13).
+
+```mermaid
+flowchart TD
+  files["the 15 workflow files, each read through workflow_file_text"]
+  files --> cjobs["check 1: every job that runs cargo (19)"]
+  files --> cwriters["check 2: every step that can write a cache (19)"]
+  files --> ckeys["check 3: every key of every cache step (19)"]
+  files --> ctexts["check 4: every key and fallback text (32)"]
+  cjobs --> reader["the cargo reader: each run script, comments removed and continuations joined"]
+  reader --> called["a called bash or sh script under scripts/, read one deep"]
+  reader --> pywalk["a called python3 script under scripts/: an ast walk from its top-level statements, along the subcommand the call names through the dispatch of main"]
+  pywalk -->|"no subcommand, or a dispatch over two expressions"| unscoped["every branch kept"]
+  pywalk -->|"a run-time name lookup"| wholescript["the whole script read"]
+  reader --> stagebodies["a check.sh call, read from each named stage's body"]
+  reader --> kinds{"what each cargo call builds: nothing, another profile or target, or the cache's profile, its subcommand the first word past any options"}
+  called --> kinds
+  pywalk -->|"the cargo argument lists of the bodies it reaches"| kinds
+  unscoped --> kinds
+  wholescript --> kinds
+  stagebodies --> kinds
+  kinds --> fitq{"the first class that fits"}
+  fitq -->|"release (3)"| relrule["restores no cache at all"]
+  fitq -->|"another runner (0)"| runrule["restores no Rust-path cache"]
+  fitq -->|"shared (9)"| sharedrule["restores the shared key once, before its first build, under the build's if"]
+  fitq -->|"cache-free (7)"| freerule["every Rust-path restore it holds carries the shared key"]
+  cwriters --> scenarios["cache_problems: the module's save scenarios, read and not edited"]
+  cwriters --> rustsave["the Rust-save key rule: the cache-primary-key of an earlier shared restore (2 Rust saves of 4)"]
+  ckeys --> resolve["a save's cache-primary-key resolved through an earlier restore of the same paths"]
+  resolve --> templates{"the template its paths choose"}
+  templates -->|"Rust (14)"| rustkey["the shared key, its fallback absent or the toolchain prefix"]
+  templates -->|"pnpm store (3)"| pnpmkey["the pnpm key over pnpm-lock.yaml"]
+  templates -->|"Playwright (2)"| browserkey["the browser key over the version pnpm-lock.yaml locks"]
+  templates -->|"any other paths"| unknowncache["a cache this rule does not know"]
+  ctexts --> vocab["the closed expression vocabulary, each env value resolved and judged again"]
+  vocab --> producers["each step output judged by its producing step's run: no run id, run number, attempt, commit sha, clock or randomness"]
+  relrule --> judged{"every member meets its rule?"}
+  runrule --> judged
+  sharedrule --> judged
+  freerule --> judged
+  scenarios --> judged
+  rustsave --> judged
+  rustkey --> judged
+  pnpmkey --> judged
+  browserkey --> judged
+  producers --> judged
+  unknowncache -->|"always"| refused["a problem, by name: the hygiene job is red"]
+  judged -->|"no"| refused
+  judged -->|"yes"| counted["controls first, then examined N and each class's count, VOID on 0"]
+  counted --> green["the hygiene job is green, and the aggregate ci needs it"]
+```
+
+| check | population | matcher | examined at `b25ed04a`, by the reader | control |
+|---|---|---|---|---|
+| 1, A1 | every job of every workflow that runs cargo | SPEC-430 R2 to R5, R13 | 19 jobs: 9 shared, 7 cache-free, 3 release, 0 on another runner; 58 Python calls, 37 scoped, 13 unscoped and 8 whole, 3 of them dropping a list the whole script holds | the `ci.yml` jobs `stage_calls` names with a stage of `COMPILES_RUST` other than `test-release` are shared, and every job holding a non-lookup shared restore runs cargo |
+| 2, A3 | every step that can write a cache | SPEC-430 R6 | 19 writers (4 `actions/cache/save`, 8 `actions/setup-node`, 7 `pnpm/action-setup`): 4 saves, 2 of them Rust saves | the saves read equal the `actions/cache/save` steps `action` reads, and the Rust saves those whose `paths` are `RUST_CACHE` |
+| 3, A5 | every key of every cache step, a save's resolved through its restore | SPEC-430 R7 | 19 keys: 14 Rust, 3 pnpm, 2 Playwright; 13 fallback lines | the keys read by class equal the cache steps `paths` reads by class |
+| 4, A7 | every key and every fallback line, resolved as in check 3 | SPEC-430 R8 | 32 texts | the texts equal the keys plus the fallback lines `lines_of` reads, every save's key resolved |
+
+Sites cured: none. At `b25ed04a` no job, writer, key or text breaks its rule under the classes (SPEC-430 R11), so
+the delivery changes no workflow. Each class's count is printed and not refused, because a class may hold none.
+
+Where it runs: the module runs in CI's `hygiene` job (`ci.yml:298`), through `check.sh`'s `python` stage, called as
+`bash scripts/check.sh python scrub secrets` (`ci.yml:351`), whose body runs `unittest discover` over the suite
+(`check.sh:186`). That job runs on every pull request into `dev` or `main` and every push to them (`ci.yml:12-17`).
+The aggregate `ci` needs `hygiene` (`ci.yml:1021`), so no required check changes.
