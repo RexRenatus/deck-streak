@@ -179,8 +179,11 @@ on the continuous integration's simulator step; their reds and greens are read t
 | `docs/decisions/ADR-391-the-engine-core-marks-an-image-occlusion-question-and-each-review-withholds-it-with-one-line.md` | docs | added |
 | `docs/schematics/web-study-screens.md` | docs | one section appended at its end (section 9); no existing line changes |
 | `docs/schematics/ios-review-screen.md` | docs | one section appended at its end (section 8); no existing line changes |
-| `web/app/src/lib/study/update-now.test.ts` | web | `withheld: false` added to view()'s defaults, a dev fixture the merge left without the now-required field (RULED 1491 Q5) |
-| `formal/tla/UndoOwnAnswer/UndoOwnAnswer.tla` | formal | line 11's `current_card` digest re-pinned to the merged span, which carries this delivery's withheld lines (RULED 1491 Q8) |
+| `web/app/src/lib/study/update-now.test.ts` | web | `withheld: false` added to view()'s defaults, a dev fixture the merge left without the now-required field |
+| `web/app/src/lib/study/card-health.test.ts` | web | `withheld: false` added to view()'s literal, a dev fixture the merge left without the now-required field; no assertion changes |
+| `web/app/src/lib/study/review-clock.test.ts` | web | `withheld: false` added to view()'s literal, a dev fixture the merge left without the now-required field; no assertion changes |
+| `formal/tla/UndoOwnAnswer/UndoOwnAnswer.tla` | formal | line 11's `current_card` digest re-pinned to the merged span, which carries this delivery's withheld lines |
+| `formal/tla/DueReorderInput/DueReorderInput.tla` | formal | line 4's `current_card` digest re-pinned to the merged span, a stuttering step for the reorder model, whose variables the withheld lines do not move |
 | `docs/schematics/the-app-campaigns-surfaces-each-carry-a-stride-table-whose-every-control-cites-a-line-that-holds.md` | docs | three cited line numbers follow the lines this delivery moves in `crates/engine-core/src/lib.rs`, `crates/web-engine/src/wasm.rs` and `web/app/src/lib/engine/protocol.ts`; no quoted text changes |
 | `docs/red-first/SPEC-380.md` | docs | added |
 | `changelog.d/occlusion-mask-guard-380.md` | docs | added |
@@ -277,11 +280,13 @@ it already disables Show Answer and every rating outside their own phases.
 
 None, by surface. The rule is a total function over one string, computed inside one synchronous
 call; the withheld phase is one more arm in two transition tables (`review.ts` and
-`ReviewModel.swift`), with no new actor, shared state, timer or write path. No covered span is
-edited: of the formal covers at the base, three name `crates/web-engine/src/wasm.rs` (its undo, its
-undo offer and its rating call) and one names `crates/ffi/src/engine.rs`; this delivery edits
-`current_card` alone in the first and does not edit the second. A transition table in TypeScript or
-Swift cannot be named by a cover.
+`ReviewModel.swift`), with no new actor, shared state, timer or write path. One covered span is
+edited: `current_card` in `crates/web-engine/src/wasm.rs`, which two models cover (UndoOwnAnswer
+and DueReorderInput). Its new lines carry the withheld answer and empty the question, answer and
+CSS on it; they move none of either model's variables, so each cover is re-stamped as a stuttering
+step. The other covers of that file (its undo, its undo offer, its rating call, its bury, its flag
+and its first queued card) and the two of `crates/ffi/src/engine.rs` in UndoOwnAnswer keep their digests. A
+transition table in TypeScript or Swift cannot be named by a cover.
 
 ## 9. Mutation rows
 
