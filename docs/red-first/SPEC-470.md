@@ -81,3 +81,10 @@ builds nothing: `Instruments::step`, `Instruments::run_on_demand` and `Instrumen
 in `crates/coordination/src/instruments.rs`, and `Held::hold_to_end`, `ToEnd::release` and
 `<impl Drop for ToEnd>::drop` in `crates/ingest/src/lock.rs`. None was run here; the pull
 request's mutation stage judges them.
+
+The rebuild onto current dev merged the original branch unchanged (c9f79f8d). The formal obligations
+ledger, which joined dev after the original base, refuses a tree entry that has no row, so at that
+merge alone `test_every_existing_entry_has_its_disposition_row` and
+`test_the_ledger_exists_in_schema_v1` read red by name in the pull request run 42081731876. The
+commit that carries this paragraph adds the model's row and lists the entry in the ledger tests'
+tables; it adds no criterion, and the tests of A1 to A6 are unchanged.
