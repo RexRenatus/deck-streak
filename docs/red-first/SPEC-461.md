@@ -28,6 +28,8 @@ A5: not red: the TCP listener at 8c5e0fcdf89be5801f73c850dfa14bd13c281b73 alread
 A6: red at 8c5e0fcdf89be5801f73c850dfa14bd13c281b73: Error: the TCP listener served no request, Expected: 200, Received: "ECONNRESET" (card-sandbox job 117403743416, listeners-the-TCP-listener-9fdb0--reads-tcp-and-its-path-key-chromium, 3 tests fail the same way)
 A6: green at f34434736917fd7486529c1e28112225a53a52dc
 A7: not red: the sentinel names the HTTP listener at 8c5e0fcdf89be5801f73c850dfa14bd13c281b73 and after; A5 is its control in the same run
+A8: red at ea572bee8331d94523176600b61284d23b464b9d: Error: nav-blank opened with W3 off in webkit (card-sandbox job 127332608442, received { "tcp": 1 } where {} was expected)
+A8: green at 618d29923f5f309500f0c9cd44b6de21e0070242
 ```
 
 C2 is the one commit that changes a test file (`planted.ts` and `listeners.ts`) between A1 to A3's and
@@ -46,3 +48,11 @@ with `clicks()` and declares the bare connection of `nav-blank` in WebKit with W
 and in the schematic. It changes only the planted table, the schematic and this record: A1's test
 and `listeners.spec.ts` are unchanged since the original red commit, and `card.spec.ts` is unchanged
 by this delivery.
+
+That merge (ea572bee) read red by name in the pull request run 42052666539: A1's test on the three
+cards `nav-blank-area`, `nav-blank-svg` and `nav-show-new`, and A8's WebKit cell, `nav-blank` with
+W3 off reading `tcp` where `{}` was expected. The commit after the merge (618d2992) carries the
+paragraph above and is where A1's test and A8's test turn green; the commit after it changes only
+documents, so both tests and every file they read are the same at this delivery's head, whose run
+reads both green. A3's selector now names `nav-top` and `nav-blank` with W4 off, the layer the ward
+gave them; their red above was read with W1 off, under the same aim.

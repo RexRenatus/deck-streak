@@ -206,7 +206,7 @@ Chosen against:
 - Rewriting section 3's rows in place: rejected because the coverage test reads that section, and
   an edit in place is not insert-only.
 
-### D5. Red first per criterion, no rows, the bound kept, no formal entry, two pushes, sonnet
+### D5. Red first per criterion, no rows, the bound kept, no formal entry, two pushes
 
 - Rows: none from S46100. The changed code is test code (the planted table, the TCP listener, its
   spec and a coverage test). StrykerJS mutates `src` and excludes test files (`web/app/stryker.config.json`),
@@ -231,8 +231,6 @@ Chosen against:
   `@phx covers` lines under `formal/` name a path under `web/` or `docs/`.
 - Pushes: two. The browser reds exist only as CI's reading of the red commit, so the first push
   carries the red commit, and the second the fix and the record.
-- Model: sonnet. Every edit is named to its line, the reds are read in CI by name, and nothing in
-  the build calls for a design judgement.
 
 Chosen against:
 
@@ -243,7 +241,6 @@ Chosen against:
 - A TLA+ model of the counter and the visits: rejected because no cover can name the TypeScript it
   would model, and the visits are sequential.
 - One push: rejected because the browser reds exist only as CI's reading of the red commit.
-- Opus for the build: rejected because the build is a line-named edit and a CI reading.
 
 ### D6. What is not in this delivery
 
@@ -309,6 +306,35 @@ Chosen against:
 - The facts tested under Vitest: rejected because the third needs a browser page to send the
   sentinel, and a Vitest file beside the coverage test would be another change under `web/app/src`.
 
+### D8. Rebuilt on the target ward: its clicked cards declare their path, and nav-blank's WebKit bare connection is a declared cell
+
+The card frame's target ward (ADR-498) landed on `dev` before this delivery, as its D4 asks. It
+moved `nav-top` and `nav-blank` to W4 alone, planted three clicked cards at the TCP listener,
+`nav-blank-area`, `nav-blank-svg` and `nav-show-new`, through a helper that declares `tcp` alone,
+since that listener then counted sockets and read no request, and added a bare-connection table with
+one WebKit cell. This delivery is rebuilt on it by one merge of its original branch, and three
+things follow.
+
+- The three cards are built by `clicks()`, so each declares `tcp` and its own path, as D2's coverage
+  pin asks of every clicked card. Their markup is unchanged, and the helper goes.
+- With W3 off, `nav-blank`'s target returns, W1 refuses the popup, and WebKit's handler preconnects
+  to the link's host: the variant reads one bare connection and nothing else, as `nav-blank-area`'s
+  does. It is declared in the bare-connection table with its section 3 cell (ADR-498 D7), and
+  SPEC-461 A8 holds it. That cell is the one change in place to section 3, which D4 otherwise leaves
+  as it is, as ADR-498 D8 changes the rows the census reads.
+- SPEC-461 A3 names `nav-top` and `nav-blank` with W4 off, the layer the ward gave them.
+
+Chosen against:
+
+- Keeping the ward's helper and narrowing the coverage pin to the cards `clicks()` builds: rejected
+  because the pin's own control refuses a clicked card that declares `tcp` alone, which would read a
+  bare connection as a follow.
+- Reading `nav-blank`'s WebKit W3-off variant as staying closed: rejected because the variant
+  restores the target and the engine preconnects, so the cell would read red at every head (ADR-498
+  D7).
+- An UNOBSERVABLE entry for that cell: rejected because the channel is observable there, and the
+  entry would read the card's reference as blind.
+
 ## Decision Outcome
 
 Every planted card that acts on a click points its link, form action or ping at the TCP listener,
@@ -333,7 +359,7 @@ two pushes, and no production change.
 
 ### Confirmation
 
-SPEC-461's acceptance criteria A1 to A7 and its red-first record.
+SPEC-461's acceptance criteria A1 to A8 and its red-first record.
 
 ## What would make this wrong
 

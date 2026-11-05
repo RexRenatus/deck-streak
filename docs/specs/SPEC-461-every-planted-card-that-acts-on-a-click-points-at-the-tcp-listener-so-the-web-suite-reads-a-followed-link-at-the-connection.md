@@ -7,8 +7,9 @@
   yet; one delivery of test code and documents; no rows, the bound kept, no formal entry, two
   pushes; the TCP listener restated as a request-reading listener on its own port, without the
   sentinel). It builds on ADR-352 D7, ADR-412 and ADR-413, and amends none of them.
-- **Schematic:** `docs/schematics/card-frame-channels.md`, amended insert-only by an appended
-  section 13 that places the counter and the controls on a followed link's path, per engine.
+- **Schematic:** `docs/schematics/card-frame-channels.md`, amended by an appended section 13 that
+  places the counter and the controls on a followed link's path, per engine, and by one
+  bare-connection cell in its section 3 (R5).
 - **Amends:** SPEC-392, insert-only, by an appended section 9 on its #761 exclusion.
 - **Status:** this delivery builds it, with its tests and `docs/red-first/SPEC-461.md`.
 
@@ -59,6 +60,14 @@ range, unless its line names another command.
 - **No row anchors on a file this delivery changes.** Of the `scripts/mutation-rows.d` files, one
   row names a web path, S39801 on `web/app/playwright.card.config.ts`, which this delivery leaves
   unchanged.
+- **Re-read at `0ef74a05`, the rebuild's cut.** The card frame's target ward (ADR-498) moved
+  `nav-top` and `nav-blank` to W4 alone (`web/app/tests-card/planted.ts:189-190`) and planted three
+  clicked cards at the TCP listener, `nav-blank-area`, `nav-blank-svg` and `nav-show-new`
+  (`:191-213`), through a helper that declares `tcp` alone (`:85-91`), since that listener then read
+  no request. Its bare-connection table (`:264-271`) holds one cell, `nav-blank-area` in WebKit with
+  W3 off, which `card.spec.ts:135-143` reads as `tcp` and no other key, and the schematic's section
+  3 holds its `BARE in WebKit with W3 off` cell (`docs/schematics/card-frame-channels.md:114`).
+  `listeners.ts` is as this section reads it above.
 
 ## 2. Requirements
 
@@ -76,12 +85,15 @@ range, unless its line names another command.
   unchanged. The suite's own tests then read, per clicked card and engine: the reference frame's
   follow at `tcp` and its own path (the control), the card frame's reading `{}` (no connection, no
   request), and the shipped frame with the card's own layer alone removed at `tcp` and its own path
-  (the control), with every other layer removed alone at `{}`.
+  (the control), with every other layer removed alone at `{}`, except each cell the
+  bare-connection table declares, which reads `tcp` and no other key (R12).
 - **R4.** A coverage test pins R1 (A1): every clicked card names the TCP listener's origin, unless
   it is UNOBSERVABLE in every configured engine, names no HTTP listener origin, and expects exactly
   `tcp` and its own path; a planted card aimed the old way, and one that declares `tcp` alone, are
   each refused by name; and it prints its examined count after its behaviour assertion.
-- **R5.** The UNOBSERVABLE table and the schematic's section 3 are unchanged (ADR-413).
+- **R5.** The UNOBSERVABLE table is unchanged (ADR-413). The bare-connection table and the
+  schematic's section 3 each gain one cell, `nav-blank` in WebKit with W3 off, and no other cell
+  of section 3 changes (R12; ADR-498 D7, D8).
 - **R6.** No file of the card frame changes, and the only file under `web/app/src` that changes is
   `planted-coverage.test.ts`. A card frame read opening a connection is a finding that stops the
   delivery; its cure is a delivery of its own.
@@ -91,12 +103,19 @@ range, unless its line names another command.
   not-red line, and names in prose every commit that changes a test file between a red and its
   green; `changelog.d/card-suite-connection-461.md` records the change.
 - **R10.** SPEC-392 gains section 9, and the schematic gains section 13, each appended after its
-  file's last line, insert-only.
+  file's last line, insert-only; the schematic's section 3 also changes `nav-blank`'s row in place
+  by its one bare-connection cell (R5), and section 13 closes with its re-reading on the target
+  ward (R12).
 - **R11.** The TCP listener's three facts, each proved by its own test in
   `web/app/tests-card/listeners.spec.ts` in each engine, the spec starting its own listeners as
   `card.spec.ts` does and reading each fact from `Listeners.reading`: (1) a connection that sends
   no request reads `tcp` and no path key (A5); (2) a served request reads `tcp` and its path key
   (A6); (3) the harness's sentinel never reaches the TCP listener (A7).
+- **R12.** Rebuilt on the card frame's target ward (ADR-478 D8): the three clicked cards the ward
+  planted at the TCP listener, `nav-blank-area`, `nav-blank-svg` and `nav-show-new`, are built by
+  `clicks()`, so each declares `tcp` and its own path as R1 says, with its markup unchanged, and the
+  ward's helper that declared `tcp` alone is removed. `nav-blank`'s bare connection in WebKit with
+  W3 off is declared in the bare-connection table with its section 3 cell (A8).
 
 ## 3. Acceptance criteria of SPEC-461
 
@@ -107,36 +126,38 @@ one run; on the build machine the suite is only listed.
 |---|---|---|---|
 | A1 | every planted card that acts on a click names the TCP listener and not the HTTP listener, unless UNOBSERVABLE in every configured engine, and expects exactly `tcp` and its own path; a card aimed the old way, or one declaring `tcp` alone, is refused by name | Vitest, `planted-coverage.test.ts` "every planted card that acts on a click points at the TCP listener, which counts every connection" | the red commit's markup, still aimed at the HTTP listener, read locally |
 | A2 | each re-aimed card's follow from the reference frame reaches the TCP listener at `tcp` and its own path in each engine where the card is observable, and its follow from the card frame reaches nothing, no connection and no path included | Playwright, the pair tests "`<id>`: the reference frame reaches its listener and the card frame reaches nothing" for the seven cards with a destination | the red commit, read in CI: 20 cases read nothing at `tcp` |
-| A3 | the shipped frame with the card's own refusal alone removed opens a connection the TCP listener counts, carrying the card's own path: `nav-self` and `download` with W4 off, `nav-top` and `nav-blank` with W1 off | Playwright, the variant tests "W4 off: `<id>` opens" and "W1 off: `<id>` opens" | the red commit, read in CI: 12 cases read nothing at `tcp` |
+| A3 | the shipped frame with the card's own refusal alone removed opens a connection the TCP listener counts, carrying the card's own path: `nav-self`, `nav-top`, `nav-blank` and `download` with W4 off | Playwright, the variant tests "W4 off: `<id>` opens" | the red commit, read in CI: 12 cases read nothing at `tcp`, with `nav-top` and `nav-blank` then held by W1 alone (R12) |
 | A4 | the whole planted suite passes in Chromium, WebKit and Firefox at the head | Playwright, `test:card` whole | not red: the kept suite of SPEC-341 and SPEC-398 |
 | A5 | a connection that sends no request reads `tcp` and no path key at the TCP listener | Playwright, `listeners.spec.ts` "the TCP listener: a connection that sends no request reads tcp and no path key" | not red: the TCP listener at the red commit already reads such a connection so; A6 at the head, in the same run, is its control |
 | A6 | a request the TCP listener serves reads `tcp` and its path key | Playwright, `listeners.spec.ts` "the TCP listener: a served request reads tcp and its path key" | the red commit, read in CI: 3 cases, the TCP listener there closing each connection before its request |
 | A7 | the harness's sentinel never reaches the TCP listener | Playwright, `listeners.spec.ts` "the TCP listener: the harness sentinel never reaches it" | not red: the sentinel names the HTTP listener at the red commit and after; A5 at the head, in the same run, is its control |
+| A8 | with W3 off, `nav-blank` reads one bare connection at the TCP listener and no other key in WebKit, and nothing in Chromium and Firefox | Playwright, the variant test "W3 off: `nav-blank` stays closed, a bare connection in webkit" | the rebuild's merge, read in CI: WebKit's variant read `tcp` where `{}` was expected, its cell not yet declared |
 
 Every criterion's test prints `examined N` where it enumerates, after its behaviour assertion.
 
 ```acceptance
 A1: pnpm exec vitest run web/app/src/lib/card/planted-coverage.test.ts -t "every planted card that acts on a click points at the TCP listener, which counts every connection"
 A2: pnpm --dir web/app exec playwright test --config playwright.card.config.ts -g "(nav-self|nav-top|nav-blank|download|ping|form|javascript-url): the reference frame reaches its listener and the card frame reaches nothing"
-A3: pnpm --dir web/app exec playwright test --config playwright.card.config.ts -g "(W4 off: (nav-self|download)|W1 off: (nav-top|nav-blank)) opens"
+A3: pnpm --dir web/app exec playwright test --config playwright.card.config.ts -g "W4 off: (nav-self|nav-top|nav-blank|download) opens"
 A4: pnpm --dir web/app test:card
 A5: pnpm --dir web/app exec playwright test --config playwright.card.config.ts -g "the TCP listener: a connection that sends no request reads tcp and no path key"
 A6: pnpm --dir web/app exec playwright test --config playwright.card.config.ts -g "the TCP listener: a served request reads tcp and its path key"
 A7: pnpm --dir web/app exec playwright test --config playwright.card.config.ts -g "the TCP listener: the harness sentinel never reaches it"
+A8: pnpm --dir web/app exec playwright test --config playwright.card.config.ts -g "W3 off: nav-blank stays closed"
 ```
 
 ## 4. File manifest
 
 | path | part | change |
 |---|---|---|
-| `web/app/tests-card/planted.ts` | 1 | changed in place, line-neutral: `:71` the aim and the arrivals (R1), `:18`, `:69` and `:70` comment and parameter name (R2) |
+| `web/app/tests-card/planted.ts` | 1 | changed: the aim and the arrivals of `clicks()` (R1), the `Listener.tcp` comment and the helper's parameter name (R2); the ward's helper removed, its three cards built by `clicks()`, and one bare-connection entry (R12) |
 | `web/app/tests-card/listeners.ts` | 1 | changed: the TCP listener restated (R2), the header comment `:1-6`, the import `:10`, the field `:42`, the handlers `:52-55`, the server `:64` and the close after `:139`; 18 lines added, 11 removed |
 | `web/app/tests-card/listeners.spec.ts` | 1 | added: the TCP listener's three facts (R11) |
 | `web/app/src/lib/card/planted-coverage.test.ts` | 1 | changed: A1's test inserted before the last line (R4) |
 | `docs/specs/SPEC-461-every-planted-card-that-acts-on-a-click-points-at-the-tcp-listener-so-the-web-suite-reads-a-followed-link-at-the-connection.md` | 1 | added: this SPEC |
 | `docs/decisions/ADR-478-the-web-card-suite-reads-a-followed-link-at-the-connection-every-planted-card-that-acts-on-a-click-points-at-the-tcp-listener.md` | 1 | added |
 | `docs/specs/SPEC-392-the-iphone-and-ipad-card-view-strips-every-link-element-and-a-followed-link-opens-no-connection.md` | 1 | changed: section 9 appended, insert-only (R10) |
-| `docs/schematics/card-frame-channels.md` | 1 | changed: section 13 appended, insert-only (R10) |
+| `docs/schematics/card-frame-channels.md` | 1 | changed: section 13 appended (R10); `nav-blank`'s section 3 cell in place (R5, R12) |
 | `docs/red-first/SPEC-461.md` | 1 | added (R9) |
 | `changelog.d/card-suite-connection-461.md` | 1 | added (R9) |
 
@@ -173,6 +194,8 @@ A7: pnpm --dir web/app exec playwright test --config playwright.card.config.ts -
 - **A selector picks other tests.** A2's or A3's `-g` pattern selects other than 21 or 12 tests, or
   A5's, A6's or A7's other than 3.
   Detected by `--list` before the red commit.
+- **A8's selector picks other tests.** A8's `-g` pattern selects other than 3 tests. Detected by
+  `--list` before the merge is pushed.
 - **A sibling changes a manifest file first.** Detected by the build's re-measure at its cut.
 
 ## 7. The planted suite's readings, per engine
@@ -184,8 +207,11 @@ own path, `/<id>/`; `{}` is the empty reading.
 | card | reference frame | card frame | its own layer removed alone | each other layer removed alone |
 |---|---|---|---|---|
 | `nav-self` | tcp + path | `{}` | W4: tcp + path | `{}` |
-| `nav-top` | tcp + path | `{}` | W1: tcp + path | `{}` |
-| `nav-blank` | tcp + path | `{}` | W1: tcp + path | `{}` |
+| `nav-top` | tcp + path | `{}` | W4: tcp + path | `{}` |
+| `nav-blank` | tcp + path | `{}` | W4: tcp + path | `{}`; in WebKit with W3 off, `tcp` and no other key (BARE, A8) |
+| `nav-blank-area` | tcp + path | `{}` | W4: tcp + path | `{}`; in WebKit with W3 off, `tcp` and no other key (BARE) |
+| `nav-blank-svg` | tcp + path | `{}` | W4: tcp + path | `{}` |
+| `nav-show-new` | tcp + path | `{}` | W1: tcp + path | `{}` |
 | `download` | tcp + path | `{}` | W4: tcp + path | `{}` |
 | `ping` | tcp + path; `{}` in Firefox (UNOBSERVABLE) | `{}` | none (two or more layers hold it) | `{}` |
 | `form` | tcp + path | `{}` | none (two or more layers hold it) | `{}` |
@@ -198,6 +224,12 @@ three engines, and `ping` in Chromium and WebKit) and 12 variant tests (four car
 engines), 32; and A6 fails in each engine, 3 more, because the TCP listener there closes each
 connection before its request: 35 in all. Every other test of the suite passes there, A5's and
 A7's among them. At the head every cell reads as written, and A5 to A7 pass in each engine.
+
+Rebuilt on the target ward (R12), the rows of `nav-top` and `nav-blank` read with W4 off, the layer
+the ward gave them, and the ward's three cards read as the other clicked cards do. At the rebuild's
+merge, before R12's commit, A1's test reads the ward's three cards as declaring `tcp` alone, and
+WebKit's W3-off variant of `nav-blank` reads `tcp` where `{}` is expected; at the head every cell
+reads as written, and A8 passes in each engine.
 
 ## 8. Formal
 
