@@ -14,4 +14,5 @@
 
 ### Changed
 
-- Bench files leave Stryker's mutate list and join the coverage exclusions.
+- Bench files live outside the app's source tree, which Stryker mutates, and join the coverage
+  exclusions.

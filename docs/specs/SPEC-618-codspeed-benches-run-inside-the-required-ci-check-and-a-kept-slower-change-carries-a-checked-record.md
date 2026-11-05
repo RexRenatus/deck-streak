@@ -91,12 +91,14 @@ R9. The benches, wave 1, each Rust measured body a named `#[inline(never)]` func
 and schedule step in `crates/engine-core/benches/scheduling.rs`; the FSRS replay in
 `crates/fsrs7/benches/replay.rs`; the native adapter's answer and face in
 `crates/ffi/benches/grading.rs` and `crates/ffi/benches/render.rs`; and the web card frame, the
-review state machine and the review screen in four `*.bench.ts` files under `web/app/src/lib/`,
-run by `vitest.bench.config.ts` with the CodSpeed Vitest plugin. `[profile.bench]` inherits release
-with line-table debug information; the release profile is unchanged.
+review state machine and the review screen in four `*.bench.ts` files under `web/app/bench/`,
+outside `web/app/src`, SPEC-039 R2's root, run by `vitest.bench.config.ts` with the CodSpeed Vitest
+plugin. `[profile.bench]` inherits release with line-table debug information; the release profile
+is unchanged.
 
-R10. `*.bench.ts` files join the Stryker mutate exclusions and the coverage exclusions; the
-CodSpeed check joins no ruleset, and the merge step reads it beside the regression record.
+R10. Bench files lie outside `web/app/src`, so neither Stryker's mutate list nor SPEC-039 R2's web
+production code reaches them, and they join the coverage exclusions; the CodSpeed check joins no
+ruleset, and the merge step reads it beside the regression record.
 
 R11. The record check of R8 runs on each pull request, in `bench-rust-build`, which holds
 `contents: read` only. Its one step runs under `github.event_name == 'pull_request'`, copies only
@@ -132,10 +134,10 @@ job sets up Node and pnpm as its build job does and installs no package. Neither
 `cargo build`, `cargo install`, `pnpm install`, `npm` or `protoc`.
 
 R15. The coverage exclusions are entries of `config/coverage.json`, the register the coverage
-report applies: `crates/*/benches/**` in the Rust lane and `web/app/src/**/*.bench.ts` in the web
-lane, each of kind `bench` and citing this SPEC. Stryker's mutate list gains `!src/**/*.bench.*`.
-The Vitest workspace config keeps its coverage block as it is, and its test project includes only
-test and spec files, so no bench file loads there.
+report applies: `crates/*/benches/**` in the Rust lane and `web/app/bench/**` in the web lane, each
+of kind `bench` and citing this SPEC. Stryker's mutate list is unchanged, since it reaches only
+`src/**` and no bench file lies there. The Vitest workspace config keeps its coverage block as it
+is, and its test project includes only test and spec files, so no bench file loads there.
 
 ## 3. Acceptance criteria of SPEC-618
 
@@ -164,7 +166,7 @@ test and spec files, so no bench file loads there.
 | A21 | each bench package takes the renamed Divan crate through the workspace entry at one exact version, each bench file is a target with `harness = false`, and each measured body is an `#[inline(never)]` function (R9, R13) | `test_perf_benches.py` `test_each_rust_bench_is_a_harnessless_target_with_a_measured_body` |
 | A22 | `perf/benchmarks.txt` equals the names the bench files define (R12) | `test_perf_benches.py` `test_the_benchmark_list_equals_the_names_the_bench_files_define` |
 | A23 | `vitest.bench.config.ts` runs the CodSpeed plugin under jsdom over `*.bench.ts` files, and the web bench files of R9 exist (R9, R13) | `test_perf_benches.py` `test_the_web_benches_run_under_the_codspeed_plugin` |
-| A24 | bench files are in Stryker's mutate exclusions and in the coverage exclusions of `config/coverage.json` (R10, R15) | `test_perf_benches.py` `test_bench_files_are_excluded_from_mutation_and_coverage` |
+| A24 | no bench file lies under `web/app/src`, the root Stryker's mutate list and SPEC-039 R2 reach, and bench files are in the coverage exclusions of `config/coverage.json` (R10, R15) | `test_perf_benches.py` `test_bench_files_are_excluded_from_mutation_and_coverage` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_perf_plan.py -k test_a_fork_pull_request_builds_but_never_uploads
@@ -247,8 +249,8 @@ computes.
 | `vitest.bench.config.ts` | web | added: the bench run under the CodSpeed Vitest plugin |
 | `package.json` | web | changed: the CodSpeed Vitest plugin at an exact version |
 | `pnpm-lock.yaml` | web | changed by pnpm: the plugin and its dependencies |
-| `web/app/src/lib/**/*.bench.ts` | web | added: the card frame, review step and review screen benches |
-| `web/app/stryker.config.json` | web | changed: bench files leave the mutate list |
+| `web/app/bench/**/*.bench.ts` | web | added: the card frame, review step and review screen benches |
+| `web/app/tsconfig.json` | web | changed: svelte-check covers the bench folder |
 | `config/coverage.json` | config | changed: the two bench exclusions |
 | `perf/benchmarks.txt` | perf | added: the benchmark list |
 | `scripts/mutation-rows.d/S61800-S61899.json` | mutation | added: rows on the new workflow lines |
