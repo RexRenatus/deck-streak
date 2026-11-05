@@ -3,8 +3,7 @@
 Path:
 `docs/specs/SPEC-436-no-lock-guard-is-held-across-an-await-no-async-body-blocks-and-no-request-handler-panics.md`.
 
-- **Issue:** none. This SPEC refers to #822, the release pull request, after which it lands, and
-  closes nothing.
+- **Issue:** none. This SPEC closes nothing.
 - **Context(s):** the workspace lint table (`Cargo.toml`), the daemon's tests and dev-dependencies,
   the lock file, the rows band and the documents. No product source, workflow, `scripts/check.sh`,
   `clippy.toml` or test-runner configuration changes.
@@ -224,9 +223,7 @@ refused.
 
 ## 5. What this does NOT cover
 
-- It does not land before the release pull request, and changes nothing the release run reads,
-  #822.
-- It does not touch the test runner's configuration, which the release pull request edits, #822.
+- It does not touch the test runner's configuration.
 - It does not move the skip day's whole-file copy, reads and write onto the blocking pool; those
   seven sites stay listed, #907.
 - It does not replace the agent's four staged-file removals with tokio's; those sites stay

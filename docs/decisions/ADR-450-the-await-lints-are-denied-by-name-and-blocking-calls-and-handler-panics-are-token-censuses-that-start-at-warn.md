@@ -294,5 +294,4 @@ run, green with the two lints at deny.
 
 SPEC-436 (requirements, criteria, manifest); ADR-293 (Rust read as tokens); SPEC-002 (the
 workspace lint table's inheritance); SPEC-020 R14 (the offload); SPEC-025 (the API's panic
-catcher); SPEC-041 A18 (the audit of silenced lint groups). Issue #822 is the release; this
-delivery lands after it.
+catcher); SPEC-041 A18 (the audit of silenced lint groups).
