@@ -46,3 +46,8 @@ removes. So at that merge alone `test_the_ledger_exists_in_schema_v1` and
 that carries this paragraph adds the Lean entry's row, lists it among the ledger tests' new entries
 and points that stand-in at ending_on_signals; it adds no criterion, and the tests of A1 to A14 are
 unchanged.
+
+The documents were restated at the new base first (464d1942). At the commit that adds the ledger row
+and the new stand-in (843bb8d1), the ledger's tests, the three tests of the survivor tests' TheMain
+and the tests of A1 to A12 and A14 read green, and the lines of the reader still hash to the Lean
+entry's cover stamp. The commit after 843bb8d1 changes only this record.
