@@ -18,9 +18,23 @@ A4: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k tes
 ```red-first
 A2: not red: guards what dev already holds; harness, release-and-app and verdict resolve to xcode-27 in every scenario, before and after the change
 A4: not red: the reader reads planted text only; fromJSON of a string literal is read and every other fromJSON form is refused by name, before and after the change
+A1: red at f88a6c7: AssertionError: 'xcode-27' != ['self-hosted', 'macOS', 'ARM64', 'ds-mini']
+A3: red at f88a6c7: AssertionError: Lists differ: ["xcframework: a push to dev, DS_MINI on, [2005 chars]els"] != []
 ```
 
 The runner admission changes in the same commit as the tests: `admitted_runner` admits the routing
 expression alone to the three short jobs, and each job of the file is held to its one runner, the
 card view's host job included. Those pins read red at the commit that adds the tests, beside A1 and
 A3, and green once the workflow holds the expression.
+
+The reds were read in CI run 41949535005, the `hygiene` job 126989913004, at f88a6c7 (the commit
+that adds the tests alone), by test name from the job's `python.log`: five tests failed, each by
+an assertion and no error, and no other test of the stage failed. A1 failed in 18 subtests, the
+three short jobs in each of the six scenarios that route them, each `'xcode-27' != ['self-hosted',
+'macOS', 'ARM64', 'ds-mini']`. A3 failed on its control, the live jobs' routing problems, before
+any plant was read. The three runner pins failed beside them:
+`test_no_workflow_uses_a_self_hosted_runner_or_a_privileged_trigger` (the admission refuses
+`xcode-27` on the three short jobs), `test_one_job_body_serves_the_change_and_the_tag`
+(`'xcode-27' != ` the expression) and `test_the_card_probe_suite_runs_on_both_simulators`
+(`card-isolation: it runs on 'xcode-27', not the admitted runner`). A2 and A4 passed in the same
+run. The workflow change follows in the next commit, with the tests unchanged.
