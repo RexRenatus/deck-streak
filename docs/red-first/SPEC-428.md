@@ -80,3 +80,27 @@ new base spells it. In `scripts/tests/test_rust_cache_workflow.py`, `TOOLS` name
 current dev in the pull request's own run, in the `hygiene` job. The `git diff --quiet` command
 above held at the first head only; over this base it does not exit 0, and the five criteria
 after A2 are read green in the second push's run.
+
+The cure followed in 614db5fc: the re-pins of `cargo-nextest` and `zizmor`, the pin of the
+`coverage-python` site and the rows, with no test changed. The reds below were read in job 127211615365,
+`hygiene` over 14073782 in the pull request's first push: `Ran 1858 tests` and `FAILED (failures=4)`. The four failures
+are A1's and A2's tests and the two sibling tests whose expected strings moved with the pin record
+and `TOOLS`, each red at 14073782 and green at the cure:
+`test_ci_workflows.TheEngineRunsBesideRust.test_the_engine_job_runs_the_engine_set_beside_the_rust_job`
+and
+`test_rust_cache_workflow.TheRustCacheWorkflow.test_it_installs_restores_by_prefix_and_compiles_without_running_a_test`.
+The other criteria held over the new base before the cure and after it, so their lines above
+stand. CI runs only the head of the push that carries the cure and this record together, and this
+record cannot name its own commit, so each green line names the cure. The cure's tree equals that
+head's on every workflow and script; this command exits 0:
+
+```text
+git diff --quiet 614db5fc841047329751b3b6068a97d566e766a5 HEAD -- .github scripts
+```
+
+```red-first
+A1: red at 140737822c739ae64fd617f5a5007f3ffc2d21c6: AssertionError: Lists differ: ['coverage.yml: coverage-python: step 4: cargo-deny names no exact version'] != []
+A1: green at 614db5fc841047329751b3b6068a97d566e766a5
+A2: red at 140737822c739ae64fd617f5a5007f3ffc2d21c6: AssertionError: Lists differ: ['coverage.yml: coverage-python: step 4: cargo-deny names no exact version'] != []
+A2: green at 614db5fc841047329751b3b6068a97d566e766a5
+```
