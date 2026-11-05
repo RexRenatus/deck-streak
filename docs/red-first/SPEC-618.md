@@ -48,12 +48,18 @@ A23: red at efc7acfe: test_the_web_benches_run_under_the_codspeed_plugin: Assert
 A23: green at 89b6d5e1
 A24: red at efc7acfe: test_bench_files_are_excluded_from_mutation_and_coverage: AssertionError: '!src/**/*.bench.*' not found in ['src/**/*.ts', 'src/**/*.js', 'src/**/*.svelte', '!src/**/*.test.*', '!src/**/*.spec.*', '!src/**/*.d.ts', '!src/lib/paraglide/**'] (job 126898689180)
 A24: green at b3f776ba
-A26: red at fff4d401: test_mutation_verdict.py:1090: AssertionError: {'ci': 189, 'battery': 234} != {'ci': 185, 'battery': 234} (read on the box: 3 of 44 failing, each on the ceiling)
-A27: red at fff4d401: test_release_rust_ceiling.py:308: AssertionError: Tuples differ: (1, '[71 chars]00 is outside 189..256; a ceiling outside it is never dealt\n') != (1, '[71 chars]00 is outside 185..256; a ceiling outside it is never dealt\n') (read on the box: 7 of 13 failing, each on the ceiling)
-A28: red at fff4d401: test_release_python_ceiling.py:345: AssertionError: Tuples differ: (0, '[366 chars]ng 189\nmutation: shards: run legs 4 of 221: p[68 chars]0\n') != (0, '[366 chars]ng 185\nmutation: shards: run legs 4 of 217: p[68 chars]0\n') (read on the box: 1 of 19 failing)
+A26: red at fff4d401: test_mutation_verdict.py:1090: AssertionError: {'ci': 189, 'battery': 234} != {'ci': 185, 'battery': 234} (read locally: 3 of 44 failing, each on the ceiling)
+A27: red at fff4d401: test_release_rust_ceiling.py:308: AssertionError: Tuples differ: (1, '[71 chars]00 is outside 189..256; a ceiling outside it is never dealt\n') != (1, '[71 chars]00 is outside 185..256; a ceiling outside it is never dealt\n') (read locally: 7 of 13 failing, each on the ceiling)
+A28: red at fff4d401: test_release_python_ceiling.py:345: AssertionError: Tuples differ: (0, '[366 chars]ng 189\nmutation: shards: run legs 4 of 221: p[68 chars]0\n') != (0, '[366 chars]ng 185\nmutation: shards: run legs 4 of 217: p[68 chars]0\n') (read locally: 1 of 19 failing)
 A25: red at ab8ee5ee: test_the_ceiling_is_the_runs_job_budget: AssertionError: {'ci': 189, 'battery': 234} != {'ci': 185, 'battery': 234} (job 127064675575)
 A29: red at ab8ee5ee: test_the_engine_and_the_fsrs7_crate_each_resolve_their_own_scheduler, read red by name (job 127064675575)
 A30: red at ab8ee5ee: test_every_exclusion_is_one_row_with_its_reason, read red by name (job 127064675575)
+A25: green at ab29cc97: read by name in CI at this delivery head, where git diff --quiet ab29cc97 HEAD -- scripts/mutation-verdict.py scripts/tests/test_dispatch_shards.py reads rc 0
+A26: green at ab29cc97: test_mutation_verdict.py, 44 tests OK (read locally)
+A27: green at ab29cc97: test_release_rust_ceiling.py, 13 tests OK (read locally)
+A28: green at ab29cc97: test_release_python_ceiling.py, 19 tests OK (read locally)
+A29: green at a22d2b21: test_fsrs7_pin.py, 1 test OK, the planted tempfile case included (read locally)
+A30: green at a22d2b21: test_coverage_report.py, 41 tests OK (read locally)
 ```
 
 A1 and A3 to A14 were committed with two stub scripts that keep every argument and decide
@@ -95,3 +101,10 @@ coverage kinds lack `bench`. A26 to A28 are the pins of the ceiling in `test_mut
 one commit before the ceiling moves, with A25's pins in `test_dispatch_shards.py` and the call
 register's three entries in `test_ci_workflows.py`, and each of the three modules reads red there
 on the ceiling alone. Their red and green lines join the fence when each is read.
+
+A26 to A28 were read red locally at fff4d401, and A26 to A30 green locally at the commits their
+green lines name. A25's module and the call register run only in CI: A25's green is read by name
+in the run at this delivery head, and the two files it reads are the same there as at ab29cc97.
+A29's green commit, a22d2b21, also moves the existing planted `fsrs6` and `tempfile` case of the
+same test, whose finding now names the admitted `divan` and `fsrs6`. The commit after a22d2b21
+changes only this record and the three SPECs.

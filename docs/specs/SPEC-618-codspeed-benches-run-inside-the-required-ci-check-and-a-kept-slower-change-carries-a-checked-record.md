@@ -254,6 +254,16 @@ computes.
 | `config/coverage.json` | config | changed: the two bench exclusions |
 | `perf/benchmarks.txt` | perf | added: the benchmark list |
 | `scripts/mutation-rows.d/S61800-S61899.json` | mutation | added: rows on the new workflow lines |
+| `scripts/mutation-verdict.py` | scripts | changed: `LEG_CEILING["ci"]` 185, and its comment's 71 other `ci.yml` jobs with the signed record's path (section 9) |
+| `scripts/mutation-rows.d/S36200-S36299.json` | mutation | changed: `S36201` re-anchored on `"ci": 185`, its mutant kept (section 9) |
+| `scripts/tests/test_dispatch_shards.py` | tests | changed: the pins of the `ci` ceiling at 185 (A25) |
+| `scripts/tests/test_mutation_verdict.py` | tests | changed: the pins of the `ci` ceiling at 185 (A26) |
+| `scripts/tests/test_release_rust_ceiling.py` | tests | changed: SPEC-423's pins of the `ci` ceiling at 185 (A27) |
+| `scripts/tests/test_release_python_ceiling.py` | tests | changed: the joint line and the kept values at 185 (A28) |
+| `scripts/tests/test_fsrs7_pin.py` | tests | changed: the dev-dependency pin admits `divan` and `fsrs6` by name, and a planted third dev-dependency is refused (A29) |
+| `scripts/tests/test_coverage_report.py` | tests | changed: the `bench` kind (A30) |
+| `docs/specs/SPEC-417-the-rows-leg-is-dealt-into-legs-that-fit-their-bound.md` | docs | changed: section 12, R11, R14 and the SPEC-362 pins at 185 |
+| `docs/specs/SPEC-342-fsrs-7-replay-time-undo-and-the-full-sync-choice-are-measured.md` | docs | changed: section 8, A1's dev-dependency pin by name |
 
 ## 5. What this does NOT cover
 
@@ -294,3 +304,66 @@ NOT APPLICABLE, TLA+, Lean and Kani (ADR-640 D7). The first part adds documents,
 standard-library scripts and their tests; the second part adds workflow jobs, benches and
 configuration, and its benches call engine functions and assert nothing about them. No protocol,
 state machine, interleaving or engine path gains or changes.
+
+## 9. The pull request run's Rust ceiling is the signed 185, and the gate names the bench words
+
+The four bench jobs are four more jobs a pull request run generates, so the run's ceiling for Rust
+legs falls from 189 to 185 by SPEC-417 R11's unchanged rule: the run's 256 jobs less every other
+`ci.yml` job, 71 with the four bench jobs, the rows job counted at its 18 legs. The owner signed
+that figure in `docs/rulings/OWNER-RULING-2026-11-05-rust-ceiling-185.md`, which amends the two
+bullets of `docs/rulings/OWNER-RULING-2026-10-18-rows-legs-822.md` on the ceiling and on the joint
+line. The bench lanes also add `divan` to the FSRS-7 crate's dev-dependencies and the `bench` kind
+to two coverage exclusions, and the gate's pins name both. This section adds four requirements and
+their criteria; every requirement and criterion above stands as written.
+
+1. **The ceiling.** `LEG_CEILING["ci"]` in `scripts/mutation-verdict.py` is 185: 256 less 71 other
+   `ci.yml` jobs, 67 and the four bench jobs. The comment above it names the 71 jobs and cites the
+   signed record. Row `S36201` keeps its id, stem, mutant and killer and is re-anchored: its find
+   `"ci": 189` becomes `"ci": 185`, and its replacement stays `"ci": 194`. `LEG_CEILING["battery"]`
+   234, `RUST_RELEASE_CEILING` 192, `RUST_MATRIX_LEGS` 256, `ROWS_MAX_LEGS` 18 and
+   `PYTHON_MAX_SHARDS` 32 do not move. A pull request whose Rust mutants need more than 185 legs is
+   refused whole by name, never cut.
+2. **The pins.** Every test pin of the `ci` ceiling, or of a figure derived from it, follows 185 and
+   keeps its relation to the ceiling, by SPEC-417 R14 at 185 (SPEC-417 section 12): each refusal
+   that names the pull request run's ceiling names 185, and each `legs N of ceiling 189` reads
+   `legs N of ceiling 185`; with no ceiling named, 185 one-leg mutants size at 185 legs and 186 are
+   refused; the ingest listing past the ceiling is 12581 mutants, one more than the 12580 that 185
+   legs of 68 hold, projected at 1585206 s serially and refused naming 185; the pull request run's
+   joint line shares 217 legs, 32 Python and 185 Rust, and its runner-minutes are
+   `(32 x 1800 + 185 x 10800) // 60`, 34260; SPEC-423's placeholder release ceiling is 185, the
+   figure one past it 186 and the figure one below it 184, the range's ends are 185 and 256, and
+   the range's refusal reads `outside 185..256`; a release ceiling of 200 or 256 keeps its figures.
+   The 128 beside the ceiling in `rust_deal(self, listed, scripts, release, 185, 128)` is not the
+   ceiling. The call register of `scripts/tests/test_ci_workflows.py` names each call these pins
+   change, each with its count of 1.
+3. **Divan by name.** The pin of the FSRS-7 crate's dev-dependencies in
+   `scripts/tests/test_fsrs7_pin.py` admits `["divan", "fsrs6"]` exactly, the bench harness and the
+   released scheduler; its dependency pin `["fsrs7"]` does not move. A planted crate whose
+   dev-dependencies are `divan`, `fsrs6` and `tempfile` is still refused, its finding naming the
+   three (SPEC-342 section 8).
+4. **The bench kind.** `KINDS` in `scripts/tests/test_coverage_report.py` gains `"bench"`, so the
+   two bench exclusions of `config/coverage.json` carry a known kind; nothing else in that module
+   changes.
+
+### Acceptance criteria of section 9
+
+| id | criterion | red it must show first | decided by |
+|---|---|---|---|
+| A25 | the derived ceilings, 71 other `ci.yml` jobs counted, equal `{"ci": 185, "battery": 234}` and `LEG_CEILING`, and the module's refusal, listing and headroom pins follow 185 (requirements 1 and 2) | red at a commit whose `LEG_CEILING["ci"]` is 189: the derived 185 differs from it | `TheReleaseFitsOneRun.test_the_ceiling_is_the_runs_job_budget`, `TheReleaseFitsOneRun.test_the_release_listing_fits_one_run`, `TheReleaseFitsOneRun.test_a_listing_beyond_the_ceiling_is_refused_whole`, `TheReleaseFitsOneRun.test_every_sizing_prints_its_headroom` |
+| A26 | the shard cap, the sizing constants and the whole tree's headroom line follow 185 (requirement 2) | red at a commit whose `LEG_CEILING["ci"]` is 189: `LEG_CEILING` differs from the pinned 185 | `TheShardsFitTheirBound.test_a_listing_that_needs_exactly_the_shard_cap_is_sized_at_the_cap`, `TheLegsAreSizedToTheRun.test_the_sizing_constants_are_the_measured_ones`, `TheLegsAreSizedToTheRun.test_the_whole_tree_is_sized_at_the_batterys_ceiling` |
+| A27 | SPEC-423's pins follow 185: the placeholder, one past it, one below it, the range's ends, its refusal, the pull request run's refusal and the joint line (requirement 2) | red at a commit whose `LEG_CEILING["ci"]` is 189: the range's refusal reads `outside 189..256` | `TheReleaseRunSizesItsRustLegsToItsCeiling.test_only_a_true_release_mark_holds_the_rust_ceiling`, `TheReleaseRunSizesItsRustLegsToItsCeiling.test_the_placeholder_ceiling_sizes_the_release_run_as_a_pull_request_run`, `TheReleaseRunSizesItsRustLegsToItsCeiling.test_a_run_that_is_not_the_release_keeps_the_pull_request_ceiling_at_any_rust_ceiling`, `TheReleaseRunSizesItsRustLegsToItsCeiling.test_a_rust_ceiling_outside_its_range_is_refused_by_name`, `TheReleaseRunSizesItsRustLegsToItsCeiling.test_the_rust_lines_read_the_release_ceiling_on_the_release_run_alone`, `TheReleaseRunSizesItsRustLegsToItsCeiling.test_the_rust_release_line_stands_beside_the_python_release_line`, `WhatTheReleaseRunKeeps.test_the_python_ceiling_tests_read_the_rust_ceiling_at_its_placeholder` |
+| A28 | the pull request plan's joint line shares 217 legs, 32 Python and 185 Rust, of 34260 runner-minutes (requirement 2) | red at a commit whose `LEG_CEILING["ci"]` is 189: the line reads 221 legs and 189 Rust | `TheReleaseRunDealsUpToItsCeiling.test_the_placeholder_ceiling_deals_the_release_run_as_a_pull_request_run` |
+| A29 | the FSRS-7 crate's dev-dependencies `divan` and `fsrs6` are admitted, and a planted `tempfile` beside them is refused by a finding naming the three (requirement 3) | red at a commit whose pin admits `fsrs6` alone: the crate's `divan` is refused | `EachResolvesItsOwnScheduler.test_the_engine_and_the_fsrs7_crate_each_resolve_their_own_scheduler` |
+| A30 | every coverage exclusion's kind is known, the two bench rows' `bench` included (requirement 4) | red at a commit whose `KINDS` lacks `bench`: the two bench rows have an unknown kind | `TheExclusionList.test_every_exclusion_is_one_row_with_its_reason` |
+
+```acceptance
+A25: python3 -m unittest discover -s scripts/tests -p test_dispatch_shards.py -k test_the_ceiling_is_the_runs_job_budget -k test_the_release_listing_fits_one_run -k test_a_listing_beyond_the_ceiling_is_refused_whole -k test_every_sizing_prints_its_headroom
+A26: python3 -m unittest discover -s scripts/tests -p test_mutation_verdict.py -k test_a_listing_that_needs_exactly_the_shard_cap_is_sized_at_the_cap -k test_the_sizing_constants_are_the_measured_ones -k test_the_whole_tree_is_sized_at_the_batterys_ceiling
+A27: python3 -m unittest discover -s scripts/tests -p test_release_rust_ceiling.py -k test_only_a_true_release_mark_holds_the_rust_ceiling -k test_the_placeholder_ceiling_sizes_the_release_run_as_a_pull_request_run -k test_a_run_that_is_not_the_release_keeps_the_pull_request_ceiling_at_any_rust_ceiling -k test_a_rust_ceiling_outside_its_range_is_refused_by_name -k test_the_rust_lines_read_the_release_ceiling_on_the_release_run_alone -k test_the_rust_release_line_stands_beside_the_python_release_line -k test_the_python_ceiling_tests_read_the_rust_ceiling_at_its_placeholder
+A28: python3 -m unittest discover -s scripts/tests -p test_release_python_ceiling.py -k test_the_placeholder_ceiling_deals_the_release_run_as_a_pull_request_run
+A29: python3 -m unittest discover -s scripts/tests -p test_fsrs7_pin.py -k test_the_engine_and_the_fsrs7_crate_each_resolve_their_own_scheduler
+A30: python3 -m unittest discover -s scripts/tests -p test_coverage_report.py -k test_every_exclusion_is_one_row_with_its_reason
+```
+
+Every red and green of A25 to A30 is recorded in `docs/red-first/SPEC-618.md`. A25's tests, and the
+call register's own test, are read in CI by name, from the job that runs `scripts/tests`.
