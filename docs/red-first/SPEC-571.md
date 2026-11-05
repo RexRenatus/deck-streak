@@ -10,7 +10,7 @@ named, and each green is measured at the commit named.
 
 ## The fence, line by line
 
-Each of the 11 lines of SPEC-571 section 3's fence resolves to one test, named by its exact name.
+Each of the 12 lines of SPEC-571 section 3's fence resolves to one test, named by its exact name.
 
 | # | criterion | test | added or named |
 |---|---|---|---|
@@ -25,6 +25,7 @@ Each of the 11 lines of SPEC-571 section 3's fence resolves to one test, named b
 | 9 | A9 | `scripts/tests/test_locale_census.py` `TheWebCensus.test_a_planted_complete_tree_reads_green` | added |
 | 10 | A10 | `scripts/tests/test_locale_census.py` `TheWebCensus.test_a_tree_with_no_catalog_is_void` | added |
 | 11 | A11 | `scripts/tests/test_locale_census.py` `TheWebTree.test_the_web_apps_catalogs_are_whole` | added |
+| 12 | A12 | `scripts/tests/test_locale_census.py` `TheWebCensus.test_an_unreadable_settings_file_is_refused` | added |
 
 ## The reds and greens
 
@@ -63,8 +64,8 @@ A11: green at 483661ff
 - After each locale's commit the census listed no `missing` line for that locale: A11's finding
   lines fell to 500, 400, 300, 200 and 100, and at 483661ff the module ran 11 tests, OK, with the
   census printing `examined 7 locales, 315 keys` and no finding.
-- `scripts/tests/test_locale_census.py` is byte-identical from 81ad67da to the last commit
-  (`git diff --quiet 81ad67da HEAD -- scripts/tests/test_locale_census.py`), so no test changed
+- `scripts/tests/test_locale_census.py` is byte-identical from 81ad67da to the first branch's head
+  (`git diff --quiet 81ad67da d9c87dd8 -- scripts/tests/test_locale_census.py`), so no test changed
   between its red and its green.
 - From 81ad67da to the commit before the rows, `scripts/locale_census.py` was in the tree and not
   yet named in `scripts/mutation-python.json`, so the committed-map test

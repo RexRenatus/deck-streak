@@ -1,4 +1,4 @@
-"""The web app's message catalogs are whole in all seven locales (SPEC-571 A1 to A11; ADR-590).
+"""The web app's message catalogs are whole in all seven locales (SPEC-571 A1 to A12; ADR-590).
 
 `scripts/locale_census.py` reads `web/app/project.inlang/settings.json` and the catalogs it names,
 and prints one line per finding, then `examined <n> locales, <m> keys`; it exits 0 when green, 1 on
@@ -328,6 +328,16 @@ class TheWebCensus(unittest.TestCase):
                     "examined 0 locales, 0 keys",
                 ],
             )
+
+    def test_an_unreadable_settings_file_is_refused(self):
+        """A12"""
+        for label, text, finding in (
+            ("not json", "{not json\n", "unreadable settings not-json"),
+            ("not an object", "[]\n", "unreadable settings not-an-object"),
+        ):
+            with self.subTest(label):
+                tree = Tree(self, settings=text)
+                self.assertCensus(tree, 3, [finding, "examined 0 locales, 0 keys"])
 
 
 class TheWebTree(unittest.TestCase):
