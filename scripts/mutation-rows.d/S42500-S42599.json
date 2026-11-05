@@ -1,0 +1,38 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S42501-THE-FLAG-IS-ON",
+        "web/app/tsconfig.json",
+        "\"noFallthroughCasesInSwitch\": true",
+        "\"noFallthroughCasesInSwitch\": false",
+        "the type check lets a switch case fall through again (SPEC-425 R5, A3)",
+        "test_web_type_check.TheTypeCheckRefusesAFallThrough.test_the_type_check_reads_no_fallthrough_from_the_apps_own_config"
+      ],
+      [
+        "S42502-THE-FLAG-IS-SET",
+        "web/app/tsconfig.json",
+        "    \"noFallthroughCasesInSwitch\": true,\n",
+        "",
+        "the flag's line is removed, so the compiler's default, off, returns (SPEC-425 R5, A3)",
+        "test_web_type_check.TheTypeCheckRefusesAFallThrough.test_the_type_check_reads_no_fallthrough_from_the_apps_own_config"
+      ],
+      [
+        "S42503-THE-CHECK-READS-THE-APPS-OWN-CONFIG",
+        "web/app/package.json",
+        "svelte-check --tsconfig ./tsconfig.json",
+        "svelte-check --tsconfig ./.svelte-kit/tsconfig.json",
+        "the type check reads the generated parent config, which lacks the flag (SPEC-425 R5, A3)",
+        "test_web_type_check.TheTypeCheckRefusesAFallThrough.test_the_type_check_reads_no_fallthrough_from_the_apps_own_config"
+      ],
+      [
+        "S42504-THE-WEB-STAGE-RUNS-THE-TYPE-CHECK",
+        "scripts/check.sh",
+        "        pnpm -r check &&\n",
+        "",
+        "the web stage stops running the type check (SPEC-425 R5, A3)",
+        "test_web_type_check.TheTypeCheckRefusesAFallThrough.test_the_type_check_reads_no_fallthrough_from_the_apps_own_config"
+      ]
+    ]
+  }
+}
