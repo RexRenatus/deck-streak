@@ -1,0 +1,150 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S42400-THE-PYTHON-STAGE-CHECKS-RUFF",
+        "scripts/check.sh",
+        "    need_python && need_cargo && need_ruff || return 1",
+        "    need_python && need_cargo || return 1",
+        "the python stage checks ruff after python3 and cargo, so a missing ruff fails it by name with its install hint (SPEC-424 R4, A4)",
+        "test_check_gate.EachStageChecksItsOwnTools.test_every_stage_fails_by_name_without_each_tool_it_runs"
+      ],
+      [
+        "S42401-A-RUFF-OFF-ITS-PIN-IS-VOID",
+        "scripts/check.sh",
+        "    if [ \"$version\" != \"ruff $pin\" ]; then",
+        "    if [ -z \"$version\" ]; then",
+        "a ruff --version other than the pin reads ruff VOID before any lint or format call (SPEC-424 R5, A5)",
+        "test_check_gate.TheRuffArmIsVoidUnlessItExamined.test_a_ruff_off_its_pin_or_with_no_pin_reads_void_before_it_lints"
+      ],
+      [
+        "S42402-A-PIN-FILE-WITH-NO-RUFF-IS-VOID",
+        "scripts/check.sh",
+        "    if [ -z \"$pin\" ]; then",
+        "    if false; then",
+        "a pin file with no ruff== line reads ruff VOID and makes no ruff call (SPEC-424 R5, A5)",
+        "test_check_gate.TheRuffArmIsVoidUnlessItExamined.test_a_ruff_off_its_pin_or_with_no_pin_reads_void_before_it_lints"
+      ],
+      [
+        "S42403-A-RUFF-CHECK-EXIT-OF-2-IS-VOID",
+        "scripts/check.sh",
+        "    if [ \"$check\" -gt 1 ] || [ \"$fmt\" -gt 1 ]; then",
+        "    if [ \"$fmt\" -gt 1 ]; then",
+        "ruff check exiting 2, a refused configuration or option, reads ruff VOID (SPEC-424 R5, A6)",
+        "test_check_gate.TheRuffArmIsVoidUnlessItExamined.test_a_ruff_that_refuses_its_configuration_reads_void"
+      ],
+      [
+        "S42404-A-LISTING-OF-NO-FILE-IS-VOID",
+        "scripts/check.sh",
+        "    if [ \"$examined\" -eq 0 ]; then",
+        "    if [ \"$examined\" -lt 0 ]; then",
+        "a file listing that names no file reads ruff VOID, never a pass (SPEC-424 R5, A7)",
+        "test_check_gate.TheRuffArmIsVoidUnlessItExamined.test_a_run_that_examined_nothing_or_two_populations_reads_void"
+      ],
+      [
+        "S42405-UNEQUAL-COUNTS-ARE-VOID",
+        "scripts/check.sh",
+        "    if [ \"$fexamined\" -ne \"$examined\" ]; then",
+        "    if false; then",
+        "a format count unequal to the listing's reads ruff VOID: the arms examined two populations (SPEC-424 R5, A7)",
+        "test_check_gate.TheRuffArmIsVoidUnlessItExamined.test_a_run_that_examined_nothing_or_two_populations_reads_void"
+      ],
+      [
+        "S42406-A-LINT-FINDING-FAILS-THE-STAGE",
+        "scripts/check.sh",
+        "    [ \"$check\" -eq 0 ] && [ \"$fmt\" -eq 0 ]",
+        "    [ \"$fmt\" -eq 0 ]",
+        "ruff check exiting 1 fails the stage with both arms' counts and exits (SPEC-424 R6, A8)",
+        "test_check_gate.TheRuffArmIsVoidUnlessItExamined.test_a_lint_finding_or_a_format_change_fails_the_stage_with_its_counts"
+      ],
+      [
+        "S42407-THE-FORMAT-ARM-ONLY-CHECKS",
+        "scripts/check.sh",
+        "    report=$(ruff format --no-cache --check \"${RUFF_ROOTS[@]}\")",
+        "    report=$(ruff format --no-cache \"${RUFF_ROOTS[@]}\")",
+        "the format arm runs ruff format --check, which writes no file (SPEC-424 R5, A9)",
+        "test_check_gate.TheRuffArmIsVoidUnlessItExamined.test_a_clean_run_passes_over_the_five_roots_beside_every_suite"
+      ],
+      [
+        "S42408-THE-ROOTS-NAME-CRATES",
+        "scripts/check.sh",
+        "RUFF_ROOTS=(scripts tools deploy agent crates)",
+        "RUFF_ROOTS=(scripts tools deploy agent)",
+        "RUFF_ROOTS names the five roots, crates among them, in order (SPEC-424 R5, A9)",
+        "test_check_gate.TheRuffArmIsVoidUnlessItExamined.test_a_clean_run_passes_over_the_five_roots_beside_every_suite"
+      ],
+      [
+        "S42409-THE-LINT-CALL-WRITES-NO-CACHE",
+        "scripts/check.sh",
+        "    ruff check --no-cache --output-format concise \"${RUFF_ROOTS[@]}\" >&2",
+        "    ruff check --output-format concise \"${RUFF_ROOTS[@]}\" >&2",
+        "the lint call passes --no-cache, so the stage writes no cache into the checkout (SPEC-424 R5, A9)",
+        "test_check_gate.TheRuffArmIsVoidUnlessItExamined.test_a_clean_run_passes_over_the_five_roots_beside_every_suite"
+      ],
+      [
+        "S42410-RUFF-TOML-REQUIRES-THE-PINNED-VERSION",
+        "ruff.toml",
+        "required-version = \"==0.15.16\"",
+        "required-version = \"==0.15.15\"",
+        "ruff.toml requires exactly the version the hashed pin names (SPEC-424 R1, A1)",
+        "test_ruff_gate.TheRuffPinIsOneHashedRelease.test_ruff_toml_requires_exactly_the_version_the_hashed_pin_names"
+      ],
+      [
+        "S42411-EXTEND-SELECT-KEEPS-ASYNC",
+        "ruff.toml",
+        "extend-select = [\"S\", \"B\", \"ASYNC\", \"PGH\", \"PLE\", \"FIX\", \"T10\", \"DTZ\", \"RUF034\", \"TID251\"]",
+        "extend-select = [\"S\", \"B\", \"PGH\", \"PLE\", \"FIX\", \"T10\", \"DTZ\", \"RUF034\", \"TID251\"]",
+        "extend-select holds every settled family, ASYNC among them (SPEC-424 R2, A2)",
+        "test_ruff_gate.TheLintTableIsTheSettledSet.test_the_lint_table_is_exactly_the_settled_selection"
+      ],
+      [
+        "S42412-IGNORE-KEEPS-S603",
+        "ruff.toml",
+        "    \"S603\", \"S607\",",
+        "    \"S607\",",
+        "ignore keeps the permanent S603 beside S607 (SPEC-424 R2, A2)",
+        "test_ruff_gate.TheLintTableIsTheSettledSet.test_the_lint_table_is_exactly_the_settled_selection"
+      ],
+      [
+        "S42413-THE-FIXTURE-IGNORES-PLE2515",
+        "ruff.toml",
+        "\"crates/agent/tests/fixtures/fake-probe.py\" = [\"PLE2515\"]",
+        "\"crates/agent/tests/fixtures/fake-probe.py\" = [\"PLE2502\"]",
+        "the fake probe's per-file ignore names PLE2515 and no other rule (SPEC-424 R2, A2)",
+        "test_ruff_gate.TheLintTableIsTheSettledSet.test_the_lint_table_is_exactly_the_settled_selection"
+      ],
+      [
+        "S42414-THE-BANNED-LIST-HOLDS-OS-CHDIR",
+        "ruff.toml",
+        "\"os.chdir\".msg = \"changes the whole process's directory; pass cwd= or an absolute path\"",
+        "\"os.getcwd\".msg = \"changes the whole process's directory; pass cwd= or an absolute path\"",
+        "the banned list names os.chdir, each name with its message (SPEC-424 R2, A2)",
+        "test_ruff_gate.TheLintTableIsTheSettledSet.test_the_lint_table_is_exactly_the_settled_selection"
+      ],
+      [
+        "S42415-THE-PIN-IS-EXACT",
+        "scripts/ruff-requirements.txt",
+        "ruff==0.15.16 \\",
+        "ruff>=0.15.16 \\",
+        "the pin names one exact ruff== requirement, never a range (SPEC-424 R1, A1)",
+        "test_ruff_gate.TheRuffPinIsOneHashedRelease.test_ruff_toml_requires_exactly_the_version_the_hashed_pin_names"
+      ],
+      [
+        "S42416-THE-INSTALL-REQUIRES-HASHES",
+        ".github/workflows/ci.yml",
+        "--disable-pip-version-check --require-hashes --only-binary",
+        "--disable-pip-version-check --only-binary",
+        "the hygiene job installs ruff with --require-hashes (SPEC-424 R3, A3)",
+        "test_ci_workflows.TheHygieneJobInstallsThePinnedRuff.test_each_job_that_runs_the_python_stage_installs_ruff_from_the_hashed_pin_first"
+      ],
+      [
+        "S42417-THE-INSTALL-TAKES-WHEELS-ONLY",
+        ".github/workflows/ci.yml",
+        "--require-hashes --only-binary :all: -r",
+        "--require-hashes -r",
+        "the hygiene job installs ruff from wheels alone, --only-binary :all: (SPEC-424 R3, A3)",
+        "test_ci_workflows.TheHygieneJobInstallsThePinnedRuff.test_each_job_that_runs_the_python_stage_installs_ruff_from_the_hashed_pin_first"
+      ]
+    ]
+  }
+}
