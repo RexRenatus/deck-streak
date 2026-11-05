@@ -101,6 +101,7 @@ ENGINE_TIED = SYNC_MODELS + (
     "tla/SensitiveDeckGate",
     "tla/SkipDayOnce",
     "tla/DueReorderInput",
+    "tla/OneInstrumentReader",
     "lean/Fsrs7MemoryState",
     "lean/Fsrs7PortState",
     "lean/Fsrs7Schedule",
@@ -211,6 +212,7 @@ NEW_ENTRIES = {
     "lean/CompanionDecide": ("keep", {"O6"}),
     "lean/SearchHolds": ("keep", {"O14"}),
     "lean/MediaBind": ("keep", {"O13"}),
+    "tla/OneInstrumentReader": ("re-stamp", {"O11"}),
     "lean/MediaGc": ("keep", {"O13"}),
     "lean/IdSlot": ("keep", {"O12"}),
 }
