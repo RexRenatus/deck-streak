@@ -28,6 +28,26 @@ A13: red at 6883288c: test_perf_record.py:177: AssertionError: 0 != 1 : perf-rec
 A13: green at 6739ab7f
 A14: red at 6883288c: test_perf_record.py:190: AssertionError: 0 != 1 : perf-record: examined 0 records, 0 refused (job 126694654074)
 A14: green at 6739ab7f
+A15: red at efc7acfe: test_the_four_bench_jobs_are_needs_of_ci: AssertionError: 'bench-rust-build' not found in {'rust': {'runs-on': 'ubuntu-24.04' (job 126898689180)
+A15: green at 9897e72b
+A16: red at efc7acfe: test_only_the_two_upload_jobs_hold_an_id_token_grant: AssertionError: ci.yml has no bench job ['bench-rust-build', 'bench-rust', 'bench-web-build', 'bench-web'] (job 126898689180)
+A16: green at 9897e72b
+A17: red at efc7acfe: test_an_upload_job_unpacks_and_uploads_and_builds_nothing: AssertionError: ci.yml has no bench job ['bench-rust-build', 'bench-rust', 'bench-web-build', 'bench-web'] (job 126898689180)
+A17: green at 0832e745
+A18: red at efc7acfe: test_each_bench_job_starts_and_its_plan_gates_every_step: AssertionError: ci.yml has no bench job ['bench-rust-build', 'bench-rust', 'bench-web-build', 'bench-web'] (job 126898689180)
+A18: green at 9897e72b
+A19: red at efc7acfe: test_the_record_check_reads_the_records_a_pull_request_adds: AssertionError: ci.yml has no bench job ['bench-rust-build', 'bench-rust', 'bench-web-build', 'bench-web'] (job 126898689180)
+A19: green at 9897e72b
+A20: red at efc7acfe: test_the_bench_profile_inherits_release_with_line_tables: AssertionError: None != {'inherits': 'release', 'debug': 'line-tables-only'} : the root manifest has no [profile.bench] that inherits release with line tables (job 126898689180)
+A20: green at 12fd31c9
+A21: red at efc7acfe: test_each_rust_bench_is_a_harnessless_target_with_a_measured_body: AssertionError: None != {'package': 'codspeed-divan-compat', 'version': '=6.0.0'} : the workspace has no exact entry for the renamed Divan crate (job 126898689180)
+A21: green at 12fd31c9
+A22: red at efc7acfe: test_the_benchmark_list_equals_the_names_the_bench_files_define: AssertionError: False is not true : perf/benchmarks.txt is absent (job 126898689180)
+A22: green at b3f776ba
+A23: red at efc7acfe: test_the_web_benches_run_under_the_codspeed_plugin: AssertionError: False is not true : vitest.bench.config.ts is absent (job 126898689180)
+A23: green at 89b6d5e1
+A24: red at efc7acfe: test_bench_files_are_excluded_from_mutation_and_coverage: AssertionError: '!src/**/*.bench.*' not found in ['src/**/*.ts', 'src/**/*.js', 'src/**/*.svelte', '!src/**/*.test.*', '!src/**/*.spec.*', '!src/**/*.d.ts', '!src/lib/paraglide/**'] (job 126898689180)
+A24: green at b3f776ba
 ```
 
 A1 and A3 to A14 were committed with two stub scripts that keep every argument and decide
@@ -44,3 +64,17 @@ stage of that commit's pull request run, beside `test_the_gate_runs_in_four_para
 sorted needs pin gains the four bench jobs in the same commit; the dynamic
 `test_the_aggregate_check_needs_every_job_and_always_runs` stays green. None of the ten is a
 control. Their red and green lines join the fence when each is read.
+
+A15 to A24 were committed with their tests before any job, bench, list or exclusion they read
+(efc7acfe); each read red by name in the gate python stage of that commit's pull request run. The
+four bench jobs joined `ci` in 9897e72b (A15, A16, A18 and A19); the bench profile, the renamed
+Divan crate and the Rust benches came in 12fd31c9 (A20 and A21), and the web benches and their
+config in 3c68c795. The cargo-codspeed install moved into the Rust build job in 0832e745 (A17), the
+web benches moved to `web/app/bench` in 89b6d5e1 (A23), and the benchmark list and the coverage
+exclusions came in b3f776ba (A22 and A24); the run at this delivery head reads them green. A17's
+body was restated in 0832e745 after its red was read at efc7acfe, and the restated body fails at
+efc7acfe the same way, because the four bench jobs it reads are absent from that commit's ci.yml.
+A23's root and A24's body were restated in 89b6d5e1 after their reds were read at efc7acfe, and
+both restated tests fail at efc7acfe: A23 on the same line, since `vitest.bench.config.ts` is
+absent there and no bench file lies under `web/app/bench`, and A24 because that commit's coverage
+register holds neither bench row. The commit after b3f776ba changes only this record.
