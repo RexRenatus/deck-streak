@@ -411,6 +411,54 @@
       "reason": "The handler's value reaches the caller only through ?? null, which reads undefined as it reads null.",
       "evidence": "When the engine refuses the read, `.catch` resolves the promise to the handler's value, null or under the mutant undefined, and the awaited result is the left side of `?? null`, which answers null for both, so `cardHealth()` returns null either way and nothing else holds the handler's value. A client with no `cardHealth` skips the call, and a record passes through unchanged, in both forms.",
       "issue": "#1065"
+    },
+    {
+      "file": "web/app/src/lib/settings/colour-mode.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "return typeof localStorage === 'undefined' ? undefined : localStorage;",
+      "reason": "Where the global is undefined, returning it returns undefined, and where it is absent or refuses, reading it throws into the catch that returns undefined.",
+      "evidence": "With the test always false the function returns localStorage itself: a storage the browser has is returned either way, a global that is undefined is returned as undefined, a global that is absent throws a ReferenceError and one whose getter refuses throws, and the catch answers undefined for both, as the typeof test does. Measured with the mutant applied to a copy of the tree and the colour-mode tests run (colour-mode.test.ts, ColourModeSetting.test.ts, ColourModeSetting.server.test.ts, settings.test.ts, layout-colour-mode.test.ts and layout.test.ts): 20 of 20 passed, as they do unmutated, and 22 answers of the module's storage paths, deviceStorage with a storage, an undefined global, no global and a refusing getter, readColourMode with no storage, a refusing getItem and six stored values, and storeColourMode in each mode with no storage, a refusing setItem and a storage, were identical to the unmutated module's, 0 differing.",
+      "issue": "#1045"
+    },
+    {
+      "file": "web/app/src/lib/settings/colour-mode.ts",
+      "mutant": "StringLiteral: \"\"",
+      "anchor": "return typeof localStorage === 'undefined' ? undefined : localStorage;",
+      "reason": "typeof never answers the empty string, so the test is always false, which returns what the true branch returns on every host.",
+      "evidence": "Comparing typeof localStorage with the empty string is false on every host, so the function returns localStorage itself: a storage is returned either way, an undefined global is returned as undefined, and an absent or refusing global throws into the catch, which answers undefined. Measured with the mutant applied to a copy of the tree and the colour-mode tests run (colour-mode.test.ts, ColourModeSetting.test.ts, ColourModeSetting.server.test.ts, settings.test.ts, layout-colour-mode.test.ts and layout.test.ts): 20 of 20 passed, as they do unmutated, and 22 answers of the module's storage paths, deviceStorage with a storage, an undefined global, no global and a refusing getter, readColourMode with no storage, a refusing getItem and six stored values, and storeColourMode in each mode with no storage, a refusing setItem and a storage, were identical to the unmutated module's, 0 differing.",
+      "issue": "#1045"
+    },
+    {
+      "file": "web/app/src/lib/settings/colour-mode.ts",
+      "mutant": "BlockStatement: {}",
+      "anchor": "} catch {\n    return undefined;\n  }",
+      "reason": "A function that leaves its catch with no return statement returns undefined, the value the catch returns.",
+      "evidence": "When reading localStorage throws, the emptied catch ends the function with no return, and its value is undefined, exactly what return undefined gives; nothing else runs in the catch. Measured with the mutant applied to a copy of the tree and the colour-mode tests run (colour-mode.test.ts, ColourModeSetting.test.ts, ColourModeSetting.server.test.ts, settings.test.ts, layout-colour-mode.test.ts and layout.test.ts): 20 of 20 passed, as they do unmutated, and 22 answers of the module's storage paths, deviceStorage with a storage, an undefined global, no global and a refusing getter, readColourMode with no storage, a refusing getItem and six stored values, and storeColourMode in each mode with no storage, a refusing setItem and a storage, were identical to the unmutated module's, 0 differing.",
+      "issue": "#1045"
+    },
+    {
+      "file": "web/app/src/lib/settings/colour-mode.ts",
+      "mutant": "ConditionalExpression: false",
+      "anchor": "stored = storage === undefined ? null : storage.getItem(COLOUR_MODE_KEY);",
+      "reason": "With no storage, reading getItem from undefined throws into the catch, which answers system, the answer a null value reaches.",
+      "evidence": "With the test always false and no storage, storage.getItem throws a TypeError, the catch returns the first mode, system, and the unmutated null finds no stored mode and falls back to the same system; with a storage both read getItem. Measured with the mutant applied to a copy of the tree and the colour-mode tests run (colour-mode.test.ts, ColourModeSetting.test.ts, ColourModeSetting.server.test.ts, settings.test.ts, layout-colour-mode.test.ts and layout.test.ts): 20 of 20 passed, as they do unmutated, and 22 answers of the module's storage paths, deviceStorage with a storage, an undefined global, no global and a refusing getter, readColourMode with no storage, a refusing getItem and six stored values, and storeColourMode in each mode with no storage, a refusing setItem and a storage, were identical to the unmutated module's, 0 differing.",
+      "issue": "#1045"
+    },
+    {
+      "file": "web/app/src/lib/settings/colour-mode.ts",
+      "mutant": "BlockStatement: {}",
+      "anchor": "} catch {\n    return COLOUR_MODES[0];\n  }",
+      "reason": "When getItem throws, stored is left undefined, which matches no mode, so the fallback after the catch answers system as the catch does.",
+      "evidence": "The emptied catch lets a refused read fall through to COLOUR_MODES.find with stored never assigned, so undefined, which equals no mode, and ?? answers COLOUR_MODES[0], system, the value the catch returns. Measured with the mutant applied to a copy of the tree and the colour-mode tests run (colour-mode.test.ts, ColourModeSetting.test.ts, ColourModeSetting.server.test.ts, settings.test.ts, layout-colour-mode.test.ts and layout.test.ts): 20 of 20 passed, as they do unmutated, and 22 answers of the module's storage paths, deviceStorage with a storage, an undefined global, no global and a refusing getter, readColourMode with no storage, a refusing getItem and six stored values, and storeColourMode in each mode with no storage, a refusing setItem and a storage, were identical to the unmutated module's, 0 differing.",
+      "issue": "#1045"
+    },
+    {
+      "file": "web/app/src/lib/settings/colour-mode.ts",
+      "mutant": "OptionalChaining: storage.setItem",
+      "anchor": "storage?.setItem(COLOUR_MODE_KEY, mode);",
+      "reason": "With no storage, calling setItem on undefined throws inside the try, whose catch keeps nothing, as the optional call keeps nothing.",
+      "evidence": "With a storage both forms call setItem once with the key and the mode; with no storage the plain call throws a TypeError, the empty catch swallows it, and applyColourMode runs after the try either way, so the root element carries the same classes and nothing is stored. Measured with the mutant applied to a copy of the tree and the colour-mode tests run (colour-mode.test.ts, ColourModeSetting.test.ts, ColourModeSetting.server.test.ts, settings.test.ts, layout-colour-mode.test.ts and layout.test.ts): 20 of 20 passed, as they do unmutated, and 22 answers of the module's storage paths, deviceStorage with a storage, an undefined global, no global and a refusing getter, readColourMode with no storage, a refusing getItem and six stored values, and storeColourMode in each mode with no storage, a refusing setItem and a storage, were identical to the unmutated module's, 0 differing.",
+      "issue": "#1045"
     }
   ]
 }

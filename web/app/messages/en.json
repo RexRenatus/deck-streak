@@ -1,6 +1,11 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
   "tagline": "Turn your daily Anki reviews into a streak worth keeping.",
+  "colour_mode": "Colour mode",
+  "colour_mode_system": "System",
+  "colour_mode_light": "Light",
+  "colour_mode_dark": "Dark",
+  "settings_link": "Settings",
   "study_day": "Study day",
   "loading": "Loading…",
   "reopen_from_telegram": "Reopen DeckStreak from Telegram to sign in again.",

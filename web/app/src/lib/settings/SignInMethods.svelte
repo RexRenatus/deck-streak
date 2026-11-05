@@ -72,7 +72,7 @@
 {:else}
   <ul class="mt-6 space-y-3">
     {#each ordered(listed.value) as method (method.id)}
-      <li class="rounded-lg bg-card p-4 text-card-foreground">
+      <li class="rounded-lg border bg-card p-4 text-card-foreground">
         {#if method.kind === 'telegram'}
           <p>{m.methods_telegram()}</p>
         {:else}
