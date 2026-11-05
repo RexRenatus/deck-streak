@@ -211,6 +211,7 @@ NEW_ENTRIES = {
     "lean/CompanionDecide": ("keep", {"O6"}),
     "lean/DocsMermaidRead": ("keep", set()),
     "lean/SearchHolds": ("keep", {"O14"}),
+    "lean/RetiredListShape": ("keep", set()),
     "lean/MediaBind": ("keep", {"O13"}),
     "lean/MediaGc": ("keep", {"O13"}),
     "lean/IdSlot": ("keep", {"O12"}),
