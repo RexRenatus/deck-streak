@@ -70,6 +70,16 @@ resolution, `try:` and `process = subprocess.Popen(`), S03975 (the `except OSErr
 `parse_document` call of the list), S03905, S12206, S03960, S03961, S03962, S03968 and S02506 (the
 SIGTERM installation, `:1427`). The cure keeps each find byte-identical but S02506's.
 
+**Re-read at the rebuild.** At the current `dev`, where this delivery is rebuilt on its branch
+unchanged, `dev` has changed three of its paths since its first base: `scripts/mutation_rows.py`,
+`scripts/tests/test_mutation_rows.py` and `formal/lean/Formal/Vectors.lean`, each merged without a
+conflict. Every find of section 7 and S02506's occurs once in the merged runner, the lines of
+`retirement_records` hash to the digest `lean/RetiredListShape` stamps, and the formal obligations
+ledger, which joined `dev` after that base, refuses a tree entry that has no row (R12). `dev` also
+gained `scripts/tests/test_mutation_rows_survivor_kills.py`, whose `call_main` stands in for the
+base's `end_on_sigterm`, which R9 removes: merged unchanged, the three tests of its `TheMain`
+error on the missing name (R12).
+
 ## 2. Requirements
 
 R1. **A list that is not an object is refused.** When the document `parse_document` returns is not
@@ -118,6 +128,16 @@ R11. **The reader carries a Lean proof.** `lean/RetiredListShape` ports `retirem
     for branch, at `ramp=report`, with the claim that every document is refused by R1 to R4's
     sentence or read as the base reads a well-formed one, a witness against the base's reading at
     a top-level array, and vectors its writer derives, which a test drives through the reader.
+R12. **The tests `dev` gained after the first base hold the delivery.** `formal/obligations.json`
+    holds one row for `lean/RetiredListShape`: the disposition `keep`, an act, and no obligation,
+    as the other entries outside the engine have; the ledger's tests in
+    `scripts/tests/test_formal_obligations.py` list it among the new entries, so the tree's entries
+    equal the ledger's rows (ADR-482 D7). `test_the_ledger_exists_in_schema_v1` and
+    `test_every_existing_entry_has_its_disposition_row` decide it. The `call_main` of
+    `scripts/tests/test_mutation_rows_survivor_kills.py` stands in for the runner's
+    `ending_on_signals` (R6 to R9) by `contextlib.nullcontext`, where it stood in for the
+    `end_on_sigterm` R9 removes, and the three tests of its `TheMain` decide it. Each is red at the
+    branch's merge alone and green with its cure.
 
 ## 3. Acceptance criteria of SPEC-465
 
@@ -187,6 +207,9 @@ A10 and A14 print the count they examined and refuse zero.
 | `formal/lean/Formal/RetiredListShapeVectors.lean` | #421 | added: the vectors writer |
 | `formal/lean/Formal/Vectors.lean` | #421 | changed: one import and one arm |
 | `formal/vectors/retired-list-shape.jsonl` | #421 | added: written by the writer |
+| `formal/obligations.json` | #421 | changed: the Lean entry's row (R12) |
+| `scripts/tests/test_formal_obligations.py` | #421 | changed: the Lean entry listed among the new entries (R12) |
+| `scripts/tests/test_mutation_rows_survivor_kills.py` | #432 | changed: `call_main` stands in for `ending_on_signals` (R12) |
 
 ## 5. What this does NOT cover
 

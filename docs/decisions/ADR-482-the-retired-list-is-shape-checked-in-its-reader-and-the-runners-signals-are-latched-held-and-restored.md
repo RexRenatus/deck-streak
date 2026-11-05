@@ -150,6 +150,30 @@ and its price for this file; and the CI workflows. The SPEC's section 5 cites th
 Two other readers whose input shapes go unchecked, the `--rows-from` plan's and the population
 reader's tables and rows, are left for issues of their own: neither is the retired list.
 
+### D7. The rebuild onto current dev, and the entry's row in the formal obligations ledger
+
+The branch is merged onto current dev unchanged, by one merge commit, and the commits on top cure
+what the merge meets. The formal obligations ledger, `formal/obligations.json`, joined dev after
+this delivery's first base, and its tests refuse a tree entry that has no row. So
+`lean/RetiredListShape` gains one row, the disposition `keep` with no obligation, as the other
+entries outside the engine have, and the ledger's tests list it among the new entries. The rebuild
+pushes twice: the merge alone, whose run reads the ledger's refusal by name, then the commits on
+top, whose run reads it green. The survivor tests,
+`scripts/tests/test_mutation_rows_survivor_kills.py`, also joined dev after that base, and their
+`call_main` stood in for the `end_on_sigterm` this delivery removes, so the run of the merge alone
+also reads by name the three tests of their `TheMain` erroring on the missing name, and the commits
+on top point that one stand-in at the new seam, `ending_on_signals`, by `contextlib.nullcontext`,
+changing no other line of the module. The lines of `retirement_records` are byte-identical at the
+new base, so the entry's cover stamp stands.
+
+- Chosen against: an obligation for the entry, because the retired list's reader is this
+  repository's own tooling, which no replacement of the engine touches, as for the release carry.
+- Chosen against: `retire`, because the reader still decides the retirement check's verdict.
+- Chosen against: re-basing or squashing the original commits, because the merge keeps every
+  commit the red-first record names as an ancestor of the head.
+- Chosen against: `create=True` on the old stand-in, because it would patch a name the runner no
+  longer has and leave `ending_on_signals` to install the run's own handlers in the test process.
+
 ## Consequences
 
 - Good, because a wrongly shaped retired list is refused by name, exit 2, and retires nothing.
