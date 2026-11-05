@@ -61,3 +61,17 @@ G1: at 7ce42553 the `hygiene` check-run's stage log `python.log` ends `agent/tes
 G2: at 7ce42553 the install step `ruff, from the hashed pin (scripts/ruff-requirements.txt), alone on the path` succeeded, installing the pinned ruff in 5 s, and the python stage passed in 939 s (hygiene job 117056530626).
 
 At the same head the guard printed `examined 169 python files under the five roots`, `examined 9 computed repository roots` and `skipped 2 fenced name(s), none opened`, and the stage's three suites read 1297, 21 and 12 tests with no failure.
+
+## Rebuild on current dev
+
+This delivery was rebuilt on current `dev`: its branch is merged onto `dev` unchanged, with both
+conflicts resolved inside the merge, and the cures of SPEC-424 section 10 go on top. The rebuild's
+first push carries the merge, the documents and the red tests, and its second push the cures and
+this record's lines.
+
+A14 is red first. The request helper hands whatever address it is given to the opener, so at the
+red commit a `file:`, `ftp:` or `data:` address reaches the planted opener and returns its answer,
+and an address with no scheme raises the request class's own error, not the refusal: the test
+fails by assertion. A15 is not red: it holds the http and https opens that the cure keeps, which
+the helper makes before the cure as after it. At the first push the gate's ruff arm reads every
+site section 10 lists, by file and code, and fails the stage with both arms' counts and exits.
