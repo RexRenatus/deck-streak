@@ -123,6 +123,13 @@ R9. **The formal decision.** Lean is required (a pure function that decides the 
 verdict, for every text); TLA+ is not applicable (one pure function of one text, no actors over
 shared state).
 
+R10. **The formal ledger names the entry.** `formal/obligations.json` holds one row for
+`lean/DocsMermaidRead`, in sorted place among the Lean rows: `keep`, with no obligation, as the
+reader is a pure function of a docs text that the engine's replacement does not touch. The
+ledger census `scripts/tests/test_formal_obligations.py` names the entry among its new entries
+as `("keep", set())`, one line, so the census still holds the tree's entries exactly: no entry
+is skipped, and no count or assertion changes.
+
 ## 3. Acceptance criteria of SPEC-474
 
 | id | criterion | decided by |
@@ -155,6 +162,8 @@ before the push, and it is read again when the pull request lands.
 | `formal/lean/Formal/Vectors.lean` | formal | changed: one import and one arm of `main`, each in sorted place |
 | `formal/vectors/docs-mermaid-read.jsonl` | formal | added: the header and 841 lines the writer prints |
 | `web/app/src/lib/docs-mermaid-read.formal.test.ts` | web | added: R6 and R7 |
+| `formal/obligations.json` | formal | changed: one row, `lean/DocsMermaidRead` keeps with no obligation (R10) |
+| `scripts/tests/test_formal_obligations.py` | repo | changed: one line, its new entries name `lean/DocsMermaidRead` (R10) |
 
 ## 5. What this does NOT cover
 
