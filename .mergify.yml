@@ -1,5 +1,6 @@
 # The Mergify merge queue for pull requests into dev (SPEC-604, ADR-625).
 # Mergify reads this file from dev, the default branch (SPEC-620, ADR-642).
+# The one queue rule is dev; the pull request rule below sends each labelled pull request to it.
 merge_queue:
   max_parallel_checks: 1
 queue_rules:
