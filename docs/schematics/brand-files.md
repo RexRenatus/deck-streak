@@ -51,3 +51,22 @@ flowchart TD
 
 Every screen, the harness's catalog and its project spec (`ios/project.yml:34`, `:48`), the bot and
 the Mini App, `csp.test.ts`'s page policy, and the scrub's handling of every unlisted binary.
+
+## 5. Amended by SPEC-580: the hero's reduced-motion still
+
+The hero is no longer README line 3 alone: lines 3 to 6 are a picture whose reduced-motion source is
+the still and whose image is the GIF. The still enters by the same copy route as every brand file.
+
+```mermaid
+flowchart LR
+  POSTER["the brand source's light poster"] --> COPY["copy program: sha256 before and after"]
+  COPY --> STILL["docs/assets/deckstreak-hero-poster-tide-light.png"]
+  COPY --> LIST["scripts/brand-files.json: the still's entry"]
+  STILL --> PICTURE["README.md lines 3 to 6: source (reduced motion) and img (the gif)"]
+  LIST --> CENSUS["test_brand_files.py: the still's pin, the picture's two paths"]
+```
+
+| step | criteria | red at the base | row |
+|---|---|---|---|
+| the picture serves the still to reduced motion and the gif otherwise | SPEC-580 A10, A12 | dev's line 3 is a bare image; planted: a hero with no reduced-motion source | S58001, S58002, S57904 (now the `<img>` line) |
+| the still is the brand source's poster, byte for byte | SPEC-580 A11, A13 | no still at dev; planted: the still missing, or other bytes | S58003 |

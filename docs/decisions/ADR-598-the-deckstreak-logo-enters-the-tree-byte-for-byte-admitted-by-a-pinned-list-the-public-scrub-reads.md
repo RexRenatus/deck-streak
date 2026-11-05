@@ -194,3 +194,14 @@ scrub stage and `apple-on-change` run at the pull request's head.
 
 Built by SPEC-579; drawn in `docs/schematics/brand-files.md`. SPEC-033 and ADR-033 (the scrub),
 SPEC-350 and ADR-361 (the install surface), ADR-018 (the licence), ADR-597 (the colour sets).
+
+## Amendment by ADR-599: the README's hero gains a reduced-motion still
+
+D4's README half is amended by ADR-599 D4, and D4's text above is kept as it was. The README's
+hero is no longer the one image line `![DeckStreak](docs/assets/deckstreak-hero-tide-light.gif)`:
+after the title and a blank line it is a `<picture>` element whose one `<source>` serves the brand
+source's light poster, `docs/assets/deckstreak-hero-poster-tide-light.png`, to a reader who asks for
+reduced motion, and whose `<img>` is the same GIF with its width, height and alt text `DeckStreak`.
+The poster enters by D5's route: copied by a program from the brand source with its sha256 checked
+before and after, listed in `scripts/brand-files.json`, and annotated in `REUSE.toml`. D8's
+"a reduced-motion still for the README" is delivered by SPEC-580.
