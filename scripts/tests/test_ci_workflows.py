@@ -921,7 +921,7 @@ DEPENDABOT = REPO / ".github" / "dependabot.yml"
 # The engine site's pin record (R7): `engine_job_problems` counts the engine job's test runner only
 # when an entry of its install equals this one exact string, so a re-pin of that site edits this
 # record in the same change, or the engine job's check reads red.
-ENGINE_NEXTEST_PIN = "cargo-nextest@0.9.146"
+ENGINE_NEXTEST_PIN = "cargo-nextest@0.9.149"
 
 
 def install_sites(value, path=()):
@@ -1049,8 +1049,8 @@ def zizmor_problems(texts):
 
 
 # The plants' anchors, each a line the cured workflows hold exactly once in the file it names.
-LINT_TOOL = "          tool: zizmor@1.30.1\n"
-RUST_TOOL = "          tool: cargo-nextest@0.9.146,cargo-deny@0.20.2\n"
+LINT_TOOL = "          tool: zizmor@1.31.1\n"
+RUST_TOOL = "          tool: cargo-nextest@0.9.149,cargo-deny@0.20.2\n"
 LINT_ZIZMOR = "        run: zizmor --no-online-audits --persona regular .github\n"
 BASE_IS_DEV = "  base-is-dev:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 5\n"
 NO_NEXTEST = "the engine job installs no cargo-nextest before its stage"
@@ -1085,7 +1085,7 @@ class CiToolsArePinnedAndJobsBounded(unittest.TestCase):
         self.assertEqual(control, [], f"the control reads {control[:1]}")
         ci = self.texts["ci.yml"]
         lint = "ci.yml: workflow-lint: step 2:"
-        rust = "ci.yml: rust: step 3:"
+        rust = "ci.yml: rust: step 4:"
         plants = [
             (
                 "a bare name",
@@ -1108,26 +1108,26 @@ class CiToolsArePinnedAndJobsBounded(unittest.TestCase):
             (
                 "two numbers",
                 LINT_TOOL,
-                "          tool: zizmor@1.30\n",
-                [f"{lint} zizmor@1.30 names no exact version"],
+                "          tool: zizmor@1.31\n",
+                [f"{lint} zizmor@1.31 names no exact version"],
             ),
             (
                 "a range",
                 LINT_TOOL,
-                "          tool: zizmor@^1.30.1\n",
-                [f"{lint} zizmor@^1.30.1 names no exact version"],
+                "          tool: zizmor@^1.31.1\n",
+                [f"{lint} zizmor@^1.31.1 names no exact version"],
             ),
             (
                 "a v prefix",
                 LINT_TOOL,
-                "          tool: zizmor@v1.30.1\n",
-                [f"{lint} zizmor@v1.30.1 names no exact version"],
+                "          tool: zizmor@v1.31.1\n",
+                [f"{lint} zizmor@v1.31.1 names no exact version"],
             ),
             (
                 "a pre-release",
                 LINT_TOOL,
-                "          tool: zizmor@1.30.1-rc.1\n",
-                [f"{lint} zizmor@1.30.1-rc.1 names no exact version"],
+                "          tool: zizmor@1.31.1-rc.1\n",
+                [f"{lint} zizmor@1.31.1-rc.1 names no exact version"],
             ),
             (
                 "an expression",
@@ -1148,19 +1148,19 @@ class CiToolsArePinnedAndJobsBounded(unittest.TestCase):
             (
                 "a floating second entry",
                 RUST_TOOL,
-                "          tool: cargo-nextest@0.9.146,cargo-deny\n",
+                "          tool: cargo-nextest@0.9.149,cargo-deny\n",
                 [f"{rust} cargo-deny names no exact version"],
             ),
             (
                 "a floating whitespace entry",
                 RUST_TOOL,
-                "          tool: cargo-nextest@0.9.146 cargo-deny\n",
+                "          tool: cargo-nextest@0.9.149 cargo-deny\n",
                 [f"{rust} cargo-deny names no exact version"],
             ),
             (
                 "an exact whitespace list",
                 RUST_TOOL,
-                "          tool: cargo-nextest@0.9.146 cargo-deny@0.20.2\n",
+                "          tool: cargo-nextest@0.9.149 cargo-deny@0.20.2\n",
                 [],
             ),
         ]
@@ -1168,7 +1168,7 @@ class CiToolsArePinnedAndJobsBounded(unittest.TestCase):
             plant = {**self.texts, "ci.yml": self.plant_once(label, ci, old, new)}
             self.assertEqual(tool_pin_problems(plant)[0], expected, label)
         cased, count = re.subn(
-            r"taiki-e/install-action(@[^\n]*\n[ \t]*with:\n[ \t]*tool: )zizmor@1\.30\.1\n",
+            r"taiki-e/install-action(@[^\n]*\n[ \t]*with:\n[ \t]*tool: )zizmor@1\.31\.1\n",
             r"Taiki-E/Install-Action\1zizmor\n",
             ci,
         )
@@ -1244,17 +1244,22 @@ class CiToolsArePinnedAndJobsBounded(unittest.TestCase):
                 f"{bare}    timeout-minutes: 5m\n",
                 [f"ci.yml: base-is-dev: timeout-minutes is 5m, {whole}"],
             ),
-            (
-                "a timeout moved onto a step",
-                f"{BASE_IS_DEV}    steps:\n      - name: a pull request into main",
-                f"{bare}    steps:\n      - timeout-minutes: 5\n"
-                "        name: a pull request into main",
-                ["ci.yml: base-is-dev: sets no timeout-minutes"],
-            ),
         ]
         for label, old, new, expected in examined("timeout plants", plants):
             plant = {**self.texts, "ci.yml": self.plant_once(label, ci, old, new)}
             self.assertEqual(job_timeout_problems(plant)[0], expected, label)
+        # A timeout moved onto a step: the job's own line removed and the step given one, two
+        # anchors, since the base spells comments and outputs between them.
+        moved = self.plant_once(
+            "a timeout moved onto a step",
+            self.plant_once("a timeout moved onto a step", ci, BASE_IS_DEV, bare),
+            "    steps:\n      - name: a pull request into main",
+            "    steps:\n      - timeout-minutes: 5\n        name: a pull request into main",
+        )
+        self.assertEqual(
+            job_timeout_problems({**self.texts, "ci.yml": moved})[0],
+            ["ci.yml: base-is-dev: sets no timeout-minutes"],
+        )
         copy = self.plant_once(
             "a .yaml copy",
             self.texts["changelog.yml"],

@@ -66,3 +66,17 @@ A6: green at a1a0eb9253e23f42211722fe335982b3d914e48e
 A7: red at 4a94005207ff5c4576a2871a16ba20dc0160aca8: AssertionError: Lists differ: ['the engine job installs no cargo-nextest before its stage'] != [] [cut] : cargo-nextest@0.9.146
 A7: green at a1a0eb9253e23f42211722fe335982b3d914e48e
 ```
+
+## The rebuild on current dev
+
+The delivery is rebuilt over current dev (SPEC-428 section 10): one merge carries this record, its
+tests and its first cure unchanged, and the cures follow on top. The commit that adds this note
+changes test lines that follow the new base, and no assertion's logic. In
+`scripts/tests/test_ci_workflows.py` the pin record and the plants' pinned strings move from
+0.9.146 to 0.9.149 and from 1.30.1 to 1.31.1, the `rust` site's place in the plants moves from
+`step 3` to `step 4`, and the plant that moves a timeout onto a step anchors on `base-is-dev` as the
+new base spells it. In `scripts/tests/test_rust_cache_workflow.py`, `TOOLS` names
+`cargo-nextest@0.9.149`. No workflow is cured in that commit, so the pin checks read red over
+current dev in the pull request's own run, in the `hygiene` job. The `git diff --quiet` command
+above held at the first head only; over this base it does not exit 0, and the five criteria
+after A2 are read green in the second push's run.
