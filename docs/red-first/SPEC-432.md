@@ -64,3 +64,16 @@ this check.
 Across `git diff b25ed04a...HEAD`, no test is deleted, renamed or skipped, no planted case is
 removed, and no filter, exclusion, skip list, sample or bound is added on the test side. The diff
 adds SPEC-432's nine files and changes no other path. The table is empty.
+
+## Rebuild on current dev
+
+This branch reaches dev unchanged through two merge commits on current dev: 2895915b merges it, and
+32a0c9d3 merges the data integrity branch of SPEC-435 beside it, so every commit above, red and green,
+is carried as it was measured. The checks were re-run there, and the green commit of the rebuild
+is 1e29f006. At 1e29f006, A1 read `examined 6 source file(s)` and `examined 4085 token(s)` and found the
+five listed items. A5 read `examined 410 source file(s)`, `examined 6609 literal(s)`, `examined
+33 migration(s)` and `examined 6531 statement(s)` and found the seven sanctioned writes. A10 read
+`examined 23 module(s)`, `examined 393 literal(s)` and `examined 12 sync write(s)`, classed KEYED
+1, UPSERT 4, SET 4, DELETE 0, PLAIN 3 and INCREMENT 0. No list of this SPEC changed. 1e29f006 makes
+one cure, in the escape-hatch census of SPEC-435: it re-pins that census's examined count to its
+population at current dev, and it edits no file of this SPEC.

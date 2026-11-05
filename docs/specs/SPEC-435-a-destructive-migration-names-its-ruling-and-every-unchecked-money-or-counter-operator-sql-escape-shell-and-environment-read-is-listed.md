@@ -468,3 +468,19 @@ S43521, S43526 to S43529, S43557 to S43559, S43579 and S43583 to S43599 are unus
 plant in which its operand alone decides the result: each form of "deletes rows" has its own
 plant, and A1's additive control holds an `ALTER TABLE` that adds a column and a column named
 `rename`, so a mutant that drops either half of an `ALTER TABLE` rule finds a hit there.
+
+## 10. Rebuild on current dev
+
+These checks were carried unchanged onto current dev and re-run there. Section 1 counts 349
+sources for the escape-hatch census: that is its population at the base this SPEC was written
+on. At current dev the same population, counted by the census's own rule (every `.rs` file under
+`crates/*/src`, each `crates/*/build.rs` and every `.rs` file under `crates/*/examples`), holds
+419 sources:
+
+```
+git ls-tree -r --name-only HEAD -- crates | grep -c -E '^crates/[^/]+/(src/.*\.rs|build\.rs|examples/.*\.rs)$'
+```
+
+A12 pins 419, still as an exact count. The register is unchanged: the census finds the same
+twelve listed sites, and the sources dev added hold no SQL escape, shell, configured program or
+environment read. No other section changes.

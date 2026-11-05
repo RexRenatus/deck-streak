@@ -60,3 +60,25 @@ A12: green at 381930a4bf5d8686ab67e11b06973c491ecc7b30
 A13: red at 4c5fb3c00836bcf92717cf827420e10bdf462e98: assertion `left == right` failed: a tree with no source is refused (left: None)
 A13: green at 381930a4bf5d8686ab67e11b06973c491ecc7b30
 ```
+
+## Rebuild on current dev
+
+This branch reaches dev unchanged through two merge commits on current dev: 2895915b merges the
+domain checks branch of SPEC-432, and 32a0c9d3 merges this branch beside it, so every commit above,
+red and green, is carried as it was measured. The checks were re-run there, and the green commit
+of the rebuild is 1e29f006. At 32a0c9d3, A12 was red on its examined pin alone: its census read `examined
+419 source(s)` against the 349 sources section 1 counted at the old base, while its judge and its
+sites-equal-ARMS assertions passed. 1e29f006 makes that one cure: it re-pins the examined literal of
+A12 from 349 to 419, the census's own count at current dev, so that the 419 literal is green at
+this base by construction (the red at 32a0c9d3 is on the old literal), and the behaviour red of A12
+is its original pair, red at 4c5fb3c0 and green at 381930a4. It changes no assertion's form, no
+planted case, no register row and no test name. At 1e29f006, A4 read `examined 33 migration(s)` and
+found the two admitted hits of `004102_notifications_queue_claim.sql`. A8 read `examined 57
+source(s)` and `sites 114 in 46 function(s)`, equal to the register. A12 read `examined 419
+source(s)` and found the twelve listed sites, equal to the register, and one spawn of a literal
+program that is no shell, examined and passing.
+
+```red-first
+A12: red at 32a0c9d3: assertion `left == right` failed: the three source sets hold 349 sources (left: 419, right: 349)
+A12: green at 1e29f006
+```
