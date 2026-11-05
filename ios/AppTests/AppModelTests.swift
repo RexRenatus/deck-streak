@@ -17,6 +17,7 @@ final class AppModelTests: XCTestCase {
     func test_a16_a_chosen_decks_review_shows_once_its_first_answer_is_in() async throws {
         let directory = FileManager.default.temporaryDirectory.appending(
             path: "shell-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let model = AppModel()
         await model.start(
             arguments: ["DeckStreak", "-DSCollectionDirectory", directory.path(percentEncoded: false)])
