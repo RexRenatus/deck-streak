@@ -47,3 +47,14 @@ SPEC-463 and none recorded as red:
 - 88922a77: a passkey row's Remove still shows the word Remove.
 
 With them the same run kills all 125 mutants of the file, and no equivalent mutant is recorded.
+
+## The rebuild onto current dev
+
+The branch above was carried onto current dev by one merge, 5d2bc22, which keeps every commit
+named in this record unchanged. Between the branch's last head, bf9ede6, and that merge, the
+component `web/app/src/lib/settings/SignInMethods.svelte` differs only by dev's own five import
+lines and one class line, `web/app/src/routes/sign-in-methods.test.ts` only by dev's own two mock
+lines, and `web/app/src/lib/passkey-messages.test.ts` not at all, so no line of the eight tests
+changed. The commit after the merge, 2deade3, changes only the two Chinese catalog values of
+`methods_remove_passkey`, and the eight tests are read by name in the pull request's own run at
+this delivery's head.
