@@ -7,7 +7,7 @@ const app = fileURLToPath(new URL('./web/app', import.meta.url));
 
 // SPEC-618 R9, R13: the web benches, run from the repository root by
 // `pnpm exec vitest bench --run --config vitest.bench.config.ts`. Each `*.bench.ts` file under
-// web/app/src is a bench file, and it runs in jsdom, since the card frame and the review screen read
+// web/app/bench is a bench file, and it runs in jsdom, since the card frame and the review screen read
 // a document. The CodSpeed plugin measures the run when CodSpeed's runner drives it (the bench-web
 // job); anywhere else it stands aside and Vitest's own timings are printed.
 //
@@ -29,7 +29,7 @@ export default defineConfig({
           environment: 'jsdom',
           include: [],
           benchmark: {
-            include: ['web/app/src/**/*.bench.ts']
+            include: ['web/app/bench/**/*.bench.ts']
           },
           // a bench measures its function and asserts nothing about what it returns
           expect: { requireAssertions: false }

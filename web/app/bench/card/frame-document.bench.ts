@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { test } from 'vitest';
-import { frameDocument } from './frame-document';
+import { frameDocument } from '../../src/lib/card/frame-document';
 
 // SPEC-618 R9, R13: the card frame's document (the inert parse, the strip, the composition and the
 // re-parse check) over both sides of every golden template card, with the card's CSS and classes,
@@ -21,7 +21,7 @@ interface Golden {
 }
 
 const GOLDEN = JSON.parse(
-  readFileSync(resolve(import.meta.dirname, '../study/review-templates.golden.json'), 'utf8')
+  readFileSync(resolve(import.meta.dirname, '../../src/lib/study/review-templates.golden.json'), 'utf8')
 ) as Golden;
 
 const WORDS = ['tide', 'ember', 'quartz', 'lumen', 'fjord', 'basalt', 'cirrus', 'delta', 'moraine', 'zephyr'];

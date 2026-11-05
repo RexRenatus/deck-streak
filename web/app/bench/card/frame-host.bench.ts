@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { test } from 'vitest';
-import { frameCard } from './frame-host';
+import { frameCard } from '../../src/lib/card/frame-host';
 
 // SPEC-618 R9, R13: the card as its frame shows it (the frame document, then the host that carries
 // it, each read back) over the inputs of frame-document.bench.ts: both sides of every golden
@@ -21,7 +21,7 @@ interface Golden {
 }
 
 const GOLDEN = JSON.parse(
-  readFileSync(resolve(import.meta.dirname, '../study/review-templates.golden.json'), 'utf8')
+  readFileSync(resolve(import.meta.dirname, '../../src/lib/study/review-templates.golden.json'), 'utf8')
 ) as Golden;
 
 const WORDS = ['tide', 'ember', 'quartz', 'lumen', 'fjord', 'basalt', 'cirrus', 'delta', 'moraine', 'zephyr'];

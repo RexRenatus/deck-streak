@@ -14,7 +14,7 @@ BENCH_TARGETS = {
     "crates/fsrs7": ["replay"],
     "crates/ffi": ["grading", "render"],
 }
-WEB_BENCH_ROOT = REPO / "web" / "app" / "src" / "lib"
+WEB_BENCH_ROOT = REPO / "web" / "app" / "bench"
 BENCH_LIST = REPO / "perf" / "benchmarks.txt"
 BENCH_CONFIG = REPO / "vitest.bench.config.ts"
 RUST_BENCH = re.compile(r"#\[divan::bench(?:\([^)]*\))?\]\s*(?:pub\s+)?fn\s+(\w+)")
@@ -131,10 +131,14 @@ class TheBenchesAreInTheTree(unittest.TestCase):
         stryker = json.loads(
             (REPO / "web" / "app" / "stryker.config.json").read_text(encoding="utf-8")
         )
-        self.assertIn("!src/**/*.bench.*", stryker.get("mutate", []))
+        # Stryker reaches only web/app/src, SPEC-039 R2's root, and no bench file lies there.
+        mutate = [glob for glob in stryker.get("mutate", []) if not glob.startswith("!")]
+        for glob in examined("stryker mutate globs", mutate):
+            self.assertTrue(glob.startswith("src/"), f"Stryker mutates {glob}, outside src")
+        self.assertEqual(sorted((REPO / "web" / "app" / "src").rglob("*.bench.*")), [])
         register = json.loads((REPO / "config" / "coverage.json").read_text(encoding="utf-8"))
         exclusions = {entry.get("glob"): entry for entry in register.get("exclusions", [])}
-        wanted = {"crates/*/benches/**": "rust", "web/app/src/**/*.bench.ts": "web"}
+        wanted = {"crates/*/benches/**": "rust", "web/app/bench/**": "web"}
         for glob, lane in examined("bench exclusions", list(wanted.items())):
             with self.subTest(glob=glob):
                 entry = exclusions.get(glob)
@@ -144,6 +148,8 @@ class TheBenchesAreInTheTree(unittest.TestCase):
                     (lane, "bench", "SPEC-618"),
                 )
                 self.assertTrue(str(entry.get("reason", "")).strip(), f"{glob} has no reason")
+        # The web bench files the source-root check above stands for, outside that root.
+        examined("web bench files outside the source root", web_bench_files())
 
 
 if __name__ == "__main__":

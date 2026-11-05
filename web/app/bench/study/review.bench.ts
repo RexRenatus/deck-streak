@@ -1,5 +1,5 @@
 import { test } from 'vitest';
-import { step, type ReviewEvent, type ReviewState } from './review';
+import { step, type ReviewEvent, type ReviewState } from '../../src/lib/study/review';
 
 // SPEC-618 R9, R13: the review state machine over one 200-press session: 100 cards, each shown,
 // revealed and answered again or good (from a fixed-seed generator), then settled, so every run

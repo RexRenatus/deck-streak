@@ -2,8 +2,8 @@ import { flushSync, mount, unmount } from 'svelte';
 import { test } from 'vitest';
 import type { CardView, Head, UndoOffer } from '#lib/engine/protocol.js';
 import { m } from '#lib/paraglide/messages.js';
-import type { StudyClient } from './review';
-import ReviewScreen from './ReviewScreen.svelte';
+import type { StudyClient } from '../../src/lib/study/review';
+import ReviewScreen from '../../src/lib/study/ReviewScreen.svelte';
 
 // SPEC-618 R9, R13: the review screen over one card, as review-screen.test.ts builds it: the screen
 // mounts, the card arrives and its question shows, Show answer turns it to the answer side, and the
