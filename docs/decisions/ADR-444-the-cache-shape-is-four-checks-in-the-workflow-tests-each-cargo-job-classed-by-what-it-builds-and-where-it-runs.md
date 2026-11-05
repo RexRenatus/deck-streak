@@ -108,7 +108,7 @@ requires.
 ## D1, chosen against
 
 - Chosen: four classes read from the job itself, because each of the eight jobs that restore nothing has a reason the tree states and no class names a job.
-- Every job that runs cargo restores the shared key (the literal reading): rejected, because five jobs would be hits on the day the rule lands, and curing them changes their cache use: `engine-measure.yml`'s cold build "restores no cache, on purpose" (SPEC-038 R12, #15), and the three listings and `fsrs7-measure.yml` would each fetch an entry of host build artifacts that none of them reads, about 53 s a run as the `rust` job's restore measured, one of them on every pull request's path to the mutation legs.
+- Every job that runs cargo restores the shared key (the literal reading): rejected, because five jobs would be hits on the day the rule lands, and curing them changes their cache use: `engine-measure.yml`'s cold build "restores no cache, on purpose" (SPEC-038 R12, #15), and the three listings and `fsrs7-measure.yml` would each fetch an entry of host build artifacts that none of them reads, about 53 s a run as the `rust` job's restore measured (job 116828746605), one of them on every pull request's path to the mutation legs.
 - Requiring the shared restore in release builds as well: rejected, because a release build that restores a cache built elsewhere is the sink of a cache-poisoning path, which the workflow linter's cache-poisoning audit reads the same way.
 - A list of exempted jobs: rejected, because an allow-list is not part of this rule, and a list keeps passing a job after the reason for its place on it is gone.
 - Only the `ci.yml` jobs that call `check.sh`, as `OnlyAPushSavesACache` reads them: rejected, because 6 of the 9 shared jobs at `ac7ebd75` call no `check.sh` stage, and a restore removed from any of them fails nothing today.
@@ -317,7 +317,7 @@ runs cargo, so the walk is proved to follow calls past the handler's own body (S
 ## D10, chosen against
 
 - Chosen: an `ast` walk of the script along the subcommand the step names, because it reads every list a run with that subcommand can reach, and a call it cannot scope keeps every branch or reads the whole script.
-- Adding the shared restore to `mutation-plan` and `mutation-verdict`: rejected, because it edits two workflow jobs, which this delivery does not change (SPEC-430 R11) and which the open release pull request's workflow files also hold, and it costs about 53 s of restore a run in two jobs whose subcommands build nothing.
+- Adding the shared restore to `mutation-plan` and `mutation-verdict`: rejected, because it edits two workflow jobs, which this delivery does not change (SPEC-430 R11), and it costs about 53 s of restore a run (job 116828746605) in two jobs whose subcommands build nothing.
 - Dropping the Python read: rejected, because `ci.yml`'s `mutation-rows` and `mutation-weekly.yml`'s `rows` would then read as cache-free, their restore would stop being required, and a narrowed rule is a weakening.
 - Reading the whole script for every call: rejected, because every caller of a script then takes the union of its subcommands, and two jobs that build nothing read as shared jobs that break the rule.
 - Reading only the handler's own body: rejected, because `prove`'s body holds no cargo list; its two lists sit below it, in `run_killer` and `builds`, which `prove_row` calls.

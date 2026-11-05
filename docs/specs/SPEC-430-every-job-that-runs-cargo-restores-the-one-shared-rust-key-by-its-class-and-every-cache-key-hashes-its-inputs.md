@@ -4,7 +4,7 @@
   its rows and `docs/`).
 - **Decided by:** ADR-444 (this SPEC's own: D1 to D10, each with what it was chosen against); SPEC-038 R1, R2 and
   R12, SPEC-191 R9, ADR-055 and ADR-191 decided the caches this SPEC holds, and none of them is amended.
-- **Status:** built in its pull request into `dev`, which lands after the open release pull request #822. It holds
+- **Status:** built in its pull request into `dev`. It holds
   `docs/red-first/SPEC-430.md`.
 
 ## 1. The problem, measured

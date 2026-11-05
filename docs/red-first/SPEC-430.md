@@ -76,7 +76,7 @@ Test edits after the red commit, each named here:
   four removed lines being those four stub returns; against `dev` it reads `1487 0`, so no existing
   line of the module changes. It changes no line of a criterion's test.
 - The rows commit and this record's commit edit no test module. After the rows commit,
-  `git -C /tmp/ds-worktrees/cache-shape-430 diff --quiet c2438d41d15e34c7778262c841b8b23f3720cd3c HEAD -- scripts/tests/test_ci_workflows.py`
+  `git diff --quiet c2438d41d15e34c7778262c841b8b23f3720cd3c ef03c16415a29ff3169d7dd8d5f457dd44860b07 -- scripts/tests/test_ci_workflows.py`
   exits 0: the module at the second push's head is the green commit's, byte for byte.
 
 ```red-first
@@ -105,3 +105,7 @@ the green commit, the rows commit and this record. That push's checks, read by n
 green: the `hygiene` job passes every test of the class, its four tree tests each print their
 `examined` line, and the rows S43000-S43060 are proved by the `mutation-rows` job's verdict line
 for each row.
+
+The class came to `dev` through a merge of its original branch onto a later `dev`: no commit
+above was rewritten, and the merge adds the same 1487 lines to the module and removes none. Each
+green is read again by name at the head of the pull request that carries the merge.
