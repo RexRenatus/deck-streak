@@ -7831,6 +7831,15 @@ DYNAMIC_IMPORTS = {
         ("test_mutation_verdict", "verdict_module", "sys.modules", 1),
     ),
     **allowed(
+        "a patch of this module's call, taken from sys.modules; it points the CLI report helper at a fake runner, reading nothing",
+        (
+            "test_mutation_python_cli_kills",
+            "TheRunPrintsAndWritesItsReport.test_the_cli_report_helper_writes_its_report_and_costs_into_a_directory_of_its_own",
+            "sys.modules",
+            1,
+        ),
+    ),
+    **allowed(
         "drops a production module the judge re-imports from a copy, so each test imports it afresh",
         ("test_mutation_python_judge_kills", "Base.setUp", "sys.modules.pop", 1),
         (
