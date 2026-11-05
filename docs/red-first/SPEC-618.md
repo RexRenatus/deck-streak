@@ -78,3 +78,14 @@ A23's root and A24's body were restated in 89b6d5e1 after their reds were read a
 both restated tests fail at efc7acfe: A23 on the same line, since `vitest.bench.config.ts` is
 absent there and no bench file lies under `web/app/bench`, and A24 because that commit's coverage
 register holds neither bench row. The commit after b3f776ba changes only this record.
+
+The third part's criteria, A25 to A30, hold the pull request run's Rust ceiling at the signed 185
+(`docs/rulings/OWNER-RULING-2026-11-05-rust-ceiling-185.md`) and name the two words the bench
+lanes need: `divan` among fsrs7's dev-dependencies, and `bench` among the kinds of a coverage
+exclusion. A25, A29 and A30 read red by name in the `hygiene` job of the run at the delivery head
+before this part, a tree whose ceiling is 189, whose fsrs7 pin admits no `divan` and whose
+coverage kinds lack `bench`. A26 to A28 are the pins of the ceiling in `test_mutation_verdict.py`,
+`test_release_rust_ceiling.py` and `test_release_python_ceiling.py`. They are re-pinned to 185 in
+one commit before the ceiling moves, with A25's pins in `test_dispatch_shards.py` and the call
+register's three entries in `test_ci_workflows.py`, and each of the three modules reads red there
+on the ceiling alone. Their red and green lines join the fence when each is read.
