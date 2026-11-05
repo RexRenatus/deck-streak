@@ -87,3 +87,7 @@ assertion of A1 to A11 changes. Neither commit touches `test_ci_workflows.py` or
 `git diff --quiet 5db3288859caf7ab141d54f0c639212120e85bc8 HEAD --
 scripts/tests/test_ci_workflows.py .github/workflows/` exits 0, so A7 to A9 still read the fix
 commit's bytes of that test module and of the three workflows at the second push's head.
+
+The rebuild onto current dev merged the original branch unchanged; the commit after that merge
+adapts the runner assertion to the routed runner helper and re-stamps the sweep bound from a fresh
+measure, with no assertion removed.

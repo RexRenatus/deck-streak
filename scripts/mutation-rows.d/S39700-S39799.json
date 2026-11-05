@@ -156,7 +156,7 @@
       [
         "S39719-HARNESS-WIRE-TIMEOUT-IN-ITS-BAND",
         ".github/workflows/xcframework.yml",
-        "    timeout-minutes: 5\n    env:\n      REPORT: ${{ github.workspace }}/harness-wire-report\n",
+        "    timeout-minutes: 10\n    env:\n      REPORT: ${{ github.workspace }}/harness-wire-report\n",
         "    timeout-minutes: 30\n    env:\n      REPORT: ${{ github.workspace }}/harness-wire-report\n",
         "the harness-wire job's time limit lies in the band its measured cost gives (SPEC-397 R8)",
         "test_ci_workflows.EachSwiftRowFileIsSweptByItsPackagesJob.test_each_sweep_is_bounded_from_its_measured_cost"

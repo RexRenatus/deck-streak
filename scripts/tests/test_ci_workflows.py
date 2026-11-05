@@ -10853,12 +10853,13 @@ SWIFT_SWEEP = "python3 scripts/swift_mutants.py sweep --package "
 SWIFT_SWEEP_JOBS = {"ios/CardIsolation": "card-isolation", "ios/HarnessWire": "harness-wire"}
 #: Each sweeping job's seconds outside its sweep step.
 SWIFT_SWEEP_OTHER_SECONDS = {
-    "harness-wire": 61,  # run 37967458391, job 113946410023
-    "card-isolation": 45,  # run 37967458391, job 113946410059
+    "harness-wire": 74,  # run 42036285042, job 127275210023
+    "card-isolation": 78,  # run 42036285042, job 127275209465
 }
-#: The worse of the two jobs' seconds per killer run, one figure for both: card-isolation's sweep
-#: step, 116 s over its 38 rows and 8 distinct killers; harness-wire's read 76 s over 35 runs.
-SWIFT_SECONDS_PER_RUN = 116 / 46  # run 37967458391, job 113946410059
+#: The worse of the two jobs' seconds per killer run, one figure for both, from each sweep step:
+#: harness-wire: 114 s over 29 rows and 6 distinct killers, run 42036285042, job 127275210023
+#: card-isolation: 233 s over 43 rows and 11 distinct killers, run 42036285042, job 127275209465
+SWIFT_SECONDS_PER_RUN = 233 / 54  # run 42036285042, job 127275209465
 
 
 def ceil5(minutes):
@@ -10888,7 +10889,7 @@ class EachSwiftRowFileIsSweptByItsPackagesJob(unittest.TestCase):
                 ]
                 self.assertEqual(sweeping, [SWIFT_SWEEP_JOBS[package]], package)
                 job = jobs[SWIFT_SWEEP_JOBS[package]]
-                self.assertEqual(job.get("runs-on"), ADMITTED_RUNNERS["xcframework.yml"])
+                self.assertEqual(job.get("runs-on"), apple_job_runner(SWIFT_SWEEP_JOBS[package]))
                 steps = job.get("steps") or []
                 runs = [str(s.get("run", "")) for s in steps]
                 (sweep,) = [at for at, run in enumerate(runs) if invocation in run]
