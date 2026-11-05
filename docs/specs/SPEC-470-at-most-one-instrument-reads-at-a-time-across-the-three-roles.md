@@ -35,6 +35,14 @@ Read at dev `36c4783a` by `git show` and `grep -n`; ADR-487 D1 cites each fact b
   lock (`:302`); that split allows at worst a redundant run after the other one, never two readers.
 - No `@phx covers` line names `instruments.rs`, `lock.rs`, `insights_routes.rs` or `reader.rs` at
   `36c4783a`.
+- Re-read at `dev` `94d99fc2`, where this delivery is rebuilt: `crates/ingest/src/lock.rs`,
+  `crates/coordination/src/instruments.rs`, `crates/coordination/src/sync_cycle.rs` and
+  `crates/api/src/insights_routes.rs` are unchanged since `36c4783a`, the branch's base;
+  `crates/ingest/src/reader.rs` now imports its four query constants from
+  `crates/ingest/src/schema18.rs`, and `with_copy` is unchanged; the eight covered items hash to the
+  digests the model stamps; the formal obligations ledger, which joined `dev` after `36c4783a`,
+  refuses a tree entry that has no row (R9); and no workflow under `.github/workflows` runs the
+  model checker, so CI reads the entry through the ledger's tests (F8).
 
 ## 2. Requirements
 
@@ -69,6 +77,11 @@ R7. The entry's `@phx covers` lines name `run_held`, `step` and `run_on_demand` 
     `crates/ingest/src/reader.rs`, each stamped with its digest after the last edit.
 R8. Rows S47001 to S47005 (section 7) are each killed by the test they name, and each killer lives
     in the crate its row mutates.
+R9. The formal obligations ledger, `formal/obligations.json`, holds `tla/OneInstrumentReader`:
+    one row with the disposition `re-stamp`, an act, and the obligation `O11`, and `O11` names
+    each of its two properties as a present artifact. The ledger's tests in
+    `scripts/tests/test_formal_obligations.py` list it among the engine-tied entries and the new
+    entries, so the tree's entries equal the ledger's rows (ADR-487 D7).
 
 ## 3. Acceptance criteria of SPEC-470
 
@@ -109,6 +122,7 @@ entry budget; its verdict is read in CI by name. No test in the fence above runs
 | F5 | a task alone, whose lock goes when its process stops, lets two runs read at once | `witness/the-reader-keeps-the-lock-until-its-process-exits.cfg` reported |
 | F6 | a guard alone, which keeps a dropped run's lock in a live process, leaves a due weekly run unrun for ever | `witness/a-due-weekly-run-runs-once-the-lock-is-free.cfg` reported |
 | F7 | the entry's covers name each item of R7 with its digest at the head | the formal check reports no stale cover |
+| F8 | the formal obligations ledger holds the entry's row, and the tree's entries equal its rows (R9) | `test_the_ledger_exists_in_schema_v1` and `test_every_existing_entry_has_its_disposition_row` in `scripts/tests/test_formal_obligations.py`, red by name at the merge alone and green with the row, in CI by run id |
 
 The model's switches are `Exclusive`, `HoldToEnd` and `KeepOnStop`; the cure is all three TRUE,
 and each witness changes only what its row says (ADR-487 D2).
@@ -134,6 +148,8 @@ and each witness changes only what its row says (ADR-487 D2).
 | `docs/red-first/SPEC-470.md` | `docs` | added: the red-first record |
 | `docs/schematics/insights-instrument-frame.md` | `docs` | changed: one section appended, insert-only |
 | `changelog.d/instrument-lock-model-470.md` | `docs` | added: the changelog fragment |
+| `formal/obligations.json` | `formal` | changed: the model's row and its two properties under `O11` (R9) |
+| `scripts/tests/test_formal_obligations.py` | `formal` | changed: the model listed among the engine-tied and the new entries (R9) |
 
 No Cargo manifest or lockfile, no formal configuration and no daemon wiring changes.
 

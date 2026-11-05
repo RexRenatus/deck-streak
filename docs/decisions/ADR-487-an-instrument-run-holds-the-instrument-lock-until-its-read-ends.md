@@ -209,6 +209,19 @@ schedules the step (#142, ADR-094); and the collection lock's same release on a 
 `with_copy` (`reader.rs:395`, `:411-413`), for every other api and bot ingest read and for an
 instrument read at a runtime stop (#957).
 
+### D7. The rebuild onto current dev, and the model's row in the formal obligations ledger
+
+The branch is merged onto current dev unchanged, by one merge commit, and the commits on top cure
+what the merge meets. The formal obligations ledger, `formal/obligations.json`, joined dev after
+this delivery's first base, and its tests refuse a tree entry that has no row. So
+`tla/OneInstrumentReader` gains one row, the disposition `re-stamp` with the obligation `O11`, and
+`O11` names its two properties as present artifacts; the ledger's tests list it among the
+engine-tied entries and the new entries. The model covers ingest's collection read, `with_copy`,
+which the engine's replacement moves, as the re-stamped `tla/SensitiveDeckGate` and
+`tla/SkipDayOnce` cover ingest's reads. The rebuild pushes twice: the merge alone, whose run reads
+the ledger's refusal by name, then the commits on top, whose run reads it green. The eight covered
+items are byte-identical at the new base, so the model's stamps stand.
+
 ## D1 was chosen against
 
 - Treating a run as one atomic take, read and release: the read outlives its caller on a blocking thread, so an atomic step hides the race this record finds.
@@ -244,6 +257,12 @@ instrument read at a runtime stop (#957).
 
 - Curing the collection lock in `with_copy` here: it guards every other api and bot ingest read, not only the instruments, so its cure is its own decision (#957).
 - Modelling the instruments' readings and reports: the property is about who reads when, not what a read returns (#142).
+
+## D7 was chosen against
+
+- `keep` with no obligation: the model covers the collection read that the engine's replacement moves, and `O11` holds each engine-tied entry to be re-read when a span it covers moves.
+- `re-point` onto the replacement's store: the property is who reads when, and it holds of any read the lock guards, so only a moved cover is re-read and re-stamped.
+- Re-basing or squashing the original commits: the merge keeps every commit the record names as an ancestor of the head.
 
 ## Consequences
 
