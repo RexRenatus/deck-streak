@@ -19,8 +19,9 @@ A8: python3 -m unittest discover -s scripts/tests -p test_identity_docs.py -k te
 A9: python3 -m unittest discover -s scripts/tests -p test_identity_docs.py -k test_a_complete_planted_tree_reads_green
 A10: python3 -m unittest discover -s scripts/tests -p test_brand_files.py -k test_the_readme_opens_with_the_title_then_the_hero
 A11: python3 -m unittest discover -s scripts/tests -p test_brand_files.py -k test_the_still_is_listed_by_its_pinned_sha256
-A12: python3 -m unittest discover -s scripts/tests -p test_brand_files.py -k test_a_hero_with_no_reduced_motion_source_is_refused
+A12: python3 -m unittest discover -s scripts/tests -p test_brand_files.py -k test_a_hero_that_shows_the_animation_is_refused
 A13: python3 -m unittest discover -s scripts/tests -p test_brand_files.py -k test_a_missing_or_altered_still_is_refused
+A14: python3 -m unittest discover -s scripts/tests -p test_brand_files.py -k test_no_readme_image_shows_the_animation
 ```
 
 ```red-first
@@ -68,6 +69,13 @@ helpers `opening_findings`, `built_on_findings`, `notice_findings`, `agents_find
 `scripts/tests/test_identity_docs.py` and `scripts/tests/test_brand_files.py` from a stub to their bodies; no test
 function or assertion changes. Commit d413947 adds one path, the still's, to `BRAND_PATHS` in
 `scripts/tests/test_brand_files.py` beside the texts and the still it lists; no assertion changes.
+
+The hero amendment renames A12 to `test_a_hero_that_shows_the_animation_is_refused`, which plants a README whose hero
+shows the gif as an image (a bare image, an `<img>` with no link, the earlier picture form, and the hero line with its
+image swapped to the gif), each beside the planted complete README read green first; and it adds A14,
+`test_no_readme_image_shows_the_animation`, which reads the tree's README, examines every image it shows and refuses
+any that names a gif. A10, A11, A12 and A14 are measured at the amendment's red commit, and their lines are written
+in the next commit.
 
 ## The rows, proved by hand
 
