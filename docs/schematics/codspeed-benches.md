@@ -17,7 +17,7 @@ flowchart LR
   build -->|"applicable true"| archive["tar archive, one-day artifact"]
   build -->|"needs outputs"| upload["bench-rust or bench-web: contents read, id-token write"]
   archive --> upload
-  tool["bench-rust only: the pinned cargo-codspeed release binary, fallback none"] --> upload
+  tool["bench-rust-build only: the pinned cargo-codspeed, carried in the archive"] --> archive
   upload -->|"upload true"| action["CodSpeed action, mode simulation"]
   action --> check["CodSpeed Performance Analysis check, outside every ruleset"]
   record[("the records the pull request adds or changes under perf/regressions.d")] --> rec["perf-record.py check, a step of bench-rust-build on a pull request"]
@@ -51,5 +51,6 @@ flowchart LR
   into `$RUNNER_TEMP/records`, checked against the head ref `github.head_ref` passes through the
   step's environment.
 - The benchmark list: `perf/benchmarks.txt`, one `<file stem>::<bench>` name per line.
-- The Rust upload job's one tool: `cargo-codspeed`, installed by `taiki-e/install-action` at a
-  pinned version with `fallback: none`; the web upload job installs nothing.
+- The Rust lane's one tool: `cargo-codspeed`, installed in `bench-rust-build` at a pinned version
+  by `cargo install --locked` and carried in the archive; `bench-rust` puts its folder on the path,
+  and neither upload job installs anything.

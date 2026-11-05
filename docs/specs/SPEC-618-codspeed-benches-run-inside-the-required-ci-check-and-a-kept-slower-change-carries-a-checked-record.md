@@ -124,11 +124,12 @@ adds a dependency edge other than the bench crate. A web bench file takes Vitest
 `test('<name>', async ({ bench }) => { await bench('<name>', fn).run() })`. Every bench input is
 seeded and fixed, and no bench asserts a computed value.
 
-R14. The one install of an upload job. R2's package install is a package manager's install. The
-Rust upload job installs one tool, the pinned `cargo-codspeed` release binary, through
-`taiki-e/install-action` with `fallback: none`, so the install downloads a published binary and
-never compiles; the web upload job sets up Node and pnpm as its build job does and installs no
-package. Neither runs `cargo build`, `pnpm install`, `npm` or `protoc`.
+R14. The one install of the Rust bench lane. R2's package install is a package manager's install.
+The Rust build job, which holds `contents: read` alone, installs one tool, `cargo-codspeed` at its
+pinned version, by `cargo install --locked`, and carries the binary in its archive; the Rust
+upload job puts the unpacked binary's folder on its path and installs nothing, and the web upload
+job sets up Node and pnpm as its build job does and installs no package. Neither upload job runs
+`cargo build`, `cargo install`, `pnpm install`, `npm` or `protoc`.
 
 R15. The coverage exclusions are entries of `config/coverage.json`, the register the coverage
 report applies: `crates/*/benches/**` in the Rust lane and `web/app/src/**/*.bench.ts` in the web
@@ -156,7 +157,7 @@ test and spec files, so no bench file loads there.
 | A14 | every other value outside the closed schema is refused, each problem on its own line (R8) | `test_perf_record.py` `test_a_record_outside_the_schema_is_refused` |
 | A15 | the four bench jobs exist and the aggregate `ci` needs each of them beside its other jobs (R1) | `test_ci_workflows.py` `test_the_four_bench_jobs_are_needs_of_ci`, `test_the_gate_runs_in_four_parallel_jobs` |
 | A16 | each build job holds `contents: read` alone, each upload job holds `contents: read` and `id-token: write`, no other `ci.yml` job holds `id-token`, and the header names the upload jobs' grant (R2, R3) | `test_ci_workflows.py` `test_only_the_two_upload_jobs_hold_an_id_token_grant` |
-| A17 | an upload job prints the reason, checks out, installs the pinned CodSpeed cargo tool in the Rust lane alone, downloads and unpacks the archive and runs the pinned action in simulation mode with no `token`, and no step builds or installs a package (R2, R3, R14) | `test_ci_workflows.py` `test_an_upload_job_unpacks_and_uploads_and_builds_nothing` |
+| A17 | the Rust build job installs the pinned CodSpeed cargo tool and carries it in its archive; an upload job prints the reason, checks out, downloads and unpacks the archive (the Rust lane puts the tool's folder on its path) and runs the pinned action in simulation mode with no `token`, and no upload step builds or installs a package or a tool (R2, R3, R14) | `test_ci_workflows.py` `test_an_upload_job_unpacks_and_uploads_and_builds_nothing` |
 | A18 | each bench job always starts, its plan publishes the three outputs, and every later step carries the plan's gate, so a run the plan finds not applicable skips every measured step (R4) | `test_ci_workflows.py` `test_each_bench_job_starts_and_its_plan_gates_every_step` |
 | A19 | on each pull request the Rust build job checks the records the diff adds or changes under `perf/regressions.d/` against the head ref and the benchmark list (R8, R11) | `test_ci_workflows.py` `test_the_record_check_reads_the_records_a_pull_request_adds` |
 | A20 | `[profile.bench]` inherits release with line-table debug information, and the root manifest holds no release profile (R9) | `test_perf_benches.py` `test_the_bench_profile_inherits_release_with_line_tables` |
