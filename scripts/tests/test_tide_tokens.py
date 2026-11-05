@@ -320,7 +320,8 @@ class TheAppCopiesTheTokens(unittest.TestCase):
         self.assertEqual(findings(REPO), [])
 
     def test_a_colour_set_that_differs_from_its_token_is_refused(self):
-        """A5: a value one byte off, and an entry that is not there, are each refused."""
+        """A5: a value one byte off, an entry or a colour set that is not there, and an entry that
+        is not whole sRGB with alpha 1.000 are each refused."""
         with tempfile.TemporaryDirectory() as tmp:
             plant(tmp)
             self.assertEqual(findings(tmp), [], "the control: the complete set reads green")
@@ -351,6 +352,37 @@ class TheAppCopiesTheTokens(unittest.TestCase):
             self.assertTrue(found[0].startswith("entry-missing: "), found)
             self.assertIn("TideAccent", found[0])
             self.assertIn("light", found[0])
+
+            plant(tmp)
+            write(tmp, CATALOG / "TideMuted.colorset" / "Contents.json", "{")
+            want = "set-missing: ios/App/Assets.xcassets/TideMuted.colorset/Contents.json: the colour set TideMuted is not there"
+            self.assertEqual(findings(tmp), [want], "a colour set that is not JSON")
+
+            other_space = planted_sets()
+            other_space["TideBorder"]["colors"][0]["color"]["color-space"] = "display-p3"
+            plant(tmp, sets=other_space)
+            want = "value-differs: ios/App/Assets.xcassets/TideBorder.colorset/Contents.json: TideBorder light entry is not whole sRGB with alpha 1.000"
+            self.assertEqual(findings(tmp), [want], "an entry in another colour space")
+
+            part_alpha = planted_sets()
+            part_alpha["TideBackground"]["colors"][1]["color"]["components"]["alpha"] = "0.500"
+            plant(tmp, sets=part_alpha)
+            want = "value-differs: ios/App/Assets.xcassets/TideBackground.colorset/Contents.json: TideBackground dark entry is not whole sRGB with alpha 1.000"
+            self.assertEqual(findings(tmp), [want], "an entry with an alpha below 1")
+
+            not_hex = planted_sets()
+            not_hex["TideAccent"]["colors"][0]["color"]["components"]["green"] = "0.420"
+            plant(tmp, sets=not_hex)
+            want = "value-differs: ios/App/Assets.xcassets/TideAccent.colorset/Contents.json: TideAccent light entry is not whole sRGB with alpha 1.000"
+            self.assertEqual(findings(tmp), [want], "a component outside the 8-bit hex form")
+
+        # A fresh folder: plant() never removes a colour set an earlier plant wrote.
+        with tempfile.TemporaryDirectory() as fresh:
+            no_card = planted_sets()
+            del no_card["TideCard"]
+            plant(fresh, sets=no_card)
+            want = "set-missing: ios/App/Assets.xcassets/TideCard.colorset/Contents.json: the colour set TideCard is not there"
+            self.assertEqual(findings(fresh), [want], "a colour set that is not there")
 
     def test_a_role_missing_from_either_mode_is_refused(self):
         """A6: a token file without one role of one mode is refused, naming the mode and the role."""
@@ -385,15 +417,16 @@ class TheAppCopiesTheTokens(unittest.TestCase):
             self.assertTrue(found[0].startswith("raw-colour: "), found)
             self.assertIn("layout.css", found[0])
 
-            for literal in (
-                "rgb(0, 0, 0)",
-                "hsl(0 0% 0%)",
-                "oklch(0.5 0.1 20)",
-                "UIColor(red: 0, green: 0, blue: 0, alpha: 1)",
+            for literal, held in (
+                ("rgb(0, 0, 0)", "rgb("),
+                ("hsl(0 0% 0%)", "hsl("),
+                ("oklch(0.5 0.1 20)", "oklch("),
+                ("UIColor(red: 0, green: 0, blue: 0, alpha: 1)", "UIColor(red:"),
             ):
                 plant(tmp)
                 write(tmp, COMPILE, f"const c = '{literal}';\n")
-                self.assertEqual(len(findings(tmp)), 1, literal)
+                want = f"raw-colour: {COMPILE.as_posix()}: line 1 holds {held}"
+                self.assertEqual(findings(tmp), [want], literal)
 
         examined("files the literal scan reads", literal_files(REPO))
         self.assertEqual(literal_findings(REPO), [])
