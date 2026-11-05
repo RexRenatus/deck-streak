@@ -1933,16 +1933,18 @@ sys.exit(f"execve failed: errno {ctypes.get_errno()}")
                         list(work.iterdir()), [], f"vector {i}: a step wrote where it ran"
                     )
         # The single-entry blocks that proceed name exactly SETTINGS' words, so the entry's listed
-        # settings are the ones the script lists.
+        # settings are the ones the script lists. Both sides are bytes, so no key is decoded.
         proceeding = {
-            os.fsdecode(key)
+            key
             for vector in vectors
             if vector["verdict"] == "proceed" and len(vector["entries"]) == 1
             for key in [bytes.fromhex(vector["entries"][0]).partition(b"=")[0]]
             if key.startswith(prefix)
         }
         self.assertEqual(
-            proceeding, set(self.settings()), "the vectors' settings are not SETTINGS'"
+            proceeding,
+            {os.fsencode(name) for name in self.settings()},
+            "the vectors' settings are not SETTINGS'",
         )
         # The covered function is the one the steps run: defined once, and called by the Caddy arm
         # as its only command.
