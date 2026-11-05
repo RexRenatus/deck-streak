@@ -3,8 +3,9 @@
 @import "shadcn-svelte/tailwind.css";
 @import "@fontsource-variable/inter";
 /* The design tokens (ADR-028), compiled from src/lib/design/tokens.json when a build or the dev
- * server starts. Every colour reads the Telegram theme variable the client sets and falls back to
- * Telegram's light palette outside Telegram; the file maps each into Tailwind's theme. */
+ * server starts. Every colour reads the Telegram theme variable the client sets and, outside
+ * Telegram, falls back to its Tide role (SPEC-593 R2): the light value in :root and the dark value
+ * under .dark. The file maps each into Tailwind's theme. */
 @import '../lib/design/tokens.css';
 /* The house CJK stylesheet (packs/cjk-typography). Its :lang() rules match every element of a CJK
  * passage, so it sits in the base layer: unlayered, it would outrank every Tailwind utility. */
@@ -24,8 +25,11 @@
 
 @layer base {
   :root {
-    /* Telegram names the chat's scheme; outside Telegram the page is light, as its colours are. */
+    /* Telegram names the chat's scheme; outside Telegram the scheme is the mode's, as its colours are. */
     color-scheme: var(--tg-color-scheme, light);
+  }
+  .dark {
+    color-scheme: var(--tg-color-scheme, dark);
   }
   * {
     @apply border-border outline-ring;
@@ -54,5 +58,24 @@
     text-decoration-line: underline;
     text-decoration-color: var(--link);
     text-underline-offset: 0.2em;
+  }
+}
+
+/* SPEC-593 R8, ADR-616 D1: until the app mounts, and while the choice is system, the stylesheet
+ * alone sets the mode. A browser that does not report light paints every colour role's dark Tide
+ * fallback, the value the compile emits for it under .dark, unless the root element carries the
+ * light class; one that reports light keeps the light fallbacks. The rule sits outside every
+ * layer, as the compiled roles do, and its selector outranks theirs. */
+@media not all and (prefers-color-scheme: light) {
+  :root:not(.light) {
+    color-scheme: var(--tg-color-scheme, dark);
+    --background: var(--tg-theme-bg-color, var(--tide-dark-background));
+    --foreground: var(--tg-theme-text-color, var(--tide-dark-ink));
+    --card: var(--tg-theme-secondary-bg-color, var(--tide-dark-card));
+    --card-foreground: var(--tg-theme-text-color, var(--tide-dark-ink));
+    --muted-foreground: var(--tg-theme-hint-color, var(--tide-dark-muted));
+    --link: var(--tg-theme-link-color, var(--tide-dark-accent));
+    --border: var(--tg-theme-hint-color, var(--tide-dark-border));
+    --ring: var(--tg-theme-link-color, var(--tide-dark-accent));
   }
 }
