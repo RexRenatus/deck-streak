@@ -107,6 +107,8 @@ lines beside those of A2 and A3.
 | `formal/lean/Formal/DeployEntryRefusalVectors.lean` | 1 | new: the entry's vectors writer |
 | `formal/lean/Formal/Vectors.lean` | 1 | one import and one arm, each in sorted place |
 | `formal/vectors/deploy-entry-refusal.jsonl` | 1 | new: the writer's vectors |
+| `formal/obligations.json` | 1 | one row: `lean/DeployEntryRefusal` keeps, with no obligation |
+| `scripts/tests/test_formal_obligations.py` | 1 | the ledger test's new entries name `lean/DeployEntryRefusal`, keep with no obligation |
 | `scripts/mutation-rows.d/S47300-S47399.json` | 1 | new: rows S47301 to S47303 |
 | `docs/specs/SPEC-473-a-lean-entry-proves-the-caddy-steps-received-entry-refusal-over-every-environment-block.md` | 1 | new: this SPEC |
 | `docs/decisions/ADR-490-the-caddy-steps-settings-check-is-one-function-that-a-lean-entry-ports-proves-and-ties-to-its-vectors.md` | 1 | new: its decision record |
