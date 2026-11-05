@@ -1,6 +1,6 @@
 # Schematic: the context map as components
 
-Kind: component. Read at DeckStreak `dev` 164ac20690e0d6d0385474d04663d14df5781e19.
+Kind: component. Read at DeckStreak `dev` e08ba4a9f6a906fccdce3c74be53364d74b3deec.
 Its sources are the fence in `docs/CONTEXT-MAP.md` and every `crates/*/Cargo.toml`.
 
 The binding record is the fence in `docs/CONTEXT-MAP.md`; this diagram draws it by layer. Every
@@ -74,6 +74,7 @@ flowchart TB
     companion
     collection
     media
+    render
     sync
   end
 
@@ -208,6 +209,8 @@ ADR-530).
 `media` depends on no workspace crate (its one dependency is `sha2`), and no crate depends on it
 yet: the collection that implements its index and the renderer that reads names through its grammar
 are later deliveries (SPEC-513, ADR-531).
+
+`render` depends on no workspace crate, and no crate depends on it yet (SPEC-603, ADR-624).
 
 `deck-streak-migration` is planned in the fence and has no directory under `crates/`, so it is not
 drawn until the delivery that builds it.
