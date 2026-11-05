@@ -16,3 +16,15 @@ A3: python3 -m unittest discover -s scripts/tests -p test_mutation_python_verdic
 A4: python3 -m unittest discover -s scripts/tests -p test_mutation_python_verdict.py -k test_a_row_the_leg_did_not_kill_fails_and_is_never_named_left
 A5: python3 -m unittest discover -s scripts/tests -p test_mutation_python_verdict.py -k test_a_left_row_adds_nothing_to_the_examined_count
 ```
+
+```red-first
+A1: red at 139828b780d948c10b5bc3499cc1a3c6e674532b: AssertionError: Lists differ: [] != ['mutation: scripts: rows left to the leg [134 chars]son']
+A1: green at 635ab5da6e2d8432496679e91ee1cd2d40766bcb
+A2: red at 139828b780d948c10b5bc3499cc1a3c6e674532b: AssertionError: Lists differ: [] != ['mutation: scripts: rows left to the leg [228 chars]ine']
+A2: green at 635ab5da6e2d8432496679e91ee1cd2d40766bcb
+A3: not red: the base prints no left line when every selected row is credited to its class; its proof is S62504 read KILLED
+A4: not red: the base fails a row the leg did not kill by name and names it on no other line; its proof is S62503 read KILLED
+A5: not red: the base reads the zero-examined VOID when the only selected row is credited to no class; its proof is S62506 read KILLED
+```
+
+The rows S62500 to S62506 were read KILLED by id in the second push's `mutation-rows` job.
