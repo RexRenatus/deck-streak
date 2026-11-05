@@ -282,3 +282,25 @@ No `.rs`, `.swift`, edge, content-security or workflow file changes.
 - **Mutation:** StrykerJS over every changed production file under `web/app/src`, with the
   repository's own configuration at a break of 100; each survivor is killed by a test or recorded
   as equivalent with its reason.
+
+## 8. Amendment (SPEC-463): each Remove names its passkey, and the confirm step takes the focus
+
+SPEC-463 (ADR-480) changes the sign-in methods screen of R12 and adds one key to §2b's wording,
+for #818. Nothing above this section changes; where a line above and this section differ, this
+section holds.
+
+- R12's confirm step is an alert dialog named by its question. Pressing a passkey's Remove moves
+  the focus to its Keep; Keep, or Escape, puts the question away and gives the focus back to that
+  passkey's Remove; after a removal the focus moves to the next passkey's Remove, else to the
+  previous one's, else to the list; a refused removal gives the focus back to its Remove
+  (SPEC-463 R1 to R6).
+- Each passkey's Remove, and the Remove of its open confirm step, is named for the passkey's place
+  among the passkey rows and the day the row shows (SPEC-463 R7).
+- §2b's wording gains one key, which R13 and A19 now hold with the other 25:
+
+| key | English |
+|---|---|
+| `methods_remove_passkey` | Remove passkey {position}, added {date} |
+
+- A17's test and the other tests of `sign-in-methods.test.ts` that pressed a Remove by the name
+  "Remove" now press it by its passkey's name; what each of them asserts is unchanged.
