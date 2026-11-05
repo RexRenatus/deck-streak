@@ -918,6 +918,159 @@ class TheMutantLegReadsRedWithNoWholeReport(unittest.TestCase):
                 self.assertEqual(expected, colour_refusals(planted_rust_step(*tail), whole))
 
 
+#: SPEC-458 R17: the `if:` of the Rust leg's last step, which fails a leg whose own baseline is not
+#: green (ADR-509's step records it as `green`), after the leg's report is kept.
+BASELINE_COLOUR_IF = (
+    "${{ needs.mutation-plan.outputs.rust == 'true' && steps.baseline.outputs.green != 'true' }}"
+)
+
+
+def baseline_colour_refusals(rust_steps):
+    """Why `mutation-rust`'s steps do not end on R17's step, which fails a leg whose own baseline
+    is not green, after the upload under `always()`; [] when they do."""
+    out = []
+    recorders = [
+        step
+        for step in rust_steps
+        if "id: baseline" in script_lines(step)
+        and any('echo "green=true" >> "$GITHUB_OUTPUT"' in line for line in script_lines(step))
+    ]
+    if len(recorders) != 1:
+        out.append(
+            f"mutation-rust: {len(recorders)} steps record a green baseline under "
+            "`id: baseline`, not one"
+        )
+    last = rust_steps[-1] if rust_steps else ""
+    if BASELINE_COLOUR_IF not in re.findall(r"(?m)^        if: (.*)$", last):
+        out.append("mutation-rust: the last step's `if:` is not R17's")
+    lines = script_lines(last)
+    end = lines[-1] if lines else ""
+    if end != "exit 1":
+        out.append(f"mutation-rust: the last step ends `{end}`, not `exit 1`")
+    if any("||" in line or "set +e" in line or "continue-on-error" in line for line in lines):
+        out.append(
+            "mutation-rust: the last step swallows a failure (`||`, `set +e` or "
+            "`continue-on-error`)"
+        )
+    before = rust_steps[-2] if len(rust_steps) > 1 else ""
+    if "actions/upload-artifact@" not in before or not re.search(
+        r"(?m)^        if: \$\{\{ always\(\) \}\}$", before
+    ):
+        out.append("mutation-rust: the step before the last is not an upload under `always()`")
+    return out
+
+
+class TheLegReadsRedWhenItsBaselineIsNotGreen(unittest.TestCase):
+    """SPEC-458 A13 and A14 (R17): a Rust leg whose own baseline is not green fails its job, after
+    its report is kept, so its colour agrees with the verdict, which reads it VOID (#827)."""
+
+    def test_a_leg_whose_baseline_is_not_green_fails_its_job_after_its_report_is_kept(self):
+        rust = steps(jobs(workflow(CI)).get("mutation-rust", ""))
+        self.assertGreater(len(rust), 0, "mutation-rust's steps examined")
+        self.assertEqual([], baseline_colour_refusals(rust))
+
+    def test_the_baseline_colour_reader_refuses_each_planted_shape(self):
+        baseline = (
+            "      - name: this leg's unmutated baseline\n"
+            "        id: baseline\n"
+            "        if: ${{ needs.mutation-plan.outputs.rust == 'true' }}\n"
+            "        run: |\n"
+            "          rc=0\n"
+            "          bash scripts/mutation-baseline.sh || rc=$?\n"
+            '          if [ "$rc" -eq 0 ]; then echo "green=true" >> "$GITHUB_OUTPUT"; fi\n'
+        )
+        mutants = (
+            "      - name: cargo-mutants, one shard of the diff, in place\n"
+            "        if: ${{ needs.mutation-plan.outputs.rust == 'true' && "
+            "steps.baseline.outputs.green == 'true' }}\n"
+            "        run: |\n"
+            "          rc=0\n"
+            "          cargo mutants --in-place --baseline=skip || rc=$?\n"
+        )
+        upload = (
+            "      - name: keep the shard's report\n"
+            "        if: ${{ always() }}\n"
+            "        uses: actions/upload-artifact@v7\n"
+            "        with:\n"
+            "          name: mutation-rust-shard-${{ matrix.shard }}\n"
+        )
+        colour = (
+            "      - name: a leg whose own baseline is not green fails its job\n"
+            "        if: ${{ needs.mutation-plan.outputs.rust == 'true' && "
+            "steps.baseline.outputs.green != 'true' }}\n"
+            "        run: |\n"
+            '          echo "mutation-rust: shard $SHARD left no whole report"\n'
+            "          exit 1\n"
+        )
+        not_r17 = "mutation-rust: the last step's `if:` is not R17's"
+        ends_upload = (
+            "mutation-rust: the last step ends `name: mutation-rust-shard-${{ matrix.shard }}`, "
+            "not `exit 1`"
+        )
+        no_upload = "mutation-rust: the step before the last is not an upload under `always()`"
+        swallows = (
+            "mutation-rust: the last step swallows a failure (`||`, `set +e` or "
+            "`continue-on-error`)"
+        )
+        planted_shapes = [
+            ("the fixed shape", (baseline, mutants, upload, colour), []),
+            ("no colour step", (baseline, mutants, upload), [not_r17, ends_upload, no_upload]),
+            (
+                "the colour step before the upload",
+                (baseline, mutants, colour, upload),
+                [not_r17, ends_upload, no_upload],
+            ),
+            (
+                "a green-baseline if",
+                (baseline, mutants, upload, colour.replace("green != 'true'", "green == 'true'")),
+                [not_r17],
+            ),
+            (
+                "the Rust condition dropped",
+                (
+                    baseline,
+                    mutants,
+                    upload,
+                    colour.replace("needs.mutation-plan.outputs.rust == 'true' && ", ""),
+                ),
+                [not_r17],
+            ),
+            (
+                "its last line exit 0",
+                (baseline, mutants, upload, colour.replace("exit 1\n", "exit 0\n")),
+                ["mutation-rust: the last step ends `exit 0`, not `exit 1`"],
+            ),
+            (
+                "its last line exit 1 or true",
+                (baseline, mutants, upload, colour.replace("exit 1\n", "exit 1 || true\n")),
+                ["mutation-rust: the last step ends `exit 1 || true`, not `exit 1`", swallows],
+            ),
+            (
+                "a continue-on-error line",
+                (
+                    baseline,
+                    mutants,
+                    upload,
+                    colour.replace(
+                        "        run: |\n", "        continue-on-error: true\n        run: |\n"
+                    ),
+                ),
+                [swallows],
+            ),
+            (
+                "no id: baseline step",
+                (baseline.replace("        id: baseline\n", ""), mutants, upload, colour),
+                ["mutation-rust: 0 steps record a green baseline under `id: baseline`, not one"],
+            ),
+        ]
+        judged = 0
+        for name, blocks, expected in examined("planted baseline colour shapes", planted_shapes):
+            with self.subTest(shape=name):
+                self.assertEqual(expected, baseline_colour_refusals(steps("".join(blocks))))
+            judged += 1
+        self.assertEqual(len(planted_shapes), judged)
+
+
 #: The rows legs' axis: the plan deals the rows into at most `ROWS_MAX_LEGS` legs (SPEC-417 R9).
 ROWS_AXIS_LINE = "        leg: ${{ fromJSON(needs.mutation-plan.outputs.rows_matrix) }}"
 ROWS_PLANNED_IF = "${{ needs.mutation-plan.outputs.rows == 'true' }}"

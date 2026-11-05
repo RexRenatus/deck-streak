@@ -24,3 +24,8 @@ The three reds were read on CI at the red commit by test name: hygiene job 11734
 300096bd greens all three. The pushed head carries the rows, the changelog fragment and this record on top of it, and
 `git diff --quiet 300096bd HEAD` over the three test modules and the three workflow files exits 0, so the tests and the
 code they read are byte-identical between the green commit and the pushed head, whose CI reads the greens by name.
+
+The rebuild onto current dev merged the original branch unchanged. There the leg runs its own
+baseline first and cargo-mutants skips its own, so a red baseline never reaches the colour line. The
+commit after the documents adds the tests of A13 and A14 with every workflow untouched, and a later
+commit adds the step they read.
