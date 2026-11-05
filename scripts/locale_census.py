@@ -16,6 +16,8 @@ It refuses, one line per finding:
 - `unreadable <locale> not-json`, `unreadable <locale> not-an-object`,
   `unreadable <locale> repeats <key>`: a catalog that is not a JSON object, or repeats a key; such
   a catalog is not examined;
+- `unreadable settings not-json`, `unreadable settings not-an-object`: a settings file that is not
+  a JSON object; the census then examines no catalog;
 - `missing <locale> <key>`: a key English holds that the locale lacks;
 - `stale <locale> <key>`: a key the locale holds that English lacks;
 - `not-text <locale> <key>`, `empty <locale> <key>`: a value that is not text, or is blank after
@@ -99,7 +101,14 @@ def census(root):
     """(findings, catalogs examined, English keys examined) over the tree at `root`."""
     findings = []
     path = root / SETTINGS
-    settings = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+    settings = {}
+    if path.is_file():
+        try:
+            settings = json.loads(path.read_text(encoding="utf-8"))
+        except ValueError:
+            return ["unreadable settings not-json"], 0, 0
+        if not isinstance(settings, dict):
+            return ["unreadable settings not-an-object"], 0, 0
     listed = settings.get("locales", [])
     if sorted(listed) != sorted(SEVEN):
         findings.append(f"locale-set locales {json.dumps(listed)}")
