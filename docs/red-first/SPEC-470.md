@@ -88,3 +88,9 @@ merge alone `test_every_existing_entry_has_its_disposition_row` and
 `test_the_ledger_exists_in_schema_v1` read red by name in the pull request run 42081731876. The
 commit that carries this paragraph adds the model's row and lists the entry in the ledger tests'
 tables; it adds no criterion, and the tests of A1 to A6 are unchanged.
+
+The documents were restated at the new base first (92f58735). At the commit that adds the ledger row
+(7af918ae), the six criteria read green by their fence lines, the ledger's tests read green, and the
+eight covered items still hash to the digests the model stamps. The pull request's own mutation
+stage judges rows S47001 to S47005 at the delivery's head. The commit after 7af918ae changes only
+this record.
