@@ -776,9 +776,9 @@ commit.
 | the first step's runner, its cut bounded at the next step | `scripts/tests/test_ci_workflows.py:1175-1189`, `run_base_is_dev` |
 | `rendered_env` and A2 | `scripts/tests/test_not_started_legs.py:115-126`, and `test_ci_admits_every_mutation_result_on_the_release_run_and_no_gating_one` (new) |
 
-## 11. Swift mutant rows, from a package's row file to the verdict (SPEC-397, ADR-411)
+## 14. Swift mutant rows, from a package's row file to the verdict (SPEC-397, ADR-411)
 
-Kind: data flow. Read at DeckStreak `dev` `164ac206` (`.github/workflows/xcframework.yml`,
+Kind: data flow. Read at DeckStreak `d274b8b2` (`.github/workflows/xcframework.yml`,
 `.github/workflows/apple-on-change.yml`, `.github/workflows/ci.yml`, `scripts/mutation_rows.py`
 and the two `ios/*/swift-mutants.json`), and drawn as SPEC-397 builds it. A Swift row is no band
 row: it has its own reader, `scripts/swift_mutants.py`, its own jobs and its own verdict line, and
@@ -810,7 +810,7 @@ flowchart TD
   end
 
   subgraph mac["a change to a path of apple-on-change.yml, the module's path included"]
-    caller["apple-on-change.yml calls xcframework.yml"] --> pkgjobs["harness-wire and card-isolation, each on the admitted hosted macOS label"]
+    caller["apple-on-change.yml calls xcframework.yml"] --> pkgjobs["harness-wire and card-isolation, each on its routed macOS runner (apple_job_runner)"]
     pkgjobs --> pkgtests["swift test --package-path ios/package"]
     pkgtests --> sweep["swift_mutants.py sweep --package ios/package --report REPORT --run-seconds n"]
     hwrows --> sweep
@@ -838,14 +838,14 @@ flowchart TD
 | the two row files, `{population, mutants}`, each row `id`, `file`, `find`, `replace`, `killer`, `why` | `ios/HarnessWire/swift-mutants.json`, `ios/CardIsolation/swift-mutants.json` |
 | the reader and its verbs `census`, `retired`, `sweep` | `scripts/swift_mutants.py` (added by SPEC-397) |
 | the census on every pull request, and its planted refusals | `scripts/tests/test_swift_mutants.py` (added by SPEC-397) |
-| the approvals record, keyed by id, read by both retired checks | `scripts/mutation-rows.retired.json`; its reader `scripts/mutation_rows.py:1236-1240` |
-| the retired step, one `run:` line, on a diff | `.github/workflows/ci.yml:630-632` |
-| the change caller's paths | `.github/workflows/apple-on-change.yml:11-19`, joined by `scripts/swift_mutants.py` |
+| the approvals record, keyed by id, read by both retired checks | `scripts/mutation-rows.retired.json`; its reader `scripts/mutation_rows.py:1403-1407` |
+| the retired step, one `run:` line, on a diff | `.github/workflows/ci.yml:794-796` |
+| the change caller's paths | `.github/workflows/apple-on-change.yml:11-21`, joined by `scripts/swift_mutants.py` |
 | the jobs that sweep, their test steps and their report uploads under `always()` | `.github/workflows/xcframework.yml`, jobs `harness-wire` and `card-isolation` |
-| the admitted macOS label | `scripts/tests/test_ci_workflows.py:44` |
+| the routed macOS runner | `scripts/tests/test_ci_workflows.py:46` (`ADMITTED_RUNNERS`) and `:135` (`apple_job_runner`) |
 | the bound: each job's `timeout-minutes` and each sweep's `--run-seconds`, from the measured constants | the A8 test in `scripts/tests/test_ci_workflows.py` |
 | the verdict line, read by name, and where a delivery records it | the job's log; `docs/red-first/SPEC-<n>.md` |
 
-The `ci.yml`, `apple-on-change.yml`, `mutation_rows.py` and `test_ci_workflows.py:44` lines are
-`164ac206`'s. SPEC-397 rewrites the sweep steps of `xcframework.yml`, which moves its later lines,
-so that file and the new module are cited by job and by name.
+The `ci.yml`, `apple-on-change.yml`, `mutation_rows.py` and `test_ci_workflows.py:46` and `:135`
+lines are `d274b8b2`'s. SPEC-397 rewrites the sweep steps of `xcframework.yml`, which moves its
+later lines, so that file and the new module are cited by job and by name.

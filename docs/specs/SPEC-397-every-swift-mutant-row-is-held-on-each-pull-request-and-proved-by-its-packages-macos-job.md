@@ -196,7 +196,7 @@ A11: python3 -m unittest discover -s scripts/tests -p test_swift_mutants.py -k t
 |---|---|---|
 | `docs/specs/SPEC-397-every-swift-mutant-row-is-held-on-each-pull-request-and-proved-by-its-packages-macos-job.md` | spec | added: this file |
 | `docs/decisions/ADR-411-swift-mutant-rows-stay-in-each-package-file-and-one-module-reads-sweeps-and-retires-them.md` | decision | added |
-| `docs/schematics/mutation-testing.md` | schematic | amended, insert-only: §11, the Swift rows' flow |
+| `docs/schematics/mutation-testing.md` | schematic | amended, insert-only: §14, the Swift rows' flow |
 | `docs/red-first/SPEC-397.md` | record | added: one line per criterion |
 | `changelog.d/swift-mutation-rows-397.md` | changelog | added |
 | `scripts/swift_mutants.py` | row battery | added: `census`, `retired`, `sweep` |
@@ -223,7 +223,7 @@ nor `scripts/mutation-rows.retired.json`.
   package job's exit is its verdict (#650).
 - The formal surfaces ratchet reads the band files only; the Swift rows' departures are held by the
   `retired` step this SPEC adds (#650).
-- It takes no figure on a device or a simulator; the bound is sized from the hosted job's own
+- It takes no figure on a device or a simulator; the bound is sized from the sweeping job's own
   steps (#629).
 - It changes no runner label and no other macOS job's bound; the macOS CI timing record is its own
   delivery (#752).

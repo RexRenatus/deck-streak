@@ -91,3 +91,7 @@ commit's bytes of that test module and of the three workflows at the second push
 The rebuild onto current dev merged the original branch unchanged; the commit after that merge
 adapts the runner assertion to the routed runner helper and re-stamps the sweep bound from a fresh
 measure, with no assertion removed.
+
+That merge (5ee3f573) read red by name in the pull request run 42036285053, and the adapting commit
+(d274b8b2) reads green in the pull request run at this delivery head; the commit after it changes
+only documents.

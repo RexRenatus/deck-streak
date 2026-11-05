@@ -39,8 +39,8 @@ for it in its exclusions. Read at DeckStreak `dev` `164ac206`:
 
 - A row is evidence only while its anchor occurs once, its killer exists, and it has not left
   unseen. Each of these is checkable without a compiler.
-- Swift compiles and its package tests run only on the hosted macOS runner, which runs only for a
-  change to one of the change caller's paths.
+- Swift compiles and its package tests run only on the routed macOS runner (`apple_job_runner`),
+  which runs only for a change to one of the change caller's paths.
 - One format has one reader. Two pasted copies of one reader drift, and nothing tests either.
 - The shared row battery serves every Rust and Python row on every pull request, so a change to
   its reader is a change to all of them.
@@ -101,11 +101,11 @@ for it in its exclusions. Read at DeckStreak `dev` `164ac206`:
 ### D3. Which job runs it, its bound, where the verdict is read, and the check that holds the rows
 
 - Each package's own job — chosen, because the package is already built there, and its label is
-  the one `ADMITTED_RUNNERS` admits (`scripts/tests/test_ci_workflows.py:44`, held by
-  `test_one_job_body_serves_the_change_and_the_tag` at `:912`), so no larger runner is needed.
-  `harness-wire` and `card-isolation` in `xcframework.yml` each run `python3
-  scripts/swift_mutants.py sweep --package ios/<package> --report "$REPORT" --run-seconds <n>`
-  after their test step, on the admitted hosted macOS label.
+  the one `apple_job_runner` routes it to (at `d274b8b2`, `scripts/tests/test_ci_workflows.py:135`,
+  held by `test_one_job_body_serves_the_change_and_the_tag` at `:947`), so no larger runner is
+  needed. `harness-wire` and `card-isolation` in `xcframework.yml` each run `python3
+  scripts/swift_mutants.py sweep --package ios/<package> --report "$REPORT" --run-seconds <n>` after
+  their test step, on the routed macOS runner.
 - A separate `swift-mutants` job — rejected, because each leg of a job matrixed over the packages
   would rebuild from a cold checkout the package its own job has just built, a second macOS job
   per change.
@@ -235,4 +235,4 @@ second push's run.
 
 ## More Information
 
-Built by SPEC-397. The schematic is `docs/schematics/mutation-testing.md` §11.
+Built by SPEC-397. The schematic is `docs/schematics/mutation-testing.md` §14.
