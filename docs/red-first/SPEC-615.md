@@ -24,7 +24,12 @@ A1: green at df125de39fceb99374d1907e568d9148f7c0ccbb
 A3: red at c4854d64c53197583c700f1e73ed85a6f46fdb1f: assertion `left == right` failed: the writer calls the day pin once: []
 A3: green at df125de39fceb99374d1907e568d9148f7c0ccbb
 A2: not red: a guard on the text card's four intervals, unchanged by the pin
-A4: not red: existing Swift tests, read green by name in apple / release-and-app at the pull request head
+A4: not red: existing Swift tests, read green by name on both destinations in apple / release-and-app job 126669104649, over the pinned fixture
+A5: red at f1d6ac2d3342600d786dff56e7e890225dc396aa: is absent before the test writes it
+A5: green at af0b0edccb44d5e9e87e5453ae72f6182c728ae6
 ```
 
 The pin replaced the inert seam of crates/ffi/tests/support/day_cutoff.rs at df125de3, between the red and the green; crates/ffi/tests/fixture_day_cutoff.rs is byte-unchanged from c4854d64.
+
+A5 came with a later pull request, which removes a scratch directory an earlier run left under the same process id: A5 is red at its red commit, whose helper still refuses that directory, and green at the commit that removes it first, measured locally by its cargo line as the lines above were. A4's reading is the review screen's step of the job its line names, at the last head of the pull request that delivered this SPEC.
+The cure changed only the scratch helper of crates/ffi/tests/fixture_day_cutoff.rs at af0b0edc, between A5's red and its green; every test function in that file is byte-unchanged from f1d6ac2d.
