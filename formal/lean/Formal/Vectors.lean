@@ -1,5 +1,6 @@
 import Formal.ChestVectors
 import Formal.CompanionDecideVectors
+import Formal.DocsMermaidReadVectors
 import Formal.DueReorderVectors
 import Formal.ExchangeVectors
 import Formal.Fsrs7MemoryStateVectors
@@ -16,6 +17,7 @@ import Formal.RecordClassBindingVectors
 import Formal.ReleaseCarryVectors
 import Formal.ReleaseGatesVectors
 import Formal.ReplayHistoryVectors
+import Formal.RetiredListShapeVectors
 import Formal.RoadToC2Vectors
 import Formal.SensitiveDeckVectors
 import Formal.SkipTariffVectors
@@ -44,6 +46,7 @@ def main (args : List String) : IO UInt32 := do
   match args with
   | ["Chest"] => Formal.ChestVectors.run
   | ["CompanionDecide"] => Formal.CompanionDecideVectors.run
+  | ["DocsMermaidRead"] => Formal.DocsMermaidReadVectors.run
   | ["DueReorder"] => Formal.DueReorderVectors.run
   | ["Exchange"] => Formal.ExchangeVectors.run
   | ["Fsrs7MemoryState"] => Formal.Fsrs7MemoryStateVectors.run
@@ -60,6 +63,7 @@ def main (args : List String) : IO UInt32 := do
   | ["ReleaseCarry"] => Formal.ReleaseCarryVectors.run
   | ["ReleaseGates"] => Formal.ReleaseGatesVectors.run
   | ["ReplayHistory"] => Formal.ReplayHistoryVectors.run
+  | ["RetiredListShape"] => Formal.RetiredListShapeVectors.run
   | ["RoadToC2"] => Formal.RoadToC2Vectors.run
   | ["SensitiveDeck"] => Formal.SensitiveDeckVectors.run
   | ["SkipTariff"] => Formal.SkipTariffVectors.run

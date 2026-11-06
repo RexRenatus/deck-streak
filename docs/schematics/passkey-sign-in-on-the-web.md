@@ -423,3 +423,62 @@ taken the old one, so a replayed response meets `challenge_invalid` (§5 above).
 start a ceremony share one ceremony cookie, so the earlier tab's finish meets a refusal and offers a
 new start; `formal/tla/PasskeyOnce/PasskeyOnce.tla` already holds that any request task may take any
 id and that a take of an id no live entry has changes nothing.
+
+## 12. The sign-in methods list's Remove flow: where the focus is, what is said, and each Remove's name (SPEC-463, ADR-480)
+
+Kinds for §12: state machine and sequence. Every `path:line` is in
+`web/app/src/lib/settings/SignInMethods.svelte` unless it names another file, read at
+`36c4783a29c44d2ffafc987803ccb1742a2c2cfc`. The server's half of a removal is §6, unchanged. Each
+state carries where the focus is with SPEC-463, and each step names the test that decides it.
+
+```mermaid
+stateDiagram-v2
+  state "Listed, the focus where the learner put it" as Listed
+  state "Asking, an alert dialog named by its question, the focus on Keep (A1, A2)" as Asking
+  state "Removing, every button held" as Removing
+  state "Refused, the wording in the alert, the focus on the row's Remove (A6)" as Refused
+  state "Read again, the focus on the next Remove, else the previous one, else the list (A5)" as Again
+  [*] --> Listed
+  Listed --> Asking: the row's Remove, named for its passkey's place and day (A7)
+  Asking --> Listed: Keep, or Escape through Keep, sends nothing, the focus on the row's Remove (A3, A4)
+  Asking --> Removing: the step's Remove, one DELETE
+  Removing --> Refused: a refusal with a wording
+  Removing --> Again: removed, or already gone
+  Refused --> Listed
+  Again --> Listed
+```
+
+Each step, at the base and with SPEC-463 (the cure):
+
+| step | at the base | with SPEC-463 | decided by |
+|---|---|---|---|
+| a passkey row, before the press | the row shows "Passkey" and its day (`:79-80`); its Remove (`:101-109`) is named "Remove" (`:108`), as every row's is | the same Remove, named "Remove passkey {position}, added {date}" from the row's place and its shown day | A7 |
+| the press | the focused Remove unmounts and nothing places the focus (no focus call in the file); the question is a plain paragraph in no live region (`:82`) | the step is one alert dialog labelled by its question (`aria-labelledby`), and the focus moves to Keep as it mounts, as the review's confirm step does (`web/app/src/lib/study/ReviewScreen.svelte:175`, `:236-241`) | A1, A2 |
+| Keep | the focused Keep unmounts (`:96`); the focus is placed nowhere | the question goes away, nothing is sent, and the focus moves to that row's Remove | A3 |
+| Escape | nothing happens | while a step is open it presses that step's Keep, so a pending step's held Keep keeps it open (`ReviewScreen.svelte:164-168`, `:199-200`) | A4 |
+| the step's Remove, removed or already gone | `confirming` clears (`:60`) and the list is read again (`:62`); the focus is placed nowhere | the focus moves to the Remove of the passkey that took the row's place, else of the one before it, else to the list, named "Sign-in methods" | A5 |
+| the step's Remove, refused with a wording | the step closes (`:60`) and the wording is shown in the alert (`:61`, `:118`); the focus is placed nowhere | the same, and the focus moves to that row's Remove | A6 |
+| the step's Remove, while open | named "Remove" (`:90`) | named as its row's Remove | A7 |
+| the wording | `methods_remove` is "Remove" in every catalog (`web/app/messages/en.json:314`) | every catalog adds `methods_remove_passkey`, holding `{position}`, `{date}` and its own Remove word | A8 |
+
+```mermaid
+sequenceDiagram
+  participant L as Learner, keyboard or screen reader
+  participant R as the passkey row
+  participant D as the confirm step, an alert dialog
+  participant S as the server, section 6
+  L->>R: Remove, named for the passkey's place and day
+  R->>D: mount, labelled by the question
+  D-->>L: the focus on Keep, the dialog's name read as the focus enters
+  alt Keep, or Escape through Keep
+    D->>R: unmount, nothing sent
+    R-->>L: the focus on the row's Remove
+  else the step's Remove
+    D->>S: DELETE, once, every button held
+    S-->>D: 204, or a refusal
+    D-->>L: the focus on the next Remove, the previous one, the list, or the row's Remove when refused
+  end
+```
+
+No live region is added: the dialog's name is the announcement, so the question is said once, by
+the focus move. The list's look does not change.
