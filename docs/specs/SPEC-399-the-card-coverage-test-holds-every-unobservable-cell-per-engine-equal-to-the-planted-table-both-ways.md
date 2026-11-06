@@ -153,7 +153,7 @@ D6 decides and A4 (section 10) holds. Sections 1 to 7, R1 to R7 and A1 to A3 sta
 - **Red first.** A4's test is committed with the parse unchanged, where an unclosed plant reads
   the old refusal, so A4 reads red by assertion. The next commit changes the refusal of that one arm and
   nothing else. With the arm then deleted from a local copy, A4 reads red again: the parse reads
-  the unclosed array to the end of the text and returns its engine.
+  the unclosed array to the last character before the final newline and returns its engine.
 - **Risks of the #805 amendment.** A bracket inside a string or a comment within the `projects`
   array is counted as code, as it was before this amendment; the card configuration holds none.
   The new refusal is read by this test alone: no other file names it.
