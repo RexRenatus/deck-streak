@@ -311,8 +311,17 @@ class TheTreeReportHelperWritesIntoItsOwnDirectory(unittest.TestCase):
         self.assertTrue(
             (home / "costs.jsonl").is_file(), "the costs record is not beside the report"
         )
+        again, document_again = tree.report("--all")
+        self.assertEqual((again.returncode, document_again), (0, {"exit": 0, "selection": "all"}))
+        self.assertEqual(len(recorded), 2)
+        self.assertNotEqual(
+            recorded[1].parent, home, "two calls of the helper wrote into one directory"
+        )
         self.doCleanups()
         self.assertFalse(home.exists(), "the report directory outlived its test")
+        self.assertFalse(
+            recorded[1].parent.exists(), "the second report directory outlived its test"
+        )
 
 
 class TheRunnerListsItsMutants(unittest.TestCase):

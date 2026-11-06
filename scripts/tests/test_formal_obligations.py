@@ -210,7 +210,9 @@ SYNC_CORE_TIES = [
 # obligations that name it.
 NEW_ENTRIES = {
     "lean/CompanionDecide": ("keep", {"O6"}),
+    "lean/DocsMermaidRead": ("keep", set()),
     "lean/SearchHolds": ("keep", {"O14"}),
+    "lean/RetiredListShape": ("keep", set()),
     "lean/MediaBind": ("keep", {"O13"}),
     "tla/OneInstrumentReader": ("re-stamp", {"O11"}),
     "lean/MediaGc": ("keep", {"O13"}),

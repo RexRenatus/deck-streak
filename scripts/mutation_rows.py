@@ -1001,6 +1001,7 @@ def run_in_own_group(
     Raises:
         subprocess.TimeoutExpired: The command outran `timeout`; its group is already dead.
     """
+    hold_signals()
     judged = resolve_tool(command, env, cwd)
     try:
         process = subprocess.Popen(
@@ -1019,7 +1020,7 @@ def run_in_own_group(
             raise
         raise refusal from error
     try:
-        stdout, stderr = process.communicate(timeout=timeout)
+        stdout, stderr = released(process).communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
         kill_group(process)
         process.wait()
@@ -1392,6 +1393,36 @@ def merge(root: pathlib.Path, args: argparse.Namespace) -> int:
 # --------------------------------------------------------------------------- retirement
 
 
+def retirement_records(listed: object) -> dict[str, dict]:
+    """The retirements `scripts/mutation-rows.retired.json` approves, keyed by row id (SPEC-465
+    R1 to R5).
+
+    `parse_document` has refused a repeated key and a text that is not JSON; this reads the list's
+    shape, which the base's loop never checked, so a wrong one crashed `retired` with a traceback
+    (#421). The list is an object, its `retired` (an absent key, no entry) an array, and each
+    entry an object with a string `id`; anything else is a refusal naming the shape the list
+    needed, the first wrong entry by its index from 0. An entry is kept, as before, when its
+    reason and its approval are both non-blank.
+
+    Raises:
+        PopulationRefused: The list, its `retired` value or one of its entries is of another shape.
+    """
+    if not isinstance(listed, dict):
+        raise PopulationRefused(f"{RETIRED} must hold a top-level object")
+    entries = listed.get("retired", [])
+    if not isinstance(entries, list):
+        raise PopulationRefused(f"{RETIRED}: `retired` is not an array of records")
+    record = {}
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            raise PopulationRefused(f"{RETIRED}: retired[{index}] is not an object")
+        if not isinstance(entry.get("id"), str):
+            raise PopulationRefused(f"{RETIRED}: retired[{index}] has no string id")
+        if str(entry.get("reason", "")).strip() and str(entry.get("approval", "")).strip():
+            record[entry["id"]] = entry
+    return record
+
+
 def retired(root: pathlib.Path, base: str) -> int:
     before = load_revision(root, base)
     if before is None:
@@ -1403,9 +1434,7 @@ def retired(root: pathlib.Path, base: str) -> int:
     path = root / RETIRED
     if path.is_file():
         listed = parse_document(RETIRED, path.read_text(encoding="utf-8"))
-        for entry in listed.get("retired", []):
-            if str(entry.get("reason", "")).strip() and str(entry.get("approval", "")).strip():
-                record[entry["id"]] = entry
+        record = retirement_records(listed)
     base_rows = rows_of(before)
     refused = 0
     for row in base_rows:
@@ -1429,18 +1458,80 @@ def retired(root: pathlib.Path, base: str) -> int:
 # --------------------------------------------------------------------------- the command line
 
 
-def end_on_sigterm() -> None:
-    """A SIGTERM ends the runner through its `finally` blocks, so a killer's group ends with it.
+@dataclass
+class RunSignals:
+    """One run of `main()`'s signal state: the signal ending it, once one arrived, and whether a
+    killer is being started (SPEC-465 R6 to R8).
 
-    The killer leads a group of its own, so a SIGTERM to the runner, or to the runner's group as
-    `timeout -s TERM` and a job cancel send it, no longer reaches the killer; the default action
-    would end the runner with no cleanup and leave the killer's group running (#409).
+    `handle` is the run's one handler for SIGTERM and SIGHUP. A signal after the first is ignored,
+    so a cleanup the first began runs to its end. The first is recorded and ends the run at once,
+    `SystemExit(128 + signum)` unwinding every `finally`, unless a killer is being started: then it
+    waits for `released`, inside the `try` whose `finally` ends the killer's group.
     """
-    signal.signal(signal.SIGTERM, lambda signum, _frame: sys.exit(128 + signum))
+
+    signum: int | None = None
+    holding: bool = False
+
+    def handle(self, signum: int, _frame: object) -> None:
+        if self.signum is not None:
+            return
+        self.signum = signum
+        if not self.holding:
+            raise SystemExit(128 + signum)
 
 
-def main(argv: list[str] | None = None) -> int:
-    end_on_sigterm()
+#: The signal state of the run `main()` is making, or None outside `main()` (SPEC-465 R9).
+RUN_SIGNALS: RunSignals | None = None
+
+
+def hold_signals() -> None:
+    """Hold the run's signals until `released`: a killer is about to start (SPEC-465 R7)."""
+    if RUN_SIGNALS is not None:
+        RUN_SIGNALS.holding = True
+
+
+def released(process: subprocess.Popen[str]) -> subprocess.Popen[str]:
+    """`process`, with the hold its start began ended; a signal held meanwhile ends the run here,
+    inside the `try` whose `finally` ends the killer's group (SPEC-465 R7)."""
+    run = RUN_SIGNALS
+    if run is not None:
+        run.holding = False
+        if run.signum is not None:
+            raise SystemExit(128 + run.signum)
+    return process
+
+
+@contextlib.contextmanager
+def ending_on_signals():
+    """A run of `main()`, ended by SIGTERM or SIGHUP through every cleanup, that leaves the
+    process as it found it (SPEC-465 R6 to R9).
+
+    The killer leads a group of its own, so a signal to the runner, or to the runner's group as
+    `timeout -s TERM`, a job cancel and a closed terminal send it, never reaches the killer, and a
+    default action would end the runner with no cleanup and leave the killer's group running
+    (#409, #432). The run's own handler takes SIGTERM, and SIGHUP unless SIGHUP was ignored when
+    the run began, as `nohup` leaves it. A signal still held when the command returns, after a
+    killer that failed to start, ends the run there. On every way out each handler found is
+    reinstalled, the default action for one set outside Python, and so is the run state before.
+    """
+    global RUN_SIGNALS
+    found = {signum: signal.getsignal(signum) for signum in (signal.SIGTERM, signal.SIGHUP)}
+    outer, state = RUN_SIGNALS, RunSignals()
+    RUN_SIGNALS = state
+    try:
+        signal.signal(signal.SIGTERM, state.handle)
+        if found[signal.SIGHUP] is not signal.SIG_IGN:
+            signal.signal(signal.SIGHUP, state.handle)
+        yield
+        if state.signum is not None:
+            raise SystemExit(128 + state.signum)
+    finally:
+        for signum, handler in found.items():
+            signal.signal(signum, signal.SIG_DFL if handler is None else handler)
+        RUN_SIGNALS = outer
+
+
+def dispatch(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument(
         "verb", choices=["count", "ids", "census", "prove", "retired", "legs", "merge"]
@@ -1504,6 +1595,13 @@ def main(argv: list[str] | None = None) -> int:
     except ToolMissing as refusal:
         print(f"retired: REFUSED: {refusal}")
         return EXIT_REFUSED
+
+
+def main(argv: list[str] | None = None) -> int:
+    """The command line, `dispatch`, run with SIGTERM and SIGHUP ending it through every cleanup
+    and the process's handlers left as they were found (SPEC-465 R6 to R9)."""
+    with ending_on_signals():
+        return dispatch(argv)
 
 
 if __name__ == "__main__":
