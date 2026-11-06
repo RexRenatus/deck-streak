@@ -290,6 +290,7 @@ class Derive(unittest.TestCase):
             said = done.stdout + done.stderr
             self.assertEqual(done.returncode, 1, said)
             self.assertEqual(done.stdout, f"perf-census: derive: {problem}\n")
+            self.assertEqual(done.stderr, "", said)
             self.assertEqual((hot, reach), (None, None), "a refused derive writes nothing")
 
     def test_derive_writes_both_documents_with_normalized_names(self):

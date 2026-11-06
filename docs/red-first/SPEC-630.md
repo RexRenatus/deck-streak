@@ -17,4 +17,11 @@ A5: green at cfbedcf7
 A1 to A5 were committed with a stub script that keeps every argument and lacks each
 behaviour (3a44a986); each read red by name in the gate python stage of the pull request run.
 The script replaced the stub in cfbedcf7, with every test unchanged, and the run at this
-delivery head reads them green. The commits after cfbedcf7 change only documents.
+delivery head reads them green. After cfbedcf7, one commit adds the test line named below, and
+the others change only documents.
+
+The pull request run at b5dad074 read one surviving mutant in the script (mutation-verdict job
+127901541353): with the refusal path of derive returning None in place of 1, the process still
+exited 1, through a traceback on stderr. So the refusal helper of test_perf_census.py also
+asserts that a refused derive leaves stderr empty. That line holds at the green script, and
+it fails on that mutant.
