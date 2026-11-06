@@ -43,11 +43,14 @@ A8: red at 98b67d059fdc363dd9dfc387d87c9f4a6628462d: AssertionError: 'DeckStreak
 A8: green at d4139479097fa12458bef0bdf7e85fec2061de9c
 A9: not red: the planted complete tree, the control; it reads green at every commit, so each planted refusal's red is its own
 A10: red at 14f5dda44829d1489d91fe8b7e0bdc8d9664bb73: AssertionError: Lists differ: ["hero-not-below-title: README.md: lines 2[78 chars]e>'"] != []
+A10: green at d90d376f853e43f938b7aea7e448bb3922b59369
 A11: red at 14f5dda44829d1489d91fe8b7e0bdc8d9664bb73: AssertionError: Lists differ: ["hero-no-still: README.md: line 3 is '<picture>'"] != []
+A11: green at d90d376f853e43f938b7aea7e448bb3922b59369
 A12: not red: its refusals are planted over a README the test spells, beside a control read green first, and the checkers they need arrive with the test, so it reads green at the merge before the README changes; A14 holds the tree's own README
 A13: red at 98b67d059fdc363dd9dfc387d87c9f4a6628462d: AssertionError: Lists differ: [] != [('still-missing', 'docs/assets/still.png')]
 A13: green at d8f619fec7c6839d2faeefedbb16319ed5dde97f
 A14: red at 14f5dda44829d1489d91fe8b7e0bdc8d9664bb73: AssertionError: Lists differ: ['hero-animates: README.md: line 5 shows d[38 chars]gif'] != []
+A14: green at d90d376f853e43f938b7aea7e448bb3922b59369
 ```
 
 ## What each red shows
@@ -94,27 +97,28 @@ Each row was proved on its own: the target's sha256 recorded, the replacement in
 by its explicit id with its own `PYTHONPYCACHEPREFIX` (one test), its first failing assertion read, and the saved bytes
 written back with the sha256 compared equal.
 
-- S58001, the still at another path: its killer,
+- S58001, the hero's image at another path, re-proved at d90d376: its killer,
   `test_brand_files.TheStillIsTheBrandSourcesPoster.test_the_still_is_listed_by_its_pinned_sha256`, failed with
-  `AssertionError: Lists differ: ["still-not-listed: README.md: the source [43 chars]ng'"] != []`. Restore sha256
-  `ec34904c47ff9bea874ed775238e838f103c1d8d7964c94df75b0ff6391e0d0e`.
-- S58002, the still under another query: the same killer failed with
-  `AssertionError: Lists differ: ['hero-no-still: README.md: line 4 is \'  [57 chars]/\''] != []`. Restore sha256
-  `ec34904c47ff9bea874ed775238e838f103c1d8d7964c94df75b0ff6391e0d0e`.
+  `AssertionError: Lists differ: ["still-not-listed: README.md: the hero's [46 chars]ng'"] != []`. Restore sha256
+  `c8e6b9ae75a7d9c147381547d8437dc4b54daaf2853049d1cc9d0c1142d1d681`.
+- S58002, the hero's image swapped to the animation, re-proved at d90d376: its killer,
+  `test_brand_files.TheReadmeHeaderShowsTheHero.test_no_readme_image_shows_the_animation`, failed with
+  `AssertionError: Lists differ: ['hero-animates: README.md: line 3 shows d[38 chars]gif'] != []`. Restore sha256
+  `c8e6b9ae75a7d9c147381547d8437dc4b54daaf2853049d1cc9d0c1142d1d681`.
 - S58003, the list's pin changed by one digit: the same killer failed with
   `AssertionError: Lists differ: [('92[29 chars]c4b81f6de7850558224482acd69334585', 8377, 'png', [[960, 360]])] != [...]`. Restore sha256
   `2f9a70ae4868d11a886f0b890f55e433818a47b68c715b4daf9ef740b655c37c`.
-- S58004, the opening's description changed: its killer,
+- S58004, the opening's description changed, re-proved at d90d376: its killer,
   `test_identity_docs.TheReadmeOpening.test_the_readme_opening_is_the_identity`, failed with an `AssertionError` that
   the description is not found in the README. Restore sha256
-  `ec34904c47ff9bea874ed775238e838f103c1d8d7964c94df75b0ff6391e0d0e`.
-- S58005, the sync server's item renamed: its killer,
+  `c8e6b9ae75a7d9c147381547d8437dc4b54daaf2853049d1cc9d0c1142d1d681`.
+- S58005, the sync server's item renamed, re-proved at d90d376: its killer,
   `test_identity_docs.TheBuiltOnSection.test_the_readme_built_on_names_each_item`, failed with
   `AssertionError: Lists differ:` the five leads, the third missing. Restore sha256
-  `ec34904c47ff9bea874ed775238e838f103c1d8d7964c94df75b0ff6391e0d0e`.
-- S58006, the trademark line reworded: the same killer failed with
+  `c8e6b9ae75a7d9c147381547d8437dc4b54daaf2853049d1cc9d0c1142d1d681`.
+- S58006, the trademark line reworded, re-proved at d90d376: the same killer failed with
   `AssertionError: Lists differ: ['trademark-line: README.md: the Built on section lacks the trademark line'] != []`.
-  Restore sha256 `ec34904c47ff9bea874ed775238e838f103c1d8d7964c94df75b0ff6391e0d0e`.
+  Restore sha256 `c8e6b9ae75a7d9c147381547d8437dc4b54daaf2853049d1cc9d0c1142d1d681`.
 - S58007, NOTICE's engine licence reworded: its killer,
   `test_identity_docs.TheNotice.test_notice_names_each_item`, failed with `AssertionError: Lists differ:` the six
   names, `engine` missing. Restore sha256 `ba5cf0d40d10019db37a7dbd24a666fa69c681da665dce99462ba4aac0f334df`.
@@ -122,7 +126,7 @@ written back with the sha256 compared equal.
   `test_identity_docs.TheAgentsOverview.test_agents_line_8_is_the_identity`, failed with an `AssertionError` that
   line 8 is not the identity line. Restore sha256
   `89b9e18647e90231ba0d5ed22d18ef67359fe343d9dd70d9b3ae24dfac1b8518`.
-- S57904, re-anchored to the picture's image line: its killer,
+- S57904, anchored on the hero's link to the animation, re-proved at d90d376: its killer,
   `test_brand_files.TheReadmeHeaderShowsTheHero.test_the_readme_opens_with_the_title_then_the_hero`, failed with
   `AssertionError: Lists differ: ['hero-not-listed: README.md: docs/assets/[48 chars]ree'] != []`. Restore sha256
-  `ec34904c47ff9bea874ed775238e838f103c1d8d7964c94df75b0ff6391e0d0e`.
+  `c8e6b9ae75a7d9c147381547d8437dc4b54daaf2853049d1cc9d0c1142d1d681`.
