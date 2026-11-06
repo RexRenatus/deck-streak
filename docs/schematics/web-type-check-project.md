@@ -38,6 +38,8 @@ flowchart LR
   listing --> censustest
   censustest --> named
   enginejob --> pwrun
+  proj --> incl
+  pwrun --> enginesuite
 ```
 
 ## What each part holds
