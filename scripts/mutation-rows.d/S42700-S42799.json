@@ -1,0 +1,774 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S42700-THE-OPENER-SQLITE-CONNECT-OPTIONS-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"SqliteConnectOptions\",",
+        "",
+        "`SqliteConnectOptions` leaves the opener names, so a file outside the database base that names it opens SQLite unrefused (SPEC-427 R4)",
+        "test_rust_house_rules.RustHouseRules.test_sqlite_is_opened_only_in_the_kernels_database_base"
+      ],
+      [
+        "S42701-THE-OPENER-SQLITE-POOL-OPTIONS-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"SqlitePoolOptions\",",
+        "",
+        "`SqlitePoolOptions` leaves the opener names, so a file outside the database base that names it opens SQLite unrefused (SPEC-427 R4)",
+        "test_rust_house_rules.RustHouseRules.test_sqlite_is_opened_only_in_the_kernels_database_base"
+      ],
+      [
+        "S42702-THE-OPENER-POOL-OPTIONS-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"PoolOptions\",",
+        "",
+        "`PoolOptions` leaves the opener names, so a file outside the database base that names it opens SQLite unrefused (SPEC-427 R4)",
+        "test_rust_house_rules.RustHouseRules.test_sqlite_is_opened_only_in_the_kernels_database_base"
+      ],
+      [
+        "S42703-THE-OPENER-RUSQLITE-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"rusqlite\",",
+        "",
+        "`rusqlite` leaves the opener names, so a file outside the database base that names it opens SQLite unrefused (SPEC-427 R4)",
+        "test_rust_house_rules.RustHouseRules.test_sqlite_is_opened_only_in_the_kernels_database_base"
+      ],
+      [
+        "S42704-THE-OPENER-LIBSQLITE3-SYS-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"libsqlite3_sys\",",
+        "",
+        "`libsqlite3_sys` leaves the opener names, so a file outside the database base that names it opens SQLite unrefused (SPEC-427 R4)",
+        "test_rust_house_rules.RustHouseRules.test_sqlite_is_opened_only_in_the_kernels_database_base"
+      ],
+      [
+        "S42705-THE-RECEIVER-SQLITE-POOL-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"SqlitePool\",",
+        "",
+        "`SqlitePool` leaves the receivers, so a connect call on it outside the database base is not refused (SPEC-427 R4)",
+        "test_rust_house_rules.RustHouseRules.test_sqlite_is_opened_only_in_the_kernels_database_base"
+      ],
+      [
+        "S42706-THE-RECEIVER-POOL-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"Pool\",",
+        "",
+        "`Pool` leaves the receivers, so a connect call on it outside the database base is not refused (SPEC-427 R4)",
+        "test_rust_house_rules.RustHouseRules.test_sqlite_is_opened_only_in_the_kernels_database_base"
+      ],
+      [
+        "S42707-THE-RECEIVER-SQLITE-CONNECTION-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"SqliteConnection\",",
+        "",
+        "`SqliteConnection` leaves the receivers, so a connect call on it outside the database base is not refused (SPEC-427 R4)",
+        "test_rust_house_rules.RustHouseRules.test_sqlite_is_opened_only_in_the_kernels_database_base"
+      ],
+      [
+        "S42708-THE-RECEIVER-CONNECTION-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"Connection\",",
+        "",
+        "`Connection` leaves the receivers, so a connect call on it outside the database base is not refused (SPEC-427 R4)",
+        "test_rust_house_rules.RustHouseRules.test_sqlite_is_opened_only_in_the_kernels_database_base"
+      ],
+      [
+        "S42709-THE-CONNECT-NAME-CONNECT-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"connect\",",
+        "",
+        "`connect` leaves the connect names, so that call on a receiver outside the database base is not refused (SPEC-427 R4)",
+        "test_rust_house_rules.RustHouseRules.test_sqlite_is_opened_only_in_the_kernels_database_base"
+      ],
+      [
+        "S42710-THE-CONNECT-NAME-CONNECT-WITH-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"connect_with\",",
+        "",
+        "`connect_with` leaves the connect names, so that call on a receiver outside the database base is not refused (SPEC-427 R4)",
+        "test_rust_house_rules.RustHouseRules.test_sqlite_is_opened_only_in_the_kernels_database_base"
+      ],
+      [
+        "S42711-THE-CONNECT-NAME-CONNECT-LAZY-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"connect_lazy\",",
+        "",
+        "`connect_lazy` leaves the connect names, so that call on a receiver outside the database base is not refused (SPEC-427 R4)",
+        "test_rust_house_rules.RustHouseRules.test_sqlite_is_opened_only_in_the_kernels_database_base"
+      ],
+      [
+        "S42712-THE-CONNECT-NAME-CONNECT-LAZY-WITH-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"connect_lazy_with\",",
+        "",
+        "`connect_lazy_with` leaves the connect names, so that call on a receiver outside the database base is not refused (SPEC-427 R4)",
+        "test_rust_house_rules.RustHouseRules.test_sqlite_is_opened_only_in_the_kernels_database_base"
+      ],
+      [
+        "S42713-THE-METHOD-ARM-IS-JUDGED",
+        "scripts/tests/test_rust_house_rules.py",
+        "(METHOD, \"calls\"),",
+        "",
+        "the method arm leaves the rule, so a `.connect_lazy_with(` call outside the database base is not refused (SPEC-427 R4)",
+        "test_rust_house_rules.RustHouseRules.test_sqlite_is_opened_only_in_the_kernels_database_base"
+      ],
+      [
+        "S42714-THE-DATABASE-BASE-IS-THE-KERNELS-DATABASE-FILE",
+        "scripts/tests/test_rust_house_rules.py",
+        "DATABASE_BASE = \"crates/kernel/src/db.rs\"",
+        "DATABASE_BASE = \"crates/kernel/src/db.rs.base\"",
+        "the allowed path names no file, so the kernel's database base is judged as any other file and its openers are refused (SPEC-427 R4)",
+        "test_rust_house_rules.RustHouseRules.test_sqlite_is_opened_only_in_the_kernels_database_base"
+      ],
+      [
+        "S42715-THE-FAMILY-FUNCTION-QUERY-IS-EXAMINED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"query\",",
+        "",
+        "`query` leaves the query family, so a `format!` passed to it is never examined (SPEC-427 R5)",
+        "test_rust_house_rules.RustHouseRules.test_no_format_reaches_a_query"
+      ],
+      [
+        "S42716-THE-FAMILY-FUNCTION-QUERY-AS-IS-EXAMINED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"query_as\",",
+        "",
+        "`query_as` leaves the query family, so a `format!` passed to it is never examined (SPEC-427 R5)",
+        "test_rust_house_rules.RustHouseRules.test_no_format_reaches_a_query"
+      ],
+      [
+        "S42717-THE-FAMILY-FUNCTION-QUERY-SCALAR-IS-EXAMINED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"query_scalar\",",
+        "",
+        "`query_scalar` leaves the query family, so a `format!` passed to it is never examined (SPEC-427 R5)",
+        "test_rust_house_rules.RustHouseRules.test_no_format_reaches_a_query"
+      ],
+      [
+        "S42718-THE-FAMILY-FUNCTION-QUERY-WITH-IS-EXAMINED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"query_with\",",
+        "",
+        "`query_with` leaves the query family, so a `format!` passed to it is never examined (SPEC-427 R5)",
+        "test_rust_house_rules.RustHouseRules.test_no_format_reaches_a_query"
+      ],
+      [
+        "S42719-THE-FAMILY-FUNCTION-QUERY-AS-WITH-IS-EXAMINED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"query_as_with\",",
+        "",
+        "`query_as_with` leaves the query family, so a `format!` passed to it is never examined (SPEC-427 R5)",
+        "test_rust_house_rules.RustHouseRules.test_no_format_reaches_a_query"
+      ],
+      [
+        "S42720-THE-FAMILY-FUNCTION-QUERY-SCALAR-WITH-IS-EXAMINED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"query_scalar_with\",",
+        "",
+        "`query_scalar_with` leaves the query family, so a `format!` passed to it is never examined (SPEC-427 R5)",
+        "test_rust_house_rules.RustHouseRules.test_no_format_reaches_a_query"
+      ],
+      [
+        "S42721-THE-FAMILY-FUNCTION-RAW-SQL-IS-EXAMINED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"raw_sql\",",
+        "",
+        "`raw_sql` leaves the query family, so a `format!` passed to it is never examined (SPEC-427 R5)",
+        "test_rust_house_rules.RustHouseRules.test_no_format_reaches_a_query"
+      ],
+      [
+        "S42722-AN-ASSERT-SQL-SAFE-SITE-IS-EXAMINED",
+        "scripts/tests/test_rust_house_rules.py",
+        "for match in ASSERTED.finditer(code):",
+        "for match in ASSERTED.finditer(\"\"):",
+        "no `AssertSqlSafe(...)` site is examined, so a `format!` wrapped in one reaches a query unrefused (SPEC-427 R5)",
+        "test_rust_house_rules.RustHouseRules.test_no_format_reaches_a_query"
+      ],
+      [
+        "S42723-AN-IMPORTED-BARE-NAME-IS-EXAMINED",
+        "scripts/tests/test_rust_house_rules.py",
+        "bare = sorted(imported_from((\"sqlx\",), code) & set(FAMILY))",
+        "bare = []",
+        "a family function imported from sqlx and called bare is never examined (SPEC-427 R5)",
+        "test_rust_house_rules.RustHouseRules.test_no_format_reaches_a_query"
+      ],
+      [
+        "S42724-A-DIRECT-FORMAT-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "if FORMAT.search(argument):",
+        "if False:",
+        "an argument holding a `format!` is not refused (SPEC-427 R5)",
+        "test_rust_house_rules.RustHouseRules.test_no_format_reaches_a_query"
+      ],
+      [
+        "S42725-A-LEAK-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "if LEAK.search(argument):",
+        "if False:",
+        "an argument holding a `.leak()` is not refused (SPEC-427 R5)",
+        "test_rust_house_rules.RustHouseRules.test_no_format_reaches_a_query"
+      ],
+      [
+        "S42726-A-LET-BOUND-FORMAT-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "names = {match.group(1) for match in LET_FORMAT.finditer(before)}",
+        "names = set()",
+        "a name a `let` binds to a `format!` earlier in the function reaches a query unrefused (SPEC-427 R5)",
+        "test_rust_house_rules.RustHouseRules.test_no_format_reaches_a_query"
+      ],
+      [
+        "S42727-AN-ASSIGNED-FORMAT-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "names |= {match.group(1) for match in SET_FORMAT.finditer(before)}",
+        "names |= set()",
+        "a name an assignment sets to a `format!` earlier in the function reaches a query unrefused (SPEC-427 R5)",
+        "test_rust_house_rules.RustHouseRules.test_no_format_reaches_a_query"
+      ],
+      [
+        "S42728-A-BINDING-COUNTS-ONLY-IN-ITS-OWN-FUNCTION",
+        "scripts/tests/test_rust_house_rules.py",
+        "before = code[max(around) : at]",
+        "before = code[:at]",
+        "a `format!` bound in an earlier function is read as bound at the site, so a query of a same-named name elsewhere is refused (SPEC-427 R5)",
+        "test_rust_house_rules.RustHouseRules.test_no_format_reaches_a_query"
+      ],
+      [
+        "S42729-THE-TRACING-PATH-IS-MATCHED",
+        "scripts/tests/test_rust_house_rules.py",
+        "(?<![\\w:.])(tracing|",
+        "(?<![\\w:.])(tracingx|",
+        "a macro called by its `tracing::` path is never examined (SPEC-427 R6)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42730-THE-LOG-PATH-IS-MATCHED",
+        "scripts/tests/test_rust_house_rules.py",
+        "|log)\\s*::\\s*(?:\\w+",
+        "|logx)\\s*::\\s*(?:\\w+",
+        "a macro called by its `log::` path is never examined (SPEC-427 R6)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42731-A-BARE-IMPORTED-MACRO-IS-MATCHED",
+        "scripts/tests/test_rust_house_rules.py",
+        "bare = sorted(imported_from((\"tracing\", \"log\"), code))",
+        "bare = []",
+        "a macro imported from `tracing` or `log` and called bare, an alias included, is never examined (SPEC-427 R6)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42732-AN-INSTRUMENT-ATTRIBUTE-IS-MATCHED",
+        "scripts/tests/test_rust_house_rules.py",
+        "for match in INSTRUMENT.finditer(code):",
+        "for match in INSTRUMENT.finditer(\"\"):",
+        "no `#[instrument]` attribute is examined, so a secret-named parameter it records is not refused (SPEC-427 R6)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42733-SKIP-AND-SKIP-ALL-ARE-READ",
+        "scripts/tests/test_rust_house_rules.py",
+        "r\"\\bskip(_all)?\\b",
+        "r\"\\bskipx(_all)?\\b",
+        "an attribute's `skip(..)` and `skip_all` are not read, so a parameter it skips is refused (SPEC-427 R6)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42734-A-FIELD-KEY-IS-PASSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "if DOTTED.fullmatch(key):",
+        "if False:",
+        "a field key that is an identifier or a dotted name passes no name (SPEC-427 R6)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42735-A-LITERAL-FIELD-KEY-IS-PASSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "elif LITERAL.fullmatch(key):",
+        "elif False:",
+        "a field key that is a string literal passes no name (SPEC-427 R6)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42736-A-VALUES-CHAIN-IS-PASSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "names += chains(value)",
+        "names += []",
+        "the path chains of a field's value pass no name (SPEC-427 R6)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42737-THE-SIGIL-STRIP-TOUCHES-ONLY-A-SIGIL",
+        "scripts/tests/test_rust_house_rules.py",
+        "if bare[:1] in (\"%\", \"?\"):",
+        "if bare[:1] not in (\"%\", \"?\"):",
+        "a shorthand's first character is stripped when it is no `%` or `?` sigil, so a bare secret-named shorthand is read under another name (SPEC-427 R6)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42738-A-POSITIONAL-FORMAT-ARGUMENT-IS-PASSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "names += chains(text)",
+        "names += []",
+        "a positional format argument after the message passes no name (SPEC-427 R6)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42739-AN-INLINE-CAPTURE-IS-PASSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "names += captured(source.literals.get(at + text.index('\"'), \"\"))",
+        "names += []",
+        "a format string's inline `{name}` capture passes no name (SPEC-427 R3, R6)",
+        "test_rust_house_rules.RustHouseRules.test_comments_and_literals_are_not_code_but_a_format_capture_is_read"
+      ],
+      [
+        "S42740-A-SKIPPED-KEYWORD-PASSES-NO-NAME",
+        "scripts/tests/test_rust_house_rules.py",
+        "if SKIPPED.match(stripped):",
+        "if False:",
+        "a `target:`, `parent:`, `name:` or `Level::` argument is read as passing names, so a secret-named target constant is refused (SPEC-427 R6)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42741-LOGS-SEMICOLON-ENDS-ITS-KEY-VALUES",
+        "scripts/tests/test_rust_house_rules.py",
+        "elif depth == 0 and char in \",;\":",
+        "elif depth == 0 and char == \",\":",
+        "`log`'s `;` does not end its key-values, so the message after it is read as a value and its capture passes no name (SPEC-427 R6)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42742-THE-PART-TOKEN-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"token\",",
+        "",
+        "`token` leaves the parts, so a passed name holding it is not refused (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42743-THE-PART-SECRET-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"secret\",",
+        "",
+        "`secret` leaves the parts, so a passed name holding it is not refused (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42744-THE-PART-PASSWORD-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"password\",",
+        "",
+        "`password` leaves the parts, so a passed name holding it is not refused (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42745-THE-PART-CREDENTIAL-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"credential\",",
+        "",
+        "`credential` leaves the parts, so a passed name holding it is not refused (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42746-THE-PART-COOKIE-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"cookie\",",
+        "",
+        "`cookie` leaves the parts, so a passed name holding it is not refused (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42747-THE-PART-BEARER-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"bearer\",",
+        "",
+        "`bearer` leaves the parts, so a passed name holding it is not refused (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42748-THE-PART-AUTHORIZATION-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"authorization\",",
+        "",
+        "`authorization` leaves the parts, so a passed name holding it is not refused (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42749-THE-PART-APIKEY-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"apikey\",",
+        "",
+        "`apikey` leaves the parts, so a passed name holding it is not refused (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42750-THE-PART-INITDATA-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"initdata\",",
+        "",
+        "`initdata` leaves the parts, so a passed name holding it is not refused (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42751-THE-PAIR-API-KEY-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"api key\",",
+        "",
+        "`api key` leaves the pairs, so a passed name holding it is not refused (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42752-THE-PAIR-PRIVATE-KEY-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"private key\",",
+        "",
+        "`private key` leaves the pairs, so a passed name holding it is not refused (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42753-THE-PAIR-SIGNING-KEY-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"signing key\",",
+        "",
+        "`signing key` leaves the pairs, so a passed name holding it is not refused (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42754-THE-PAIR-INIT-DATA-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"init data\",",
+        "",
+        "`init data` leaves the pairs, so a passed name holding it is not refused (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42755-THE-PAIR-SESSION-ID-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"session id\",",
+        "",
+        "`session id` leaves the pairs, so a passed name holding it is not refused (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42756-THE-ABOUT-NAME-COUNT-IS-NOT-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"count\",",
+        "",
+        "`count` leaves the about-names, so a passed name ending in it is refused for its part (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42757-THE-ABOUT-NAME-LEN-IS-NOT-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"len\",",
+        "",
+        "`len` leaves the about-names, so a passed name ending in it is refused for its part (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42758-THE-ABOUT-NAME-LENGTH-IS-NOT-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"length\",",
+        "",
+        "`length` leaves the about-names, so a passed name ending in it is refused for its part (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42759-THE-ABOUT-NAME-SIZE-IS-NOT-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"size\",",
+        "",
+        "`size` leaves the about-names, so a passed name ending in it is refused for its part (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42760-THE-ABOUT-NAME-TOTAL-IS-NOT-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"total\",",
+        "",
+        "`total` leaves the about-names, so a passed name ending in it is refused for its part (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42761-THE-ABOUT-NAME-NAME-IS-NOT-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"name\",",
+        "",
+        "`name` leaves the about-names, so a passed name ending in it is refused for its part (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42762-THE-ABOUT-NAME-PATH-IS-NOT-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"path\",",
+        "",
+        "`path` leaves the about-names, so a passed name ending in it is refused for its part (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42763-THE-ABOUT-NAME-FILE-IS-NOT-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"file\",",
+        "",
+        "`file` leaves the about-names, so a passed name ending in it is refused for its part (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42764-THE-ABOUT-NAME-KIND-IS-NOT-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"kind\",",
+        "",
+        "`kind` leaves the about-names, so a passed name ending in it is refused for its part (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42765-THE-ABOUT-NAME-HASH-IS-NOT-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"hash\",",
+        "",
+        "`hash` leaves the about-names, so a passed name ending in it is refused for its part (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42766-THE-ABOUT-NAME-ID-IS-NOT-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"id\",",
+        "",
+        "`id` leaves the about-names, so a passed name ending in it is refused for its part (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42767-THE-ABOUT-NAME-AT-IS-NOT-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"at\",",
+        "",
+        "`at` leaves the about-names, so a passed name ending in it is refused for its part (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42768-A-PAIR-IS-DECIDED-BEFORE-AN-ABOUT-NAME",
+        "scripts/tests/test_rust_house_rules.py",
+        "return paired or (not about and parted)",
+        "return (paired or parted) and not about",
+        "an about-name at the end admits a name holding a pair, so `session_id` is not refused (SPEC-427 R7)",
+        "test_rust_house_rules.RustHouseRules.test_no_secret_named_name_reaches_a_log_macro"
+      ],
+      [
+        "S42769-THE-CRATE-RAND-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"rand\",",
+        "",
+        "`rand` leaves the refused crates, so a path, an import or a dependency through it is not refused (SPEC-427 R8)",
+        "test_rust_house_rules.RustHouseRules.test_randomness_is_drawn_only_through_getrandom"
+      ],
+      [
+        "S42770-THE-CRATE-RAND-CORE-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"rand_core\",",
+        "",
+        "`rand_core` leaves the refused crates, so a path, an import or a dependency through it is not refused (SPEC-427 R8)",
+        "test_rust_house_rules.RustHouseRules.test_randomness_is_drawn_only_through_getrandom"
+      ],
+      [
+        "S42771-THE-CRATE-RAND-CHACHA-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"rand_chacha\",",
+        "",
+        "`rand_chacha` leaves the refused crates, so a path, an import or a dependency through it is not refused (SPEC-427 R8)",
+        "test_rust_house_rules.RustHouseRules.test_randomness_is_drawn_only_through_getrandom"
+      ],
+      [
+        "S42772-THE-CRATE-FASTRAND-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"fastrand\",\n)",
+        ")",
+        "`fastrand` leaves the refused crates, so a path, an import or a dependency through it is not refused (SPEC-427 R8)",
+        "test_rust_house_rules.RustHouseRules.test_randomness_is_drawn_only_through_getrandom"
+      ],
+      [
+        "S42773-RING-RAND-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "(RING_RAND, \"ring::rand\"),",
+        "",
+        "the `ring::rand` arm leaves the rule, so a draw through it is not refused (SPEC-427 R8)",
+        "test_rust_house_rules.RustHouseRules.test_randomness_is_drawn_only_through_getrandom"
+      ],
+      [
+        "S42774-THE-GENERATOR-OS-RNG-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"OsRng\",",
+        "",
+        "`OsRng` leaves the generators, so a draw through it is not refused (SPEC-427 R8)",
+        "test_rust_house_rules.RustHouseRules.test_randomness_is_drawn_only_through_getrandom"
+      ],
+      [
+        "S42775-THE-GENERATOR-THREAD-RNG-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"ThreadRng\",",
+        "",
+        "`ThreadRng` leaves the generators, so a draw through it is not refused (SPEC-427 R8)",
+        "test_rust_house_rules.RustHouseRules.test_randomness_is_drawn_only_through_getrandom"
+      ],
+      [
+        "S42776-THE-GENERATOR-THREAD-RNG-CALL-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"thread_rng\",",
+        "",
+        "`thread_rng` leaves the generators, so a draw through it is not refused (SPEC-427 R8)",
+        "test_rust_house_rules.RustHouseRules.test_randomness_is_drawn_only_through_getrandom"
+      ],
+      [
+        "S42777-THE-GENERATOR-STD-RNG-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"StdRng\",",
+        "",
+        "`StdRng` leaves the generators, so a draw through it is not refused (SPEC-427 R8)",
+        "test_rust_house_rules.RustHouseRules.test_randomness_is_drawn_only_through_getrandom"
+      ],
+      [
+        "S42778-THE-GENERATOR-SMALL-RNG-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"SmallRng\",",
+        "",
+        "`SmallRng` leaves the generators, so a draw through it is not refused (SPEC-427 R8)",
+        "test_rust_house_rules.RustHouseRules.test_randomness_is_drawn_only_through_getrandom"
+      ],
+      [
+        "S42779-THE-GENERATOR-SEEDABLE-RNG-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "\"SeedableRng\",",
+        "",
+        "`SeedableRng` leaves the generators, so a draw through it is not refused (SPEC-427 R8)",
+        "test_rust_house_rules.RustHouseRules.test_randomness_is_drawn_only_through_getrandom"
+      ],
+      [
+        "S42780-PY-RANDOM-NEW-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "(PY_RANDOM, \"PyRandom::new\"),",
+        "",
+        "the `PyRandom::new` arm leaves the rule, so constructing one is not refused (SPEC-427 R8)",
+        "test_rust_house_rules.RustHouseRules.test_randomness_is_drawn_only_through_getrandom"
+      ],
+      [
+        "S42781-A-RAND-FAMILY-IMPORT-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "(CRATE_USE, \"imports a rand-family crate\"),",
+        "",
+        "the `use` and `extern crate` arm leaves the rule, so importing a refused crate is not refused (SPEC-427 R8)",
+        "test_rust_house_rules.RustHouseRules.test_randomness_is_drawn_only_through_getrandom"
+      ],
+      [
+        "S42782-A-MANIFEST-DEPENDENCY-IS-REFUSED",
+        "scripts/tests/test_rust_house_rules.py",
+        "if key in RANDOM_CRATES or package in RANDOM_CRATES:",
+        "if False:",
+        "a member manifest's dependency on a refused crate, by key or by package, is not refused (SPEC-427 R8)",
+        "test_rust_house_rules.RustHouseRules.test_randomness_is_drawn_only_through_getrandom"
+      ],
+      [
+        "S42783-THE-LOCKS-UUID-ARM-IS-READ",
+        "scripts/tests/test_rust_house_rules.py",
+        "drawn = lock_draws_rand(root)",
+        "drawn = False",
+        "a uuid constructor is admitted under a lock whose uuid depends on rand (SPEC-427 R9)",
+        "test_rust_house_rules.RustHouseRules.test_randomness_is_drawn_only_through_getrandom"
+      ],
+      [
+        "S42784-AN-INLINE-TEST-SPAN-IS-BLANKED",
+        "scripts/tests/test_rust_house_rules.py",
+        "code = blanked(code, start, end)",
+        "code = code",
+        "an inline `#[cfg(test)]` item stays in the code, so its violations are refused (SPEC-427 R2)",
+        "test_rust_house_rules.RustHouseRules.test_the_population_is_the_shipped_sources_without_test_code"
+      ],
+      [
+        "S42785-AN-OUT-OF-LINE-TEST-MODULE-IS-DROPPED",
+        "scripts/tests/test_rust_house_rules.py",
+        "dropped.update(declared(path, module, given))",
+        "dropped.update(())",
+        "a file an out-of-line `#[cfg(test)] mod` declares stays in the population (SPEC-427 R2)",
+        "test_rust_house_rules.RustHouseRules.test_the_population_is_the_shipped_sources_without_test_code"
+      ],
+      [
+        "S42786-A-PATH-ATTRIBUTE-IS-HONOURED",
+        "scripts/tests/test_rust_house_rules.py",
+        "given = literals.get(named.end() - 1)",
+        "given = None",
+        "a test module's `#[path]` is not honoured, so the file it names stays in the population (SPEC-427 R2)",
+        "test_rust_house_rules.RustHouseRules.test_the_population_is_the_shipped_sources_without_test_code"
+      ],
+      [
+        "S42787-THE-WALK-READS-NESTED-SOURCES",
+        "scripts/tests/test_rust_house_rules.py",
+        "SOURCES = \"*/src/**/*.rs\"",
+        "SOURCES = \"*/src/*.rs\"",
+        "the walk reads only each crate's top source directory, so a nested source leaves the population (SPEC-427 R2)",
+        "test_rust_house_rules.RustHouseRules.test_the_population_is_the_shipped_sources_without_test_code"
+      ],
+      [
+        "S42788-A-LINE-COMMENT-IS-BLANKED",
+        "scripts/tests/test_rust_house_rules.py",
+        "/[/*]|",
+        "/[*]|",
+        "a line comment is read as code, so a violation in it is refused (SPEC-427 R3)",
+        "test_rust_house_rules.RustHouseRules.test_comments_and_literals_are_not_code_but_a_format_capture_is_read"
+      ],
+      [
+        "S42789-A-NESTED-BLOCK-COMMENT-IS-BLANKED-WHOLE",
+        "scripts/tests/test_rust_house_rules.py",
+        "depth += 1 if mark.group() == \"/*\" else -1",
+        "depth += 0 if mark.group() == \"/*\" else -1",
+        "a nested block comment ends at its inner close, so the rest of the outer comment is read as code (SPEC-427 R3)",
+        "test_rust_house_rules.RustHouseRules.test_comments_and_literals_are_not_code_but_a_format_capture_is_read"
+      ],
+      [
+        "S42790-A-STRING-LITERAL-IS-BLANKED",
+        "scripts/tests/test_rust_house_rules.py",
+        "|[\"']",
+        "|[']",
+        "a string literal's contents are read as code, so a violation in it is refused (SPEC-427 R3)",
+        "test_rust_house_rules.RustHouseRules.test_comments_and_literals_are_not_code_but_a_format_capture_is_read"
+      ],
+      [
+        "S42791-A-RAW-STRING-IS-BLANKED",
+        "scripts/tests/test_rust_house_rules.py",
+        "(?<!\\w)[bc]?r#*\"|",
+        "",
+        "a raw string's contents are read as code, so a violation in it is refused (SPEC-427 R3)",
+        "test_rust_house_rules.RustHouseRules.test_comments_and_literals_are_not_code_but_a_format_capture_is_read"
+      ],
+      [
+        "S42792-SQLITE-ONE-PLACE-REFUSES-AN-EMPTY-POPULATION",
+        "scripts/tests/test_rust_house_rules.py",
+        "return refused, judged(\"shipped source files\", read), openers",
+        "return refused, read, openers",
+        "the rule passes over an empty population of shipped source files instead of failing on `examined 0` (SPEC-427 R10)",
+        "test_rust_house_rules.RustHouseRules.test_each_rule_refuses_an_empty_population"
+      ],
+      [
+        "S42793-NO-FORMAT-INTO-QUERY-REFUSES-AN-EMPTY-POPULATION",
+        "scripts/tests/test_rust_house_rules.py",
+        "return refused, judged(\"query sites\", read)",
+        "return refused, read",
+        "the rule passes over an empty population of query sites instead of failing on `examined 0` (SPEC-427 R10)",
+        "test_rust_house_rules.RustHouseRules.test_each_rule_refuses_an_empty_population"
+      ],
+      [
+        "S42794-NO-SECRET-IN-LOG-REFUSES-AN-EMPTY-POPULATION",
+        "scripts/tests/test_rust_house_rules.py",
+        "return refused, judged(\"log macro calls\", read)",
+        "return refused, read",
+        "the rule passes over an empty population of log macro calls instead of failing on `examined 0` (SPEC-427 R10)",
+        "test_rust_house_rules.RustHouseRules.test_each_rule_refuses_an_empty_population"
+      ],
+      [
+        "S42795-RANDOMNESS-THROUGH-GETRANDOM-REFUSES-AN-EMPTY-POPULATION",
+        "scripts/tests/test_rust_house_rules.py",
+        "return refused, judged(\"shipped source files and manifests\", read)",
+        "return refused, read",
+        "the rule passes over an empty population of shipped source files and manifests instead of failing on `examined 0` (SPEC-427 R10)",
+        "test_rust_house_rules.RustHouseRules.test_each_rule_refuses_an_empty_population"
+      ]
+    ]
+  }
+}
