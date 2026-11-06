@@ -6,8 +6,8 @@ import { join, resolve } from 'node:path';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { describe, expect, it } from 'vitest';
-import { hosted } from '$lib/card/frame-host';
-import type { CardView, Head, UndoOffer } from '$lib/engine/protocol';
+import { hosted } from '#lib/card/frame-host.js';
+import type { CardView, Head, UndoOffer } from '#lib/engine/protocol.js';
 import type { StudyClient } from './review';
 import ReviewScreen from './ReviewScreen.svelte';
 
