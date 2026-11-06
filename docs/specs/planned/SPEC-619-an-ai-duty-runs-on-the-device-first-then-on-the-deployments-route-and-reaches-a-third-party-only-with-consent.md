@@ -236,7 +236,7 @@ and its changelog fragment.
   request, and unreadable marks stop every route. Detected by A8.
 - **A fallback goes silent.** Detected by A7, which examines every declared duty.
 - **The third-party route's recipient is missing from the privacy policy.** Detected by the
-  privacy-gdpr pack's policy row on the box run, over the build's `privacy.json` and `PRIVACY.md`.
+  privacy-gdpr pack's policy row, run over the build's `privacy.json` and `PRIVACY.md`.
 - **A shown text names a model or a maker.** Detected by A6.
 
 ## 7. Delivered by the next pull requests
