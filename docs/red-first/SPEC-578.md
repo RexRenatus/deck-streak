@@ -121,7 +121,7 @@ raw-colour test now reads each of its four compile plants by its exact finding, 
 literal, where it counted one finding before. Like the planted refusals above, these are `not red`: each is
 a planted fixture, refused on every run.
 
-Each plant was shown able to fail by a mutant of the census made by hand in that commit's tree, its test run
+Four plants were each shown able to fail by a mutant of the census made by hand in that commit's tree, its test run
 by name, and the module then restored from its saved bytes with its sha256 equal:
 
 - the `set-missing` line replaced by `pass`: `AssertionError: Lists differ: [] != ['set-missing: ios/App/Assets.xcassets/Tid[65 chars]ere']`
