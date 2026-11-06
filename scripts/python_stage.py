@@ -59,7 +59,7 @@ def main(suites):
     for suite, name in tail:
         print(f"serial: {suite}/{name} ({reason(name)})")
     pooled = [module for module in modules if module not in tail]
-    with ThreadPoolExecutor(max_workers=min(jobs, 1)) as pool:
+    with ThreadPoolExecutor(max_workers=jobs) as pool:
         futures = {module: pool.submit(run, module) for module in pooled}
     results = {module: future.result() for module, future in futures.items()}
     results.update((module, run(module)) for module in tail)
