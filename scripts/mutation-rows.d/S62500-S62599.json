@@ -1,0 +1,62 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S62500-ONLY-THE-SCRIPTS-CLASS-NAMES-LEFT-ROWS",
+        "scripts/mutation-verdict.py",
+        "if klass != \"scripts\":",
+        "if klass == \"scripts\":",
+        "only the scripts class names the rows it leaves to the leg report, never the rust or oracle class (SPEC-625 R4, A2)",
+        "test_mutation_python_verdict.TheScriptsClassNamesTheRowsItLeavesToTheLegReport.test_only_the_scripts_class_names_and_only_rows_no_class_credits"
+      ],
+      [
+        "S62501-AN-ORACLE-ROW-IS-CREDITED-NEVER-LEFT",
+        "scripts/mutation-verdict.py",
+        "ROW_CREDITING = frozenset({\"rust\", \"oracle\", \"scripts\"})",
+        "ROW_CREDITING = frozenset({\"rust\", \"scripts\"})",
+        "a killed row on the oracle path is credited by its class and never named left (SPEC-625 R1, A2)",
+        "test_mutation_python_verdict.TheScriptsClassNamesTheRowsItLeavesToTheLegReport.test_only_the_scripts_class_names_and_only_rows_no_class_credits"
+      ],
+      [
+        "S62502-A-RUST-ROW-IS-CREDITED-NEVER-LEFT",
+        "scripts/mutation-verdict.py",
+        "{\"rust\", \"oracle\", \"scripts\"}",
+        "{\"oracle\", \"scripts\"}",
+        "a killed row on a Rust path is credited by its class and never named left (SPEC-625 R1, A2)",
+        "test_mutation_python_verdict.TheScriptsClassNamesTheRowsItLeavesToTheLegReport.test_only_the_scripts_class_names_and_only_rows_no_class_credits"
+      ],
+      [
+        "S62503-ONLY-A-KILLED-ROW-IS-NAMED-LEFT",
+        "scripts/mutation-verdict.py",
+        "if killed and (overlap is None",
+        "if (overlap is None",
+        "a row the leg did not kill fails by name and is never named left (SPEC-625 R3, A4)",
+        "test_mutation_python_verdict.TheScriptsClassNamesTheRowsItLeavesToTheLegReport.test_a_row_the_leg_did_not_kill_fails_and_is_never_named_left"
+      ],
+      [
+        "S62504-NO-LINE-PRINTS-WHEN-NONE-IS-LEFT",
+        "scripts/mutation-verdict.py",
+        "    if uncredited:",
+        "    if uncredited or True:",
+        "no left line prints when every selected row is credited (SPEC-625 R2, A3)",
+        "test_mutation_python_verdict.TheScriptsClassNamesTheRowsItLeavesToTheLegReport.test_no_left_line_prints_when_every_selected_row_is_credited"
+      ],
+      [
+        "S62505-EACH-LEFT-ROW-CARRIES-ITS-OWN-REASON",
+        "scripts/mutation-verdict.py",
+        "if overlap is None else",
+        "if overlap is not None else",
+        "a left row on a changed line names its path and a row on none says it covers no changed line (SPEC-625 R2, A1)",
+        "test_mutation_python_verdict.TheScriptsClassNamesTheRowsItLeavesToTheLegReport.test_a_killed_row_on_a_changed_map_line_is_named_left_to_the_leg_report"
+      ],
+      [
+        "S62506-A-LEFT-ROW-ADDS-TO-NO-COUNT",
+        "scripts/mutation-verdict.py",
+        "if path is not None and classify(path) == klass:",
+        "if path is None or classify(path) in (klass, \"other\"):",
+        "a row left to the leg report adds nothing to the examined count, so the zero-examined VOID holds (SPEC-625 R3, A5)",
+        "test_mutation_python_verdict.TheScriptsClassNamesTheRowsItLeavesToTheLegReport.test_a_left_row_adds_nothing_to_the_examined_count"
+      ]
+    ]
+  }
+}
