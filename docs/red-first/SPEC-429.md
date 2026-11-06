@@ -86,3 +86,14 @@ A10: green at 97f482454f1da67d5a0f68db2cd676aea36b7795
 A11: red at a5f510b20d68af65779fe1e73521ec116449bbc1: AssertionError: Lists differ: [] != [11]
 A11: green at 97f482454f1da67d5a0f68db2cd676aea36b7795
 ```
+
+The rebuild onto `dev`. This pull request's first commit, c09f7a0, merges the branch above onto
+`dev` with a merge commit, so every commit this record names is a commit of this pull request.
+`dev` had moved the `mutation-plan` job's `shards` step to read `python-rerun.json`, and the
+plan job test pins that step's command whole, so one test edit follows the merge, in 2343150:
+the pinned `shards` command reads `python-rerun.json` in place of `python-listed.json`, still
+matched as one whole line. It removes no assertion, case or test, it changes no other test, and
+it is the only test edit after the fix commit. The schematic section this record calls section
+10 is numbered 12 in the commit after 2343150, after the two sections `dev` added; its text is
+unchanged. The run at this pull request's head is the reading of the eleven criteria after the
+rebuild.

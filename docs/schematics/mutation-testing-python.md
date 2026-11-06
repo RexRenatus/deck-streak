@@ -781,14 +781,14 @@ the same mutant ends, and `a_bare_word_outside_a_string_drops_only_its_field` ca
 | rows | none on these mutants | S48001 to S48007 |
 | proof | none | the differential census, the seeded differential, `lean/TokenProgress` and the release run's next reading |
 
-## 10. The stale price-row warning (SPEC-429, ADR-443)
+## 12. The stale price-row warning (SPEC-429, ADR-443)
 
 Every `path:line` in this section was read at dev `ac7ebd75`. Sections 6 to 9 stay as written.
 This section shows a reading beside them: the plan job names each priced file whose suite now
 holds more tests than the run its row names ran, with the refresh that clears it, and its job's
 result never changes.
 
-### 10.1 Before: a row and its suite at dev `ac7ebd75`
+### 12.1 Before: a row and its suite at dev `ac7ebd75`
 
 ```mermaid
 flowchart TD
@@ -805,7 +805,7 @@ flowchart TD
 138 and its whole row's run 117. No line of the plan compares them
 (`scripts/mutation-verdict.py:143-174`, :1287-1288).
 
-### 10.2 After: the verb and its step
+### 12.2 After: the verb and its step
 
 ```mermaid
 flowchart TD
@@ -836,7 +836,7 @@ it wrote, and the job's result is the one its other steps decide. The pricing ro
 `shards` prices by: the scoped row when `plan` is in `SCOPED_SELECTIONS` and the file has one, else
 the whole row.
 
-### 10.3 What crosses each step
+### 12.3 What crosses each step
 
 | step | before (dev `ac7ebd75`) | after (SPEC-429) |
 |---|---|---|

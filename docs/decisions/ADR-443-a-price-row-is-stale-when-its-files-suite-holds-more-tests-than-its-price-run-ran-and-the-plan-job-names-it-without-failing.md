@@ -132,7 +132,7 @@ alone, and push 2 carries the green, the rows and the red-first record.
 
 **D9. One delivery under SPEC-429 and this ADR.** SPEC-421 is amended insert-only, because its
 R12's record directory gains a reader whose figure is the control record's `ran`.
-`docs/schematics/mutation-testing-python.md` gains section 10, insert-only.
+`docs/schematics/mutation-testing-python.md` gains section 12, insert-only.
 
 ## What it was chosen against
 

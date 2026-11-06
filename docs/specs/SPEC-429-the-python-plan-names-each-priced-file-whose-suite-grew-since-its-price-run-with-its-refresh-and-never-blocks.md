@@ -7,7 +7,7 @@
 - **Decided by:** ADR-443 (a price row is stale when its file's suite holds more tests than its
   price run ran, and a verb of the plan's own names it in the plan job without failing it).
   SPEC-421 is amended insert-only.
-- **Schematic:** `docs/schematics/mutation-testing-python.md` section 10, added insert-only.
+- **Schematic:** `docs/schematics/mutation-testing-python.md` section 12, added insert-only.
 - **Status:** delivered by the pull request that adds this file, with its tests and
   `docs/red-first/SPEC-429.md`.
 - **Mutation band:** S42900-S42999.
@@ -126,7 +126,7 @@ share `PYTHON_MAX_SHARDS` and `PYTHON_SHARE_CAP`; `PYTHON_RELEASE_CEILING` and
 skipped-mutant record and no exemption exists.
 
 R13. Insert-only amendment sections, every earlier byte kept: SPEC-421 (its R12's records gain this
-reader). `docs/schematics/mutation-testing-python.md` gains section 10.
+reader). `docs/schematics/mutation-testing-python.md` gains section 12.
 
 ## 3. Acceptance criteria of SPEC-429
 
@@ -171,7 +171,7 @@ A11: python3 -m unittest discover -s scripts/tests -p test_mutation_python_workf
 | `scripts/tests/test_ci_workflows.py` | workflow tests | changed: the dynamic-import register's entries for the sites A5's loader oracle adds |
 | `scripts/mutation-rows.d/S42900-S42999.json` | mutation rows | added: section 9's rows |
 | `docs/specs/SPEC-421-each-python-file-is-priced-at-its-scoped-test-cost-measured-by-a-dispatched-run-and-the-plan-deals-scoped-legs-by-it.md` | records | changed: an insert-only amendment section |
-| `docs/schematics/mutation-testing-python.md` | records | changed: section 10, insert-only |
+| `docs/schematics/mutation-testing-python.md` | records | changed: section 12, insert-only |
 | `docs/specs/SPEC-429-the-python-plan-names-each-priced-file-whose-suite-grew-since-its-price-run-with-its-refresh-and-never-blocks.md` | records | added: this file |
 | `docs/decisions/ADR-443-a-price-row-is-stale-when-its-files-suite-holds-more-tests-than-its-price-run-ran-and-the-plan-job-names-it-without-failing.md` | records | added |
 | `docs/red-first/SPEC-429.md` | records | added |
