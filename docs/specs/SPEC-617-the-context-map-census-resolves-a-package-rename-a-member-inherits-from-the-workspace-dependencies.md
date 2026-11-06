@@ -107,3 +107,33 @@ Each row mutates `scripts/tests/test_context_map_schematic.py`, and its killer i
 |---|---|---|
 | `S61700-INHERITED-RENAME-IGNORED` | the resolver returns the key where an inherited rename stands | A1 |
 | `S61701-WORKSPACE-TABLE-UNREAD` | the real tree passes an empty table for the root manifest's workspace dependencies | A2 |
+
+## 8. Amendments: A1's fixture covers every edge table, and every fixture reading passes its table
+
+A later delivery closes three gaps that a review of this delivery found. It changes no reading of
+the real tree: the census names the same edges before and after (R5).
+
+- **A1: the fixture covers every edge table R1 names.** Plain `[build-dependencies]` and a
+  target's `[dependencies]` join `[dependencies]` and a target's `[build-dependencies]` in the
+  fixture of `test_an_inherited_package_rename_names_the_renamed_crate`. Each new entry inherits a
+  rename to a crate that no other table of the fixture names, so a census that skipped either
+  table would lose that crate's edge.
+- **R4: two more rows.** `S61702-PLAIN-BUILD-TABLE-UNREAD` joins S61700 and S61701. Its mutant
+  drops the plain `[build-dependencies]` table from the edge reading, which A1's fixture before
+  this amendment let pass, and A1 kills it. `S61703-TARGET-DEPENDENCIES-UNREAD` drops a target's
+  `[dependencies]` table, where the clean fixture A1 checks first holds an edge, and A1 kills it.
+- **R2: the fixture helper takes no default.** `fixture_findings` takes the workspace dependencies
+  table as a required keyword, and every fixture reading passes its table, the fixture tree's own
+  `FIXTURE_INHERITED` or a renaming one, so no reading defaults the table.
+- **The red-first record.** `docs/red-first/SPEC-617.md` now says that, before the resolver
+  changed, the census passed the root manifest's table on and the resolver never read it.
+
+| path | change |
+|---|---|
+| `scripts/tests/test_context_map_schematic.py` | changed: A1's fixture, and the fixture helper's table |
+| `scripts/mutation-rows.d/S61700-S61799.json` | changed: rows S61702 and S61703 |
+| `docs/red-first/SPEC-617.md` | changed: one sentence, and a paragraph on this amendment |
+| `docs/specs/SPEC-617-the-context-map-census-resolves-a-package-rename-a-member-inherits-from-the-workspace-dependencies.md` | changed: this section |
+| `changelog.d/context-map-rename-tables-617.md` | added |
+
+No manifest, no line of the fence, no drawing, no decision record and no product code changes.
