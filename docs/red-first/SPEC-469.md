@@ -63,3 +63,10 @@ a count assertion.
   prefix, a parenthesis group, no head, depth 1 and no call beside, on the run count's own
   assertion: `the run count parted from its port: ( sqlx : : query ! (
   "DELETE FROM agent_runs WHERE created_at < ?1" ) )`, `left: 0`, `right: 1`. A2 passed under it.
+
+## The rebuild onto dev
+
+The delivery was carried onto dev by the merge commit 173962c8, which git made with no conflict.
+The formal ledger census in `scripts/tests/test_formal_obligations.py` read red there, naming
+`lean/AgentPinGroups` as a formal entry with no row. The row and the new entry line were added in
+f61d0f7e, with no other line of the ledger or its test changed, and the census read green there.
