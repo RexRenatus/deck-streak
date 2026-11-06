@@ -92,6 +92,7 @@ SYNC_MODELS = ("tla/FullSyncChoice", "tla/MinimumClientHandshake", "tla/SyncCred
 ENGINE_TIED = SYNC_MODELS + (
     "tla/SyncSnapshotWindow",
     "tla/UndoOwnAnswer",
+    "tla/AnswerOnTheShownState",
     "tla/SkipDayWrite",
     "tla/AwardOnce",
     "tla/FoldSettlesOnce",
@@ -208,6 +209,7 @@ SYNC_CORE_TIES = [
 # The entries built after the 44 were dispositioned, each with its disposition and the
 # obligations that name it.
 NEW_ENTRIES = {
+    "tla/AnswerOnTheShownState": ("re-point", {"O11"}),
     "lean/CompanionDecide": ("keep", {"O6"}),
     "lean/DocsMermaidRead": ("keep", set()),
     "lean/SearchHolds": ("keep", {"O14"}),
