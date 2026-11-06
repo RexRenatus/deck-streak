@@ -96,3 +96,7 @@ Insert-only; every earlier byte is kept. R3 is amended: the `release` job restor
 release-profile key of SPEC-038's amendment, not the debug key, whose `target/debug` the release
 profile never reads. Its runner, toolchain pin and protoc pin stay those of `rust`, and the
 aggregate `ci` job still needs it.
+
+## Amendment: the census set runs once, in its own job (SPEC-632)
+
+Insert-only; every earlier byte is kept. The test binary `deck-streak-progression::xp_census` judges the source, not the shipped build: each run spawns `cargo check --workspace` in its own `--target-dir` with a cleared environment and the profile and flag variables scrubbed, and passes no `--release` (`crates/progression/tests/xp_census.rs`, `fn cargo` and the selection loop), so its verdict is the same in the test and the release profile, while it set the floor of both stages (1,357 s and 1,045 s in run 41962635280). R2 is amended: `test-release` runs every test `test` runs, which is now the workspace minus the engine set and minus the census set, `CENSUS_TESTS` in `scripts/check.sh`. The census set runs once per run, in the stage `test-census`, in its own job `census`, in the test profile, with the Rust cache restored and none saved, and the aggregate `ci` needs it. A binary in the census set spawns its own cargo with a cleared environment; `test_census_set_spawns_its_own_cargo` holds it, so a test that proves runtime behaviour cannot join the set. R1, R3, R4 and R5 are unchanged.
