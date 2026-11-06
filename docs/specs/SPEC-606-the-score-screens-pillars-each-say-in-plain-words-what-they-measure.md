@@ -94,6 +94,7 @@ A4: cargo test -p deck-streak-analytics --test pillar_about -- --exact each_pill
 
 - The bot's `/score` reply shows no pillar: it answers the total, the grade, the reviews and the true retention (`crates/bot/src/score_commands.rs:18-37`), so it has no pillar to describe, and #800 names the score screen.
 - The score page's own texts outside the breakdown, such as `score_none`, and the app-wide keys the page reads (`loading`, `back_to_today` and the error lines) stay as they are in each locale: every web message in every locale is #1051.
+- The grade label the breakdown shows under the total (`score.grade.label`, such as `SOLID`) stays as it is: it is an English string the server sends from its grade bands (`GRADE_BANDS` in `crates/analytics/src/constants.rs`), not one of the 13 texts R3 names, so no locale file holds it and this delivery does not translate it.
 - Any change to a pillar's computation: each sentence states its pillar as it is computed at `b065fce`. Judging the retention pillar against each card's desired retention is #727.
 - The iPhone and iPad app, which has no score screen at `b065fce`: a native view of each web screen is #1057, and it carries these sentences when it is built.
 
