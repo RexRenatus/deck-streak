@@ -157,8 +157,10 @@ class TheRunPrintsAndWritesItsReport(unittest.TestCase):
 
         with mock.patch.object(sys.modules[__name__], "call", fake):
             code, out, err, text = self.report_of(tree, "--all")
+            again = self.report_of(tree, "--all")
         self.assertEqual((code, out, err, text), (0, "", "", '{"exit": 0, "selection": "all"}\n'))
-        self.assertEqual(len(recorded), 1)
+        self.assertEqual(again, (code, out, err, text))
+        self.assertEqual(len(recorded), 2)
         home = recorded[0].parent
         self.assertFalse(
             home == tree.root.parent, "the report was written into the parent of the scenario tree"
@@ -170,8 +172,14 @@ class TheRunPrintsAndWritesItsReport(unittest.TestCase):
         self.assertTrue(
             (home / "costs.jsonl").is_file(), "the costs record is not beside the report"
         )
+        self.assertNotEqual(
+            recorded[1].parent, home, "two calls of the helper wrote into one directory"
+        )
         self.doCleanups()
         self.assertFalse(home.exists(), "the report directory outlived its test")
+        self.assertFalse(
+            recorded[1].parent.exists(), "the second report directory outlived its test"
+        )
 
     def test_a_clean_run_is_exit_zero_and_prints_the_counts_and_the_selection_it_ran(self):
         tree = Tree(self, {"calc": CALC})

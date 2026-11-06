@@ -16,6 +16,22 @@
         "        self.addCleanup(scratch.cleanup)\n        target = tree.root.parent / f\"{tree.root.name}-cli.json\"\n",
         "the command line report helper writes its report and its costs record into a directory of its own, never the parent of the scenario tree (SPEC-610 R2, A2)",
         "test_mutation_python_cli_kills.TheRunPrintsAndWritesItsReport.test_the_cli_report_helper_writes_its_report_and_costs_into_a_directory_of_its_own"
+      ],
+      [
+        "S61002-THE-TREE-REPORT-HELPER-MAKES-A-DIRECTORY-PER-CALL",
+        "scripts/tests/test_mutation_python.py",
+        "    def report(self, *args, **kwargs):\n        scratch = tempfile.TemporaryDirectory()\n",
+        "    def report(self, *args, **kwargs):\n        scratch = self.__dict__.get(\"home\") or self.__dict__.setdefault(\"home\", tempfile.TemporaryDirectory())\n",
+        "the tree report helper makes a directory on every call, never reusing the directory of its first call (SPEC-610 R1, A1)",
+        "test_mutation_python.TheTreeReportHelperWritesIntoItsOwnDirectory.test_the_tree_report_helper_writes_its_report_and_costs_into_a_directory_of_its_own"
+      ],
+      [
+        "S61003-THE-CLI-REPORT-HELPER-MAKES-A-DIRECTORY-PER-CALL",
+        "scripts/tests/test_mutation_python_cli_kills.py",
+        "    def report_of(self, tree, *args):\n        scratch = tempfile.TemporaryDirectory()\n",
+        "    def report_of(self, tree, *args):\n        scratch = self.__dict__.get(\"home\") or self.__dict__.setdefault(\"home\", tempfile.TemporaryDirectory())\n",
+        "the command line report helper makes a directory on every call, never reusing the directory of its first call (SPEC-610 R2, A2)",
+        "test_mutation_python_cli_kills.TheRunPrintsAndWritesItsReport.test_the_cli_report_helper_writes_its_report_and_costs_into_a_directory_of_its_own"
       ]
     ]
   }
