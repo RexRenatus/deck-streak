@@ -145,3 +145,11 @@ A16: not red: the workflow is a new file, whose absence is not its behaviour
 A5, A12, A13 and A16 are not red first, because the base writes no sentinel record, the red
 commit's stubs ignore the scoped table, and the workflow is a new file. Each is recorded `not red`,
 with that reason, and holds its behaviour against a change.
+
+## The rows for the two table lines that had none (section 10)
+
+Rows S42135 and S42136 pin the mutant figure of the table lines for `scripts/mutation-verdict.py`
+and `scripts/mutation_carry.py`. Their killer is A9's test, which this change leaves as it is, so no
+criterion gains a red or a green line. `scripts/mutation_rows.py prove` over the two rows at
+5dd1afda, the commit that adds them, read each KILLED: the killer passed without its mutant,
+selecting one test, and failed with it installed.

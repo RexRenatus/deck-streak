@@ -314,3 +314,23 @@ target.
 The table's rows are written at the fill, one per line of `PYTHON_SCOPED_SECONDS`, from S42120
 upward, then the two rows on `scripts/mutation-verdict.py`'s line. With sixteen lines they are
 S42120-S42135, then S42136 and S42137.
+
+## 10. Amendments: rows for the two scoped table lines that had none
+
+A later reprice of `PYTHON_SCOPED_SECONDS` gave the table a line for `scripts/mutation-verdict.py`,
+which the fill's price run left unpriced, and SPEC-493's refresh gave it a line for its new
+`scripts/mutation_carry.py`. No row pinned either line's figure. This amendment gives each line the
+row section 9 gives every line, its mutant figure plus 1:
+
+| row | behaviour | mutant | killer |
+|---|---|---|---|
+| S42135 | `scripts/mutation-verdict.py`'s scoped mutant figure is the price run's | the figure plus 1 | A9 |
+| S42136 | `scripts/mutation_carry.py`'s scoped mutant figure is the price run's | the figure plus 1 | A9 |
+
+Each find is its line's path and triple as the table holds them at this amendment's base, and
+occurs exactly once in `scripts/mutation-verdict.py`. The band file
+`scripts/mutation-rows.d/S42100-S42199.json` gains the two rows after S42134. A9's test, their
+killer, is unchanged, and no row, test, assertion or killer is removed or loosened. Section 9's
+two further rows on `scripts/mutation-verdict.py`'s line, its control and sentinel figures, are
+not written by this amendment; the ids section 9 names for them assume a table of sixteen lines,
+so they take the next free ids when they are written.
