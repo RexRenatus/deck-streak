@@ -215,6 +215,7 @@ NEW_ENTRIES = {
     "lean/MediaBind": ("keep", {"O13"}),
     "lean/MediaGc": ("keep", {"O13"}),
     "lean/IdSlot": ("keep", {"O12"}),
+    "tla/LogCaptureFloor": ("keep", set()),
 }
 # The 55 existing entries' dispositions.
 # They are the 43 that predate the sync entries, those five, the release gates' entry, and the
