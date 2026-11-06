@@ -21,12 +21,7 @@ final class AppModelTests: XCTestCase {
             path: "shell-\(UUID().uuidString)", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let model = AppModel(review: { deck, session in
-            ReviewModel(
-                deck: deck, session: session, voiceOverRunning: { true },
-                installed: {
-                    Thread.sleep(forTimeInterval: 40)
-                    return []
-                })
+            ReviewModel(deck: deck, session: session, voiceOverRunning: { true }, installed: { [] })
         })
         let opened = Opened()
         let opening = Task { @MainActor in
