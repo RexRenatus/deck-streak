@@ -87,3 +87,26 @@ and its sha256 compared.
 | `S48303-A-REPORT-RAMP-IS-REFUSED` | A2, subtest `report`: `'ok: RefundWritesItsOwnMovement reads ramp=report' != 'refused: RefundWritesItsOwnMovement reads ramp=report'` | `aee832c22b9165902843540f9466514dc9fdf00af7573f80942bf7cba82f2db5` both | `c2bdc5cc09c05e150e31ebe58adab4b75ac172e9751c394a1983b76b0072a5ea` |
 
 No mutation tool ran. CI's rows job reads each row by its stem.
+
+## The rebuild onto the current development branch
+
+The branch was rebuilt by one merge of its earlier head onto the development branch at c302d698,
+with no earlier commit rewritten. The merge commit d58874ff brings the eight paths byte for byte,
+and the pin, its support module and the entry are byte-identical between the flip and this head
+(`git diff --quiet` over the three paths read rc 0), so the green at the flip is the green CI runs
+here. The readings of section 3a were taken again at d58874ff with c302d698 as the base, one check
+at a time.
+
+Before the merge, at c302d698, the ramp reading of `RefundWritesItsOwnMovement` printed
+`"flip": "unmoved"` and `"eligible": true`, with a streak of 20 against a `k` of 20 and no
+finding.
+
+F1, the ramp reading of the flip, printed `"flip": "admitted"`, `"ramp": "block"` and
+`FORMAL OK exit=0`. F2, the gate check of the entry, printed `FORMAL OK exit=0`, its card row for
+the property at ramp `block`, clean `true`, with no `WITNESS_SURVIVED`, `STALE`, `FLOOR`,
+`TIMEOUT`, `MODEL_ERROR` or `PREMATURE_PROMOTION` finding. F3, the block arm, with
+`RefundKeyedPerDay = FALSE` planted in a scratch clone at d58874ff, exited 1 on a `VIOLATION` of
+the property; the report arm, the same plant over c302d698, exited 0 with the violation reported.
+Neither clone was pushed. F4, `git diff --numstat` against c302d698 over `formal/tla/WalletFloor/`,
+read one added and one removed line of `formal/tla/WalletFloor/WalletFloor.tla` and nothing else,
+and the diff names no path under `crates/` and not `config/formal.json`.
