@@ -11,7 +11,7 @@ The test `skip_write::a_take_pushes_exactly_the_previewed_cards_and_their_review
 (`crates/ingest/tests/skip_write.rs:936-1037`) failed once in the `mutation-rust` baselines of one
 pull-request run: leg 138's baseline (job 116852801329) failed it after 37.885 s at
 `crates/ingest/tests/skip_write.rs:972:9`, and the fail-fast profile then stopped three sibling
-tests (SIGTERM after 57.127 s, 4.264 s and 3.719 s in the same job). The panic printed the whole
+tests (SIGTERM after 57.127 s, 4.264 s and 3.719 s in job 116852801329). The panic printed the whole
 answer:
 
     left: Accepted { moved: [1700100000001, 1700100000002, 1700100000003], left_alone: [], read_back: [] }
@@ -77,10 +77,10 @@ What differs in a mutation baseline from the `rust` job, as read:
 - test threads: neither sets them (no `test-threads` in `.config/nextest.toml`, none on either
   command), so both run nextest's default; both run each test in its own process, so the target's
   zone lock and `TZ` are one process's (the `--exact` command line in job 116852801329, 37.885 s);
-- load: the test's own durations are alike: 70.475 s to 98.243 s in eight sampled baselines of the
-  same run (each figure beside its leg's artifact in SPEC-459's census table), and 78.437 s and
-  95.348 s in two `rust` jobs (job 117031548517, a 2059 s test stage, and job 117043344169, a
-  2406 s test stage);
+- load: the test's own durations are alike: 70.475 s to 98.243 s in run 38864023497's eight
+  sampled baselines (each figure beside its leg's artifact in SPEC-459's census table),
+  78.437 s in `rust` job 117031548517 (a 2059 s test stage), and
+  95.348 s in `rust` job 117043344169 (a 2406 s test stage);
 - the count: one run held 192 baselines, each running the test once, where a run holds one `rust`
   job. A rare coincidence surfaces where the test runs most.
 

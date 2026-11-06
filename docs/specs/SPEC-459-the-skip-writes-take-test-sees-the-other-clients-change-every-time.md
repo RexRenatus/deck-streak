@@ -13,7 +13,7 @@ Base: every `path:line` below was read at dev `83846ea3929ab3805c1e95db7291097fd
   at `crates/ingest/tests/skip_write.rs:972:9`, "fsrs false: the card the preview did
   not list is left alone". The answer was `Accepted { moved: [1700100000001, 1700100000002,
   1700100000003], left_alone: [], read_back: [] }` where `left_alone: [1700100000012]` was expected.
-  The `mutants` profile then terminated three sibling tests (57.127 s, 4.264 s and 3.719 s, same job).
+  The `mutants` profile then terminated three sibling tests (57.127 s, 4.264 s and 3.719 s, job 116852801329).
 - The card `SKIP_FLOOR + 12` is made due today by another client between the preview and the take
   (`skip_write.rs:958-968`): `synthetic::change_cards` (`crates/ingest/tests/support/synthetic.rs:1147-1172`)
   then `support::sync_on_another_client` (`crates/ingest/tests/support/mod.rs:780-785`).
