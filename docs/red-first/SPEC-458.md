@@ -31,3 +31,18 @@ commit after the documents adds the tests of A13 and A14 with every workflow unt
 commit adds the step they read.
 
 The step A13 reads and its three rows come in their own commit, which changes no test file.
+
+```red-first
+A13: red at 19ff4d75: AssertionError: Lists differ: [] != ["mutation-rust: the last step's `if:` is [160 chars]()`']
+A13: green at 195157d8
+A14: not red: it plants its own shapes into copies of the leg's colour step, so it pins the reader and not the tree
+```
+
+A13 read red by name in the pull request run 42056188572 at 19ff4d75, and 195157d8 greens it with
+its test unchanged. The merge of current dev between them changes no line of the mutation-rust job
+and no line of the module that holds A13, and the commits after 195157d8 change only documents.
+
+The paragraph on the three reds says the workflows commit that greens them and the pushed head are
+byte-identical over the three test modules and the three workflow files; that held only at the
+original head. At this head the two merges with dev and the commits on top change all six files, so
+A1, A2 and A4 are read green by name in the run at this pull request's head, as A13 is.
