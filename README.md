@@ -1,9 +1,6 @@
 # DeckStreak
 
-<picture>
-  <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/deckstreak-hero-poster-tide-light.png">
-  <img src="docs/assets/deckstreak-hero-tide-light.gif" width="960" height="360" alt="DeckStreak">
-</picture>
+<a href="docs/assets/deckstreak-hero-tide-light.gif"><img src="docs/assets/deckstreak-hero-poster-tide-light.png" width="960" height="360" alt="DeckStreak"></a>
 
 A spaced-repetition study game for the web, iPhone and iPad: XP, streaks, quests and a morning
 reading from a mentor per subject that primes the day's new cards. Rex, DeckStreak's own memory

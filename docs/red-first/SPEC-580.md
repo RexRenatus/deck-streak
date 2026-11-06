@@ -42,14 +42,12 @@ A7: green at d8f619fec7c6839d2faeefedbb16319ed5dde97f
 A8: red at 98b67d059fdc363dd9dfc387d87c9f4a6628462d: AssertionError: 'DeckStreak is a ...[33 chars]tudy' != 'DeckStreak is a spaced-repetition study game for the web,[34 chars]tudy'
 A8: green at d4139479097fa12458bef0bdf7e85fec2061de9c
 A9: not red: the planted complete tree, the control; it reads green at every commit, so each planted refusal's red is its own
-A10: red at 98b67d059fdc363dd9dfc387d87c9f4a6628462d: AssertionError: Lists differ: ["hero-not-below-title: README.md: lines 2[131 chars]f)'"] != []
-A10: green at d4139479097fa12458bef0bdf7e85fec2061de9c
-A11: red at 98b67d059fdc363dd9dfc387d87c9f4a6628462d: AssertionError: examined 0 still entries: the population is empty, so nothing was judged
-A11: green at d4139479097fa12458bef0bdf7e85fec2061de9c
-A12: red at 98b67d059fdc363dd9dfc387d87c9f4a6628462d: AssertionError: Lists differ: [] != [('hero-no-still', 'README.md')]
-A12: green at d8f619fec7c6839d2faeefedbb16319ed5dde97f
+A10: red at 14f5dda44829d1489d91fe8b7e0bdc8d9664bb73: AssertionError: Lists differ: ["hero-not-below-title: README.md: lines 2[78 chars]e>'"] != []
+A11: red at 14f5dda44829d1489d91fe8b7e0bdc8d9664bb73: AssertionError: Lists differ: ["hero-no-still: README.md: line 3 is '<picture>'"] != []
+A12: not red: its refusals are planted over a README the test spells, beside a control read green first, and the checkers they need arrive with the test, so it reads green at the merge before the README changes; A14 holds the tree's own README
 A13: red at 98b67d059fdc363dd9dfc387d87c9f4a6628462d: AssertionError: Lists differ: [] != [('still-missing', 'docs/assets/still.png')]
 A13: green at d8f619fec7c6839d2faeefedbb16319ed5dde97f
+A14: red at 14f5dda44829d1489d91fe8b7e0bdc8d9664bb73: AssertionError: Lists differ: ['hero-animates: README.md: line 5 shows d[38 chars]gif'] != []
 ```
 
 ## What each red shows
@@ -58,9 +56,14 @@ A13: green at d8f619fec7c6839d2faeefedbb16319ed5dde97f
 - A3 and A6 fail because the base README has no Built on section and the tree has no NOTICE, so the census examines
   an empty population and says so.
 - A8 fails because the base overview line frames another product.
-- A10 fails because the base README holds the hero as a bare image line, where the amended header expects the picture.
-- A11 fails because the base list holds no entry for the still, so the census examines an empty population.
-- A2, A4, A5, A7, A12 and A13 each plant their refusal beside a control that reads green; with the helper stubbed, the
+- A10 fails at the merge because its README holds the hero as a `<picture>` block, where the header expects the hero
+  line on line 3.
+- A11 fails at the merge because the still is read from the hero line's image, and line 3 there is `<picture>`.
+- A14 fails at the merge because the `<picture>` block's `<img src>`, on line 5, names the gif, so the README shows the
+  animation to every reader who has not asked for less motion.
+- A12 is not red: it plants each refused hero beside a control read green first, and its checkers arrive with it, so
+  it reads green before the README changes.
+- A2, A4, A5, A7 and A13 each plant their refusal beside a control that reads green; with the helper stubbed, the
   planted refusal finds nothing, which is exactly what each assertion reads.
 
 A10's test is dev's own test of the README header, kept and amended by the picture's order (SPEC-580 R3). Two commits
@@ -76,6 +79,14 @@ image swapped to the gif), each beside the planted complete README read green fi
 `test_no_readme_image_shows_the_animation`, which reads the tree's README, examines every image it shows and refuses
 any that names a gif. A10, A11, A12 and A14 are measured at the amendment's red commit, and their lines are written
 in the next commit.
+
+## The hero amendment
+
+Before the hero amendment, the earlier branch recorded three of these criteria in their first form: the README header
+test, A10, red at 98b67d0 on the bare image hero and green at d413947; the still list census, A11, red at 98b67d0 on
+an empty population and green at d413947; and the reduced-motion refusal, A12, red at 98b67d0 with its helper stubbed
+and green at d8f619f. The amendment changed all three tests, so those facts are kept here as history, and the lines
+in the record above measure the amended tests anew at the merge that carries them.
 
 ## The rows, proved by hand
 

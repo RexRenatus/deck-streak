@@ -4,18 +4,18 @@
       [
         "S58001-THE-README-STILL-IS-THE-PINNED-FILE",
         "README.md",
-        "srcset=\"docs/assets/deckstreak-hero-poster-tide-light.png\"",
-        "srcset=\"docs/assets/deckstreak-hero-poster.png\"",
-        "the hero's reduced-motion source is the pinned still; another path would show a reader who asked for less motion no still (SPEC-580 A11)",
+        "src=\"docs/assets/deckstreak-hero-poster-tide-light.png\"",
+        "src=\"docs/assets/deckstreak-hero-poster.png\"",
+        "the hero's image is the pinned still; another path would show no listed still (SPEC-580 A11)",
         "test_brand_files.TheStillIsTheBrandSourcesPoster.test_the_still_is_listed_by_its_pinned_sha256"
       ],
       [
-        "S58002-THE-README-STILL-ANSWERS-REDUCED-MOTION",
+        "S58002-THE-README-HERO-NEVER-PLAYS-THE-ANIMATION",
         "README.md",
-        "media=\"(prefers-reduced-motion: reduce)\"",
-        "media=\"(prefers-color-scheme: dark)\"",
-        "the still answers the reduced-motion query; under another query a reader who asked for less motion would see the animation (SPEC-580 A11)",
-        "test_brand_files.TheStillIsTheBrandSourcesPoster.test_the_still_is_listed_by_its_pinned_sha256"
+        "<img src=\"docs/assets/deckstreak-hero-poster-tide-light.png\"",
+        "<img src=\"docs/assets/deckstreak-hero-tide-light.gif\"",
+        "the hero shows the still and links to the animation; an image of the animation would play it for every reader (SPEC-580 A14)",
+        "test_brand_files.TheReadmeHeaderShowsTheHero.test_no_readme_image_shows_the_animation"
       ],
       [
         "S58003-THE-LIST-PINS-THE-STILLS-SHA256",
