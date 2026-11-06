@@ -1139,6 +1139,7 @@ def plant_wrapper(script, root):
     files = {"max": f"{cap}\n", "swap.max": "0\n", "oom.group": "0\n", "events": EVENTS}
     for name, text in {**files, "peak": "0\n"}.items():
         (group / f"memory.{name}").write_text(text, "utf-8")
+    (group / "cgroup.procs").write_text(f"{os.getpid()}\n", "utf-8")
     for name, line in (("sudo", "exit 0"), ("systemctl", "echo continue")):
         (root / name).write_text(f"#!/bin/sh\n{line}\n", "utf-8")
         (root / name).chmod(0o700)
