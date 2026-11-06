@@ -186,7 +186,7 @@ class ThePlanJobNamesTheStalePriceRows(unittest.TestCase):
         self.assertIn(
             '        run: python3 scripts/mutation-verdict.py shards --plan "$RUNNER_TEMP/mutation/'
             'plan.json" --listed "$RUNNER_TEMP/mutation/listed.json" --python-listed '
-            '"$RUNNER_TEMP/mutation/python-listed.json"\n',
+            '"$RUNNER_TEMP/mutation/python-rerun.json"\n',
             found[shards[0]],
         )
 
