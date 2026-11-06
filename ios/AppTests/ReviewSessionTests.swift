@@ -9,6 +9,8 @@
 // tags name two videos and a sound; and `health/` is the card health collection (SPEC-507 R17),
 // whose deck `Health` holds one review card with 207 review rows, counters apart from its log and a
 // stored FSRS memory state.
+// Its second collection, in `occlusion/`, holds the deck `Occlusion` with one image occlusion card,
+// which the session withholds (SPEC-380 A13).
 import Foundation
 import XCTest
 
@@ -44,17 +46,34 @@ func freshFixture() throws -> URL {
     return fresh
 }
 
-/// The engine opened on `directory` through the app's launch argument, and its deck `Review`.
-func openedFixture(_ directory: URL) async throws -> (EngineSession, Deck) {
+/// The engine opened on `directory` through the app's launch argument, and its deck named `name`:
+/// `Review` unless a test names another.
+func openedFixture(
+    _ directory: URL, deck name: String = "Review"
+) async throws -> (EngineSession, Deck) {
     let engine = EngineSession()
     try await engine.open(
         arguments: ["DeckStreak", "-DSCollectionDirectory", directory.path(percentEncoded: false)])
     let decks = try await engine.decks()
     let review = try XCTUnwrap(
-        decks.first { $0.name == "Review" },
-        "the fixture's deck Review is listed; the decks read \(decks.map(\.name))")
+        decks.first { $0.name == name },
+        "the fixture's deck \(name) is listed; the decks read \(decks.map(\.name))")
     return (engine, review)
 }
+
+/// The fixture's second collection (SPEC-380 R10), in its directory `occlusion` beside the first,
+/// and its deck `Occlusion`, which holds one image occlusion card the engine built.
+func openedOcclusion() async throws -> (EngineSession, Deck) {
+    try await openedFixture(
+        freshFixture().appending(path: "occlusion", directoryHint: .isDirectory),
+        deck: "Occlusion")
+}
+
+/// The line a withheld card's document holds in the card's place (SPEC-380 R6, R7), as the test
+/// spells it: never read from the ffi's constant.
+let withheldLine =
+    "This image occlusion card cannot be shown here, because this app does not draw its masks. "
+    + "You can still bury or flag it."
 
 final class ReviewSessionTests: XCTestCase {
     func test_a16_a_double_tap_answers_once() async throws {
@@ -231,6 +250,27 @@ final class ReviewSessionTests: XCTestCase {
             ["true", "Reviews: 0", "false", "Reviews: 1", "true"],
             "B6: the panel opened on the text card and closed, and Good after 40 seconds, 30 of "
                 + "them in the panel, records 10 seconds: the newest row reads \(newest)")
+    }
+
+    func test_an_occlusion_card_is_withheld() async throws {
+        let (engine, occlusion) = try await openedOcclusion()
+        let session = ReviewSession(engine: engine)
+        try await session.choose(occlusion)
+        // Autoplay is wished, so a shown question would hand over its header's speech.
+        let step = try await session.next(autoplay: true, installed: [])
+        XCTAssertEqual(
+            step.phase, .withheld,
+            "A13: the session answers the occlusion card in the withheld phase")
+        XCTAssertEqual(
+            [
+                "withheld \(step.face.withheld)",
+                "line \(step.face.document.contains(withheldLine))",
+                "mask layer \(step.face.document.contains("image-occlusion"))",
+                "image \(step.face.document.contains("<img"))",
+                "clips \(step.face.autoplay.count + step.face.replay.count)",
+            ],
+            ["withheld true", "line true", "mask layer false", "image false", "clips 0"],
+            "A13: the occlusion card's face is the withheld face: the line, no image and no clip")
     }
 
     // MARK: - Steps
