@@ -1,0 +1,278 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S43100-EDGE-ROW-DROPPED",
+        "config/crate-edges.json",
+        "    {\"from\": \"progression\", \"to\": \"xp\", \"table\": \"dependencies\", \"target\": null, \"adr\": \"ADR-445\"},\n",
+        "",
+        "a manifest edge whose row is gone is refused as unlisted (SPEC-431 R1, A1)",
+        "test_crate_edges.TheCrateGraphIsTheListedEdges.test_every_manifest_edge_has_one_row_and_every_row_an_edge"
+      ],
+      [
+        "S43101-UNADMITTED-MANIFEST-EDGE",
+        "crates/push/Cargo.toml",
+        "deck-streak-kernel.workspace = true\n",
+        "deck-streak-kernel.workspace = true\ndeck-streak-notifications.workspace = true\n",
+        "a new manifest edge with no row is refused by name (SPEC-431 R1, A1)",
+        "test_crate_edges.TheCrateGraphIsTheListedEdges.test_every_manifest_edge_has_one_row_and_every_row_an_edge"
+      ],
+      [
+        "S43102-STALE-EDGE-ROW",
+        "config/crate-edges.json",
+        "    {\"from\": \"push\", \"to\": \"kernel\", \"table\": \"dependencies\", \"target\": null, \"adr\": \"ADR-445\"},\n",
+        "    {\"from\": \"push\", \"to\": \"kernel\", \"table\": \"dependencies\", \"target\": null, \"adr\": \"ADR-445\"},\n    {\"from\": \"push\", \"to\": \"notifications\", \"table\": \"dependencies\", \"target\": null, \"adr\": \"ADR-445\"},\n",
+        "a row no manifest edge stands behind is refused as stale (SPEC-431 R1, A1)",
+        "test_crate_edges.TheCrateGraphIsTheListedEdges.test_every_manifest_edge_has_one_row_and_every_row_an_edge"
+      ],
+      [
+        "S43103-TARGET-EDGE-UNCONDITIONAL",
+        "crates/web-engine/Cargo.toml",
+        "[target.'cfg(target_arch = \"wasm32\")'.dependencies]",
+        "[dependencies]\ndeck-streak-engine-core.workspace = true\n\n[target.'cfg(target_arch = \"wasm32\")'.dependencies]",
+        "an edge moved off its target table is a new row's edge (SPEC-431 R3, A1)",
+        "test_crate_edges.TheCrateGraphIsTheListedEdges.test_every_manifest_edge_has_one_row_and_every_row_an_edge"
+      ],
+      [
+        "S43104-TARGET-TABLES-UNREAD",
+        "scripts/tests/test_crate_edges.py",
+        "    for key, table in sorted(manifest.get(\"target\", {}).items()):",
+        "    for key, table in sorted({}.items()):",
+        "the census reads every [target.<key>] table (SPEC-431 R3, A1)",
+        "test_crate_edges.TheCrateGraphIsTheListedEdges.test_every_manifest_edge_has_one_row_and_every_row_an_edge"
+      ],
+      [
+        "S43105-MEMBERS-EMPTY",
+        "scripts/tests/test_crate_edges.py",
+        "    for pattern in table.get(\"members\", []):",
+        "    for pattern in []:",
+        "a census that finds no member is VOID (SPEC-431 R2, R4, A1)",
+        "test_crate_edges.TheCrateGraphIsTheListedEdges.test_every_manifest_edge_has_one_row_and_every_row_an_edge"
+      ],
+      [
+        "S43106-DEV-TABLE-UNREAD",
+        "scripts/tests/test_crate_edges.py",
+        "(\"dependencies\", DEV,",
+        "(\"dependencies\",",
+        "the census reads [dev-dependencies] (SPEC-431 R3, A2)",
+        "test_crate_edges.TheCrateGraphIsTheListedEdges.test_each_dependency_table_and_spelling_resolves_to_its_member"
+      ],
+      [
+        "S43107-BUILD-TABLE-UNREAD",
+        "scripts/tests/test_crate_edges.py",
+        "DEV, BUILD)",
+        "DEV)",
+        "the census reads [build-dependencies] (SPEC-431 R3, A2)",
+        "test_crate_edges.TheCrateGraphIsTheListedEdges.test_each_dependency_table_and_spelling_resolves_to_its_member"
+      ],
+      [
+        "S43108-RENAME-UNRESOLVED",
+        "scripts/tests/test_crate_edges.py",
+        "    package = source.get(\"package\", key)",
+        "    package = key",
+        "an entry renamed by package resolves to its member (SPEC-431 R3, A2)",
+        "test_crate_edges.TheCrateGraphIsTheListedEdges.test_each_dependency_table_and_spelling_resolves_to_its_member"
+      ],
+      [
+        "S43109-INHERITED-RENAME-UNRESOLVED",
+        "scripts/tests/test_crate_edges.py",
+        "        source, base = inherited.get(key, {}), \"\"",
+        "        source, base = {}, \"\"",
+        "a workspace = true entry takes its [workspace.dependencies] entry's package (SPEC-431 R3, A2)",
+        "test_crate_edges.TheCrateGraphIsTheListedEdges.test_each_dependency_table_and_spelling_resolves_to_its_member"
+      ],
+      [
+        "S43110-PATH-UNRESOLVED",
+        "scripts/tests/test_crate_edges.py",
+        "    path = source.get(\"path\")",
+        "    path = None",
+        "an entry resolves to its member by path (SPEC-431 R3, A2)",
+        "test_crate_edges.TheCrateGraphIsTheListedEdges.test_each_dependency_table_and_spelling_resolves_to_its_member"
+      ],
+      [
+        "S43111-UNDERSCORE-TABLE-ADMITTED",
+        "scripts/tests/test_crate_edges.py",
+        "                if spelling in scope:",
+        "                if spelling in ():",
+        "an underscore table spelling is refused by name (SPEC-431 R3, A2)",
+        "test_crate_edges.TheCrateGraphIsTheListedEdges.test_each_dependency_table_and_spelling_resolves_to_its_member"
+      ],
+      [
+        "S43112-EDGE-ADR-ABSENT",
+        "config/crate-edges.json",
+        "{\"from\": \"economy\", \"to\": \"kernel\", \"table\": \"dependencies\", \"target\": null, \"adr\": \"ADR-445\"}",
+        "{\"from\": \"economy\", \"to\": \"kernel\", \"table\": \"dependencies\", \"target\": null, \"adr\": \"ADR-9445\"}",
+        "a row citing an ADR no file holds is unadmitted (SPEC-431 R5, A3)",
+        "test_crate_edges.TheCrateGraphIsTheListedEdges.test_every_edge_is_admitted_by_an_adr_that_names_it"
+      ],
+      [
+        "S43113-EDGE-TOKEN-UNNAMED",
+        "docs/decisions/ADR-445-each-fitness-test-is-its-own-census-over-a-listed-file-and-every-row-names-the-adr-that-admits-it.md",
+        "`publishing -> kernel`",
+        "`publishing -> the kernel`",
+        "a row whose ADR does not name its edge is unadmitted (SPEC-431 R5, A3)",
+        "test_crate_edges.TheCrateGraphIsTheListedEdges.test_every_edge_is_admitted_by_an_adr_that_names_it"
+      ],
+      [
+        "S43114-EDGE-TOKEN-UNREAD",
+        "scripts/tests/test_crate_edges.py",
+        "        if token not in texts[files[0]]:",
+        "        if not token:",
+        "the census reads each row's token in its ADR (SPEC-431 R5, A3)",
+        "test_crate_edges.TheCrateGraphIsTheListedEdges.test_every_edge_is_admitted_by_an_adr_that_names_it"
+      ],
+      [
+        "S43115-OWED-ROW-DROPPED",
+        "config/vectors-parity.json",
+        ",\n    {\"entry\": \"lean/TableCensusReach\", \"adr\": \"ADR-445\"}",
+        "",
+        "an implemented entry with no vectors test and no owed row is refused (SPEC-431 R7, A4)",
+        "test_formal_parity.EachFormalEntryMeetsItsVectorsTest.test_every_implemented_lean_entry_has_its_vectors_test_or_a_row"
+      ],
+      [
+        "S43116-OWED-ROW-STALE",
+        "config/vectors-parity.json",
+        "    {\"entry\": \"lean/TableCensusReach\", \"adr\": \"ADR-445\"}\n",
+        "    {\"entry\": \"lean/TableCensusReach\", \"adr\": \"ADR-445\"},\n    {\"entry\": \"lean/Wallet\", \"adr\": \"ADR-445\"}\n",
+        "an owed row for an entry that has its vectors test is stale (SPEC-431 R7, A4)",
+        "test_formal_parity.EachFormalEntryMeetsItsVectorsTest.test_every_implemented_lean_entry_has_its_vectors_test_or_a_row"
+      ],
+      [
+        "S43117-TLA-VECTORS-ADMITTED",
+        "scripts/tests/test_formal_parity.py",
+        "            if entry[\"vectors\"]:",
+        "            if not entry:",
+        "a TLA+ entry that declares vectors is refused by name (SPEC-431 R7, A4)",
+        "test_formal_parity.EachFormalEntryMeetsItsVectorsTest.test_every_implemented_lean_entry_has_its_vectors_test_or_a_row"
+      ],
+      [
+        "S43118-ENTRIES-EMPTY",
+        "scripts/tests/test_formal_parity.py",
+        "NAME = re.compile(r\"[A-Za-z][A-Za-z0-9_]*\")",
+        "NAME = re.compile(r\"$^\")",
+        "a census that derives no entry is VOID (SPEC-431 R6, R9, A4)",
+        "test_formal_parity.EachFormalEntryMeetsItsVectorsTest.test_every_implemented_lean_entry_has_its_vectors_test_or_a_row"
+      ],
+      [
+        "S43119-UNIMPLEMENTED-UNDECLARED",
+        "scripts/tests/test_formal_parity.py",
+        "            if not unimplemented:",
+        "            if not entry:",
+        "a Lean entry with no covers line and no unimplemented row is refused (SPEC-431 R7, A4)",
+        "test_formal_parity.EachFormalEntryMeetsItsVectorsTest.test_every_implemented_lean_entry_has_its_vectors_test_or_a_row"
+      ],
+      [
+        "S43120-VECTORS-PATH-MOVED",
+        "crates/economy/tests/formal_vectors_wallet.rs",
+        "include_str!(\"../../../formal/vectors/wallet.jsonl\")",
+        "include_str!(\"../../../formal/vectors/wallets.jsonl\")",
+        "a vectors test naming a path no entry declares is refused (SPEC-431 R8, A5)",
+        "test_formal_parity.EachFormalEntryMeetsItsVectorsTest.test_every_vectors_test_names_one_live_entry_and_every_file_one_entry"
+      ],
+      [
+        "S43121-COMMENT-CITATION-COUNTED",
+        "scripts/tests/test_formal_parity.py",
+        "        if token == \"//\":",
+        "        if token == \"\":",
+        "a vectors path named only in a comment is no citation (SPEC-431 R8, A5)",
+        "test_formal_parity.EachFormalEntryMeetsItsVectorsTest.test_every_vectors_test_names_one_live_entry_and_every_file_one_entry"
+      ],
+      [
+        "S43122-ORPHAN-VECTORS-ADMITTED",
+        "scripts/tests/test_formal_parity.py",
+        "            findings.append(f\"{path}: a vectors file no Lean entry declares\")",
+        "            pass",
+        "a vectors file no entry declares is refused (SPEC-431 R8, A5)",
+        "test_formal_parity.EachFormalEntryMeetsItsVectorsTest.test_every_vectors_test_names_one_live_entry_and_every_file_one_entry"
+      ],
+      [
+        "S43123-CLOCK-ROW-DROPPED",
+        "config/clock-reads.json",
+        "    {\"path\": \"crates/kernel/src/clock.rs\", \"count\": 1, \"adr\": \"ADR-445\", \"why\": \"SystemClock, the one reader of the system time (SPEC-020 R6)\"},\n",
+        "",
+        "a file's reads with no row are refused as unlisted (SPEC-431 R10, A6)",
+        "test_clock_reads.TheClockReadsAreTheListedSites.test_every_production_files_clock_reads_equal_its_row"
+      ],
+      [
+        "S43124-CLOCK-COUNT-LOWERED",
+        "config/clock-reads.json",
+        "{\"path\": \"crates/ingest/src/skip_write.rs\", \"count\": 2,",
+        "{\"path\": \"crates/ingest/src/skip_write.rs\", \"count\": 1,",
+        "a row counting one read fewer than its file holds is refused (SPEC-431 R10, A6)",
+        "test_clock_reads.TheClockReadsAreTheListedSites.test_every_production_files_clock_reads_equal_its_row"
+      ],
+      [
+        "S43125-UNLISTED-CLOCK-READ",
+        "crates/push/src/lib.rs",
+        "use std::time::Duration;\n",
+        "use std::time::Duration;\nconst _CLOCK: fn() -> std::time::SystemTime = std::time::SystemTime::now;\n",
+        "a new clock read, a function pointer, in an unlisted file is refused (SPEC-431 R10, R11, A6)",
+        "test_clock_reads.TheClockReadsAreTheListedSites.test_every_production_files_clock_reads_equal_its_row"
+      ],
+      [
+        "S43126-BUILD-SCRIPT-UNREAD",
+        "scripts/tests/test_clock_reads.py",
+        "        if (member / \"build.rs\").is_file():",
+        "        if not member:",
+        "the census reads each member's build.rs (SPEC-431 R10, A6)",
+        "test_clock_reads.TheClockReadsAreTheListedSites.test_every_production_files_clock_reads_equal_its_row"
+      ],
+      [
+        "S43127-SOURCES-EMPTY",
+        "scripts/tests/test_clock_reads.py",
+        "    for member in members(root):",
+        "    for member in []:",
+        "a census that reads no production file is VOID (SPEC-431 R13, A6)",
+        "test_clock_reads.TheClockReadsAreTheListedSites.test_every_production_files_clock_reads_equal_its_row"
+      ],
+      [
+        "S43128-DATE-SPELLING-DROPPED",
+        "scripts/tests/test_clock_reads.py",
+        "\"Local\", \"Date\")",
+        "\"Local\")",
+        "Date::now is a clock read (SPEC-431 R11, A7)",
+        "test_clock_reads.TheClockReadsAreTheListedSites.test_each_clock_spelling_and_alias_is_a_read"
+      ],
+      [
+        "S43129-ALIAS-UNCOLLECTED",
+        "scripts/tests/test_clock_reads.py",
+        "                    if source in grown and bound != \"_\":",
+        "                    if source in () and bound != \"_\":",
+        "a name a use ... as binds to a clock type is collected (SPEC-431 R11, A7)",
+        "test_clock_reads.TheClockReadsAreTheListedSites.test_each_clock_spelling_and_alias_is_a_read"
+      ],
+      [
+        "S43130-CFG-TEST-FILE-READ",
+        "scripts/tests/test_clock_reads.py",
+        "    pending = [\n",
+        "    pending = [] and [\n",
+        "a module file declared under #[cfg(test)] is set aside (SPEC-431 R12, A8)",
+        "test_clock_reads.TheClockReadsAreTheListedSites.test_test_code_is_never_read_as_production"
+      ],
+      [
+        "S43131-CFG-TEST-ITEM-READ",
+        "scripts/tests/test_clock_reads.py",
+        "            removed.append((match.start(), finish))",
+        "            removed.append((match.start(), match.start()))",
+        "an item under #[cfg(test)] has its body removed (SPEC-431 R12, A8)",
+        "test_clock_reads.TheClockReadsAreTheListedSites.test_test_code_is_never_read_as_production"
+      ],
+      [
+        "S43132-COMMENT-READ",
+        "scripts/tests/test_clock_reads.py",
+        "        if token == \"//\":",
+        "        if token == \"\":",
+        "a read in a line comment is no read (SPEC-431 R11, A9)",
+        "test_clock_reads.TheClockReadsAreTheListedSites.test_comments_and_literals_hold_no_read"
+      ],
+      [
+        "S43133-CLOCK-TOKEN-UNNAMED",
+        "docs/decisions/ADR-445-each-fitness-test-is-its-own-census-over-a-listed-file-and-every-row-names-the-adr-that-admits-it.md",
+        "`crates/daemon/src/snapshot_lister.rs`",
+        "`crates/daemon/src/snapshot-lister.rs`",
+        "a row whose ADR does not name its path is unadmitted (SPEC-431 R14, A10)",
+        "test_clock_reads.TheClockReadsAreTheListedSites.test_every_file_with_reads_is_admitted_by_an_adr_that_names_it"
+      ]
+    ]
+  }
+}
