@@ -88,3 +88,9 @@ merge alone `TheFormalLedger.test_the_ledger_exists_in_schema_v1` and
 `TheFormalLedger.test_every_existing_entry_has_its_disposition_row` read red by name when the ledger
 tests ran on it. The commit that carries this paragraph adds the model's row and lists the entry in
 the ledger tests' tables; it adds no criterion, and the tests of A1 and A2 are unchanged.
+
+The documents were restated at the new base first (12dfd18d). At the commit that adds the ledger row
+(265e0648), each row's mutant, installed once by hand on the current engine pin and then removed,
+made its killing test fail on its own assertion, and both tests read green once it was removed; the
+ledger tests read green there too. The commit after 265e0648 changes only this record, and the pull
+request run at it reads them green.
