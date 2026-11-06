@@ -50,7 +50,7 @@ jobs:
         run: rustup show
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
-          tool: cargo-nextest,cargo-deny
+          tool: cargo-nextest@0.9.149,cargo-deny@0.20.2
       - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
         env:
           PROTOC_SHA256: 96553041f1a91ea0efee963cb16f462f5985b4d65365f3907414c360044d8065
@@ -120,7 +120,7 @@ jobs:
         run: rustup show
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
-          tool: cargo-nextest
+          tool: cargo-nextest@0.9.149
       - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
         env:
           PROTOC_SHA256: 96553041f1a91ea0efee963cb16f462f5985b4d65365f3907414c360044d8065
@@ -172,7 +172,7 @@ jobs:
         run: rustup show
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
-          tool: cargo-nextest
+          tool: cargo-nextest@0.9.149
       - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
         env:
           PROTOC_SHA256: 96553041f1a91ea0efee963cb16f462f5985b4d65365f3907414c360044d8065
@@ -324,7 +324,7 @@ jobs:
       # git source in deny.toml must still be live in the graph.
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
-          tool: cargo-deny
+          tool: cargo-deny@0.20.2
       - name: restore the Rust cache, keyed on the toolchain pin and Cargo.lock
         id: rust-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -622,6 +622,7 @@ jobs:
           python3 scripts/memory_scope.py --report "$out" -- cargo mutants --no-shuffle -vV --in-place --in-diff "$RUNNER_TEMP/mutation/git.diff" --baseline=skip --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 2300 --build-timeout 600 --output "$out" || rc=$?
           echo "$rc" > "$out/cargo-mutants.exit"
           echo "cargo-mutants exited $rc"
+          case "$rc" in 0|2|3) ;; *) echo "mutation-rust: shard $SHARD left no whole report (cargo-mutants exited $rc); the verdict reads it VOID"; exit "$rc" ;; esac
       - name: keep the shard's report
         if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -629,6 +630,16 @@ jobs:
           name: mutation-rust-shard-${{ matrix.shard }}
           path: ${{ runner.temp }}/shards/
           if-no-files-found: warn
+      # A leg whose own baseline is not green ran no mutant and left no whole report: it fails its
+      # job here, after its report is kept, so its colour agrees with the verdict, which reads that
+      # record VOID by name (SPEC-458 R17, ADR-475 D10).
+      - name: a leg whose own baseline is not green fails its job, after its report is kept
+        if: ${{ needs.mutation-plan.outputs.rust == 'true' && steps.baseline.outputs.green != 'true' }}
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: |
+          echo "mutation-rust: shard $SHARD left no whole report (its baseline recorded exit $(cat "$RUNNER_TEMP/shards/mutation-rust-shard-$SHARD/baseline/baseline.exit")); the verdict reads it VOID"
+          exit 1
 
   # One job per shard of the plan's Python matrix: the runner over the diff's Python mutants, each
   # shard's mutants round-robin as the plan sized them, stopping a file at its first survivor. It
@@ -1335,9 +1346,9 @@ jobs:
           persist-credentials: false
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
-          tool: zizmor
+          tool: zizmor@1.31.1
       - name: zizmor audits the workflows themselves
-        run: zizmor --no-online-audits --persona regular .github/workflows
+        run: zizmor --no-online-audits --persona regular .github
 
   base-is-dev:
     runs-on: ubuntu-24.04
