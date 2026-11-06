@@ -239,6 +239,14 @@ uniffi_internal_macros = { git = "https://github.com/RexRenatus/uniffi-rs.git", 
 uniffi_macros = { git = "https://github.com/RexRenatus/uniffi-rs.git", rev = "bfb6dd9eb92b9febcfe00583ed57bec2ee056c34" }
 uniffi_meta = { git = "https://github.com/RexRenatus/uniffi-rs.git", rev = "bfb6dd9eb92b9febcfe00583ed57bec2ee056c34" }
 uniffi_udl = { git = "https://github.com/RexRenatus/uniffi-rs.git", rev = "bfb6dd9eb92b9febcfe00583ed57bec2ee056c34" }
+# ADR-657: rinja, rinja_derive and rinja_parser from the maintainer's fork of askama, at the
+# published rinja 0.3.5 with its config parsed by toml 0.5, so basic-toml and RUSTSEC-2026-0374
+# leave the lock. Pinned by `rev`; the fork's branch `deckstreak-rinja-toml` keeps the commit
+# fetchable. The entries go when a rinja or askama release that the bindings generator takes drops
+# basic-toml.
+rinja = { git = "https://github.com/RexRenatus/askama.git", rev = "efef71d57c2f9195da6f4c128f742b8ac865d26c" }
+rinja_derive = { git = "https://github.com/RexRenatus/askama.git", rev = "efef71d57c2f9195da6f4c128f742b8ac865d26c" }
+rinja_parser = { git = "https://github.com/RexRenatus/askama.git", rev = "efef71d57c2f9195da6f4c128f742b8ac865d26c" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

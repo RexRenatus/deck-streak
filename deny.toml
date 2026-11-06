@@ -61,8 +61,8 @@ allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 # entry puts in place of the upstream tag the engine names, and the one fork the engine's own
 # manifest pins by revision (ankitects/rust-url, for percent-encoding-iri). ADR-338 and ADR-353 add
 # a third, fsrs-rs, ADR-513 a fourth, the web-push-native fork, ADR-583 a fifth, the sqlx fork, and
-# ADR-657 the uniffi-rs fork, below; nothing else. While the patch holds no crate comes from Anki's
-# own repository, so it is not allowed: an unpatched engine is refused by name.
+# ADR-657 the uniffi-rs and askama forks, below; nothing else. While the patch holds no crate comes
+# from Anki's own repository, so it is not allowed: an unpatched engine is refused by name.
 allow-git = [
     "https://github.com/RexRenatus/anki.git",
     "https://github.com/ankitects/rust-url.git",
@@ -78,4 +78,6 @@ allow-git = [
     "https://github.com/RexRenatus/sqlx.git",
     # ADR-657: the maintainer's fork of uniffi-rs, at the published 0.29.1 without the unused paste.
     "https://github.com/RexRenatus/uniffi-rs.git",
+    # ADR-657: the maintainer's fork of askama, at the published rinja 0.3.5 on toml.
+    "https://github.com/RexRenatus/askama.git",
 ]
