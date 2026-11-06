@@ -46,9 +46,9 @@ GOLDEN_LINES = (
     "mutation: shards: python legs dealt by cost: 3 priced leg(s), the slowest at 1800 s of its "
     "1800 s bound; 0 unpriced leg(s) of at most 20\n"
     "mutation: shards: 1 shard(s) for 0 listed mutant(s), projected at 0 s serially; the slowest "
-    "at 2141 s of its 10800 s bound; legs 1 of ceiling 185\n"
-    "mutation: shards: run legs 4 of 217: python 3 of 32, rust 1 of 185; projected 126 "
-    "runner-minute(s) of 34260\n"
+    "at 2141 s of its 10800 s bound; legs 1 of ceiling 184\n"
+    "mutation: shards: run legs 4 of 216: python 3 of 32, rust 1 of 184; projected 126 "
+    "runner-minute(s) of 34080\n"
 )
 GOLDEN_OUTPUTS = {
     "shards": "1",
@@ -743,7 +743,7 @@ class TheCeilingIsSignedAndTheRunbookSaysTheMethod(unittest.TestCase):
         ]
         for name in examined("values the release run reads", values):
             self.assertEqual(stores.count(name), 1, name)
-        restated = {32, 128, 1800, 185, 234}
+        restated = {32, 128, 1800, 184, 234}
         functions = [
             node
             for node in tree.body
