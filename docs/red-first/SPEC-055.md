@@ -54,4 +54,17 @@ A20: not red: SPEC-022's existing settings test, which had to stay green at the 
 A21: not red: SPEC-022's existing no-upload census, which had to stay green at the new pin (R7); it passed at 4df16b0
 A22: not red: SPEC-022's existing sync test, which had to stay green at the new pin (R7); it passed at 4df16b0
 A23: not red: SPEC-022's existing sync test, which had to stay green at the new pin (R7); it passed at 4df16b0
+A25: red at c302d698: AssertionError: Lists differ: ['paste (RUSTSEC-2024-0436) is a package of Cargo.lock', 'basic-toml (RUSTSEC-2026-0374) is a package of Cargo.lock'] != []
 ```
+
+## §9: the paste and basic-toml notices
+
+The commit that removes the two ignore entries from `deny.toml` also adds A25, with `Cargo.toml`
+and `Cargo.lock` as c302d698 holds them. A25's red above was taken there, over c302d698's lock: its
+planted controls pass (one finding per retired crate, none for the clean plant), and the lockfile's
+656 packages hold both crates. Each notice is red in the same tree: `cargo deny --locked check
+advisories` (cargo-deny 0.20.2) fails with exactly these two errors, and the six engine entries
+apply.
+
+- RUSTSEC-2024-0436: red at c302d698: error[unmaintained]: paste - no longer maintained (paste 1.0.15)
+- RUSTSEC-2026-0374: red at c302d698: error[unmaintained]: `basic-toml` is unmaintained (basic-toml 0.1.10)

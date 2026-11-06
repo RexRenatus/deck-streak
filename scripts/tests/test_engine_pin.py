@@ -14,6 +14,8 @@ that carries the rebuild fix (SPEC-055 A1, A2, A3 and A5; ADR-058).
 - A3 runs `cargo deny` over the advisories and the sources, and reads the notes it prints at the
   info level. Every advisory exception in `deny.toml` is one it still encounters, and every allowed
   git source is one a crate of the graph comes from.
+- A25 reads the lockfile's packages. No unmaintained crate that SPEC-055's amendments retire
+  (`paste` and `basic-toml`, ADR-657) is one of them, at any version and from any source.
 - A5 reads ADR-058's Confirmation: the pinned commit and its one-file difference from the upstream
   tag, the no-op build before and after the pin, CI's runs, and a final status. When a note
   appended to ADR-058 moved the pin (SPEC-338 A15), the Confirmation is judged at the fix's own
@@ -400,6 +402,37 @@ PLANTED_LIVE = [
     note("allowed-source", ("source", f"git+{RUST_URL}"), ("source allowance", RUST_URL)),
 ]
 
+# ----------------------------------------------------------------------------------------- A25
+
+#: The unmaintained crates SPEC-055's amendments retire, each with its notice: the lockfile names
+#: none of them as a package, at any version and from any source (SPEC-055 §9, ADR-657). A later
+#: amendment widens this by insertion only.
+RETIRED = (("paste", "RUSTSEC-2024-0436"), ("basic-toml", "RUSTSEC-2026-0374"))
+#: The maintained successors already in the lock, which a clean planted lock holds.
+SUCCESSORS = (("pastey", "0.2.3"), ("toml", "0.5.11"))
+
+
+def lock_findings(lock):
+    """Why a crate SPEC-055's amendments retire is still in the lockfile; empty when none is."""
+    names = {package.get("name") for package in tomllib.loads(lock).get("package", [])}
+    return [
+        f"{crate} ({advisory}) is a package of Cargo.lock"
+        for crate, advisory in RETIRED
+        if crate in names
+    ]
+
+
+def planted_packages(*packages):
+    """A planted lockfile of the given (name, version) registry packages."""
+    body = "version = 4\n"
+    for name, version in packages:
+        body += (
+            f'\n[[package]]\nname = "{name}"\nversion = "{version}"\n'
+            'source = "registry+https://github.com/rust-lang/crates.io-index"\n'
+        )
+    return body
+
+
 # ------------------------------------------------------------------------------------------ A5
 
 STATUS = re.compile(r"(?m)^status: (\S+)$")
@@ -754,6 +787,20 @@ class DenyTomlIsLive(unittest.TestCase):
         summaries = [d for d in diagnostics if d.get("type") == "summary"]
         self.assertEqual(len(summaries), 1, f"cargo deny ran no check: {done.stderr[-2000:]}")
         self.assertEqual(audit_findings(deny, diagnostics), [])
+
+
+class RetiredCratesAreGone(unittest.TestCase):
+    def test_the_retired_unmaintained_crates_are_absent_from_the_lockfile(self):
+        self.assertEqual(lock_findings(planted_packages(*SUCCESSORS)), [])
+        for crate, advisory in examined("retired crate(s)", RETIRED):
+            with self.subTest(crate):
+                self.assertEqual(
+                    lock_findings(planted_packages(*SUCCESSORS, (crate, "1.0.0"))),
+                    [f"{crate} ({advisory}) is a package of Cargo.lock"],
+                )
+        live = LOCKFILE.read_text(encoding="utf-8")
+        examined("package(s) in Cargo.lock", tomllib.loads(live).get("package", []))
+        self.assertEqual(lock_findings(live), [])
 
 
 class Adr058RecordsThePin(unittest.TestCase):
