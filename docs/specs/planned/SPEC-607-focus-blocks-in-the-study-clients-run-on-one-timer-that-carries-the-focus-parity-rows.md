@@ -361,7 +361,7 @@ the tests above that prove their numbers, and they close with the release (#924)
 | `scripts/mutation-rows.d/S60700-S60799.json` | repo | added: the hand-proved rows (section 9) |
 | `Cargo.lock` | workspace | changed |
 | `docs/specs/SPEC-607-focus-blocks-in-the-study-clients-run-on-one-timer-that-carries-the-focus-parity-rows.md` | docs | moved from `docs/specs/planned/` |
-| `docs/specs/planned/SPEC-079-a-focus-block-runs-on-the-services-clock-and-deep-work-earns-once.md` | docs | changed: its status names this SPEC as superseding it |
+| `docs/specs/planned/SPEC-079-a-focus-block-runs-on-the-services-clock-and-deep-work-earns-once.md` | docs | unchanged by this build: its status already names this SPEC as superseding it |
 | `docs/decisions/ADR-079-a-focus-block-ends-on-the-services-clock-armed-by-each-long-running-role-and-claimed-once.md` | docs | changed: a note that ADR-628 replaces its role list |
 | `docs/decisions/ADR-628-one-timer-serves-a-block-and-the-focus-rows-and-a-block-shows-only-its-own-time-left.md` | docs | changed: accepted |
 | `docs/decisions/ADR-629-the-rest-guard-is-opt-in-and-keeps-its-readings-on-the-device.md` | docs | changed: accepted |
@@ -401,6 +401,8 @@ the tests above that prove their numbers, and they close with the release (#924)
   this SPEC (#924).
 - No economy number changes in this SPEC (#924).
 - It builds no Mini App screen and no bot command (#924).
+- Committed study windows (#109, SPEC-105) and the session debrief (#131, SPEC-101) are related but
+  not in this SPEC: a block books no study window and asks no rating of how the session felt.
 
 ## 7. Formal
 
