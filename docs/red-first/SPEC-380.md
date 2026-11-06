@@ -106,3 +106,16 @@ A15: not red: the base keeps every Swift budget; it guards R9
   are the second push's run 38024311958, job 114134348744, in the same step, whose report reads
   each test passed on the iPhone and on the iPad. Both reds are written after both readings, in the
   third push, as A9's and A10's are written late.
+
+## Rebuilt on current dev
+
+The branch was rebuilt on current dev by one merge commit, 8550c7a6, which carries every commit
+above unchanged; the commits after it change only what the shapes on dev and the reorder model's
+cover of `current_card` asked for. The ci run 42010432748 at the rebuilt head 4e784c95 read A1 to
+A8 passed by name in its engine test log, A9 to A12 passed in its web test log's run of
+`occlusion-guard.test.ts`, which holds A9 to A12 and no other test, and A15 passed in its run of
+the scripts suite. That head's apple-on-change run stopped before the review screen's tests, so
+A13 and A14 are read by name on both simulators at this pull request's head. A second merge
+commit, f06f2397, brings current dev in again with no conflict, and 7699b937 fits one bench dev
+added to the required field; the commits after 7699b937 change only SPEC-380's manifest and this
+record.
