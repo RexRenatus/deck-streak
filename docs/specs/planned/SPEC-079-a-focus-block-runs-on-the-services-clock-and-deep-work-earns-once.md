@@ -15,8 +15,9 @@
   SPEC-072 (progression's `settle` port), SPEC-073 (the badge award port), SPEC-026 (the bot's
   command table, callbacks and transport), SPEC-041 (the router). **Mutation band:**
   `S07900-S07999`.
-- **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
-  `docs/specs/` with its tests and `docs/red-first/SPEC-079.md` (ADR-016).
+- **Status:** superseded by SPEC-607, which keeps this SPEC's numbers, goldens and claim
+  and drops its bot and Mini App parts. This SPEC is never built: it stays in `docs/specs/planned/`
+  as the record SPEC-607 supersedes, and no delivery moves it to `docs/specs/`.
 
 ## 1. The problem, measured
 
