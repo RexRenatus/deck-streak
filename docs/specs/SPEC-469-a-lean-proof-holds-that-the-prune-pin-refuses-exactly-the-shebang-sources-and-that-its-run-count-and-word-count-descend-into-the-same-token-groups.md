@@ -110,6 +110,8 @@ theorems are proved.
 | `docs/schematics/agent-pin-token-groups-proof.md` | docs | added |
 | `docs/specs/SPEC-043-agent-core-runner-gate-and-degradation.md` | docs | changed: section 13 appended, insert-only |
 | `changelog.d/agent-pins-token-groups-469.md` | repo | added |
+| `formal/obligations.json` | formal | changed: the `lean/AgentPinGroups` row added to the entries, insert-only |
+| `scripts/tests/test_formal_obligations.py` | repo | changed: `lean/AgentPinGroups` added to the new entries with no obligation, insert-only |
 
 ## 5. What this does NOT cover
 
