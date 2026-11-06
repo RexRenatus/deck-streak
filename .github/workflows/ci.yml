@@ -156,9 +156,11 @@ jobs:
 
   # The workspace's tests in the profile the daemon ships from (SPEC-330, ADR-330, #473): the
   # tests run with debug assertions on and the shipped build runs with them off, so code the build
-  # selects is proved here in the build it ships in. It restores the Rust cache and saves none: rust
-  # alone saves it, because two jobs saving one key race. The release build lands under
-  # target/release, which the cache does not hold, so this job compiles its own.
+  # selects is proved here in the build it ships in. The debug key holds target/debug, which the
+  # release profile never reads, so this job keeps a release-profile key of its own (SPEC-631):
+  # it restores that key on every run, and it is the key's only writer. A push to dev or main that
+  # missed the key cleans the workspace's release artifacts out of target/ and saves it. Neither
+  # restore prefix matches the other key.
   release:
     runs-on: ubuntu-24.04
     timeout-minutes: 100
@@ -181,8 +183,10 @@ jobs:
           echo "$PROTOC_SHA256  /tmp/protoc.zip" | sha256sum -c -
           mkdir -p "$HOME/.local/protoc" && unzip -q /tmp/protoc.zip -d "$HOME/.local/protoc"
           echo "$HOME/.local/protoc/bin" >> "$GITHUB_PATH"
-      - name: restore the Rust cache, keyed on the toolchain pin and Cargo.lock
-        id: rust-cache
+      - name: free space before the restore
+        run: df -h /
+      - name: restore the release-profile Rust cache, keyed on the toolchain pin and Cargo.lock
+        id: release-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
@@ -190,15 +194,30 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
+          key: rust-release-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
-            rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
+            rust-release-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
       - name: the locked dependency graph, every target's packages (the censuses read it offline)
         run: cargo fetch --locked --manifest-path Cargo.toml
       - name: test-release, the workspace's tests in the release profile
         env:
           CHECK_LOG_DIR: ${{ runner.temp }}/check-logs
         run: bash scripts/check.sh test-release
+      - name: free space after the stage
+        run: df -h /
+      - name: keep only the dependencies' release artifacts in the cache
+        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main') && steps.release-cache.outputs.cache-hit != 'true' }}
+        run: cargo clean --workspace --release
+      - name: save the release-profile Rust cache
+        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main') && steps.release-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ steps.release-cache.outputs.cache-primary-key }}
       - name: upload stage logs
         if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

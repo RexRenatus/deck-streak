@@ -3424,25 +3424,42 @@ class OnlyAPushSavesACache(unittest.TestCase):
             fallback = key.split("${{ hashFiles('Cargo.lock') }}")[0]
             self.assertEqual(lines_of(restore["with"]["restore-keys"]), [fallback])
             restored[job_id] = (gate, restore)
-        # One job saves it: the one that builds every target, after its stages.
+        # One save per profile key, each by the one job that restores it, after its stages: the
+        # debug key by the job that builds every target, the release key by the release job.
         saves = [
             (job_id, n, s)
             for job_id, job in workflow["jobs"].items()
             for n, s in enumerate(job.get("steps") or [])
             if action(s) == "actions/cache/save" and paths(s) == RUST_CACHE
         ]
-        self.assertEqual(len(saves), 1, f"the Rust cache is saved by {len(saves)} steps")
-        job_id, at, save = saves[0]
-        self.assertIn(job_id, restored, f"{job_id} saves a Rust cache it never restored")
-        gate, restore = restored[job_id]
-        self.assertIn("clippy", dict(stage_calls(workflow))[job_id], f"{job_id} builds no target")
-        self.assertGreater(at, gate, f"{job_id} saves the Rust cache before its stages")
-        primary = "${{ steps." + restore["id"] + ".outputs.cache-primary-key }}"
-        self.assertEqual(save["with"]["key"], primary)
-        # The workspace's own artifacts are rebuilt from any fresh checkout: clean them first.
-        clean = workflow["jobs"][job_id]["steps"][at - 1]
-        self.assertEqual(str(clean.get("run", "")).strip(), "cargo clean --workspace")
-        self.assertEqual(clean.get("if"), save.get("if"))
+        self.assertEqual(len(saves), 2, f"the Rust cache is saved by {len(saves)} steps")
+        release_restorers = sorted(
+            job_id
+            for job_id, (_, restore) in restored.items()
+            if restore["with"]["key"].startswith("rust-release-")
+        )
+        self.assertEqual(len(release_restorers), 1, f"{release_restorers} restore the release key")
+        profiles = {}
+        for job_id, at, save in saves:
+            self.assertIn(job_id, restored, f"{job_id} saves a Rust cache it never restored")
+            gate, restore = restored[job_id]
+            release = restore["with"]["key"].startswith("rust-release-")
+            profile = "release" if release else "debug"
+            self.assertNotIn(profile, profiles, f"the {profile} key is saved by two jobs")
+            profiles[profile] = job_id
+            built = "test-release" if release else "clippy"
+            self.assertIn(built, dict(stage_calls(workflow))[job_id], f"{job_id} builds no target")
+            self.assertGreater(at, gate, f"{job_id} saves the Rust cache before its stages")
+            primary = "${{ steps." + restore["id"] + ".outputs.cache-primary-key }}"
+            self.assertEqual(save["with"]["key"], primary)
+            # The workspace's own artifacts are rebuilt from any fresh checkout: clean them first,
+            # in the profile the key holds.
+            clean = workflow["jobs"][job_id]["steps"][at - 1]
+            cleaned = "cargo clean --workspace --release" if release else "cargo clean --workspace"
+            self.assertEqual(str(clean.get("run", "")).strip(), cleaned)
+            self.assertEqual(clean.get("if"), save.get("if"))
+        self.assertEqual(sorted(profiles), ["debug", "release"])
+        self.assertEqual(profiles["release"], release_restorers[0])
 
     def test_a_cache_is_saved_only_by_a_push_to_dev_or_main(self):
         problems, saves = cache_scan(WORKFLOWS)
