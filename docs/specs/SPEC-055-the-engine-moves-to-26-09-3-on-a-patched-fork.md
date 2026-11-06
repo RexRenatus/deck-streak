@@ -436,3 +436,4 @@ red over the lockfile before the first fork lands, and green once the last one d
 #1001, #326, https://github.com/mozilla/uniffi-rs/pull/2485,
 https://github.com/askama-rs/askama/pull/771 and https://github.com/askama-rs/askama/issues/794.
 The upstream pull requests this fix owes are linked here when opened.
+Opened: https://github.com/askama-rs/askama/pull/796 (`basic-toml`) and https://github.com/ayrat555/frankenstein/pull/342 (`paste`).
