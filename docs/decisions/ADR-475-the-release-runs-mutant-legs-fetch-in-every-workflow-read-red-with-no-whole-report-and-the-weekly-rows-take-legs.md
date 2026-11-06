@@ -150,7 +150,7 @@ D1 and D2 are two populations of `scripts/tests/test_rows_jobs_fetch_graph.py`'s
 `saving_jobs()` finds every job holding a step that saves the Rust cache's paths. D4's test sits in
 `scripts/tests/test_mutation_workflows.py` beside the other `mutation-rust` step tests, reading the
 whole exits from the verdict's text the way `rows_constant` reads the rows runner's. Every test reads
-a workflow, so each is red and green in CI's `hygiene` job, never on the box.
+a workflow, so each is red and green in CI's `hygiene` job, never on a local machine.
 
 ### D8. Rows and formal surface
 
@@ -226,7 +226,7 @@ D6 was chosen against:
 D7 was chosen against:
 
 - **D7, a new test module for the weekly and the warm-up**: the rule already lives in `test_rows_jobs_fetch_graph.py`, whose `refusals()` takes its anchor as a parameter for this.
-- **D7, run the workflow tests on the box**: every touched module reads a workflow file, so their reds and greens are read in CI by name.
+- **D7, run the workflow tests on a local machine**: every touched module reads a workflow file, so their reds and greens are read in CI by name.
 
 D8 was chosen against:
 
@@ -279,7 +279,7 @@ VOID by name from its record, so what a run admits does not change.
   reason: the step decides a job's colour, not the verdict.
 - D9: the first pull request builds D1, D2, D4 and D10; D5 stays the next one's.
 
-D10 was chosen against:
+## What D10 was chosen against, and what would make it wrong
 
 - **D10, end the baseline step on its own exit**: it rewrites ADR-509's step, which always
   succeeds so that its record is kept and read, and that decision's tests.

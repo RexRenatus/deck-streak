@@ -158,7 +158,7 @@ module reads a workflow file, so none runs off CI for this delivery.
 - A raise of `ROWS_MAX_LEGS` for a release that selects more than 2686 rows, which is read on that
   release's final union and signed then (#830).
 - The weekly `rust` leg's `exit "$rc"`, which fails it on survivors as well, unchanged (#827).
-- Any re-run, dispatch or cancel of a run, and any change to who starts a release (#822).
+- Any re-run, dispatch or cancel of a run, and any change to who starts a release.
 - The weekly rows' legs and the battery's ceiling, which section 10 delivers in the next pull
   request (#830).
 
@@ -196,7 +196,7 @@ leg's are the spans of R6's line named below.
 | `S45804-THE-WARM-UP-FETCHES-NOTHING` | `.github/workflows/rust-cache.yml` | the `warm` fetch step's `run:` becomes `echo skipped` | A2 |
 | `S45805-THE-WARM-UP-SWALLOWS-ITS-FETCH` | `.github/workflows/rust-cache.yml` | that `run:` gains `\|\| true` | A2 |
 | `S45806-THE-WARM-UP-FETCHES-ON-A-HIT` | `.github/workflows/rust-cache.yml` | the fetch step loses its `if:` line | `test_rust_cache_workflow.TheRustCacheWorkflow.test_it_looks_the_exact_key_up_and_every_later_step_stops_on_a_hit` |
-| `S45807-THE-RUST-LEG-PASSES-A-RED-BASELINE` | `.github/workflows/ci.yml` | `case "$rc" in 0\|2\|3) ;;` becomes `case "$rc" in 0\|2\|3\|4) ;;` | A4 |
+| `S45807-THE-RUST-LEG-PASSES-EXIT-4` | `.github/workflows/ci.yml` | `case "$rc" in 0\|2\|3) ;;` becomes `case "$rc" in 0\|2\|3\|4) ;;` | A4 |
 | `S45808-THE-RUST-LEG-FAILS-ON-ITS-SURVIVORS` | `.github/workflows/ci.yml` | it becomes `case "$rc" in 0\|3) ;;` | A4 |
 | `S45809-THE-RUST-LEG-FAILS-ON-ITS-TIMEOUTS` | `.github/workflows/ci.yml` | it becomes `case "$rc" in 0\|2) ;;` | A4 |
 | `S45810-THE-RUST-LEG-FAILS-WHEN-ALL-ARE-CAUGHT` | `.github/workflows/ci.yml` | it becomes `case "$rc" in 2\|3) ;;` | A4 |
@@ -283,8 +283,8 @@ open, so it closes #827; #830 stays open for section 10.
 | `S45814-THE-COLOUR-STEP-RUNS-WITH-NO-RUST-MUTANTS` | `.github/workflows/ci.yml` | its `if:` loses its Rust condition | A13 |
 
 Figures read at the old base and changed since: `ROWS_MAX_LEGS` reads 18 under the owner's signed
-ruling on the rows legs, and `LEG_CEILING` reads `{"ci": 189, "battery": 234}`; section 10's pull
-request re-derives R15 and A11 from the figures at its own cut. A1 to A6 and their rows are
+ruling on the rows legs, and `LEG_CEILING` reads `{"ci": 185, "battery": 234}`; section 10's pull
+request re-derives R15 and A11 from the figures at its own cut. A1 to A6 and their mutants are
 unchanged, every red and green is read by name in CI's `hygiene` job, and no path beyond section 4
 changes. Beyond section 4's cells, `ci.yml` gains R17's step after the upload, the rows file gains
 rows `S45812` to `S45814`, `test_mutation_workflows.py` gains the colour step's reader, A13 and
