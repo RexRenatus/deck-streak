@@ -296,3 +296,7 @@ rewritten, and the commits after it change only what that later base moved. At t
   `web/app/bench/study/review-screen.bench.ts`, `web/app/src/lib/study/card-health.test.ts`,
   `web/app/src/lib/study/review-clock.test.ts`, `web/app/tests/a11y.spec.ts` and
   `web/app/tests/voice-picker-a11y.spec.ts`.
+- The source census in `crates/kernel/tests/allow_list_arms.rs` reads every Rust source under each
+  crate's src and examples folders, and each crate's build script, and pins how many it reads. This
+  delivery adds one such source, `crates/engine-core/src/ai_assisted.rs`, so that pin and its
+  message move from 419 to 420; no arm row and no other assertion changes.
