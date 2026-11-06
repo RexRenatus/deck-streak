@@ -182,6 +182,7 @@ on the continuous integration's simulator step; their reds and greens are read t
 | `web/app/src/lib/study/update-now.test.ts` | web | `withheld: false` added to view()'s defaults, a dev fixture the merge left without the now-required field |
 | `web/app/src/lib/study/card-health.test.ts` | web | `withheld: false` added to view()'s literal, a dev fixture the merge left without the now-required field; no assertion changes |
 | `web/app/src/lib/study/review-clock.test.ts` | web | `withheld: false` added to view()'s literal, a dev fixture the merge left without the now-required field; no assertion changes |
+| `web/app/bench/study/review-screen.bench.ts` | web | `withheld: false` added to its card view literal, a dev bench the merge left without the now-required field; no measured step changes |
 | `formal/tla/UndoOwnAnswer/UndoOwnAnswer.tla` | formal | line 11's `current_card` digest re-pinned to the merged span, which carries this delivery's withheld lines |
 | `formal/tla/DueReorderInput/DueReorderInput.tla` | formal | line 4's `current_card` digest re-pinned to the merged span, a stuttering step for the reorder model, whose variables the withheld lines do not move |
 | `docs/schematics/the-app-campaigns-surfaces-each-carry-a-stride-table-whose-every-control-cites-a-line-that-holds.md` | docs | three cited line numbers follow the lines this delivery moves in `crates/engine-core/src/lib.rs`, `crates/web-engine/src/wasm.rs` and `web/app/src/lib/engine/protocol.ts`; no quoted text changes |
