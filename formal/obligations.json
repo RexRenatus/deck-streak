@@ -538,6 +538,7 @@
     {"entry": "tla/TracedSetCovers", "disposition": "keep", "act": "unaffected by the engine's replacement; nothing, unless a delivery's covers check shows a moved span", "obligations": []},
     {"entry": "tla/UndoOwnAnswer", "disposition": "re-point", "act": "re-stamped if the answer seam edits the rate call it covers; re-pointed onto the store's own undo, a retraction on the op log, keeping its four properties", "obligations": ["O11"]},
     {"entry": "tla/WalletFloor", "disposition": "keep", "act": "unaffected by the engine's replacement; nothing, unless a delivery's covers check shows a moved span", "obligations": []},
+    {"entry": "lean/AgentPinGroups", "disposition": "keep", "act": "new with the token groups proof of the agent pins (SPEC-469): re-stamped when a pin span it covers moves, with no weakening", "obligations": []},
     {"entry": "lean/Chest", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
     {"entry": "lean/CompanionDecide", "disposition": "keep", "act": "new with the scheduling companion's interface (SPEC-501); re-stamped when the decision or the handshake it covers moves, with no weakening", "obligations": ["O6"]},
     {"entry": "lean/DocsMermaidRead", "disposition": "keep", "act": "new with the docs reader's formal path (SPEC-474); a pure function of a docs text, unaffected by the engine's replacement", "obligations": []},

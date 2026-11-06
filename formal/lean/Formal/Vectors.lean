@@ -1,3 +1,4 @@
+import Formal.AgentPinGroupsVectors
 import Formal.ChestVectors
 import Formal.CompanionDecideVectors
 import Formal.DocsMermaidReadVectors
@@ -44,6 +45,7 @@ lists it as support.
 
 def main (args : List String) : IO UInt32 := do
   match args with
+  | ["AgentPinGroups"] => Formal.AgentPinGroupsVectors.run
   | ["Chest"] => Formal.ChestVectors.run
   | ["CompanionDecide"] => Formal.CompanionDecideVectors.run
   | ["DocsMermaidRead"] => Formal.DocsMermaidReadVectors.run
