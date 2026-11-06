@@ -819,3 +819,18 @@ runs the action. A24 judges the census itself, over planted workflows of its own
 shape it reads, among them an allowed advisory, an exempt package, `warn-only`, a scope left
 out, a severity floor, a check turned off, a licence left out, a tag in place of a SHA, a path
 filter, a second event, a condition and a second review.
+
+## 19. Amendments, by SPEC-424: the python stage checks ruff after cargo
+
+Insert-only under ruling (i) of section 8: every earlier byte is kept in order. It inserts this
+section and nothing else. Made by SPEC-424 and ADR-438 (D1 and D9).
+
+- **R4, as amended.** The `python` stage checks `python3`, then `cargo`, then
+  `ruff`, which must be the version `scripts/ruff-requirements.txt` pins (SPEC-424 R4 and R5). A
+  missing `ruff` fails the stage by name with its install hint, locally and in CI, as every other
+  missing tool does. Every other stage's tools are unchanged.
+- **What holds it.** `scripts/tests/test_check_gate.py`'s `TOOLS` map names `ruff` after `cargo`
+  for `python`, and `test_every_stage_fails_by_name_without_each_tool_it_runs` reads it (SPEC-424
+  A4). This section adds no criterion of its own, so it adds no acceptance section.
+- **Files**: `scripts/check.sh`, `scripts/tests/test_check_gate.py` and this SPEC, each delivered
+  by SPEC-424.
