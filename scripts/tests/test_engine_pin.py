@@ -6,7 +6,8 @@ that carries the rebuild fix (SPEC-055 A1, A2, A3 and A5; ADR-058).
   commit id, and `anki_proto` from the same commit when it is patched too (SPEC-338 A14, ADR-348),
   every engine package in the lockfile comes from that commit, and `allow-git` names exactly the
   fork, `ankitects/rust-url`, fsrs-rs, the web-push-native fork, the sqlx fork, the uniffi-rs
-  fork and the askama fork (ADR-338; SPEC-342 A2; ADR-513; ADR-583; ADR-657).
+  fork, the askama fork and the frankenstein fork (ADR-338; SPEC-342 A2; ADR-513; ADR-583;
+  ADR-657).
 - A2 builds `deck-streak-ingest` twice in the workspace's own target directory and reads the second
   build's `Compiling`, `Dirty`, `Fresh` and `Finished` lines. With the fix, nothing is compiled or
   judged dirty, and cargo's own time stays inside R2's bound. Unpatched, the second build recompiles
@@ -68,6 +69,9 @@ UNIFFI_RS = "https://github.com/RexRenatus/uniffi-rs.git"
 #: rinja, rinja_derive and rinja_parser come from it until a release the bindings generator takes
 #: drops basic-toml (ADR-657).
 ASKAMA = "https://github.com/RexRenatus/askama.git"
+#: The maintainer's fork of frankenstein, at the published 0.52.1 with paste replaced by pastey;
+#: frankenstein comes from it until a frankenstein release drops paste (ADR-657).
+FRANKENSTEIN = "https://github.com/RexRenatus/frankenstein.git"
 #: The upstream release the engine runs (SPEC-055 R1).
 TAG = "26.09.3"
 #: The dependency line, in the one form its two readers parse: SPEC-022's A1 check and the report
@@ -110,8 +114,8 @@ def patched_rev(manifest):
 
 def pin_findings(manifest, lock, deny):
     """Why the engine is not the upstream tag patched by rev to a commit of the fork, with exactly
-    the fork, rust-url, fsrs-rs, web-push-native, sqlx, uniffi-rs and askama allowed; empty when
-    it is."""
+    the fork, rust-url, fsrs-rs, web-push-native, sqlx, uniffi-rs, askama and frankenstein
+    allowed; empty when it is."""
     found = []
     dependency = tomllib.loads(manifest).get("workspace", {}).get("dependencies", {}).get("anki")
     if DEPENDENCY not in manifest.splitlines():
@@ -165,10 +169,12 @@ def pin_findings(manifest, lock, deny):
         found.append(f"the lockfile records the patch as unused: {[p['name'] for p in unused]}")
     sources = tomllib.loads(deny).get("sources", {})
     allowed = sources.get("allow-git", [])
-    if sorted(allowed) != sorted([FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, UNIFFI_RS, ASKAMA]):
+    if sorted(allowed) != sorted(
+        [FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, UNIFFI_RS, ASKAMA, FRANKENSTEIN]
+    ):
         found.append(
             f"allow-git is {allowed}, not exactly the fork, rust-url, fsrs-rs, web-push-native, "
-            "sqlx, uniffi-rs and askama"
+            "sqlx, uniffi-rs, askama and frankenstein"
         )
     if sources.get("unknown-git") != "deny":
         found.append(f"unknown-git is {sources.get('unknown-git')!r}, not 'deny'")
@@ -209,7 +215,9 @@ def planted_lock(sources=None, unused=""):
     return body + unused
 
 
-def planted_deny(allowed=(FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, UNIFFI_RS, ASKAMA)):
+def planted_deny(
+    allowed=(FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, UNIFFI_RS, ASKAMA, FRANKENSTEIN),
+):
     listed = ", ".join(f'"{url}"' for url in allowed)
     return f'[sources]\nunknown-git = "deny"\nallow-git = [{listed}]\n'
 
@@ -679,63 +687,88 @@ class TheEngineIsPatchedByRev(unittest.TestCase):
                 planted_manifest(),
                 planted_lock(),
                 planted_deny(
-                    (UPSTREAM, FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, UNIFFI_RS, ASKAMA)
+                    (
+                        UPSTREAM,
+                        FORK,
+                        RUST_URL,
+                        FSRS_RS,
+                        WEB_PUSH,
+                        SQLX,
+                        UNIFFI_RS,
+                        ASKAMA,
+                        FRANKENSTEIN,
+                    )
                 ),
                 [
                     "allow-git is "
-                    f"{[UPSTREAM, FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, UNIFFI_RS, ASKAMA]}, "
-                    "not exactly the fork, rust-url, fsrs-rs, web-push-native, sqlx, uniffi-rs "
-                    "and askama"
+                    f"{[UPSTREAM, FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, UNIFFI_RS, ASKAMA, FRANKENSTEIN]}, "
+                    "not exactly the fork, rust-url, fsrs-rs, web-push-native, sqlx, uniffi-rs, "
+                    "askama and frankenstein"
                 ],
             ),
             "fsrs-rs not allowed": (
                 planted_manifest(),
                 planted_lock(),
-                planted_deny((FORK, RUST_URL, WEB_PUSH, SQLX, UNIFFI_RS, ASKAMA)),
+                planted_deny((FORK, RUST_URL, WEB_PUSH, SQLX, UNIFFI_RS, ASKAMA, FRANKENSTEIN)),
                 [
-                    f"allow-git is {[FORK, RUST_URL, WEB_PUSH, SQLX, UNIFFI_RS, ASKAMA]}, "
-                    "not exactly the fork, rust-url, fsrs-rs, web-push-native, sqlx, uniffi-rs "
-                    "and askama"
+                    "allow-git is "
+                    f"{[FORK, RUST_URL, WEB_PUSH, SQLX, UNIFFI_RS, ASKAMA, FRANKENSTEIN]}, "
+                    "not exactly the fork, rust-url, fsrs-rs, web-push-native, sqlx, uniffi-rs, "
+                    "askama and frankenstein"
                 ],
             ),
             "web-push-native's fork not allowed": (
                 planted_manifest(),
                 planted_lock(),
-                planted_deny((FORK, RUST_URL, FSRS_RS, SQLX, UNIFFI_RS, ASKAMA)),
+                planted_deny((FORK, RUST_URL, FSRS_RS, SQLX, UNIFFI_RS, ASKAMA, FRANKENSTEIN)),
                 [
-                    f"allow-git is {[FORK, RUST_URL, FSRS_RS, SQLX, UNIFFI_RS, ASKAMA]}, "
-                    "not exactly the fork, rust-url, fsrs-rs, web-push-native, sqlx, uniffi-rs "
-                    "and askama"
+                    "allow-git is "
+                    f"{[FORK, RUST_URL, FSRS_RS, SQLX, UNIFFI_RS, ASKAMA, FRANKENSTEIN]}, "
+                    "not exactly the fork, rust-url, fsrs-rs, web-push-native, sqlx, uniffi-rs, "
+                    "askama and frankenstein"
                 ],
             ),
             "sqlx's fork not allowed": (
                 planted_manifest(),
                 planted_lock(),
-                planted_deny((FORK, RUST_URL, FSRS_RS, WEB_PUSH, UNIFFI_RS, ASKAMA)),
+                planted_deny((FORK, RUST_URL, FSRS_RS, WEB_PUSH, UNIFFI_RS, ASKAMA, FRANKENSTEIN)),
                 [
-                    f"allow-git is {[FORK, RUST_URL, FSRS_RS, WEB_PUSH, UNIFFI_RS, ASKAMA]}, "
-                    "not exactly the fork, rust-url, fsrs-rs, web-push-native, sqlx, uniffi-rs "
-                    "and askama"
+                    "allow-git is "
+                    f"{[FORK, RUST_URL, FSRS_RS, WEB_PUSH, UNIFFI_RS, ASKAMA, FRANKENSTEIN]}, "
+                    "not exactly the fork, rust-url, fsrs-rs, web-push-native, sqlx, uniffi-rs, "
+                    "askama and frankenstein"
                 ],
             ),
             "uniffi-rs's fork not allowed": (
                 planted_manifest(),
                 planted_lock(),
-                planted_deny((FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, ASKAMA)),
+                planted_deny((FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, ASKAMA, FRANKENSTEIN)),
                 [
-                    f"allow-git is {[FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, ASKAMA]}, "
-                    "not exactly the fork, rust-url, fsrs-rs, web-push-native, sqlx, uniffi-rs "
-                    "and askama"
+                    "allow-git is "
+                    f"{[FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, ASKAMA, FRANKENSTEIN]}, "
+                    "not exactly the fork, rust-url, fsrs-rs, web-push-native, sqlx, uniffi-rs, "
+                    "askama and frankenstein"
                 ],
             ),
             "askama's fork not allowed": (
                 planted_manifest(),
                 planted_lock(),
-                planted_deny((FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, UNIFFI_RS)),
+                planted_deny((FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, UNIFFI_RS, FRANKENSTEIN)),
                 [
-                    f"allow-git is {[FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, UNIFFI_RS]}, "
-                    "not exactly the fork, rust-url, fsrs-rs, web-push-native, sqlx, uniffi-rs "
-                    "and askama"
+                    "allow-git is "
+                    f"{[FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, UNIFFI_RS, FRANKENSTEIN]}, "
+                    "not exactly the fork, rust-url, fsrs-rs, web-push-native, sqlx, uniffi-rs, "
+                    "askama and frankenstein"
+                ],
+            ),
+            "frankenstein's fork not allowed": (
+                planted_manifest(),
+                planted_lock(),
+                planted_deny((FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, UNIFFI_RS, ASKAMA)),
+                [
+                    f"allow-git is {[FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, UNIFFI_RS, ASKAMA]}, "
+                    "not exactly the fork, rust-url, fsrs-rs, web-push-native, sqlx, uniffi-rs, "
+                    "askama and frankenstein"
                 ],
             ),
             "a comment that names neither": (

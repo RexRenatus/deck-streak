@@ -247,6 +247,11 @@ uniffi_udl = { git = "https://github.com/RexRenatus/uniffi-rs.git", rev = "bfb6d
 rinja = { git = "https://github.com/RexRenatus/askama.git", rev = "efef71d57c2f9195da6f4c128f742b8ac865d26c" }
 rinja_derive = { git = "https://github.com/RexRenatus/askama.git", rev = "efef71d57c2f9195da6f4c128f742b8ac865d26c" }
 rinja_parser = { git = "https://github.com/RexRenatus/askama.git", rev = "efef71d57c2f9195da6f4c128f742b8ac865d26c" }
+# ADR-657: frankenstein from the maintainer's fork, at the published 0.52.1 with paste replaced by
+# pastey 0.2.3, so paste and RUSTSEC-2024-0436 leave the lock. Pinned by `rev`; the fork's branch
+# `deckstreak-pastey` keeps the commit fetchable. The entry goes when a frankenstein release drops
+# paste.
+frankenstein = { git = "https://github.com/RexRenatus/frankenstein.git", rev = "c757cbb994829a00b4fadb0c662fdf16ccd8c2a1" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
