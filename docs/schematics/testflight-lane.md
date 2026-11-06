@@ -87,6 +87,8 @@ crates to the XCFramework's build closure, read from the workspace's manifests.
         |    check: App Store profile, unexpired, for this certificate, app id's first
         |           label not `invalid` (the placeholder's)
         |    write certificate -> TMP/lane/original.p12 (0600); password -> openssl pkcs12 on stdin,
+        |      (a failed read: one class line, then the same read once more with -legacy;
+        |       a second failure refuses naming both classes; see "The certificate read")
         |    re-wrapped under a run-time passphrase -> security import -x -T codesign
         |    -> every certificate file REMOVED
         |    keychain TMP/lane/lane.keychain-db (generated password, search list set)
@@ -128,6 +130,36 @@ discarded when the job ends.
 | stopped | no part placed | success | "stopped before the upload: the credential is not placed" |
 | half-placed | some parts placed | failure at step 3 | credential: half placed; outcome: stopped at the preflight (its error line names the absent parts by role) |
 | profile refused | a development, expired or foreign profile, or one whose app id's first label is `invalid` | failure at step 5, before the archive | outcome: not uploaded: the signing or the upload failed (the step's error lines name the cause, redacted) |
+| certificate unreadable | the first certificate read and its `-legacy` read both fail | failure at step 5, before the archive | outcome: not uploaded: the signing or the upload failed (the step's error line names both reads' classes) |
 | awaiting the owner | release lane, parts placed | waits at the environment's review | (nothing until approved) |
 | uploaded | all placed, signing and upload succeed | success | "uploaded", with the number |
 | upload refused | App Store Connect refuses | failure at step 6 | outcome: not uploaded: the signing or the upload failed (the step's error lines name the cause, redacted) |
+
+## The certificate read, and its one retry
+
+```
+ TMP/lane/original.p12, the password line on stdin, the environment minus every credential part
+        |
+        v
+ openssl pkcs12 -in original.p12 -passin stdin -passout pass:<run-time passphrase>
+        |  ok    -> the re-wrap (-export) and the job keychain, as above
+        |  fails -> one class of its standard error, read in memory; print one line:
+        |           pkcs12 read failed: class <class>; reading once more with -legacy
+        v
+ openssl pkcs12 -legacy -in original.p12 ...   (the same arguments, stdin and environment)
+        |  ok    -> print "pkcs12 read under -legacy: ok"; the re-wrap and the job keychain
+        |  fails -> refuse: openssl pkcs12 read failed: first class <a>, -legacy class <b>
+        v
+ no third read; after a refusal no further tool runs
+```
+
+| class | openssl's standard error holds (case-blind; the first row that matches wins) |
+|---|---|
+| `wrong-password` | `invalid password` or `mac verify` |
+| `legacy-algorithm` | `unsupported` |
+| `option-refused` | `unknown option`, `unrecognized flag` or `bad option` |
+| `unrecognised` | none of the above |
+
+The class vocabulary is closed. openssl's standard error is never printed, logged, written to a
+file or put in a refusal, whole or in part; the re-wrap and every other tool call keep their
+arguments (SPEC-352 R9 and R13 as section 8 amends them, ADR-363's amendment).

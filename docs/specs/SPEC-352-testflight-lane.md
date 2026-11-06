@@ -114,6 +114,7 @@ R9. Signing: the certificate's password reaches `openssl pkcs12` on its standard
     native target and never a package target, and the archive builds the scheme `Harness`'s
     `Harness` target alone. No tracked file changes, and `ios/Config/Harness.xcconfig`'s opening
     comment says so.
+    Amended: section 8, the first certificate read retries once under -legacy.
 R10. Upload: only the upload step writes the key, as a mode `0600` file in a fresh mode `0700`
     directory under the runner's temporary directory, and removes that directory when the step
     ends, pass or fail. The step exports and uploads with `xcodebuild -exportArchive` and export
@@ -133,6 +134,7 @@ R13. The log publishes no private value. The identity's name, the profile's name
     writes its full output to a file under the runner's temporary directory that is never
     uploaded; a step prints only that output's error and warning lines, with each private value
     replaced. No step traces its commands, and the lane uploads no artifact.
+    Amended: section 8, the first certificate read retries once under -legacy.
 R14. Only the `app` job of the two lane files reads a secret, and only in its preflight, signing and
     upload steps, each reading exactly the parts it uses, in that step's own `env` under a neutral
     role-word variable name, never at the workflow's or the job's level and never in a `run` text.
@@ -218,6 +220,9 @@ R22. Ruling 461: the internal lane also starts on a push to `dev`, filtered to t
 | A23 | the app's property list declares `UILaunchScreen` and the four iPad orientations, and the project names the asset catalog among the target's sources and its app icon | `test_ios_icon.py`, `test_the_app_declares_what_an_upload_requires` |
 | A24 | the icon `scripts/ios_icon.py` writes decodes to a 1024 by 1024 RGB image with no alpha channel and no text chunk, every unfiltered pixel one opaque colour | `test_ios_icon.py`, `test_the_generated_icon_is_an_opaque_square_with_no_text` |
 | A25 | the internal lane's push filter watches exactly the crates the XCFramework links, read from the packages its cargo commands build and the workspace's manifests; a filter missing one linked crate, and a filter naming a crate the XCFramework does not link, are each refused by name | `test_testflight_workflows.py`, `test_the_internal_push_filter_watches_every_crate_the_xcframework_links` |
+| A26 | with recording shims on `PATH`, a failed first certificate read is followed by exactly one more read, whose arguments are the first read's with `-legacy` right after `pkcs12`, with the same standard input and a credential-free environment; when it succeeds, the step goes on to the re-wrap and the keychain import as before | `test_ios_lane.py`, `test_a_failed_certificate_read_is_read_once_more_under_legacy` |
+| A27 | each failed read prints exactly one line naming one class of the closed set, `wrong-password`, `legacy-algorithm`, `option-refused` or `unrecognised`, chosen in section 8's order (one case per class); a marker the shim plants in its standard error reaches neither the step's output nor its refusal | `test_ios_lane.py`, `test_each_failed_certificate_read_prints_one_class_and_nothing_of_openssl` |
+| A28 | when the `-legacy` read also fails, the step refuses naming both classes, and the shims record no third `pkcs12` read and no `security` call | `test_ios_lane.py`, `test_a_failed_legacy_read_refuses_naming_both_classes_and_runs_no_further_tool` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_the_internal_plan_refuses_any_event_or_ref_but_a_dispatch_on_dev
@@ -245,6 +250,9 @@ A22: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k te
 A23: python3 -m unittest discover -s scripts/tests -p test_ios_icon.py -k test_the_app_declares_what_an_upload_requires
 A24: python3 -m unittest discover -s scripts/tests -p test_ios_icon.py -k test_the_generated_icon_is_an_opaque_square_with_no_text
 A25: python3 -m unittest discover -s scripts/tests -p test_testflight_workflows.py -k test_the_internal_push_filter_watches_every_crate_the_xcframework_links
+A26: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_a_failed_certificate_read_is_read_once_more_under_legacy
+A27: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_each_failed_certificate_read_prints_one_class_and_nothing_of_openssl
+A28: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_a_failed_legacy_read_refuses_naming_both_classes_and_runs_no_further_tool
 ```
 
 Every criterion runs on Linux in the hygiene job's `python` stage, with no credential, no macOS
@@ -380,3 +388,45 @@ dispatch with no input. The plan refuses a run that a workflow's own token start
 - A5's refused dispatch moves from the tag's own ref to a branch named like it, `refs/heads/v0.2.0`,
   with the new message (ADR-419 D6); no assertion is removed.
 - The second path's criteria are SPEC-405 A1 to A7, and its rows are S40500 to S40515.
+
+### The first certificate read retries once under -legacy
+
+A lane run's signing step failed at its first read of the placed certificate, and its log said
+only `openssl pkcs12 failed with exit 1`: the step keeps every signing tool's output in memory and
+prints none of it (R13), so the log could not say whether the password does not open the bundle or
+the runner's openssl refuses the legacy algorithms a keychain export uses. R9 now reads the
+certificate once more with `-legacy` after a failed first read, and R13 now prints one fixed line
+per failed read, naming one class of a closed set and nothing of openssl's own output.
+
+The class is chosen in memory from openssl's standard error, by case-blind substring tests in this
+order: `wrong-password` when it holds `invalid password` or `mac verify`; `legacy-algorithm` when it
+holds `unsupported`; `option-refused` when it holds `unknown option`, `unrecognized flag` or
+`bad option`; else `unrecognised`. A failed first read prints
+`pkcs12 read failed: class <class>; reading once more with -legacy`, and the step runs the same read
+once more: the first read's arguments with `-legacy` right after `pkcs12`, the same password line on
+its standard input and the same credential-free environment. When that read succeeds the step
+prints `pkcs12 read under -legacy: ok` and signs as before, the re-wrap under the generated
+passphrase and the job keychain unchanged. When it fails too, the step refuses with
+`openssl pkcs12 read failed: first class <a>, -legacy class <b>`, the second class chosen by the
+same rule, and runs no third read and no further tool. openssl's standard error is never printed,
+logged, written to a file or put in a refusal, whole or in part.
+
+- A26 (R9 as amended) is new: a failed first read is followed by exactly one more read, the first
+  read's arguments with `-legacy` right after `pkcs12`, with the same standard input and a
+  credential-free environment; when it succeeds, the step goes on to the re-wrap and the keychain
+  import as before.
+- A27 (R13 as amended) is new: each failed read prints exactly one line naming one class of the
+  closed set, chosen in the order above (one case per class); a marker the shim plants in its
+  standard error reaches neither the step's output nor its refusal.
+- A28 (R9 as amended) is new: when the `-legacy` read also fails, the step refuses naming both
+  classes, and the shims record no third `pkcs12` read and no `security` call.
+
+| file | context | change |
+|---|---|---|
+| `scripts/ios_lane.py` | scripts | changed: the first certificate read retries once under `-legacy`, and each failed read prints one class line (R9 and R13 as amended) |
+| `scripts/tests/test_ios_lane.py` | tests | changed: A26 to A28 added, with the shim's refused-read setting |
+| `scripts/mutation-rows.d/S35200-S35299.json` | mutation | changed: rows for the new arms, appended |
+| `changelog.d/testflight-sign-legacy-352.md` | docs | added |
+| `docs/specs/SPEC-352-testflight-lane.md`, `docs/decisions/ADR-363-testflight-lane.md`, `docs/schematics/testflight-lane.md`, `docs/red-first/SPEC-352.md` | docs | changed: insert-only amendments |
+
+The amendment changes no workflow, no other tool call and no repository or environment setting.
