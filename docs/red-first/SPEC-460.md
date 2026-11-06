@@ -81,3 +81,10 @@ state in place of the shown one:
 
 Neither mutant failed to compile, and neither build printed a warning. CI's rows job decides both
 rows by id after the push.
+
+The rebuild onto current dev merged the original branch unchanged (659baba5). The formal obligations
+ledger, which joined dev after the original base, refuses a tree entry that has no row, so at that
+merge alone `TheFormalLedger.test_the_ledger_exists_in_schema_v1` and
+`TheFormalLedger.test_every_existing_entry_has_its_disposition_row` read red by name when the ledger
+tests ran on it. The commit that carries this paragraph adds the model's row and lists the entry in
+the ledger tests' tables; it adds no criterion, and the tests of A1 and A2 are unchanged.
