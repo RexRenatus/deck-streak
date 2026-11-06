@@ -192,6 +192,7 @@ so it has no line in the fence.
 | `changelog.d/release-legs-362.md` | release | added |
 
 Since ADR-509, the `baseline.log` row above is a fixture of cargo-mutants' own baseline log: each Rust leg now runs its own unmutated baseline under a time budget before cargo-mutants, which skips its own, and the verdict holds the log of a leg's own green baseline to R7.
+
 ## 5. What this does NOT do
 
 - It does not speed the census tests themselves. The progression census is the largest single
