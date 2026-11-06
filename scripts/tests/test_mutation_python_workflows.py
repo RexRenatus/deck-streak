@@ -156,5 +156,40 @@ class TheDocumentsTeachThePythonRun(unittest.TestCase):
         self.assertRegex(text(ADR_073), r"(?m)^status: accepted$")
 
 
+class ThePlanJobNamesTheStalePriceRows(unittest.TestCase):
+    """SPEC-429 A11 (R10, ADR-443 D2): the `mutation-plan` job runs `mutation-verdict.py stale` in
+    one step of its own, right after the rows legs step, whose command echoes a VOID line when the
+    verb exits non-zero, so the step cannot fail the job; it sets no output, and the `shards`
+    step's command is the one it was."""
+
+    def test_the_plan_job_runs_the_stale_verb_in_a_step_that_cannot_fail(self):
+        found = steps(jobs(workflow(CI)).get("mutation-plan", ""))
+        stale = [at for at, step in enumerate(found) if "mutation-verdict.py stale" in step]
+        legs = [at for at, step in enumerate(found) if "mutation_rows.py legs" in step]
+        shards = [at for at, step in enumerate(found) if "mutation-verdict.py shards" in step]
+        self.assertEqual(len(legs), 1, "the plan job holds one rows legs step")
+        self.assertEqual(stale, [legs[0] + 1], "one stale step, right after the rows legs step")
+        step = found[stale[0]]
+        self.assertRegex(
+            step,
+            r"(?m)^      - name: the price rows whose suite grew since their run, a warning that "
+            r"never fails the plan$",
+        )
+        self.assertRegex(
+            step,
+            r"""(?m)^        run: 'python3 scripts/mutation-verdict\.py stale \|\| echo "mutation: """
+            r"""stale: VOID: the check exited \$\?"'$""",
+        )
+        for word in examined("forbidden keys", ["id:", "continue-on-error:", "if:", "with:"]):
+            self.assertNotIn(word, step, f"the stale step carries {word}")
+        self.assertEqual(len(shards), 1, "the plan job holds one shards step")
+        self.assertIn(
+            '        run: python3 scripts/mutation-verdict.py shards --plan "$RUNNER_TEMP/mutation/'
+            'plan.json" --listed "$RUNNER_TEMP/mutation/listed.json" --python-listed '
+            '"$RUNNER_TEMP/mutation/python-listed.json"\n',
+            found[shards[0]],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
