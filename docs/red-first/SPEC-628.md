@@ -14,3 +14,11 @@ over the base's project read 0 errors and 0 warnings: the project read none of t
 A1: pnpm exec vitest run web/app/src/lib/type-check-project.test.ts -t "the type-check project names every browser suite, harness and configuration"
 A2: pnpm exec vitest run web/app/src/lib/type-check-project.test.ts -t "the census names a member the project omits"
 ```
+
+```red-first
+A1: red at e6a5777cbcac3fa0ee3271d64d0ea6325d4b767d: AssertionError: the project omits engine-harness, playwright.engine.config.ts, tests-engine, vite.engine.config.ts: expected [ 'engine-harness', …(3) ] to deeply equal []
+A1: green at 8e0a17718600f5b641197e8d5b20668328001f11
+A2: not red: guards the census's own selection and forms, which C2 holds
+```
+
+With a type error planted in each of the five engine files, the check read 0 errors at `877b3dfb` and 5 at `8e0a1771`, one in each file, and the check over the project read 0 errors and 0 warnings at `8e0a1771`.
