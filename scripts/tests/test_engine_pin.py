@@ -5,8 +5,8 @@ that carries the rebuild fix (SPEC-055 A1, A2, A3 and A5; ADR-058).
   tag, the root manifest's `[patch]` entry on the upstream URL takes `anki` from the fork by a full
   commit id, and `anki_proto` from the same commit when it is patched too (SPEC-338 A14, ADR-348),
   every engine package in the lockfile comes from that commit, and `allow-git` names exactly the
-  fork, `ankitects/rust-url`, fsrs-rs, the web-push-native fork and the sqlx fork (ADR-338;
-  SPEC-342 A2; ADR-513; ADR-583).
+  fork, `ankitects/rust-url`, fsrs-rs, the web-push-native fork, the sqlx fork and the uniffi-rs
+  fork (ADR-338; SPEC-342 A2; ADR-513; ADR-583; ADR-657).
 - A2 builds `deck-streak-ingest` twice in the workspace's own target directory and reads the second
   build's `Compiling`, `Dirty`, `Fresh` and `Finished` lines. With the fix, nothing is compiled or
   judged dirty, and cargo's own time stays inside R2's bound. Unpatched, the second build recompiles
@@ -60,6 +60,10 @@ WEB_PUSH = "https://github.com/RexRenatus/web-push-native.git"
 #: The maintainer's fork of sqlx, at the published 0.9.0 with sha2 moved to 0.11; all seven sqlx
 #: crates come from it until a sqlx release moves to sha2 0.11 (ADR-583).
 SQLX = "https://github.com/RexRenatus/sqlx.git"
+#: The maintainer's fork of uniffi-rs, at the published 0.29.1 without uniffi_bindgen's unused
+#: paste; all seven uniffi crates come from it until a uniffi release ADR-345 admits drops paste
+#: (ADR-657).
+UNIFFI_RS = "https://github.com/RexRenatus/uniffi-rs.git"
 #: The upstream release the engine runs (SPEC-055 R1).
 TAG = "26.09.3"
 #: The dependency line, in the one form its two readers parse: SPEC-022's A1 check and the report
@@ -102,7 +106,7 @@ def patched_rev(manifest):
 
 def pin_findings(manifest, lock, deny):
     """Why the engine is not the upstream tag patched by rev to a commit of the fork, with exactly
-    the fork, rust-url, fsrs-rs, web-push-native and sqlx allowed; empty when it is."""
+    the fork, rust-url, fsrs-rs, web-push-native, sqlx and uniffi-rs allowed; empty when it is."""
     found = []
     dependency = tomllib.loads(manifest).get("workspace", {}).get("dependencies", {}).get("anki")
     if DEPENDENCY not in manifest.splitlines():
@@ -156,10 +160,10 @@ def pin_findings(manifest, lock, deny):
         found.append(f"the lockfile records the patch as unused: {[p['name'] for p in unused]}")
     sources = tomllib.loads(deny).get("sources", {})
     allowed = sources.get("allow-git", [])
-    if sorted(allowed) != sorted([FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX]):
+    if sorted(allowed) != sorted([FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, UNIFFI_RS]):
         found.append(
-            f"allow-git is {allowed}, not exactly the fork, rust-url, fsrs-rs, web-push-native "
-            "and sqlx"
+            f"allow-git is {allowed}, not exactly the fork, rust-url, fsrs-rs, web-push-native, "
+            "sqlx and uniffi-rs"
         )
     if sources.get("unknown-git") != "deny":
         found.append(f"unknown-git is {sources.get('unknown-git')!r}, not 'deny'")
@@ -200,7 +204,7 @@ def planted_lock(sources=None, unused=""):
     return body + unused
 
 
-def planted_deny(allowed=(FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX)):
+def planted_deny(allowed=(FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, UNIFFI_RS)):
     listed = ", ".join(f'"{url}"' for url in allowed)
     return f'[sources]\nunknown-git = "deny"\nallow-git = [{listed}]\n'
 
@@ -669,37 +673,47 @@ class TheEngineIsPatchedByRev(unittest.TestCase):
             "upstream still allowed": (
                 planted_manifest(),
                 planted_lock(),
-                planted_deny((UPSTREAM, FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX)),
+                planted_deny((UPSTREAM, FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, UNIFFI_RS)),
                 [
-                    f"allow-git is {[UPSTREAM, FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX]}, "
-                    "not exactly the fork, rust-url, fsrs-rs, web-push-native and sqlx"
+                    "allow-git is "
+                    f"{[UPSTREAM, FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, UNIFFI_RS]}, "
+                    "not exactly the fork, rust-url, fsrs-rs, web-push-native, sqlx and uniffi-rs"
                 ],
             ),
             "fsrs-rs not allowed": (
                 planted_manifest(),
                 planted_lock(),
-                planted_deny((FORK, RUST_URL, WEB_PUSH, SQLX)),
+                planted_deny((FORK, RUST_URL, WEB_PUSH, SQLX, UNIFFI_RS)),
                 [
-                    f"allow-git is {[FORK, RUST_URL, WEB_PUSH, SQLX]}, "
-                    "not exactly the fork, rust-url, fsrs-rs, web-push-native and sqlx"
+                    f"allow-git is {[FORK, RUST_URL, WEB_PUSH, SQLX, UNIFFI_RS]}, "
+                    "not exactly the fork, rust-url, fsrs-rs, web-push-native, sqlx and uniffi-rs"
                 ],
             ),
             "web-push-native's fork not allowed": (
                 planted_manifest(),
                 planted_lock(),
-                planted_deny((FORK, RUST_URL, FSRS_RS, SQLX)),
+                planted_deny((FORK, RUST_URL, FSRS_RS, SQLX, UNIFFI_RS)),
                 [
-                    f"allow-git is {[FORK, RUST_URL, FSRS_RS, SQLX]}, "
-                    "not exactly the fork, rust-url, fsrs-rs, web-push-native and sqlx"
+                    f"allow-git is {[FORK, RUST_URL, FSRS_RS, SQLX, UNIFFI_RS]}, "
+                    "not exactly the fork, rust-url, fsrs-rs, web-push-native, sqlx and uniffi-rs"
                 ],
             ),
             "sqlx's fork not allowed": (
                 planted_manifest(),
                 planted_lock(),
-                planted_deny((FORK, RUST_URL, FSRS_RS, WEB_PUSH)),
+                planted_deny((FORK, RUST_URL, FSRS_RS, WEB_PUSH, UNIFFI_RS)),
                 [
-                    f"allow-git is {[FORK, RUST_URL, FSRS_RS, WEB_PUSH]}, "
-                    "not exactly the fork, rust-url, fsrs-rs, web-push-native and sqlx"
+                    f"allow-git is {[FORK, RUST_URL, FSRS_RS, WEB_PUSH, UNIFFI_RS]}, "
+                    "not exactly the fork, rust-url, fsrs-rs, web-push-native, sqlx and uniffi-rs"
+                ],
+            ),
+            "uniffi-rs's fork not allowed": (
+                planted_manifest(),
+                planted_lock(),
+                planted_deny((FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX)),
+                [
+                    f"allow-git is {[FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX]}, "
+                    "not exactly the fork, rust-url, fsrs-rs, web-push-native, sqlx and uniffi-rs"
                 ],
             ),
             "a comment that names neither": (

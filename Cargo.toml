@@ -227,6 +227,18 @@ sqlx-macros-core = { git = "https://github.com/RexRenatus/sqlx.git", rev = "9e82
 sqlx-mysql = { git = "https://github.com/RexRenatus/sqlx.git", rev = "9e8282470fd7a1d7d57cd20cad526e0996875012" }
 sqlx-postgres = { git = "https://github.com/RexRenatus/sqlx.git", rev = "9e8282470fd7a1d7d57cd20cad526e0996875012" }
 sqlx-sqlite = { git = "https://github.com/RexRenatus/sqlx.git", rev = "9e8282470fd7a1d7d57cd20cad526e0996875012" }
+# ADR-657: the seven uniffi crates from the maintainer's fork, at the published 0.29.1 with
+# uniffi_bindgen's unused paste dropped, so RUSTSEC-2024-0436 loses this parent. Pinned by `rev`;
+# the fork's branch `deckstreak-no-paste` keeps the commit fetchable. uniffi_internal_macros comes
+# from the same commit at 0.29.1, the version the release names. The entries go when a uniffi
+# release that ADR-345 admits drops paste.
+uniffi = { git = "https://github.com/RexRenatus/uniffi-rs.git", rev = "bfb6dd9eb92b9febcfe00583ed57bec2ee056c34" }
+uniffi_bindgen = { git = "https://github.com/RexRenatus/uniffi-rs.git", rev = "bfb6dd9eb92b9febcfe00583ed57bec2ee056c34" }
+uniffi_core = { git = "https://github.com/RexRenatus/uniffi-rs.git", rev = "bfb6dd9eb92b9febcfe00583ed57bec2ee056c34" }
+uniffi_internal_macros = { git = "https://github.com/RexRenatus/uniffi-rs.git", rev = "bfb6dd9eb92b9febcfe00583ed57bec2ee056c34" }
+uniffi_macros = { git = "https://github.com/RexRenatus/uniffi-rs.git", rev = "bfb6dd9eb92b9febcfe00583ed57bec2ee056c34" }
+uniffi_meta = { git = "https://github.com/RexRenatus/uniffi-rs.git", rev = "bfb6dd9eb92b9febcfe00583ed57bec2ee056c34" }
+uniffi_udl = { git = "https://github.com/RexRenatus/uniffi-rs.git", rev = "bfb6dd9eb92b9febcfe00583ed57bec2ee056c34" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

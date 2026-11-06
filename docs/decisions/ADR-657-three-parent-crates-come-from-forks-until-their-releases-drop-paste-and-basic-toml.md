@@ -22,8 +22,9 @@ fix, so each parent comes from a fork we keep, as ADR-513 and ADR-583 do.
 
 - D1. `frankenstein` comes from RexRenatus/frankenstein at the 0.52.1 release plus one commit that
   takes `pastey` 0.2.3 for `paste`, by `rev`, kept fetchable by branch `deckstreak-pastey`.
-- D2. The seven `uniffi` crates come from RexRenatus/uniffi-rs at the 0.29.1 release plus one commit
-  that drops `uniffi_bindgen`'s unused `paste`, by `rev`, kept fetchable by branch
+- D2. The seven `uniffi` crates come from RexRenatus/uniffi-rs at the 0.29.1 release plus two
+  commits, one that drops `uniffi_bindgen`'s unused `paste` and one that names `weedle2` by version
+  alone in `uniffi_udl`, as the published crate does, by `rev`, kept fetchable by branch
   `deckstreak-no-paste`; the version stays `=0.29.1`.
 - D3. `rinja`, `rinja_derive` and `rinja_parser` come from RexRenatus/askama at the `rinja` 0.3.5
   release plus one commit that parses the config with `toml` 0.5, by `rev`, kept fetchable by branch
