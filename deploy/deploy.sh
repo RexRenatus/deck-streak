@@ -32,8 +32,9 @@ DECKSTREAK_DEPLOY_ROOT DECKSTREAK_DEPLOY_UNIT_DIR DECKSTREAK_DEPLOY_ENV_FILE
 DECKSTREAK_DEPLOY_CADDY_DIR DECKSTREAK_DEPLOY_CADDYFILE DECKSTREAK_DEPLOY_CADDY_CONFIG
 DECKSTREAK_DEPLOY_READY_SECONDS DECKSTREAK_DEPLOY_READY_POLL DECKSTREAK_DEPLOY_KEEP
 '
-case "${1:-}" in
-caddy-install | caddy-remove)
+# The refusal, one function so a Lean entry can cover it (SPEC-473, ADR-490); each Caddy step
+# calls it before anything else.
+refuse_unlisted_settings() {
     for name in ${!DECKSTREAK_DEPLOY_@}; do
         named=
         for setting in $SETTINGS; do [ "$name" != "$setting" ] || named=1; done
@@ -54,6 +55,10 @@ caddy-install | caddy-remove)
         case $given in *" $key "*) echo "deploy: $key is given twice" >&2; exit 1 ;; esac
         given="$given$key "
     done
+}
+case "${1:-}" in
+caddy-install | caddy-remove)
+    refuse_unlisted_settings
     ;;
 esac
 
