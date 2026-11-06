@@ -2761,6 +2761,11 @@ class TheGateRunsInParallelJobs(unittest.TestCase):
                     "workflow-lint",
                     "base-is-dev",
                     "card-sandbox",
+                    # SPEC-618 adds the four bench jobs, a build job and an upload job per lane.
+                    "bench-rust-build",
+                    "bench-rust",
+                    "bench-web-build",
+                    "bench-web",
                 ]
             ),
         )
@@ -5746,7 +5751,7 @@ NOT_WORKFLOW_READS = {
         (
             "test_dispatch_shards",
             "TheReleaseFitsOneRun.test_a_listing_beyond_the_ceiling_is_refused_whole",
-            "plan_shards(entries('deck-streak-ingest', 12853))",
+            "plan_shards(entries('deck-streak-ingest', 12581))",
             1,
         ),
         (
@@ -7429,7 +7434,7 @@ NOT_WORKFLOW_READS = {
         (
             "test_release_rust_ceiling",
             "TheReleaseRunSizesItsRustLegsToItsCeiling.test_the_placeholder_ceiling_sizes_the_release_run_as_a_pull_request_run",
-            "rust_deal(self, listed, scripts, release, 189, 128)",
+            "rust_deal(self, listed, scripts, release, 185, 128)",
             1,
         ),
         (
@@ -7519,7 +7524,7 @@ NOT_WORKFLOW_READS = {
         (
             "test_release_rust_ceiling",
             "TheRustCeilingIsSignedAndTheRunbookSaysTheMethod.test_the_rust_ceiling_cites_the_signed_ruling_only_above_the_pull_request_ceiling",
-            "rust_ceiling_problems(source(189, ''), root)",
+            "rust_ceiling_problems(source(185, ''), root)",
             1,
         ),
         (
@@ -11932,3 +11937,210 @@ class TheHarnessWorkRunsInTwoJobsAndAVerdict(unittest.TestCase):
         for name, (body, wanted) in examined("planted bodies", list(plants.items())):
             with self.subTest(plant=name):
                 self.assertEqual(split_upload_problems(body), wanted, name)
+
+
+# SPEC-618: per lane a build job with no token and an upload job with CodSpeed's OIDC grant.
+BENCH_LANES = {"rust": ("bench-rust-build", "bench-rust"), "web": ("bench-web-build", "bench-web")}
+BENCH_JOBS = [job for pair in BENCH_LANES.values() for job in pair]
+BENCH_UPLOAD_ACTIONS = {
+    "rust": {
+        "actions/checkout",
+        "actions/download-artifact",
+        "CodSpeedHQ/action",
+    },
+    "web": {
+        "actions/checkout",
+        "pnpm/action-setup",
+        "actions/setup-node",
+        "actions/download-artifact",
+        "CodSpeedHQ/action",
+    },
+}
+BENCH_RUNS = {
+    "rust": "cargo codspeed run",
+    "web": "pnpm exec vitest bench --run --config vitest.bench.config.ts",
+}
+BENCH_BUILDS_NOTHING = ("cargo build", "pnpm install", "npm ", "protoc", "cargo install")
+# SPEC-618 R14: the Rust build job installs the one tool and carries it in its archive.
+BENCH_TOOL_INSTALL = "cargo install --locked cargo-codspeed --version 6.0.0"
+BENCH_TOOL_BINARY = "codspeed-tool/bin/cargo-codspeed"
+BENCH_TOOL_PATH = 'echo "$GITHUB_WORKSPACE/codspeed-tool/bin" >> "$GITHUB_PATH"'
+
+
+def bench_jobs(workflow):
+    """The four bench jobs of ci.yml by name; a job that is absent fails the test reading it."""
+    jobs = workflow["jobs"]
+    missing = [job for job in BENCH_JOBS if job not in jobs]
+    if missing:
+        raise AssertionError(f"ci.yml has no bench job {missing}")
+    return {job: jobs[job] for job in BENCH_JOBS}
+
+
+def needs_of(job):
+    value = job.get("needs") or []
+    return [str(need) for need in (value if isinstance(value, list) else [value])]
+
+
+def bench_plan_context(event, applicable, upload):
+    return {
+        "github.event_name": event,
+        "steps.plan.outputs.applicable": applicable,
+        "steps.plan.outputs.upload": upload,
+        **{f"needs.{build}.outputs.upload": upload for build, _ in BENCH_LANES.values()},
+    }
+
+
+class TheBenchLanes(unittest.TestCase):
+    def test_the_four_bench_jobs_are_needs_of_ci(self):
+        workflow = load("ci.yml")
+        needs = needs_of(workflow["jobs"]["ci"])
+        for job in examined("bench jobs", BENCH_JOBS):
+            self.assertIn(job, workflow["jobs"], f"ci.yml has no {job} job")
+            self.assertIn(job, needs, f"ci does not need {job}")
+        for build, upload in BENCH_LANES.values():
+            self.assertEqual(needs_of(workflow["jobs"][upload]), [build], upload)
+
+    def test_only_the_two_upload_jobs_hold_an_id_token_grant(self):
+        workflow = load("ci.yml")
+        jobs = bench_jobs(workflow)
+        for build, upload in BENCH_LANES.values():
+            self.assertEqual(dict(jobs[build].get("permissions") or {}), {"contents": "read"})
+            self.assertEqual(
+                dict(jobs[upload].get("permissions") or {}),
+                {"contents": "read", "id-token": "write"},
+            )
+        holders = [
+            name
+            for name, job in examined("ci jobs", list(workflow["jobs"].items()))
+            if "id-token" in (job.get("permissions") or {})
+        ]
+        self.assertEqual(sorted(holders), ["bench-rust", "bench-web"])
+        header = workflow_file_text(WORKFLOWS / "ci.yml").split("\njobs:\n", 1)[0]
+        said = " ".join(
+            line.lstrip("#").strip() for line in header.splitlines() if line.startswith("#")
+        )
+        for needle in ("bench-rust", "bench-web", "`id-token: write`", "SPEC-618"):
+            self.assertIn(needle, said, f"the ci.yml header does not name {needle}")
+
+    def test_an_upload_job_unpacks_and_uploads_and_builds_nothing(self):
+        jobs = bench_jobs(load("ci.yml"))
+        for lane, (_, upload) in examined("bench lanes", list(BENCH_LANES.items())):
+            with self.subTest(job=upload):
+                steps = jobs[upload]["steps"]
+                self.assertIn("run", steps[0], f"{upload} does not print the reason first")
+                uses = [action(step) for step in steps if step.get("uses")]
+                self.assertLessEqual(set(uses), BENCH_UPLOAD_ACTIONS[lane], upload)
+                self.assertIn("actions/download-artifact", uses, upload)
+                self.assertEqual(uses[-1], "CodSpeedHQ/action", upload)
+                runs = " ".join(str(step.get("run", "")) for step in steps)
+                self.assertIn("tar -xf", runs, f"{upload} does not unpack the archive")
+                for word in BENCH_BUILDS_NOTHING:
+                    self.assertNotIn(word, runs, f"{upload} runs {word.strip()}")
+                codspeed = (steps[-1].get("with") or {}) if uses else {}
+                self.assertEqual(str(codspeed.get("mode")), "simulation", upload)
+                self.assertEqual(str(codspeed.get("run")).strip(), BENCH_RUNS[lane], upload)
+                self.assertNotIn("token", codspeed, f"{upload} passes the action a token")
+                tools = [s for s in steps if action(s) == "taiki-e/install-action"]
+                self.assertEqual(len(tools), 0, upload)
+                if lane == "rust":
+                    build = BENCH_LANES[lane][0]
+                    installs = [
+                        str(s.get("run", ""))
+                        for s in jobs[build]["steps"]
+                        if action(s) == "taiki-e/install-action"
+                        or "cargo install" in str(s.get("run", ""))
+                    ]
+                    self.assertEqual(len(installs), 1, build)
+                    self.assertIn(BENCH_TOOL_INSTALL, installs[0], build)
+                    archive = " ".join(
+                        str(s.get("run", ""))
+                        for s in jobs[build]["steps"]
+                        if "tar -cf" in str(s.get("run", ""))
+                    )
+                    self.assertIn(BENCH_TOOL_BINARY, archive, build)
+                    self.assertIn(BENCH_TOOL_PATH, runs, upload)
+
+    def test_each_bench_job_starts_and_its_plan_gates_every_step(self):
+        jobs = bench_jobs(load("ci.yml"))
+        skipped = bench_plan_context("push", "false", "false")
+        measured = bench_plan_context("push", "true", "true")
+        for lane, (build, upload) in examined("bench lanes", list(BENCH_LANES.items())):
+            with self.subTest(job=build):
+                job = jobs[build]
+                self.assertNotIn("if", job, f"{build} does not always start")
+                for key in ("applicable", "upload", "reason"):
+                    wanted = f"${{{{ steps.plan.outputs.{key} }}}}"
+                    self.assertEqual(str((job.get("outputs") or {}).get(key)), wanted, key)
+                steps = job["steps"]
+                ids = [str(step.get("id", "")) for step in steps]
+                self.assertIn("plan", ids, f"{build} has no plan step")
+                plan = steps[ids.index("plan")]
+                command = str(plan.get("run", ""))
+                for part in (
+                    f"scripts/perf-plan.py --lane {lane}",
+                    "--base HEAD^1 --head HEAD",
+                    '--event "$EVENT"',
+                    '--repo "$REPO"',
+                    '--head-repo "$HEAD_REPO"',
+                    '--github-output "$GITHUB_OUTPUT"',
+                    '--step-summary "$GITHUB_STEP_SUMMARY"',
+                ):
+                    self.assertIn(part, command, f"{build}'s plan lacks {part}")
+                env = {key: str(value) for key, value in (plan.get("env") or {}).items()}
+                self.assertEqual(env.get("EVENT"), "${{ github.event_name }}", build)
+                self.assertEqual(env.get("REPO"), "${{ github.repository }}", build)
+                self.assertEqual(
+                    env.get("HEAD_REPO"), "${{ github.event.pull_request.head.repo.full_name }}"
+                )
+                checkout = [s for s in steps if action(s) == "actions/checkout"]
+                self.assertEqual(len(checkout), 1, build)
+                self.assertEqual(str((checkout[0].get("with") or {}).get("fetch-depth")), "2")
+                later = [
+                    step
+                    for step in steps[ids.index("plan") + 1 :]
+                    if "perf-record.py check" not in str(step.get("run", ""))
+                ]
+                for step in examined(f"{build} measured steps", later):
+                    self.assertIn("if", step, f"{build}: a step after the plan is ungated")
+                    self.assertFalse(condition(step["if"], skipped), step["if"])
+                    self.assertTrue(condition(step["if"], measured), step["if"])
+            with self.subTest(job=upload):
+                job = jobs[upload]
+                self.assertNotIn("if", job, f"{upload} does not always start")
+                steps = job["steps"]
+                said = " ".join(
+                    [str(steps[0].get("run", ""))]
+                    + [str(value) for value in (steps[0].get("env") or {}).values()]
+                )
+                self.assertIn(f"needs.{build}.outputs.reason", said, upload)
+                self.assertNotIn("if", steps[0], f"{upload} does not always print the reason")
+                for step in examined(f"{upload} gated steps", steps[1:]):
+                    self.assertIn("if", step, f"{upload}: a step after the reason is ungated")
+                    self.assertFalse(condition(step["if"], skipped), step["if"])
+                    self.assertTrue(condition(step["if"], measured), step["if"])
+
+    def test_the_record_check_reads_the_records_a_pull_request_adds(self):
+        jobs = bench_jobs(load("ci.yml"))
+        checks = {
+            job: [s for s in jobs[job]["steps"] if "perf-record.py check" in str(s.get("run", ""))]
+            for job in BENCH_JOBS
+        }
+        self.assertEqual(
+            {job: len(found) for job, found in checks.items()},
+            {"bench-rust-build": 1, "bench-rust": 0, "bench-web-build": 0, "bench-web": 0},
+        )
+        step = examined("record steps", checks["bench-rust-build"])[0]
+        command = str(step.get("run", ""))
+        for part in (
+            "git diff --name-only --diff-filter=AM HEAD^1 HEAD -- perf/regressions.d",
+            '"$RUNNER_TEMP/records"',
+            'scripts/perf-record.py check --dir "$RUNNER_TEMP/records" --branch "$HEAD_REF"'
+            " --benchmarks perf/benchmarks.txt",
+        ):
+            self.assertIn(part, command, f"the record step lacks {part}")
+        env = {key: str(value) for key, value in (step.get("env") or {}).items()}
+        self.assertEqual(env.get("HEAD_REF"), "${{ github.head_ref }}")
+        for event, runs in (("pull_request", True), ("push", False)):
+            for applicable in ("true", "false"):
+                context = bench_plan_context(event, applicable, applicable)
+                self.assertEqual(bool(condition(step["if"], context)), runs, (event, applicable))

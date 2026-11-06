@@ -23,6 +23,12 @@ debug = "line-tables-only"
 [profile.dev.package."*"]
 debug = false
 
+# SPEC-618 R9 (ADR-640): the benches build as the release build does, with line tables so a
+# profile names the file and line of each measured function. The release profile is unchanged.
+[profile.bench]
+inherits = "release"
+debug = "line-tables-only"
+
 # One home for every version. External crates are added here by the delivery whose ADR admits
 # them (docs/decisions); a member writes `name.workspace = true`.
 [workspace.dependencies]
@@ -177,6 +183,10 @@ web-push-native = { version = "0.5.0", default-features = false }
 base64ct = { version = "1.8.3", default-features = false, features = ["alloc"] }
 hkdf = "0.13.0"
 aes-gcm = "0.11.1"
+# ADR-640 (SPEC-618 R9): CodSpeed's Divan-compatible bench harness, renamed to `divan` so a bench
+# writes Divan's own attributes, pinned exactly. A dev-dependency of the three bench packages only;
+# no production dependency of any context changes.
+divan = { package = "codspeed-divan-compat", version = "=6.0.0" }
 
 # ADR-058 (#233): the engine's upstream tag above, replaced by a commit of the maintainer's fork that
 # is that tag plus one fix, so the engine's protobuf build script stops rerunning on every cargo

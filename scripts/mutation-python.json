@@ -102,6 +102,18 @@
       "test_mutation_rows_survivor_kills"
     ]
   },
+  "scripts/perf-plan.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_perf_plan"
+    ]
+  },
+  "scripts/perf-record.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_perf_record"
+    ]
+  },
   "scripts/public-scrub.py": {
     "dir": "scripts/tests",
     "modules": [

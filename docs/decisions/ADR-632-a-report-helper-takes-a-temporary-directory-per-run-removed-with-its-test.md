@@ -71,3 +71,34 @@ helper's directory, and these tests would not see it.
 
 SPEC-610 states the requirements and the criteria. SPEC-418 R6 is the costs record beside the
 report. Issue #833 reports the shared file.
+
+## Amendment: the with-block option, and a directory per call proved (SPEC-610 section 10)
+
+The options above leave out the nearest alternative to the chosen one: a
+`with tempfile.TemporaryDirectory()` block inside each helper, so that the directory is removed
+before the helper returns. It needs no `Tree.test`, and no caller could reach the directory after
+the call. It is not chosen, because the directory would be gone before a test could look into it:
+A1 and A2 read the directory after the call, to check that the costs record sits beside the
+report, and with a with-block that record would go with the directory before any test saw it. The
+chosen option also keeps the lifetime the fix in issue #833 names, a directory removed by
+`addCleanup`, which the scenario tree's own directory already has.
+
+A1 and A2 first called each helper once, so a helper that kept one directory per `Tree`, the
+second option above, would have passed them. Each test now calls its helper twice and asserts that
+the two reports went into two different directories.
+
+### Consequences of this amendment
+
+- Good: the tests now hold the per-call rule that sets the chosen option apart from one directory
+  per `Tree`.
+- Neutral: the decision is unchanged; no helper and no runner line changes.
+
+### Confirmation of this amendment
+
+Rows S61002 and S61003 each make a helper keep the directory of its first call; A1 and A2 kill them
+in the `mutation-rows` job.
+
+### What would make this amendment wrong
+
+A runner that no longer wrote its costs record beside `--report` (SPEC-418 R6). No test would then
+need the directory after the call, and a with-block would be the simpler choice.
