@@ -98,3 +98,19 @@ each alert is triaged, and a fixable one becomes a pull request into `dev`.
 
 Deploys run from your machine, from a tag on `main`: `bash deploy/deploy.sh vX.Y.Z` (RELEASING.md).
 The first deploy, and any change to a unit, Caddy, the firewall or a bucket, waits for your go.
+
+## 10. CodSpeed (the bench uploads, not part of the install)
+
+The `ci` workflow uploads bench results to CodSpeed by OIDC (SPEC-618, ADR-640). Set it up once:
+
+1. Sign in at codspeed.io with the GitHub account that owns this repository.
+2. Import the repository: in GitHub's install step choose "Only select repositories" and select
+   this repository alone.
+3. Choose the manual setup and decline the setup wizard: the wizard opens a pull request of its own,
+   and the bench jobs are already in `.github/workflows/ci.yml`.
+4. After the first upload, set "default branch for analysis" to `dev` in the repository's CodSpeed
+   settings.
+
+Create no CodSpeed token and no repository secret: the upload jobs authenticate by OIDC, and the
+CodSpeed action takes no `token` input. The CodSpeed check is not a required check. A pull request
+that keeps a slower change carries a regression record, as `perf/regressions.d/README.md` says.
