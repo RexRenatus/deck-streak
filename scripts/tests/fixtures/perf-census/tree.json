@@ -1,0 +1,7 @@
+{
+  "crates/engine-core/benches/scheduling.rs": "#[inline(never)]\nfn day_queue_measured(cards: &[QueueCard]) -> usize {\n    day_queue(cards).len()\n}\n\n#[divan::bench]\nfn day_queue(bencher: Bencher) {\n    bencher.bench(|| day_queue_measured(&CARDS));\n}\n",
+  "crates/ffi/benches/grading.rs": "#[divan::bench(args = [\"again\", \"good\"], sample_count = 10, sample_size = 1)]\nfn answer(bencher: Bencher, grade: &str) {\n    bencher.bench(|| answer_measured(grade));\n}\n",
+  "crates/fsrs7/benches/replay.rs": "#[divan::bench(args = [\"single\", \"batch\"])]\npub fn replay(bencher: Bencher, method: &str) {\n    bencher.bench(|| replay_measured(method));\n}\n",
+  "crates/engine-core/src/scheduler.rs": "#[divan::bench]\nfn not_a_bench_file() {}\n",
+  "web/app/bench/study/review.bench.ts": "bench('step', () => {\n  step(state, event);\n});\n"
+}

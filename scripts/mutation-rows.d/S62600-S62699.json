@@ -1,0 +1,14 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S62600-RUFF-TARGETS-AN-OLDER-PYTHON",
+        "ruff.toml",
+        "target-version = \"py312\"",
+        "target-version = \"py311\"",
+        "ruff.toml targets Python 3.11 again, which the target test refuses (SPEC-626 A1)",
+        "test_ruff_target.RuffTarget.test_ruff_targets_python_312"
+      ]
+    ]
+  }
+}

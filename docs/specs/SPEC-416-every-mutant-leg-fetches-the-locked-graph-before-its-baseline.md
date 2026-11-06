@@ -142,3 +142,16 @@ which occur once in `ci.yml` (the `rust` and `release` jobs' fetch lines follow 
 | `S41600-THE-MUTANT-LEG-FETCHES-NOTHING` | `.github/workflows/ci.yml` | the step's `run:` becomes `echo skipped` | `test_rows_jobs_fetch_graph.EveryMutantsJobFetchesTheLockedGraph.test_each_baseline_job_fetches_after_its_cache_restore_and_before_cargo_mutants` |
 | `S41601-THE-MUTANT-LEG-SWALLOWS-ITS-FETCH` | `.github/workflows/ci.yml` | the step's `run:` gains `\|\| true` | the same |
 | `S41602-THE-MUTANT-LEG-FETCHES-UNDER-ANOTHER-IF` | `.github/workflows/ci.yml` | the step's `if:` reads `== 'false'` | the same |
+
+## Amendment: every workflow's mutant legs fetch first, and the Rust leg reads red with no whole report (SPEC-458)
+
+SPEC-458 R1 reads R1's population from every workflow file under `.github/workflows/`, not from `ci.yml` alone, and holds R2 and
+R3 for each job it adds. This SPEC's own A1 still reads `ci.yml`; SPEC-458 A1 reads every workflow, and SPEC-458 A6 holds this
+SPEC's tests unchanged.
+
+- Section 5's first bullet is delivered by SPEC-458 R1 and R2: the weekly `rust` leg gains a fetch step right after its restore,
+  and the rehearsal's fetch moves to right after its restore. Its premise is corrected there: a scheduled run restores the default
+  branch's entry, not `dev`'s.
+- Section 5's third bullet is delivered by SPEC-458 R6: `mutation-rust` fails its job, after its report is uploaded, on any exit
+  outside the verdict's `WHOLE_EXITS`.
+- Section 5's fourth bullet is delivered by SPEC-458 R3 and R4: the warm-up fetches the locked graph before it builds and saves.

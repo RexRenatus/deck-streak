@@ -820,6 +820,16 @@ shape it reads, among them an allowed advisory, an exempt package, `warn-only`, 
 out, a severity floor, a check turned off, a licence left out, a tag in place of a SHA, a path
 filter, a second event, a condition and a second review.
 
+## Amendment: the release job keeps a release-profile cache of its own (SPEC-631)
+
+Insert-only; every earlier byte is kept. R1 is amended: besides the `rust` job, the `release` job
+saves the same paths under its own key
+`rust-release-<runner os>-<hashFiles('rust-toolchain.toml')>-<hashFiles('Cargo.lock')>`, only when
+R2 allows it, and only after `cargo clean --workspace --release` has left the dependencies'
+release-profile artifacts alone in `target/`. It restores only that key, falling back to the newest
+entry of the same toolchain pin. In `ci.yml` the `rust` job stays the only job that saves the debug
+key, and no other job restores the release key. R2 is unchanged.
+
 ## Amendment: the census set beside the engine set (SPEC-632)
 
 Insert-only. R13 is amended: the census set is one nextest filterset, `CENSUS_TESTS` in `scripts/check.sh`, stated nowhere else. The `test` stage runs `cargo nextest run --workspace --locked --no-fail-fast -E 'not (<the engine set> | <the census set>)'`, `test-engine` runs `-E '<the engine set>'` and a new `test-census` runs `-E '<the census set>'`. The commands differ only in the filterset, so every test of the workspace runs in exactly one of them.

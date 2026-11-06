@@ -1,0 +1,22 @@
+--------------------------------------------------------------------------------
+Profile data file 'callgrind.out.scheduling-whole' (creator: callgrind-3.22.0)
+--------------------------------------------------------------------------------
+Events recorded:  Ir
+Events shown:     Ir
+Event sort order: Ir
+Thresholds:       100
+Auto-annotation:  off
+
+--------------------------------------------------------------------------------
+Ir
+--------------------------------------------------------------------------------
+900,000 (100.0%)  PROGRAM TOTALS
+
+--------------------------------------------------------------------------------
+Ir                 file:function
+--------------------------------------------------------------------------------
+500,000 (55.56%)  /build/deck-streak/crates/ingest/tests/support/synthetic.rs:deck_streak_ingest::support::synthetic::build_shaped::h6666666666666666
+300,000 (33.33%)  /build/deck-streak/crates/engine-core/src/scheduler.rs:deck_streak_engine_core::scheduler::day_queue::h0123456789abcdef
+ 99,998 (11.11%)  /rustc/library/core/src/slice/sort/stable/mod.rs:core::slice::sort::stable::driftsort_main
+      1 ( 0.00%)  ???:???
+      1 ( 0.00%)  /build/deck-streak/crates/ffi/src/engine.rs:deck_streak_ffi::engine::Engine::new::h7777777777777777

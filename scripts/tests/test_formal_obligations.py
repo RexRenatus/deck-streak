@@ -92,6 +92,7 @@ SYNC_MODELS = ("tla/FullSyncChoice", "tla/MinimumClientHandshake", "tla/SyncCred
 ENGINE_TIED = SYNC_MODELS + (
     "tla/SyncSnapshotWindow",
     "tla/UndoOwnAnswer",
+    "tla/AnswerOnTheShownState",
     "tla/SkipDayWrite",
     "tla/AwardOnce",
     "tla/FoldSettlesOnce",
@@ -208,6 +209,7 @@ SYNC_CORE_TIES = [
 # The entries built after the 44 were dispositioned, each with its disposition and the
 # obligations that name it.
 NEW_ENTRIES = {
+    "tla/AnswerOnTheShownState": ("re-point", {"O11"}),
     "lean/CompanionDecide": ("keep", {"O6"}),
     "lean/DocsMermaidRead": ("keep", set()),
     "lean/SearchHolds": ("keep", {"O14"}),
@@ -215,6 +217,7 @@ NEW_ENTRIES = {
     "lean/MediaBind": ("keep", {"O13"}),
     "lean/MediaGc": ("keep", {"O13"}),
     "lean/IdSlot": ("keep", {"O12"}),
+    "tla/LogCaptureFloor": ("keep", set()),
 }
 # The 55 existing entries' dispositions.
 # They are the 43 that predate the sync entries, those five, the release gates' entry, and the
