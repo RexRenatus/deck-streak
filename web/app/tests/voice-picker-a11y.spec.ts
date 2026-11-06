@@ -78,7 +78,8 @@ function device(): void {
     css: '',
     labels: ['<1m', '<6m', '<10m', '4d'],
     undo: null,
-    late: false
+    late: false,
+    assisted: false
   };
   const answers: Record<string, unknown> = {
     open: { existed: true },
