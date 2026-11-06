@@ -58,6 +58,10 @@ final class SyncModel {
     /// The engine's number for a full sync: a normal sync's answer below it needs no choice.
     static let fullSync: UInt32 = 2
 
+    /// Called after each sync that completes with no full sync left to choose, a normal sync or
+    /// the normal sync after a written download, so the shell lists its decks again (SPEC-600 R5).
+    @ObservationIgnored var completed: @MainActor () async -> Void = {}
+
     private let engine: any SyncEngine
     private let store: SyncCredentialStore
     private let endpoint: String
@@ -81,6 +85,7 @@ final class SyncModel {
             let required = try await engine.sync(hostKey: hostKey, endpoint: endpoint)
             guard required >= Self.fullSync else {
                 message = "Synced."
+                await completed()
                 return
             }
             unsynced = try await engine.unsynced()

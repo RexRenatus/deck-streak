@@ -1,0 +1,22 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S60000-THE-SHELL-HANDS-THE-PHASE-TO-THE-MODEL",
+        "ios/App/Sources/DeckListView.swift",
+        "Task { await model.phaseChanged(phase) }",
+        "Task { _ = phase }",
+        "the shell hands no scene phase to the model, so a return from the background never syncs (SPEC-600 R1, A10)",
+        "test_ios_sync_moments.TheMomentsHaveOneSiteEach.test_the_shell_hands_each_scene_phase_and_the_review_close_to_the_model"
+      ],
+      [
+        "S60001-THE-CLOSE-GOES-THROUGH-THE-MODEL",
+        "ios/App/Sources/DeckListView.swift",
+        "Task { await model.closeReview() }",
+        "model.chosenDeck = nil",
+        "the review close skips the model, so a closed review never syncs (SPEC-600 R1, A10)",
+        "test_ios_sync_moments.TheMomentsHaveOneSiteEach.test_the_shell_hands_each_scene_phase_and_the_review_close_to_the_model"
+      ]
+    ]
+  }
+}
