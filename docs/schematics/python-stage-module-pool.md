@@ -5,8 +5,8 @@ through `scripts/python_stage.py` once SPEC-633 lands, from the call to the verd
 
 ```mermaid
 flowchart TD
-    stage["check.sh stage_python: need_python and need_cargo"] --> call["python3 scripts/python_stage.py scripts/tests tools/parity-oracle agent/tests"]
-    call --> list["each suite's top-level test_*.py modules, in name order"]
+    stage["check.sh stage_python: need_python and need_cargo"] --> runner["python3 scripts/python_stage.py scripts/tests tools/parity-oracle agent/tests"]
+    runner --> list["each suite's top-level test_*.py modules, in name order"]
     list --> split{"module matches a SERIAL_MODULES entry"}
     split -- "yes" --> named["one line per tail module: serial: suite/module (reason)"]
     split -- "no" --> pool["pool of PYTHON_STAGE_JOBS threads, default os.cpu_count(); 1 runs serially"]
