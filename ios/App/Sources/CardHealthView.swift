@@ -14,13 +14,19 @@ struct CardHealthView: View {
                     Section {
                         ForEach(Array(section.lines.enumerated()), id: \.offset) { _, line in
                             Text(line)
+                                .foregroundStyle(Color.tideInk)
                         }
                     } header: {
                         Text(section.title)
+                            .foregroundStyle(Color.tideMuted)
                             .accessibilityAddTraits(.isHeader)
                     }
+                    .listRowBackground(Color.tideCard)
+                    .listRowSeparatorTint(Color.tideBorder)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Color.tideBackground)
             .navigationTitle("Card info")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -32,5 +38,6 @@ struct CardHealthView: View {
                 }
             }
         }
+        .tint(Color.tideAccent)
     }
 }
