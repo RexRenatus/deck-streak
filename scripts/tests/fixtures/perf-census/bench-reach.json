@@ -1,0 +1,31 @@
+{
+  "schema": "deckstreak.perf-bench-reach.v1",
+  "derived_at": "0000000000000000000000000000000000000000",
+  "benches": {
+    "grading::answer": {
+      "total_ir": 500000,
+      "functions": [
+        "__memcpy_avx_unaligned_erms",
+        "deck_streak_engine_core::answer::shown_states"
+      ]
+    },
+    "replay::replay": {
+      "total_ir": 200000,
+      "functions": [
+        "<deck_streak_fsrs7::replay::Replay as core::iter::traits::iterator::Iterator>::next",
+        "core::slice::sort::stable::driftsort_main"
+      ]
+    },
+    "scheduling::day_queue": {
+      "total_ir": 400000,
+      "functions": [
+        "core::slice::sort::stable::driftsort_main",
+        "deck_streak_engine_core::scheduler::day_queue"
+      ]
+    }
+  },
+  "files": [
+    "crates/engine-core/src/scheduler.rs",
+    "crates/ingest/tests/support/synthetic.rs"
+  ]
+}
