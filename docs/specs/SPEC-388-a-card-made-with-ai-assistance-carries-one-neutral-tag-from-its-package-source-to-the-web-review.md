@@ -273,3 +273,26 @@ rows from `S38800`:
 `S38807` and `S38808` are killed by A10's census, the one native killer for code only the web
 engine's own target compiles. Web code is proved by StrykerJS on the pull request (C3), never by
 hand rows.
+
+## 10. Amendments
+
+This delivery is rebuilt on a later dev. Its first commit merges the earlier branch with no commit
+rewritten, and the commits after it change only what that later base moved. At that base:
+
+- The stride table re-point is `lib.rs` 62 to 64, `dispatch.rs` 158 to 161 and `protocol.ts` 333
+  to 335, resolved inside the merge; no row or control text changes.
+- Of the 322 `@phx covers` lines under `formal/`, 0 name a web path or `ai_assisted.rs`, 6 name
+  `crates/engine-core/src/dispatch.rs` and 9 name `crates/web-engine/src/wasm.rs`. Two models
+  cover `current_card`. Its cover in `formal/tla/UndoOwnAnswer/UndoOwnAnswer.tla` is re-stamped
+  inside the merge, and its cover in `formal/tla/DueReorderInput/DueReorderInput.tla` moves to the
+  same digest with the same abstraction comment line. The tag lookup moves none of either model's
+  variables, so no action, property or witness changes, and the other twelve covered items of the
+  two files stay byte for byte as they are.
+- The web app imports its own library as `#lib` with each file's extension. The two library
+  imports of `web/app/src/lib/study/ai-assisted-line.test.ts` take that form, and no other line of
+  that file changes.
+- Thirteen files under `web/app` carry `late` in a card view literal. Five of them are new to this
+  delivery, and each gains `assisted: false` with no assertion change:
+  `web/app/bench/study/review-screen.bench.ts`, `web/app/src/lib/study/card-health.test.ts`,
+  `web/app/src/lib/study/review-clock.test.ts`, `web/app/tests/a11y.spec.ts` and
+  `web/app/tests/voice-picker-a11y.spec.ts`.
