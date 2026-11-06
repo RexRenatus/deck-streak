@@ -30,6 +30,12 @@ Every figure was read at `dev` `83846ea3`, by the command named beside it.
 - The rows and the model read `crates/engine-core/src/dispatch.rs` and
   `crates/engine-core/src/answer.rs`, and the tests call `crates/engine-core/tests/support/mod.rs`;
   none of the three changes in this delivery.
+- Re-read at `dev` `2f9cb998`, where this delivery is rebuilt: both row finds still occur once in
+  `crates/engine-core/src/dispatch.rs` (`:502` and `:506`, with `run_answer` at `:501-507`);
+  `crates/engine-core/src/answer.rs` and `crates/engine-core/tests/support/mod.rs` are unchanged
+  since `36c4783a`, the branch's base; the three covered items hash to the digests the model stamps;
+  the engine's pinned rev is `dca72f35`; and the formal obligations ledger, which joined `dev` after
+  `83846ea3`, refuses a tree entry that has no row (R10).
 
 ## 2. Requirements
 
@@ -70,6 +76,12 @@ and no existing line of either changes.
 
 R9. No file under `crates/*/src` changes, and no test is removed, skipped or narrowed.
 
+R10. The formal obligations ledger, `formal/obligations.json`, holds `tla/AnswerOnTheShownState`:
+one row with the disposition `re-point`, an act, and the obligation `O11`, and `O11` names each of
+its two properties as a present artifact. The ledger's tests in
+`scripts/tests/test_formal_obligations.py` list it among the engine-tied entries and the new
+entries, so the tree's entries equal the ledger's rows (ADR-477 D7).
+
 ## 3. Acceptance criteria of SPEC-460
 
 | A | criterion | decided by |
@@ -98,6 +110,8 @@ A2: cargo test -p deck-streak-engine-core --test stale_answer -- --exact a_press
 | `docs/schematics/owner-press-to-recorded-grade.md` | 1 | amended: section 6 appended, no line changed |
 | `docs/red-first/SPEC-460.md` | 1 | added: the red-first record (section 10) |
 | `changelog.d/engine-stale-state-refusal-460.md` | 1 | added: the changelog fragment |
+| `formal/obligations.json` | 1 | changed: the model's row and its two properties under `O11` (R10) |
+| `scripts/tests/test_formal_obligations.py` | 1 | changed: the model listed among the engine-tied and the new entries (R10) |
 
 ## 5. What this does NOT cover
 
@@ -126,7 +140,7 @@ A2: cargo test -p deck-streak-engine-core --test stale_answer -- --exact a_press
 - The engine's backend lock was not read: the model takes the engine's check and write as one
   action, and ADR-477 names what would make that wrong.
 
-## 7. What decides R6 to R9
+## 7. What decides R6 to R10
 
 | R | decided by |
 |---|---|
@@ -134,6 +148,7 @@ A2: cargo test -p deck-streak-engine-core --test stale_answer -- --exact a_press
 | R7 | the repository's formal check of the one entry: both properties clean, each witness caught |
 | R8 | `git diff --numstat` of each amended file reads `<n> 0` |
 | R9 | `git diff --name-only` of the delivery names no `crates/*/src` path, and the weakening table is empty |
+| R10 | the ledger's tests `test_the_ledger_exists_in_schema_v1` and `test_every_existing_entry_has_its_disposition_row`, red by name on the merge alone and green with the row, the green read in the pull request run |
 
 ## 8. Mutation rows, band `S46000-S46099`
 

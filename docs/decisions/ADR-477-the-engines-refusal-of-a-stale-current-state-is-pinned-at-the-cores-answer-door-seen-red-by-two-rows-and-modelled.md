@@ -221,9 +221,30 @@ Chosen against:
 - Pinning each adapter's mapping of the refusal here: rejected, because these tests run the core
   door only; the adapter layer is a question for its own item.
 
+### D7. The rebuild onto current dev, and the model's row in the formal obligations ledger
+
+The branch is merged onto current dev unchanged, by one merge commit, and the commits on top cure
+what the merge meets. The formal obligations ledger, `formal/obligations.json`, joined dev after
+this delivery's first base, and its tests refuse a tree entry that has no row. So
+`tla/AnswerOnTheShownState` gains one row, the disposition `re-point` with the obligation `O11`, and
+`O11` names its two properties as present artifacts; the ledger's tests list it among the
+engine-tied entries and the new entries. The ledger's tests read the merge alone red by name,
+before the commits on top, and read green in the pull request run at the head. The three covered
+items are byte-identical at the new base, so the model's stamps stand, and each row is proved
+again by hand on the current engine pin.
+
+Chosen against:
+- `keep` with no obligation: rejected, because the model covers the engine's answer door, and `O11`
+  holds every engine-tied entry to be retired or re-pointed when the engine is replaced, as it does
+  `tla/UndoOwnAnswer` and `tla/DueReorderInput`, which cover the same door's neighbours.
+- `retire`: rejected, because the refusal stays a claim of ADR-376 D3 for as long as the engine
+  answers.
+- Re-basing or squashing the original commits: rejected, because the merge keeps every commit the
+  record names as an ancestor of the head.
+
 ## Decision Outcome
 
-D1 to D6 as chosen above. The core gains no line. Its test suite gains `tests/stale_answer.rs`
+D1 to D7 as chosen above. The core gains no line. Its test suite gains `tests/stale_answer.rs`
 with A1 and A2, the band gains `S46001` and `S46002`, `formal/tla` gains `AnswerOnTheShownState`,
 and ADR-376 and the answer's schematic gain one appended section each.
 
