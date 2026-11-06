@@ -57,3 +57,8 @@ an up-to-date head.
   a bypass that skips checks the queue never ran would make the exemption unsafe.
 - A queue that stops testing each batch on the tip of dev would leave dev with no up-to-date check at
   all.
+
+## Note, appended: the public record of the owner's ruling
+
+- The change made by the owner's ruling reached dev in pull request #1151, the public pull request
+  that carried this record and the three tests that replace the two that held the old values.
