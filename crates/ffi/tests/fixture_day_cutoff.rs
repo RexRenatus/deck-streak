@@ -84,11 +84,14 @@ fn text(bytes: Vec<u8>) -> String {
 }
 
 /// A scratch directory for one test, named by the test and this process, and absent before the
-/// test writes it.
+/// test writes it: a directory that an earlier run left under the same id is removed first.
 fn scratch(test: &str) -> PathBuf {
     let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
         .join("ffi-fixture-day-cutoff")
         .join(format!("{test}-{}", std::process::id()));
+    if dir.exists() {
+        std::fs::remove_dir_all(&dir).expect("an earlier run's scratch directory is removed");
+    }
     assert!(
         !dir.exists(),
         "the scratch directory {} is absent before the test writes it",
