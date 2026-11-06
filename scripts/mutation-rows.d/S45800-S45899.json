@@ -1,0 +1,102 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S45800-THE-WEEKLY-RUST-LEG-FETCHES-NOTHING",
+        ".github/workflows/mutation-weekly.yml",
+        "      - name: the locked dependency graph, every target's packages (the census reads it offline at the baseline)\n        run: cargo fetch --locked --manifest-path Cargo.toml\n",
+        "      - name: the locked dependency graph, every target's packages (the census reads it offline at the baseline)\n        run: echo skipped\n",
+        "the weekly rust leg's fetch step runs nothing",
+        "test_rows_jobs_fetch_graph.AllWorkflowsBaselineJobsFetchTheLockedGraph.test_each_baseline_job_of_every_workflow_fetches_after_its_cache_restore_and_before_cargo_mutants"
+      ],
+      [
+        "S45801-THE-WEEKLY-RUST-LEG-SWALLOWS-ITS-FETCH",
+        ".github/workflows/mutation-weekly.yml",
+        "      - name: the locked dependency graph, every target's packages (the census reads it offline at the baseline)\n        run: cargo fetch --locked --manifest-path Cargo.toml\n",
+        "      - name: the locked dependency graph, every target's packages (the census reads it offline at the baseline)\n        run: cargo fetch --locked --manifest-path Cargo.toml || true\n",
+        "the weekly rust leg's fetch swallows its failure",
+        "test_rows_jobs_fetch_graph.AllWorkflowsBaselineJobsFetchTheLockedGraph.test_each_baseline_job_of_every_workflow_fetches_after_its_cache_restore_and_before_cargo_mutants"
+      ],
+      [
+        "S45802-THE-REHEARSAL-FETCHES-NOTHING",
+        ".github/workflows/mutation-weekly.yml",
+        "      - name: the locked dependency graph, every target's packages (the rehearsal's baseline reads it as a shard's does)\n        run: cargo fetch --locked --manifest-path Cargo.toml\n",
+        "      - name: the locked dependency graph, every target's packages (the rehearsal's baseline reads it as a shard's does)\n        run: echo skipped\n",
+        "the rehearsal's fetch step runs nothing",
+        "test_rows_jobs_fetch_graph.AllWorkflowsBaselineJobsFetchTheLockedGraph.test_each_baseline_job_of_every_workflow_fetches_after_its_cache_restore_and_before_cargo_mutants"
+      ],
+      [
+        "S45803-THE-REHEARSAL-SWALLOWS-ITS-FETCH",
+        ".github/workflows/mutation-weekly.yml",
+        "      - name: the locked dependency graph, every target's packages (the rehearsal's baseline reads it as a shard's does)\n        run: cargo fetch --locked --manifest-path Cargo.toml\n",
+        "      - name: the locked dependency graph, every target's packages (the rehearsal's baseline reads it as a shard's does)\n        run: cargo fetch --locked --manifest-path Cargo.toml || true\n",
+        "the rehearsal's fetch swallows its failure",
+        "test_rows_jobs_fetch_graph.AllWorkflowsBaselineJobsFetchTheLockedGraph.test_each_baseline_job_of_every_workflow_fetches_after_its_cache_restore_and_before_cargo_mutants"
+      ],
+      [
+        "S45804-THE-WARM-UP-FETCHES-NOTHING",
+        ".github/workflows/rust-cache.yml",
+        "        if: ${{ steps.lookup.outputs.cache-hit != 'true' }}\n        run: cargo fetch --locked --manifest-path Cargo.toml\n",
+        "        if: ${{ steps.lookup.outputs.cache-hit != 'true' }}\n        run: echo skipped\n",
+        "the warm-up's fetch step runs nothing",
+        "test_rows_jobs_fetch_graph.EveryRustCacheSaveFetchesTheLockedGraph.test_each_job_that_saves_the_rust_cache_fetches_after_its_restore_and_before_its_save"
+      ],
+      [
+        "S45805-THE-WARM-UP-SWALLOWS-ITS-FETCH",
+        ".github/workflows/rust-cache.yml",
+        "        if: ${{ steps.lookup.outputs.cache-hit != 'true' }}\n        run: cargo fetch --locked --manifest-path Cargo.toml\n",
+        "        if: ${{ steps.lookup.outputs.cache-hit != 'true' }}\n        run: cargo fetch --locked --manifest-path Cargo.toml || true\n",
+        "the warm-up's fetch swallows its failure",
+        "test_rows_jobs_fetch_graph.EveryRustCacheSaveFetchesTheLockedGraph.test_each_job_that_saves_the_rust_cache_fetches_after_its_restore_and_before_its_save"
+      ],
+      [
+        "S45806-THE-WARM-UP-FETCHES-ON-A-HIT",
+        ".github/workflows/rust-cache.yml",
+        "        if: ${{ steps.lookup.outputs.cache-hit != 'true' }}\n        run: cargo fetch --locked --manifest-path Cargo.toml\n",
+        "        run: cargo fetch --locked --manifest-path Cargo.toml\n",
+        "the warm-up's fetch runs on an exact hit",
+        "test_rust_cache_workflow.TheRustCacheWorkflow.test_it_looks_the_exact_key_up_and_every_later_step_stops_on_a_hit"
+      ],
+      [
+        "S45807-THE-RUST-LEG-PASSES-A-RED-BASELINE",
+        ".github/workflows/ci.yml",
+        "case \"$rc\" in 0|2|3) ;;",
+        "case \"$rc\" in 0|2|3|4) ;;",
+        "the Rust leg passes exit 4, a red baseline",
+        "test_mutation_workflows.TheMutantLegReadsRedWithNoWholeReport.test_the_rust_leg_fails_its_job_on_every_exit_outside_the_whole_exits"
+      ],
+      [
+        "S45808-THE-RUST-LEG-FAILS-ON-ITS-SURVIVORS",
+        ".github/workflows/ci.yml",
+        "case \"$rc\" in 0|2|3) ;;",
+        "case \"$rc\" in 0|3) ;;",
+        "the Rust leg fails on exit 2, survivors in a whole report",
+        "test_mutation_workflows.TheMutantLegReadsRedWithNoWholeReport.test_the_rust_leg_fails_its_job_on_every_exit_outside_the_whole_exits"
+      ],
+      [
+        "S45809-THE-RUST-LEG-FAILS-ON-ITS-TIMEOUTS",
+        ".github/workflows/ci.yml",
+        "case \"$rc\" in 0|2|3) ;;",
+        "case \"$rc\" in 0|2) ;;",
+        "the Rust leg fails on exit 3, timeouts in a whole report",
+        "test_mutation_workflows.TheMutantLegReadsRedWithNoWholeReport.test_the_rust_leg_fails_its_job_on_every_exit_outside_the_whole_exits"
+      ],
+      [
+        "S45810-THE-RUST-LEG-FAILS-WHEN-ALL-ARE-CAUGHT",
+        ".github/workflows/ci.yml",
+        "case \"$rc\" in 0|2|3) ;;",
+        "case \"$rc\" in 2|3) ;;",
+        "the Rust leg fails on exit 0, every mutant caught",
+        "test_mutation_workflows.TheMutantLegReadsRedWithNoWholeReport.test_the_rust_leg_fails_its_job_on_every_exit_outside_the_whole_exits"
+      ],
+      [
+        "S45811-THE-RUST-LEG-NEVER-FAILS",
+        ".github/workflows/ci.yml",
+        "the verdict reads it VOID\"; exit \"$rc\" ;; esac",
+        "the verdict reads it VOID\"; true ;; esac",
+        "the Rust leg never fails its job on a partial leg",
+        "test_mutation_workflows.TheMutantLegReadsRedWithNoWholeReport.test_the_rust_leg_fails_its_job_on_every_exit_outside_the_whole_exits"
+      ]
+    ]
+  }
+}
