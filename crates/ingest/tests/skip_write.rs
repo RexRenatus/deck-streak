@@ -2,6 +2,8 @@
 //! layer (SPEC-083 A5, A9, A25, A26, A28, A29, A34, A36, A38 to A40, A44, A47 to A49, A53, A54 and
 //! A56). This target is compiled at edition 2021 so that its tests set the process's zone without
 //! `unsafe` (SPEC-083 section 3), and every test in it holds the target's one lock for its whole run.
+//! The other client its take tests play stamps its change past the server's and has its sync
+//! checked (SPEC-459 A1 and A2).
 
 // An integration test is test code: its helpers panic on a fixture that cannot be built, and it
 // prints the examined counts on purpose.
@@ -1624,6 +1626,85 @@ fn a_card_that_changed_between_the_preview_and_the_converge_is_left_alone() {
     );
     let pushed: Vec<i64> = scene.pushed().iter().map(|card| card.id).collect();
     assert_eq!(pushed, kept, "the push carries neither card");
+}
+
+/// One year in milliseconds: a collection stamp this far ahead of the clock is one that no whole
+/// second of the clock reaches (SPEC-459 A1).
+const A_YEAR_MS: i64 = 365 * 24 * 60 * 60 * 1000;
+
+#[test]
+fn a_change_on_another_client_stamps_its_copy_one_past_the_stamp_it_found() {
+    let _zone = zone(UTC);
+    let scene = Scene::offline(&SKIP_CARDS, SkipSetup::UTC, StudyDayRule::default());
+    let copy = scene.copy();
+    let stamps = examined(
+        "stamp(s)",
+        vec![synthetic::modified(&copy), now().epoch_millis() + A_YEAR_MS],
+    );
+    for found in stamps {
+        synthetic::run_sql(&copy, &format!("update col set mod = {found}"));
+        synthetic::change_cards(&copy, &[(SKIP_FLOOR + 12, 1)]);
+        assert_eq!(
+            synthetic::modified(&copy),
+            found + 1,
+            "the other client's change stamps its copy one past the stamp {found} it found \
+             (SPEC-459 R1)"
+        );
+    }
+}
+
+#[test]
+fn an_other_clients_sync_that_carries_no_change_is_refused_by_name() {
+    const TEST: &str = "an_other_clients_sync_that_carries_no_change_is_refused_by_name";
+    if support::role().as_deref() == Some(support::SERVER) {
+        return support::serve();
+    }
+    let _zone = zone(UTC);
+    let scene = Scene::served(TEST, &SKIP_CARDS, SkipSetup::UTC, StudyDayRule::default());
+    let server = synthetic::modified(&scene.copy());
+    let other = scene.other("other.anki2");
+    let today_due = RslibEngine
+        .due_cards(&other, "prop:due=0")
+        .expect("the other client's copy reads")[0]
+        .due;
+    synthetic::change_cards(&other, &[(SKIP_FLOOR + 12, today_due)]);
+    // The seam the take test needed, forced: the change is pending, and the other client's stamp
+    // is the server's, so its sync has nothing to exchange.
+    synthetic::run_sql(&other, &format!("update col set mod = {server}"));
+    scene.clear();
+    let refusal = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        support::sync_on_another_client(&scene.runtime, &other, scene.endpoint());
+    }))
+    .err()
+    .map(|payload| {
+        payload
+            .downcast_ref::<String>()
+            .cloned()
+            .or_else(|| {
+                payload
+                    .downcast_ref::<&str>()
+                    .map(|text| (*text).to_owned())
+            })
+            .unwrap_or_default()
+    })
+    .unwrap_or_default();
+    assert!(
+        refusal.contains("the other client's sync carried no change to the server"),
+        "a sync that left the other client's stamp at the server's is refused by name \
+         (SPEC-459 R2): {refusal:?}"
+    );
+    let recording = scene.recording.as_ref().expect("the layer");
+    for (method, expected) in [("meta", 1), ("finish", 0)] {
+        let sent = recording
+            .requests()
+            .iter()
+            .filter(|request| request.method == method)
+            .count();
+        assert_eq!(
+            sent, expected,
+            "the other client's sync opened once and exchanged nothing: {method}"
+        );
+    }
 }
 
 #[test]
