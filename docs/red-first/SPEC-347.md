@@ -137,3 +137,9 @@ The red below is quoted from the run of the pull request at 6985d269 (run 421373
 ```text
 A16: red at 6985d269: run 42137382843, job `release-and-app`, on the iPhone and on the iPad: AppModelTests.swift:52: error: -[DeckStreakTests.AppModelTests test_a16_a_chosen_decks_review_shows_once_its_first_answer_is_in] : failed - A16: the collection and the review open within 30 seconds; the decks listed read 1 and the phases handed []
 ```
+
+The amended A16 turns green at 08883787, the commit that removed the planted stall, and the commits after 08883787 change only documents; the run of the pull request at this delivery head reads A16 green on both simulators:
+
+```text
+A16: green at 08883787
+```
