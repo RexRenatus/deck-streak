@@ -47,3 +47,13 @@ ledger test's new entries; 8abe309c adds the entry's ledger row, keep with no ob
 ledger test reads red by name at 775c1894 and at d4917551, and green at 8abe309c. Nothing after
 8abe309c changes the deploy scripts, the tests, the ledger or the entry:
 `git diff --quiet 8abe309c HEAD -- deploy scripts formal` exits 0.
+
+A second merge commit, e4df8d36, brings this branch onto a later dev. It keeps both sides'
+lines in `formal/lean/Formal/Vectors.lean` and `formal/obligations.json`: against its first
+parent, the dev it merges onto, it adds to those two files and to
+`scripts/tests/test_formal_obligations.py` only this entry's import and arm, its ledger row and
+its line among the ledger test's new entries, and the ledger test reads green at e4df8d36. That
+merge also brings dev's own changes under `scripts` and `formal`, so the check above now holds
+for this delivery's own files, and no later commit changes them:
+`git diff --quiet 8abe309c HEAD -- deploy scripts/tests/test_deploy_scripts.py scripts/mutation-rows.d/S47300-S47399.json formal/lean/Formal/DeployEntryRefusal.lean formal/lean/Formal/DeployEntryRefusalVectors.lean formal/vectors/deploy-entry-refusal.jsonl`
+exits 0.
