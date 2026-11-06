@@ -622,6 +622,7 @@ jobs:
           python3 scripts/memory_scope.py --report "$out" -- cargo mutants --no-shuffle -vV --in-place --in-diff "$RUNNER_TEMP/mutation/git.diff" --baseline=skip --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 2300 --build-timeout 600 --output "$out" || rc=$?
           echo "$rc" > "$out/cargo-mutants.exit"
           echo "cargo-mutants exited $rc"
+          case "$rc" in 0|2|3) ;; *) echo "mutation-rust: shard $SHARD left no whole report (cargo-mutants exited $rc); the verdict reads it VOID"; exit "$rc" ;; esac
       - name: keep the shard's report
         if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -629,6 +630,16 @@ jobs:
           name: mutation-rust-shard-${{ matrix.shard }}
           path: ${{ runner.temp }}/shards/
           if-no-files-found: warn
+      # A leg whose own baseline is not green ran no mutant and left no whole report: it fails its
+      # job here, after its report is kept, so its colour agrees with the verdict, which reads that
+      # record VOID by name (SPEC-458 R17, ADR-475 D10).
+      - name: a leg whose own baseline is not green fails its job, after its report is kept
+        if: ${{ needs.mutation-plan.outputs.rust == 'true' && steps.baseline.outputs.green != 'true' }}
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: |
+          echo "mutation-rust: shard $SHARD left no whole report (its baseline recorded exit $(cat "$RUNNER_TEMP/shards/mutation-rust-shard-$SHARD/baseline/baseline.exit")); the verdict reads it VOID"
+          exit 1
 
   # One job per shard of the plan's Python matrix: the runner over the diff's Python mutants, each
   # shard's mutants round-robin as the plan sized them, stopping a file at its first survivor. It
