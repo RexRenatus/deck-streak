@@ -38,14 +38,23 @@ final class AppModel {
     private let session = EngineSession()
     private let store: SyncCredentialStore
     private var started = false
+    /// Builds the review of a chosen deck on its session; a test hands in a review that reads no
+    /// device voice (SPEC-347 A16).
+    private let makeReview: @MainActor (Deck, ReviewSession) -> ReviewModel
 
     /// Reads the stored host key once, so a stored item reads as signed in at launch with no
-    /// network call (R8).
-    init(configuration: SyncConfiguration = .current) {
+    /// network call (R8). The review it opens is the review model's own unless one is handed in.
+    init(
+        configuration: SyncConfiguration = .current,
+        review: @escaping @MainActor (Deck, ReviewSession) -> ReviewModel = { deck, session in
+            ReviewModel(deck: deck, session: session)
+        }
+    ) {
         let store = SyncCredentialStore(
             service: configuration.endpoint, account: configuration.user)
         self.configuration = configuration
         self.store = store
+        makeReview = review
         user = configuration.user
         signedIn = (try? store.hostKey()) != nil
         sync = SyncModel(engine: session, store: store, endpoint: configuration.endpoint)
@@ -72,7 +81,7 @@ final class AppModel {
     /// (SPEC-348 R9, SPEC-347 section 11).
     func openReview() async {
         let opening = chosenDeck.map { deck in
-            ReviewModel(deck: deck, session: ReviewSession(engine: session))
+            makeReview(deck, ReviewSession(engine: session))
         }
         review = nil
         await opening?.start()
