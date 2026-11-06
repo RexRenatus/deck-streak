@@ -29,3 +29,5 @@ The rebuild onto current dev merged the original branch unchanged. There the leg
 baseline first and cargo-mutants skips its own, so a red baseline never reaches the colour line. The
 commit after the documents adds the tests of A13 and A14 with every workflow untouched, and a later
 commit adds the step they read.
+
+The step A13 reads and its three rows come in their own commit, which changes no test file.

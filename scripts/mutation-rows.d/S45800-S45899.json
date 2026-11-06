@@ -58,11 +58,11 @@
         "test_rust_cache_workflow.TheRustCacheWorkflow.test_it_looks_the_exact_key_up_and_every_later_step_stops_on_a_hit"
       ],
       [
-        "S45807-THE-RUST-LEG-PASSES-A-RED-BASELINE",
+        "S45807-THE-RUST-LEG-PASSES-EXIT-4",
         ".github/workflows/ci.yml",
         "case \"$rc\" in 0|2|3) ;;",
         "case \"$rc\" in 0|2|3|4) ;;",
-        "the Rust leg passes exit 4, a red baseline",
+        "the Rust leg passes exit 4, an exit outside the whole exits",
         "test_mutation_workflows.TheMutantLegReadsRedWithNoWholeReport.test_the_rust_leg_fails_its_job_on_every_exit_outside_the_whole_exits"
       ],
       [
@@ -96,6 +96,30 @@
         "the verdict reads it VOID\"; true ;; esac",
         "the Rust leg never fails its job on a partial leg",
         "test_mutation_workflows.TheMutantLegReadsRedWithNoWholeReport.test_the_rust_leg_fails_its_job_on_every_exit_outside_the_whole_exits"
+      ],
+      [
+        "S45812-THE-LEG-STAYS-GREEN-ON-A-RED-BASELINE",
+        ".github/workflows/ci.yml",
+        "the verdict reads it VOID\"\n          exit 1\n",
+        "the verdict reads it VOID\"\n          exit 0\n",
+        "the leg stays green when its own baseline is not green",
+        "test_mutation_workflows.TheLegReadsRedWhenItsBaselineIsNotGreen.test_a_leg_whose_baseline_is_not_green_fails_its_job_after_its_report_is_kept"
+      ],
+      [
+        "S45813-THE-COLOUR-STEP-RUNS-ON-A-GREEN-BASELINE",
+        ".github/workflows/ci.yml",
+        "steps.baseline.outputs.green != 'true'",
+        "steps.baseline.outputs.green == 'true'",
+        "the colour step runs after a green baseline instead of a red one",
+        "test_mutation_workflows.TheLegReadsRedWhenItsBaselineIsNotGreen.test_a_leg_whose_baseline_is_not_green_fails_its_job_after_its_report_is_kept"
+      ],
+      [
+        "S45814-THE-COLOUR-STEP-RUNS-WITH-NO-RUST-MUTANTS",
+        ".github/workflows/ci.yml",
+        "needs.mutation-plan.outputs.rust == 'true' && steps.baseline.outputs.green != 'true'",
+        "steps.baseline.outputs.green != 'true'",
+        "the colour step runs on a leg the plan deals no Rust mutant",
+        "test_mutation_workflows.TheLegReadsRedWhenItsBaselineIsNotGreen.test_a_leg_whose_baseline_is_not_green_fails_its_job_after_its_report_is_kept"
       ]
     ]
   }
