@@ -500,6 +500,76 @@ class EachFormalEntryMeetsItsVectorsTest(unittest.TestCase):
             with self.subTest(name):
                 self.assertEqual(planted(vectors_findings, files), expected)
 
+    def test_every_as_found_row_admits_a_vectors_finding_of_its_path(self):
+        self.assertEqual(list_findings(read_list(REPO))[0] + vectors_findings(REPO), [])
+        examined("vectors test(s)", vectors_tests(REPO))
+        examined("vectors file(s)", vectors_files(REPO))
+        listed("as_found row(s)", (read_list(REPO) or {}).get("as_found", []))
+        purse = "crates/economy/tests/formal_vectors_purse.rs"
+        orphan = f"{VECTORS}/orphan.jsonl"
+        adr = f"{DECISIONS}/ADR-1-parity.md"
+        names = {adr: f"Lists `{purse}` and `{orphan}` as found.\n"}
+        misnamed = {**names, WALLET_TEST: None, purse: vectors_test_source("wallet")}
+        renamed = (
+            f"{purse}: names formal/vectors/wallet.jsonl, "
+            "so its file name is formal_vectors_wallet.rs"
+        )
+        twice_declared = {
+            **names,
+            orphan: "{}\n",
+            f"{LEAN}/Chest.lean": lean("orphan"),
+            f"{LEAN}/Purse.lean": lean("orphan"),
+        }
+
+        def as_found(changes, *rows):
+            files = formal_tree(changes)
+            files[LIST] = json.dumps({"owed": [], "unimplemented": [], "as_found": list(rows)})
+            return files
+
+        def row(path, **more):
+            return {"path": path, "adr": "ADR-1", **more}
+
+        def findings(root):
+            return list_findings(read_list(root))[0] + vectors_findings(root)
+
+        plants = {
+            "a finding with no row": (as_found(misnamed), [renamed]),
+            "a stale row": (
+                as_found(names, row(orphan)),
+                [f"{orphan}: an as_found row with no finding"],
+            ),
+            "a row whose ADR lacks its path": (
+                as_found({**misnamed, adr: "Lists nothing.\n"}, row(purse)),
+                [f"{purse}: {adr} does not hold `{purse}`"],
+            ),
+            "an unknown key in a row": (
+                as_found(misnamed, row(purse, why="as found")),
+                ["as_found row 1: unknown key why"],
+            ),
+            "a row out of order": (
+                as_found({**misnamed, orphan: "{}\n"}, row(orphan), row(purse)),
+                [f"{purse}: an as_found row out of order, sorted by path"],
+            ),
+            "one path twice": (
+                as_found(misnamed, row(purse), row(purse)),
+                [f"{purse}: listed twice"],
+            ),
+            "an R8 finding of another class on an as_found vectors test": (
+                as_found({**names, purse: vectors_test_source("ledger")}, row(purse)),
+                [f"{purse}: names formal/vectors/ledger.jsonl, which no Lean entry declares"],
+            ),
+            "an R8 finding of another class on an as_found vectors file": (
+                as_found(twice_declared, row(orphan)),
+                [
+                    f"{orphan}: declared by 2 Lean entries, not one",
+                    f"{orphan}: an as_found row with no finding",
+                ],
+            ),
+        }
+        for name, (files, expected) in examined("planted defect(s)", plants.items()):
+            with self.subTest(name):
+                self.assertEqual(planted(findings, files), expected)
+
 
 if __name__ == "__main__":
     unittest.main()

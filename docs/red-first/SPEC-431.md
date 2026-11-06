@@ -34,3 +34,21 @@ A8: green at 0d1b9392b6eddf4bf51ba730963a959054e06833
 A9: green at 0d1b9392b6eddf4bf51ba730963a959054e06833
 A10: green at 0d1b9392b6eddf4bf51ba730963a959054e06833
 ```
+
+## Rebuild on current dev
+
+This delivery was rebuilt on a later `dev`: its commits were merged onto it unchanged, the
+documents were amended (SPEC-431 section 10, ADR-445 D10), and the as-found test was committed
+next, alone. A11 is red first: at that commit the census still reads `as_found` as an unknown key,
+keeps the four vectors findings an `as_found` row would admit and reports no stale row, so A11
+fails by assertion on the real tree, before any planted defect. At the same commit the censuses
+read the base population at the rebuild's cut red by name, each by its first assertion over the
+real tree, with these causes:
+
+- A1 and A2: the ten edges the cut adds have no row.
+- A4: the eight Lean entries the cut adds have no row.
+- A5: the four vectors findings that no row kind could hold.
+- A6 to A9: the two production files with clock reads that the cut adds have no row, and
+  `crates/ffi/src/engine.rs` reads the clock twice where its row counts one.
+
+A3 and A10 read green there, since each judges the admission of the existing rows only.
