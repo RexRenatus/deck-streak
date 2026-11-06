@@ -68,7 +68,8 @@ R9. The entry is checked within the repository's default entry budget.
 R10. The formal ledger names the entry: `formal/obligations.json` gains its row (disposition
 `keep`, no obligation), and the ledger's census `scripts/tests/test_formal_obligations.py` gains
 its one `NEW_ENTRIES` line, as the census requires of every entry built after the designed ones.
-That line is the one `scripts/tests` change this SPEC makes, an exception to R8; the census, which CI runs, decides R10.
+That line is the one `scripts/tests` change this SPEC makes, an exception to R8; the census, which
+CI runs, decides R10.
 
 ## 3. Acceptance criteria of SPEC-475
 
