@@ -58,6 +58,12 @@ flowchart LR
 | rows | `owed`: `lean/SensitiveDeck`, `lean/TableCensusReach`; `unimplemented`: none | `listed 2 parity row(s)` |
 | matcher | the token is `formal/vectors/<slug>.jsonl` inside a string literal, never in a comment | the planted controls of A4 and A5 |
 
+The list's third key, `as_found`, joins the same verdict: each row `{"path", "adr"}` names a
+vectors test or a vectors file whose one finding of its class (a test's file name, or a file no
+Lean entry declares) is listed as found. The join drops that finding alone and keeps every other
+finding on the path; a row with no such finding behind it is stale, and a row whose ADR file does
+not hold its path is unadmitted.
+
 ## 3. The clock-read allow-list: `scripts/tests/test_clock_reads.py`
 
 ```mermaid

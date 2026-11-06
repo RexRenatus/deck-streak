@@ -7,3 +7,5 @@
   vectors test names a live entry. Every production Rust file's clock reads equal its row's count in
   `config/clock-reads.json`. Each census prints what it examined and refuses an empty population
   (SPEC-431).
+  The three lists were re-cut at the rebuild's dev, and the formal parity list admits four named
+  vectors findings as found.

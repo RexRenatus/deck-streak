@@ -304,3 +304,43 @@ rows each list gained, from each pull request's diff of the list, and the fixes,
 on which the check reported a finding and whose diff adds no row to its list. The reader records
 each reading beside the window it read; a demotion it proposes goes to the owner as a signed
 ruling.
+
+## 10. Amendments: the lists at the rebuild's dev, the as-found vectors rows, and their acceptance criteria
+
+This section amends the requirements above for the rebuild of this delivery on a later `dev`, as
+measured at the rebuild's cut. R15's counts are the first base's; R18 supersedes them at the
+rebuild's cut.
+
+R18. The three lists hold what the rebuild's cut holds, each row citing `ADR-445`, with no product
+     change (ADR-445 D10): 95 edge rows, the 85 of R15 and the ten edges the cut adds; ten formal
+     entry rows, eight `owed` (the two of R15 and six the cut adds) and two `unimplemented`; eight
+     clock rows, the six of R15 with `crates/ffi/src/engine.rs` counting 2, and the two production
+     files the cut adds, each counting 1; and four `as_found` rows (R19). The appendix ADR-445
+     adds at the rebuild names each new row by its token.
+R19. `config/vectors-parity.json` takes a third key, `as_found`, whose rows are `{"path", "adr"}`,
+     sorted by `path`, with no path twice and no unknown key; an absent `as_found` key reads as an
+     empty list. Each `path` is a `crates/*/tests/formal_vectors_*.rs` or a
+     `formal/vectors/*.jsonl` path. R8 itself is unchanged: an `as_found` row admits only the one
+     R8 finding class it is listed for, never every finding on its path; for a vectors test, the
+     file-name finding (`<test>: names <vectors path>, so its file name is <expected>`), and for a
+     vectors file, the undeclared-file finding (`<path>: a vectors file no Lean entry declares`).
+     Any other R8 finding on an `as_found` path stays a finding. A row whose path has no finding
+     of its class fails as stale (`<path>: an as_found row with no finding`), so a path of any
+     other shape, which can hold no such finding, fails as stale too. Each row's ADR file holds its
+     path as `` `<path>` ``, else the row fails as unadmitted
+     (`` <path>: <ADR file> does not hold `<path>` ``). From this amendment on, R9's key set reads
+     `owed`, `unimplemented` and `as_found`.
+
+| id | criterion | decided by |
+|---|---|---|
+| A11 | Every `as_found` row admits one vectors finding of its own class on its path, every other finding on that path stays, a row with no such finding is stale, and each row's ADR holds its path (R19) | ADR-445 D10 |
+
+```acceptance
+A11: python3 -m unittest discover -s scripts/tests -p test_formal_parity.py -k test_every_as_found_row_admits_a_vectors_finding_of_its_path
+```
+
+A11's planted defects, each refused by name with the finding its fixture spells: a finding with no
+row; a stale row; a row whose ADR lacks its path; an unknown key in a row; a row out of order; one
+path twice; and an R8 finding of another class on an `as_found` path, which stays a finding, on a
+vectors test (a path no entry declares) and on a vectors file (a file two entries declare, whose
+row is then also stale).

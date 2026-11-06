@@ -303,6 +303,40 @@ Chosen against:
 - Three deliveries, one per check: lost, because the review rule and the kill criteria would then
   be decided three times.
 
+### D10, the rebuild's dev: listed as found at the rebuild's cut, and as-found vectors rows
+
+- Chosen: D5 applied at the rebuild's cut. The lists hold what the tree holds at that cut, with no
+  product change, each defect listed as found and its cure left to its own delivery, because the
+  ten edges, the eight Lean entries and the clock reads the cut adds arrived while this delivery
+  was unlanded, and D1's "a later edge cites the ADR its delivery writes" reads of edges that
+  arrive after it lands. Each new row cites this ADR, and the appendix the rebuild adds names each
+  by its token. These rows are D5's listing at the rebuild's cut, as the first listing was, so
+  they are not rows added inside D6's review window.
+  - `crates/ffi/src/engine.rs` counts 2 at the rebuild's cut; the first appendix's count of 1 is
+    the first base's. Its two production reads, each `SystemTime::now` and each listed as found:
+    the native adapter's answer time in `now_millis`, and a stamp in a choice file's name in
+    `choice_file`. A third read in that file sits in test code, which the census sets aside. Both
+    are the adapter's own clock, outside SPEC-020 R6's `SystemClock`, because the adapter depends
+    on no DeckStreak crate but the engine core (ADR-345 D1).
+  - Four R8 findings that no row kind could hold, three vectors tests whose file names drop their
+    crate's name and one frame fixture that no Lean entry declares, are listed in a third key of
+    `config/vectors-parity.json`, `as_found`: rows `{"path", "adr"}`, sorted by `path`, with no
+    path twice and no unknown key. A row admits only the one R8 finding class it is listed for:
+    for a vectors test its file-name finding, and for a vectors file its undeclared-file finding.
+    Any other finding on that path stays a finding, a row with no finding of its class behind it
+    fails as stale, and each row's ADR names its path as `` `<path>` ``. R8 itself is unchanged.
+  - Kill criteria: D6's criteria hold for each list. An `as_found` list that gains a row a later
+    delivery adds, instead of that delivery curing its finding, is the sign this decision is wrong.
+
+Chosen against:
+
+- Widening R8's file-name rule to a crate-prefixed slug: lost, because it would admit a class of
+  file names, not four listed paths, and every later test could take that spelling unreviewed.
+- Renaming the three vectors tests or moving the frame fixture: lost, because each is a product
+  change that other deliveries' records name, and D5 leaves each cure to its own delivery.
+- Leaving the four findings so the check lands red: lost, for D5's own reason, since a check red on
+  arrival blocks every pull request until a cure that is not this delivery's lands.
+
 ## Decision Outcome
 
 Chosen options: D1 to D9 as each "Chosen:" bullet states, because together they make the crate
@@ -406,3 +440,43 @@ Every implemented Lean entry with no vectors test:
 
 - `lean/SensitiveDeck`.
 - `lean/TableCensusReach`.
+
+## Appendix: the rows the rebuild's cut adds
+
+The census reads each token below exactly as it is spelled, so each sits on one line.
+
+Every internal edge the rebuild's cut adds, each with no target table:
+
+- `companion-slot -> companion`, a `[dependencies]` row.
+- `engine-core -> analytics`, a `[dev-dependencies]` row.
+- `engine-core -> ingest`, a `[dev-dependencies]` row.
+- `engine-core -> kernel`, a `[dev-dependencies]` row.
+- `ingest -> anki-format`, a `[dependencies]` row.
+- `ingest -> collection`, a `[dependencies]` row.
+- `ingest -> search`, a `[dependencies]` row.
+- `kernel -> study-day`, a `[dependencies]` row.
+- `search -> study-day`, a `[dependencies]` row.
+- `web-engine -> companion`, a `[dependencies]` row.
+
+Every Lean entry the rebuild's cut adds a row for:
+
+- `lean/DocsMermaidRead`, unimplemented: no `@phx covers` line.
+- `lean/PushJudge`, unimplemented: no `@phx covers` line.
+- `lean/RecordClassBinding`, owed: no vectors test names its vectors path.
+- `lean/ReleaseCarry`, owed: no vectors test names its vectors path.
+- `lean/ReleaseGates`, owed: no vectors test names its vectors path.
+- `lean/RetiredListShape`, owed: no vectors test names its vectors path.
+- `lean/SearchHolds`, owed: implemented with no vectors path.
+- `lean/TokenProgress`, owed: no vectors test names its vectors path.
+
+Every production file with clock reads that the rebuild's cut adds, with its count:
+
+- `crates/ffi/src/backups.rs`: 1, the backup names' stamp, `SystemTime::now`.
+- `crates/ingest/src/search_parity.rs`: 1, the search parity check's now, `SystemTime::now`.
+
+Every vectors finding listed as found, each an `as_found` row:
+
+- `crates/companion/tests/formal_vectors_decide.rs`: its file name drops its crate's name.
+- `crates/media/tests/formal_vectors_bind.rs`: its file name drops its crate's name.
+- `crates/media/tests/formal_vectors_gc.rs`: its file name drops its crate's name.
+- `formal/vectors/companion-frames.jsonl`: a codec frame fixture no Lean entry declares.
