@@ -31,5 +31,5 @@ the parse unchanged. Its first unclosed plant read the old refusal, so A4 failed
 assertion in a local run of the whole file, and every other test of the file passed. The next
 commit, fcc5fecb, changes the refusal of the unclosed arm and nothing else; like the fix commit
 8b14ab8, it edits the test file and changes no assertion of any test. With that arm deleted from
-a local copy at fcc5fecb and the file run again, A4 failed by `AssertionError: expected [] to deeply equal [ 'projects array never closes' ]`, so the planted case
+a local copy at fcc5fecb and the A4 acceptance line run again, A4 failed by `AssertionError: expected [] to deeply equal [ 'projects array never closes' ]`, so the planted case
 is what holds the arm.
