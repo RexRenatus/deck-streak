@@ -55,6 +55,7 @@ A21: not red: SPEC-022's existing no-upload census, which had to stay green at t
 A22: not red: SPEC-022's existing sync test, which had to stay green at the new pin (R7); it passed at 4df16b0
 A23: not red: SPEC-022's existing sync test, which had to stay green at the new pin (R7); it passed at 4df16b0
 A25: red at c302d698: AssertionError: Lists differ: ['paste (RUSTSEC-2024-0436) is a package of Cargo.lock', 'basic-toml (RUSTSEC-2026-0374) is a package of Cargo.lock'] != []
+A25: green at 2efb88df
 ```
 
 ## §9: the paste and basic-toml notices
@@ -68,3 +69,14 @@ apply.
 
 - RUSTSEC-2024-0436: red at c302d698: error[unmaintained]: paste - no longer maintained (paste 1.0.15)
 - RUSTSEC-2026-0374: red at c302d698: error[unmaintained]: `basic-toml` is unmaintained (basic-toml 0.1.10)
+- RUSTSEC-2026-0374: green at ced88ca4: `basic-toml` has left the lock, and the run names RUSTSEC-2024-0436 alone
+- RUSTSEC-2024-0436: green at 2efb88df: `paste` has left the lock, and the run passes with no error, the six engine entries applied
+
+A1 already has its fence lines, so its red for each fork is recorded here, in SPEC-565 A6b's form:
+`deny.toml` was edited first and A1 run with the test unchanged, then the test's exact list grew by
+that fork and A1 passed at the fork's commit. The uniffi-rs fork: red with deny.toml edited and the
+test unchanged: `allow-git is [...], not exactly the fork, rust-url, fsrs-rs, web-push-native and
+sqlx`; green at 37551ff3. The askama fork: red the same way: `allow-git is [...], not exactly the
+fork, rust-url, fsrs-rs, web-push-native, sqlx and uniffi-rs`; green at ced88ca4. The frankenstein
+fork: red the same way: `allow-git is [...], not exactly the fork, rust-url, fsrs-rs,
+web-push-native, sqlx, uniffi-rs and askama`; green at 2efb88df.
