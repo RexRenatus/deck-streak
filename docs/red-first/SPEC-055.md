@@ -54,7 +54,7 @@ A20: not red: SPEC-022's existing settings test, which had to stay green at the 
 A21: not red: SPEC-022's existing no-upload census, which had to stay green at the new pin (R7); it passed at 4df16b0
 A22: not red: SPEC-022's existing sync test, which had to stay green at the new pin (R7); it passed at 4df16b0
 A23: not red: SPEC-022's existing sync test, which had to stay green at the new pin (R7); it passed at 4df16b0
-A25: red at c302d698: AssertionError: Lists differ: ['paste (RUSTSEC-2024-0436) is a package of Cargo.lock', 'basic-toml (RUSTSEC-2026-0374) is a package of Cargo.lock'] != []
+A25: red at 3772e659: AssertionError: Lists differ: ['paste (RUSTSEC-2024-0436) is a package of Cargo.lock', 'basic-toml (RUSTSEC-2026-0374) is a package of Cargo.lock'] != []
 A25: green at 2efb88df
 ```
 
