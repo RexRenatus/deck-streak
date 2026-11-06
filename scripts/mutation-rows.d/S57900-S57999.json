@@ -28,8 +28,8 @@
       [
         "S57904-THE-README-HERO-IS-THE-LISTED-FILE",
         "README.md",
-        "![DeckStreak](docs/assets/deckstreak-hero-tide-light.gif)",
-        "![DeckStreak](docs/assets/deckstreak-hero.gif)",
+        "<img src=\"docs/assets/deckstreak-hero-tide-light.gif\"",
+        "<img src=\"docs/assets/deckstreak-hero.gif\"",
         "the README's hero is the listed committed file; an image at a path the tree does not hold would show nothing (SPEC-579 A7)",
         "test_brand_files.TheReadmeHeaderShowsTheHero.test_the_readme_opens_with_the_title_then_the_hero"
       ],
