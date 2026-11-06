@@ -354,11 +354,15 @@ RENAMING_WORKSPACE = FIXTURE_WORKSPACE + (
     'alias = { package = "deck-streak-kernel", path = "crates/kernel" }\n'
     'deck-streak-old = { package = "deck-streak-web-engine", path = "crates/web-engine" }\n'
     'fsrs7 = { package = "fsrs", version = "1" }\n'
+    'deck-streak-gen = { package = "deck-streak-codegen", path = "crates/codegen" }\n'
+    'glue = { package = "deck-streak-glue", path = "crates/glue" }\n'
 )
 INHERITING_INGEST = (
     '[package]\nname = "deck-streak-ingest"\n\n'
     "[dependencies]\nalias.workspace = true\nfsrs7.workspace = true\n\n"
+    "[build-dependencies]\ndeck-streak-gen.workspace = true\n\n"
     "[dev-dependencies]\ndeck-streak-old.workspace = true\n\n"
+    "[target.'cfg(unix)'.dependencies]\nglue = { workspace = true }\n\n"
     "[target.'cfg(unix)'.build-dependencies]\ndeck-streak-old = { workspace = true }\n"
 )
 
@@ -554,7 +558,7 @@ class TheSchematicDrawsTheCrateGraph(unittest.TestCase):
         self.assertFixtureClean()
         self.assertEqual(
             manifest_edges({"ingest": INHERITING_INGEST}, inherited),
-            {("ingest", "kernel"), ("ingest", "web-engine")},
+            {("ingest", name) for name in ("kernel", "web-engine", "codegen", "glue")},
         )
         ingest = swap(FIXTURE_MANIFESTS["ingest"], "deck-streak-kernel.", "alias.")
         manifests = dict(FIXTURE_MANIFESTS, ingest=ingest)
