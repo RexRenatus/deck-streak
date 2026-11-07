@@ -96,6 +96,7 @@ A3: cargo test -p deck-streak-engine-core --test face -- --exact escaped_names_a
 | `docs/decisions/ADR-424-the-core-writes-a-sound-tags-video-into-the-face-as-a-data-url-video-element-for-a-reader-that-asks.md` | docs | R6: one paragraph inserted after D1's shape (section 9); no line changes |
 | `crates/engine-core/src/media.rs` | engine-core | R1, R4: `Budget::shows_video` decodes the name with `decoded_name` above its unchanged line, and its doc comment says so |
 | `crates/engine-core/tests/face.rs` | engine-core | R2, R3, A1 to A3: three tests, a hand table, a reader that records each name it is asked for, and their helpers, appended after the sound video tests |
+| `crates/media/tests/css.rs` | media | the face suite census of SPEC-513 A5: its pinned test count moves from 18 to 21 for the three tests appended to `crates/engine-core/tests/face.rs`, none of them a font case |
 | `scripts/mutation-rows.d/S46400-S46499.json` | rows | added: S46400 and S46401 (section 7) |
 | `docs/red-first/SPEC-464.md` | docs | added: A1 and A2 red then green, A3 recorded `not red` |
 | `changelog.d/sound-tag-escaped-dot-464.md` | docs | added: the fragment, citing #820 |
