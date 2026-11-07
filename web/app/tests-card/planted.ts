@@ -74,7 +74,7 @@ const none = (): string => '';
 
 /** A card that loads from the HTTP listener under its own path, with no click. */
 function loads(id: string, alone: Layer | null, html: (http: string) => string, css: (http: string) => string = none): PlantedCard {
-  return { id, alone, click: false, html: (l) => html(`${l.http}/${id}`), css: (l) => css(`${l.http}/${id}`), paths: [`/${id}/`] };
+  return { id, alone, click: false, html: (l) => html(`${l.http}/${id}`), css: (l) => css(`${l.http}/${id}`), paths: ['tcp', `/${id}/`] };
 }
 
 /** A card whose full-frame link or button acts when clicked, toward the TCP listener (SPEC-461). */
@@ -118,7 +118,7 @@ export const PLANTED: readonly PlantedCard[] = [
       null,
       (h) => `<img alt="" srcset="${h}/1 1x"><picture><source srcset="${h}/2"><img alt=""></picture>`
     ),
-    paths: ['/srcset/1', '/srcset/2']
+    paths: ['tcp', '/srcset/1', '/srcset/2']
   },
   loads(
     'css-url',
