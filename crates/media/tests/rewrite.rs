@@ -1,4 +1,4 @@
-//! `rewrite` visits the engine's media reference names for every case of the engine's media_refs
+//! `rewrite` visits the engine's media reference names for every case of the engine's `media_refs`
 //! golden, in the engine's order, and writes each answer in its reference's place (SPEC-601 A9).
 
 #![allow(clippy::expect_used, clippy::print_stdout)]
