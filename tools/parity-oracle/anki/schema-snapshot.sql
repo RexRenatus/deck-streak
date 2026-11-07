@@ -1,4 +1,4 @@
--- The schema of a fresh collection of the engine at dca72f352730abb4222389cc148e46387c17f97f, col.ver 18,
+-- The schema of a fresh collection of the engine at 2d8e3150f5e392f5cfaa7bfe8485c479186307a9, col.ver 18,
 -- derived from tools/parity-oracle/goldens/anki.schema.snapshot.json (SPEC-498).
 PRAGMA user_version = 0;
 
