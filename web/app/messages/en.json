@@ -1,6 +1,6 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-  "tagline": "Turn your daily Anki reviews into a streak worth keeping.",
+  "tagline": "Turn your daily reviews into a streak worth keeping.",
   "colour_mode": "Colour mode",
   "colour_mode_system": "System",
   "colour_mode_light": "Light",

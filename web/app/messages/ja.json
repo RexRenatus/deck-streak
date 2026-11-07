@@ -1,6 +1,6 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-  "tagline": "毎日のAnkiの復習を、続けたくなる連続記録に。",
+  "tagline": "毎日の復習を、続けたくなる連続記録に。",
   "score_title": "今日のスコア",
   "score_pillars": "スコアを構成する五つの柱",
   "pillar_consistency": "継続",
