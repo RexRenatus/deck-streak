@@ -1,0 +1,302 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S42600-THE-FORMAL-LIBRARY-MAKES-EVERY-WARNING-AN-ERROR",
+        "formal/lean/lakefile.toml",
+        "leanOptions = { warningAsError = true }",
+        "leanOptions = { warningAsError = false }",
+        "the Formal library's key is set false, so a warning Lean raises while it builds the library would pass the build (SPEC-426 R1)",
+        "test_formal_config.LakefileWarnings.test_the_formal_library_makes_every_warning_an_error"
+      ],
+      [
+        "S42601-THE-DECLARED-DOCUMENT-HOLDS-THE-KEY-ON",
+        "scripts/tests/test_formal_config.py",
+        "\"leanOptions\": {\"warningAsError\": True}",
+        "\"leanOptions\": {\"warningAsError\": False}",
+        "the declared document holds the key false, so the pin would hold a lakefile whose warnings pass the build (SPEC-426 R2)",
+        "test_formal_config.LakefileWarnings.test_the_formal_library_makes_every_warning_an_error"
+      ],
+      [
+        "S42602-AN-ABSENT-KEY-IS-REFUSED",
+        "scripts/tests/test_formal_config.py",
+        "problems.append((\"key-absent\",",
+        "((\"key-absent\",",
+        "the key-absent arm answers nothing, so a Formal library whose options lack the key would be read as making warnings errors (SPEC-426 R2)",
+        "test_formal_config.LakefileWarnings.test_the_lakefile_reader_refuses_each_planted_fault_by_its_arm"
+      ],
+      [
+        "S42603-ONLY-THE-BOOLEAN-TRUE-TURNS-THE-KEY-ON",
+        "scripts/tests/test_formal_config.py",
+        "elif options[WARNING_KEY] is not True:",
+        "elif not options[WARNING_KEY]:",
+        "any truthy value is admitted, so the string true or the integer 1 would be read as the boolean the option takes (SPEC-426 R2)",
+        "test_formal_config.LakefileWarnings.test_the_lakefile_reader_refuses_each_planted_fault_by_its_arm"
+      ],
+      [
+        "S42604-THE-KEY-IS-READ-ON-THE-FORMAL-LIBRARY-ALONE",
+        "scripts/tests/test_formal_config.py",
+        "lib.get(\"name\") == LIBRARY",
+        "True",
+        "a library of any name is taken for the Formal library, so the key set on another library would be read as the Formal library's (SPEC-426 R2)",
+        "test_formal_config.LakefileWarnings.test_the_lakefile_reader_refuses_each_planted_fault_by_its_arm"
+      ],
+      [
+        "S42605-A-SECOND-FORMAL-LIBRARY-IS-REFUSED",
+        "scripts/tests/test_formal_config.py",
+        "if len(libraries) > 1:",
+        "if len(libraries) > 2:",
+        "two libraries named Formal are admitted, so which one Lake builds would be left to its reading (SPEC-426 R2)",
+        "test_formal_config.LakefileWarnings.test_the_lakefile_reader_refuses_each_planted_fault_by_its_arm"
+      ],
+      [
+        "S42606-AN-ARGUMENT-NAMING-THE-KEY-IS-REFUSED",
+        "scripts/tests/test_formal_config.py",
+        "if WARNING_KEY in str(argument):",
+        "if False:",
+        "the key-in-args arm answers nothing, so an argument array that switches the key off as text would pass the pin (SPEC-426 R2)",
+        "test_formal_config.LakefileWarnings.test_the_lakefile_reader_refuses_each_planted_fault_by_its_arm"
+      ],
+      [
+        "S42607-THE-ARGUMENT-ARM-READS-THE-PACKAGE-TOO",
+        "scripts/tests/test_formal_config.py",
+        "holders = [(\"the package\", doc)] + ",
+        "holders = ",
+        "the package's own argument arrays are not read, so an argument naming the key on the package would pass the pin (SPEC-426 R2)",
+        "test_formal_config.LakefileWarnings.test_the_lakefile_reader_refuses_each_planted_fault_by_its_arm"
+      ],
+      [
+        "S42608-A-LINK-ON-THE-LAKEFILE-PATH-IS-REFUSED",
+        "scripts/tests/test_formal_config.py",
+        "refuse_link_components(root / LAKEFILE_PATH, root)",
+        "None",
+        "the link walk is skipped, so a link at formal, formal/lean or the lakefile would be followed and its target read (SPEC-426 R2)",
+        "test_formal_config.LakefileWarnings.test_the_lakefile_is_read_as_the_tree_stores_it"
+      ],
+      [
+        "S42609-SORRY-IS-REFUSED",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "\"sorry\",  # a hole: the declaration rests on sorryAx",
+        "\"-\",  # a hole: the declaration rests on sorryAx",
+        "the word sorry is replaced by a non-word, so a sorry in a Lean module's code would pass the guard (SPEC-426 R5)",
+        "test_lean_escape_hatches.EscapeHatches.test_each_hatch_in_code_is_refused_by_its_name_and_none_in_prose"
+      ],
+      [
+        "S42610-THE-ADMIT-TACTIC-IS-REFUSED",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "\"admit\",  # the tactic that closes a goal with sorry",
+        "\"-\",  # the tactic that closes a goal with sorry",
+        "the word admit is replaced by a non-word, so the admit tactic in a Lean module's code would pass the guard (SPEC-426 R5)",
+        "test_lean_escape_hatches.EscapeHatches.test_each_hatch_in_code_is_refused_by_its_name_and_none_in_prose"
+      ],
+      [
+        "S42611-AXIOM-IS-REFUSED",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "\"axiom\",  # a new axiom, which no proof discharges",
+        "\"-\",  # a new axiom, which no proof discharges",
+        "the word axiom is replaced by a non-word, so a new axiom in a Lean module's code would pass the guard (SPEC-426 R5)",
+        "test_lean_escape_hatches.EscapeHatches.test_each_hatch_in_code_is_refused_by_its_name_and_none_in_prose"
+      ],
+      [
+        "S42612-NATIVE-DECIDE-IS-REFUSED",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "\"native_decide\",  # the compiler's evaluation, trusted by an axiom",
+        "\"-\",  # the compiler's evaluation, trusted by an axiom",
+        "the word native_decide is replaced by a non-word, so native_decide in a Lean module's code would pass the guard (SPEC-426 R5)",
+        "test_lean_escape_hatches.EscapeHatches.test_each_hatch_in_code_is_refused_by_its_name_and_none_in_prose"
+      ],
+      [
+        "S42613-IMPLEMENTED-BY-IS-REFUSED",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "\"implemented_by\",  # runs other code than the definition the kernel checked",
+        "\"-\",  # runs other code than the definition the kernel checked",
+        "the word implemented_by is replaced by a non-word, so implemented_by in a Lean module's code would pass the guard (SPEC-426 R5)",
+        "test_lean_escape_hatches.EscapeHatches.test_each_hatch_in_code_is_refused_by_its_name_and_none_in_prose"
+      ],
+      [
+        "S42614-THE-EXTERN-ATTRIBUTE-IS-REFUSED",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "\"extern\",  # runs foreign code in the definition's place",
+        "\"-\",  # runs foreign code in the definition's place",
+        "the word extern is replaced by a non-word, so the extern attribute in a Lean module's code would pass the guard (SPEC-426 R5)",
+        "test_lean_escape_hatches.EscapeHatches.test_each_hatch_in_code_is_refused_by_its_name_and_none_in_prose"
+      ],
+      [
+        "S42615-UNSAFE-IS-REFUSED",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "\"unsafe\",  # a declaration the kernel does not check",
+        "\"-\",  # a declaration the kernel does not check",
+        "the word unsafe is replaced by a non-word, so an unsafe declaration in a Lean module's code would pass the guard (SPEC-426 R5)",
+        "test_lean_escape_hatches.EscapeHatches.test_each_hatch_in_code_is_refused_by_its_name_and_none_in_prose"
+      ],
+      [
+        "S42616-THE-NOLINT-ATTRIBUTE-IS-REFUSED",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "\"nolint\",  # a linter switched off for one declaration",
+        "\"-\",  # a linter switched off for one declaration",
+        "the word nolint is replaced by a non-word, so the nolint attribute in a Lean module's code would pass the guard (SPEC-426 R5)",
+        "test_lean_escape_hatches.EscapeHatches.test_each_hatch_in_code_is_refused_by_its_name_and_none_in_prose"
+      ],
+      [
+        "S42617-A-LINTER-SWITCHED-OFF-IS-REFUSED",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "LINTER_PREFIX = \"linter.\"",
+        "LINTER_PREFIX = \"linter.unusedVariables\"",
+        "the linter prefix is narrowed to one linter, so any other linter switched off in a module would pass the guard (SPEC-426 R5)",
+        "test_lean_escape_hatches.EscapeHatches.test_each_hatch_in_code_is_refused_by_its_name_and_none_in_prose"
+      ],
+      [
+        "S42618-ONLY-FALSE-SWITCHES-A-LINTER-OFF",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "value == \"false\"",
+        "value in (\"false\", \"true\")",
+        "a linter set true is also read as switched off, so a module that turns a linter on would be refused (SPEC-426 R5)",
+        "test_lean_escape_hatches.EscapeHatches.test_each_hatch_in_code_is_refused_by_its_name_and_none_in_prose"
+      ],
+      [
+        "S42619-A-ZERO-HEARTBEAT-LIMIT-IS-REFUSED",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "numeral_value(value) == 0",
+        "numeral_value(value) == 1",
+        "the zero test is moved to one, so a heartbeat limit of 0, which removes the limit, would pass the guard (SPEC-426 R5)",
+        "test_lean_escape_hatches.EscapeHatches.test_each_hatch_in_code_is_refused_by_its_name_and_none_in_prose"
+      ],
+      [
+        "S42620-THE-HEARTBEAT-ARM-READS-A-DOTTED-NAME",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "name.endswith(\".\" + HEARTBEATS)",
+        "False",
+        "the dotted suffix is not read, so synthInstance.maxHeartbeats set to 0 would pass the guard (SPEC-426 R5)",
+        "test_lean_escape_hatches.EscapeHatches.test_each_hatch_in_code_is_refused_by_its_name_and_none_in_prose"
+      ],
+      [
+        "S42621-A-ZERO-IN-ANOTHER-BASE-IS-ZERO",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "base = NUMERAL_BASES.get(token[:2].lower(), 10)",
+        "base = 10",
+        "numerals are read in decimal only, so a heartbeat limit written 0x0, 0b0 or 0o0 would pass the guard (SPEC-426 R6)",
+        "test_lean_escape_hatches.EscapeHatches.test_each_hatch_in_code_is_refused_by_its_name_and_none_in_prose"
+      ],
+      [
+        "S42622-A-LINE-COMMENT-IS-PROSE",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "elif text.startswith(\"--\", index):",
+        "elif text.startswith(\"---\", index):",
+        "the line-comment marker is narrowed, so a hatch a line comment only names would be refused as code (SPEC-426 R6)",
+        "test_lean_escape_hatches.EscapeHatches.test_each_hatch_in_code_is_refused_by_its_name_and_none_in_prose"
+      ],
+      [
+        "S42623-BLOCK-COMMENTS-NEST",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "nesting += 1",
+        "nesting = 1",
+        "the nesting count is held at one, so a nested block comment would end at its first close and its prose be read as code (SPEC-426 R6)",
+        "test_lean_escape_hatches.EscapeHatches.test_the_matcher_agrees_with_leans_own_verdict_on_each_planted_file"
+      ],
+      [
+        "S42624-AN-ESCAPED-CHARACTER-STAYS-IN-ITS-STRING",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "index += 2  # a backslash takes the next character with it",
+        "index += 1  # a backslash takes the next character with it",
+        "a backslash takes nothing with it, so an escaped quote would close its string and the string's text be read as code (SPEC-426 R6)",
+        "test_lean_escape_hatches.EscapeHatches.test_the_matcher_agrees_with_leans_own_verdict_on_each_planted_file"
+      ],
+      [
+        "S42625-AN-INTERPOLATION-IS-CODE",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "interpolated = start > 0 and text[start - 1] == \"!\"",
+        "interpolated = False",
+        "no string is read as interpolated, so a hatch in an interpolation's code would pass the guard (SPEC-426 R6)",
+        "test_lean_escape_hatches.EscapeHatches.test_the_matcher_agrees_with_leans_own_verdict_on_each_planted_file"
+      ],
+      [
+        "S42626-A-CHARACTER-LITERAL-IS-NOT-A-STRING",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "elif (end := char_literal_end(text, index)) is not None:",
+        "elif False:",
+        "the character-literal arm is never taken, so a quote character would open a string and the code after it be read as text (SPEC-426 R6)",
+        "test_lean_escape_hatches.EscapeHatches.test_the_matcher_agrees_with_leans_own_verdict_on_each_planted_file"
+      ],
+      [
+        "S42627-A-RAW-STRING-ENDS-AT-ITS-OWN-HASHES",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "close = '\"' + \"#\" * hashes",
+        "close = '\"'",
+        "the closing hashes are not counted, so a raw string would end at its first quote and its text be read as code (SPEC-426 R6)",
+        "test_lean_escape_hatches.EscapeHatches.test_the_matcher_agrees_with_leans_own_verdict_on_each_planted_file"
+      ],
+      [
+        "S42628-AN-UNTERMINATED-BLOCK-COMMENT-IS-REFUSED",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "return refuse(path, text, start, out, problems, \"unterminated-comment\")",
+        "return None",
+        "the refusal answers nothing, so a block comment that never closes would hide the rest of the file unrefused (SPEC-426 R6)",
+        "test_lean_escape_hatches.EscapeHatches.test_an_unterminated_comment_or_string_is_refused_by_name"
+      ],
+      [
+        "S42629-AN-UNTERMINATED-STRING-IS-REFUSED",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "return refuse(path, text, start, out, problems, \"unterminated-string\")",
+        "return None",
+        "the refusal answers nothing, so a string that never closes would hide the rest of the file unrefused (SPEC-426 R6)",
+        "test_lean_escape_hatches.EscapeHatches.test_an_unterminated_comment_or_string_is_refused_by_name"
+      ],
+      [
+        "S42630-AN-UNTERMINATED-RAW-STRING-IS-REFUSED",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "return refuse(path, text, start, out, problems, \"unterminated-raw-string\")",
+        "return None",
+        "the refusal answers nothing, so a raw string that never closes would hide the rest of the file unrefused (SPEC-426 R6)",
+        "test_lean_escape_hatches.EscapeHatches.test_an_unterminated_comment_or_string_is_refused_by_name"
+      ],
+      [
+        "S42631-AN-UNTERMINATED-INTERPOLATION-IS-REFUSED",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "return refuse(path, text, opened, out, problems, \"unterminated-interpolation\")",
+        "return None",
+        "the refusal answers nothing, so an interpolation that never closes would hide the rest of the file unrefused (SPEC-426 R6)",
+        "test_lean_escape_hatches.EscapeHatches.test_an_unterminated_comment_or_string_is_refused_by_name"
+      ],
+      [
+        "S42632-THE-POPULATION-IS-EVERY-LEAN-FILE-UNDER-FORMAL-LEAN",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "ROOT_PREFIX = \"formal/lean/\"",
+        "ROOT_PREFIX = \"formal/lean/Formal/\"",
+        "the path prefix is narrowed to formal/lean/Formal/, so the root module and any Lean file beside it would never be judged (SPEC-426 R4)",
+        "test_lean_escape_hatches.EscapeHatches.test_no_lean_file_under_formal_lean_holds_an_escape_hatch"
+      ],
+      [
+        "S42633-A-LINK-AT-A-LEAN-FILE-IS-REFUSED",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "refuse_link_components(Path(root) / path, root)",
+        "None",
+        "the link walk is skipped, so a link at a tracked Lean path would be followed and its target judged (SPEC-426 R4)",
+        "test_lean_escape_hatches.EscapeHatches.test_no_lean_file_under_formal_lean_holds_an_escape_hatch"
+      ],
+      [
+        "S42634-AN-ALLOW-LIST-ENTRY-ADMITS-ONLY-ITS-OWN-COUNT",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "if found and found == count:",
+        "if found:",
+        "the count is not compared, so an entry naming another count would admit every hit of its path and arm (SPEC-426 R7)",
+        "test_lean_escape_hatches.EscapeHatches.test_the_allow_list_is_empty_and_an_unused_entry_is_refused"
+      ],
+      [
+        "S42635-AN-UNUSED-ALLOW-LIST-ENTRY-IS-REFUSED",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "stale.append(entry)",
+        "pass",
+        "the stale arm answers nothing, so an entry that admits no hit, or names another count, would stand unrefused (SPEC-426 R7)",
+        "test_lean_escape_hatches.EscapeHatches.test_the_allow_list_is_empty_and_an_unused_entry_is_refused"
+      ],
+      [
+        "S42636-A-MODULE-THAT-NAMES-THE-KEY-IS-REFUSED",
+        "scripts/tests/test_lean_escape_hatches.py",
+        "if token == KEY:",
+        "if False:",
+        "key-off answers nothing, so a module that sets warningAsError false would switch the lakefile's key off unrefused (SPEC-426 R9)",
+        "test_lean_escape_hatches.EscapeHatches.test_no_lean_module_switches_warnings_as_errors_off"
+      ]
+    ]
+  }
+}
