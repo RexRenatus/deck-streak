@@ -12,6 +12,9 @@ SPEC-465's tests close the module: a retired list of the wrong shape refused by 
 a runner process signalled at each edge of a killer's run (A6 to A9), `main()` run in this
 process and leaving its handlers as it found them (A10 to A12), and the reader driven through
 every vector of its Lean proof (A14).
+SPEC-645's tests follow them: a `--rows-from` plan of the wrong shape refused by name by `prove`,
+`legs` and `merge` as processes and by its reader as a function (A1 to A5), and a well-formed
+plan read as before (A6).
 """
 
 import argparse
@@ -1863,6 +1866,106 @@ class MainLeavesTheProcessAsItFoundIt(unittest.TestCase):
         ):
             outcome = self.main("prove", "--all", "--root", self.root)
         self.assertEqual(outcome, ("exited", 143))
+
+
+PLAN_NOT_AN_OBJECT = "{plan} must hold a top-level object"
+PLAN_ROWS_NOT_AN_ARRAY = "{plan}: `rows` is not an array of row ids"
+PLAN_ENTRY_NOT_A_STRING = "{plan}: rows[{index}] is not a string"
+
+
+class TheRowsPlanRefusesAWrongShape(unittest.TestCase):
+    """SPEC-645 A1 to A6 (R1 to R5): a `--rows-from` plan of the wrong shape is refused by the
+    sentence naming the file and the shape it needed, as one `mutation_rows: REFUSED:` line on
+    stderr, exit 2, an empty stdout and nothing written, by `prove`, `legs` and `merge` as
+    processes and by the reader as a function; a well-formed plan reads as it did."""
+
+    IDS = ("S00001-FIRST", "S00002-SECOND", "S00003-THIRD")
+
+    def setUp(self):
+        self.fixture = Fixture(self, [unproved_row(identifier) for identifier in self.IDS])
+
+    def assert_refused(self, document, said_for):
+        """`document` as the plan of each verb that reads one, refused with the sentence
+        `said_for` spells from the plan's path, and by the reader in this process."""
+        plan = self.fixture.write("plan.json", json.dumps(document))
+        said = said_for(plan)
+        report = self.fixture.root / "merged.json"
+        sink = self.fixture.write("legs-output", "")
+        verbs = [
+            ("prove", lambda: self.fixture.run("prove", "--rows-from", str(plan))),
+            ("legs", lambda: self.fixture.run("legs", "--rows-from", str(plan), output=sink)),
+            (
+                "merge",
+                lambda: self.fixture.run(
+                    "merge",
+                    "--rows-from",
+                    str(plan),
+                    "--legs",
+                    "1",
+                    "--from",
+                    str(self.fixture.root / "legs"),
+                    "--report",
+                    str(report),
+                ),
+            ),
+        ]
+        for verb, run in examined("verbs that read a plan", verbs):
+            done = run()
+            first = (done.stderr.splitlines() or [""])[0]
+            self.assertEqual(done.returncode, 2, f"{verb} ended {done.returncode}: {first}")
+            self.assertEqual(done.stderr, f"mutation_rows: REFUSED: {said}\n", verb)
+            self.assertEqual(done.stdout, "", verb)
+        self.assertFalse(report.exists(), "a refused merge wrote a report")
+        self.assertEqual(outputs(sink), {}, "a refused plan wrote outputs")
+        runner = load_runner()
+        with self.assertRaises(runner.PlanRefused) as refused:
+            runner.plan_rows(str(plan), document)
+        self.assertEqual(str(refused.exception), said)
+
+    def test_a_plan_that_is_an_array_is_refused_naming_the_shape(self):
+        self.assert_refused(["S00001-FIRST"], lambda plan: PLAN_NOT_AN_OBJECT.format(plan=plan))
+
+    def test_a_plan_that_is_a_string_is_refused_naming_the_shape(self):
+        self.assert_refused("S00001-FIRST", lambda plan: PLAN_NOT_AN_OBJECT.format(plan=plan))
+
+    def test_a_plan_that_is_a_number_a_boolean_or_null_is_refused_naming_the_shape(self):
+        for value in examined("planted scalar plans", [7, 1.5, True, False, None]):
+            with self.subTest(value=value):
+                self.assert_refused(value, lambda plan: PLAN_NOT_AN_OBJECT.format(plan=plan))
+
+    def test_a_rows_value_that_is_not_an_array_is_refused_naming_the_shape(self):
+        planted = [7, "S00001-FIRST", None, {"S00001-FIRST": 1}]
+        for value in examined("planted rows values", planted):
+            with self.subTest(value=value):
+                self.assert_refused(
+                    {"rows": value}, lambda plan: PLAN_ROWS_NOT_AN_ARRAY.format(plan=plan)
+                )
+
+    def test_a_row_id_that_is_not_a_string_is_refused_naming_its_place(self):
+        planted = [(["S00001-FIRST", 1], 1), ([["S00001-FIRST"]], 0)]
+        for rows, index in examined("planted row ids", planted):
+            with self.subTest(rows=rows):
+                self.assert_refused(
+                    {"rows": rows},
+                    lambda plan: PLAN_ENTRY_NOT_A_STRING.format(plan=plan, index=index),
+                )
+
+    def test_a_well_formed_plan_still_selects_its_rows(self):
+        plans = [
+            (
+                {"_": ["a note"], "rows": list(self.IDS), "scope": {"decision": "run"}},
+                0,
+                "legs: 1 leg(s) for 3 row(s), the largest 3 row(s)",
+            ),
+            ({"_": ["a note"]}, 0, "legs: 1 leg(s) for 0 row(s), the largest 0 row(s)"),
+            ({"rows": ["S99999-GHOST"]}, 2, "legs: REFUSED: no row holds the id(s) S99999-GHOST"),
+        ]
+        for document, code, line in examined("well-formed plans", plans):
+            plan = self.fixture.write("plan.json", json.dumps(document))
+            done = self.fixture.run("legs", "--rows-from", str(plan))
+            self.assertEqual(done.returncode, code, done.stdout + done.stderr)
+            self.assertIn(line, done.stdout)
+            self.assertEqual(done.stderr, "")
 
 
 if __name__ == "__main__":
