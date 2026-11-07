@@ -8939,6 +8939,20 @@ DYNAMIC_IMPORTS = {
         "an import of this repository's own script module by its constant name, `import mutation_rows`, after a sys.path insert of the constant scripts directory; it reads no workflow file",
         ("test_mutation_rows_survivor_kills", "<module>", "import mutation_rows as runner", 1),
     ),
+    **allowed(
+        "compiles and executes the production path gate script's own source, or a planted copy of its text, in a fresh module the test makes and owns; the code it runs is that one script's text, which imports only the standard library, so it brings in no module of the test directory and reads no workflow file",
+        ("test_path_gate", "load", "compile(source, str(SCRIPT), 'exec')", 1),
+        (
+            "test_path_gate",
+            "load",
+            "exec(compile(source, str(SCRIPT), 'exec'), module.__dict__)",
+            1,
+        ),
+    ),
+    **allowed(
+        "reaches the namespace of the fresh module the loader makes, by a constant name, to run the path gate script's text in it; that namespace holds only what the script defines, so it brings in no module of the test directory",
+        ("test_path_gate", "load", "module.__dict__", 1),
+    ),
 }
 
 
