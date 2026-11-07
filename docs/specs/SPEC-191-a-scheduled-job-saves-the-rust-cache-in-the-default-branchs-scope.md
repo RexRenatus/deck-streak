@@ -151,3 +151,10 @@ and who can restore it.
 
 Issue #370; SPEC-038 R1, R2 and its amendment; ADR-055; ADR-191; `actions/cache` README (cache
 scopes and the tips on feature branches) and its `restore` action's inputs and outputs.
+
+## Amendment: the warm-up fetches the locked graph before it builds (SPEC-458)
+
+SPEC-458 R3 and R4 add one step to R5's order. After the restore by `ci.yml`'s prefix and before R6's clippy build, the job runs
+the fetch `ci.yml`'s `rust` job runs before its save, `cargo fetch --locked --manifest-path Cargo.toml`, under the lookup's
+condition `if: ${{ steps.lookup.outputs.cache-hit != 'true' }}`, so the entry R8 saves holds every target's packages. R4's lookup,
+R6's builds, R7's clean right before the save and R8's save are unchanged, and no key, path or condition changes (SPEC-458 R8).

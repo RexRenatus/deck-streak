@@ -165,5 +165,5 @@ text leaves the device without the learner's consent. Nothing is built before th
 ## More Information
 
 #928, #65, #52, #53, #780, #840 and #842; CHARTER 11, 15, 16 and 17; ADR-015, ADR-043, ADR-054,
-ADR-068, ADR-301, ADR-392 and ADR-602; SPEC-043, SPEC-044, SPEC-381 and SPEC-619;
+ADR-068, ADR-135, ADR-301, ADR-392 and ADR-602; SPEC-043, SPEC-044, SPEC-381 and SPEC-619;
 `docs/schematics/ai-routes-and-consent.md`.

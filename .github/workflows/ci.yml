@@ -9,6 +9,8 @@ name: ci
 # fork's included, restores and never saves.
 # The required `ci` check is always the pull request's own run: the aggregate job reports as `ci` for
 # a pull request and as `ci (push)` for a push to dev or main.
+# The two bench upload jobs, bench-rust and bench-web, alone add `id-token: write`, for CodSpeed's
+# OIDC upload; they run no install and no build script (SPEC-618).
 on:
   pull_request:
     branches: [dev, main]
@@ -48,7 +50,7 @@ jobs:
         run: rustup show
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
-          tool: cargo-nextest,cargo-deny
+          tool: cargo-nextest@0.9.149,cargo-deny@0.20.2
       - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
         env:
           PROTOC_SHA256: 96553041f1a91ea0efee963cb16f462f5985b4d65365f3907414c360044d8065
@@ -118,7 +120,7 @@ jobs:
         run: rustup show
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
-          tool: cargo-nextest
+          tool: cargo-nextest@0.9.149
       - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
         env:
           PROTOC_SHA256: 96553041f1a91ea0efee963cb16f462f5985b4d65365f3907414c360044d8065
@@ -154,9 +156,11 @@ jobs:
 
   # The workspace's tests in the profile the daemon ships from (SPEC-330, ADR-330, #473): the
   # tests run with debug assertions on and the shipped build runs with them off, so code the build
-  # selects is proved here in the build it ships in. It restores the Rust cache and saves none: rust
-  # alone saves it, because two jobs saving one key race. The release build lands under
-  # target/release, which the cache does not hold, so this job compiles its own.
+  # selects is proved here in the build it ships in. The debug key holds target/debug, which the
+  # release profile never reads, so this job keeps a release-profile key of its own (SPEC-631):
+  # it restores that key on every run, and it is the key's only writer. A push to dev or main that
+  # missed the key cleans the workspace's release artifacts out of target/ and saves it. Neither
+  # restore prefix matches the other key.
   release:
     runs-on: ubuntu-24.04
     timeout-minutes: 100
@@ -170,7 +174,7 @@ jobs:
         run: rustup show
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
-          tool: cargo-nextest
+          tool: cargo-nextest@0.9.149
       - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
         env:
           PROTOC_SHA256: 96553041f1a91ea0efee963cb16f462f5985b4d65365f3907414c360044d8065
@@ -179,8 +183,10 @@ jobs:
           echo "$PROTOC_SHA256  /tmp/protoc.zip" | sha256sum -c -
           mkdir -p "$HOME/.local/protoc" && unzip -q /tmp/protoc.zip -d "$HOME/.local/protoc"
           echo "$HOME/.local/protoc/bin" >> "$GITHUB_PATH"
-      - name: restore the Rust cache, keyed on the toolchain pin and Cargo.lock
-        id: rust-cache
+      - name: free space before the restore
+        run: df -h /
+      - name: restore the release-profile Rust cache, keyed on the toolchain pin and Cargo.lock
+        id: release-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
@@ -188,15 +194,30 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
+          key: rust-release-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
-            rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
+            rust-release-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
       - name: the locked dependency graph, every target's packages (the censuses read it offline)
         run: cargo fetch --locked --manifest-path Cargo.toml
       - name: test-release, the workspace's tests in the release profile
         env:
           CHECK_LOG_DIR: ${{ runner.temp }}/check-logs
         run: bash scripts/check.sh test-release
+      - name: free space after the stage
+        run: df -h /
+      - name: keep only the dependencies' release artifacts in the cache
+        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main') && steps.release-cache.outputs.cache-hit != 'true' }}
+        run: cargo clean --workspace --release
+      - name: save the release-profile Rust cache
+        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main') && steps.release-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ steps.release-cache.outputs.cache-primary-key }}
       - name: upload stage logs
         if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -322,7 +343,7 @@ jobs:
       # git source in deny.toml must still be live in the graph.
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
-          tool: cargo-deny
+          tool: cargo-deny@0.20.2
       - name: restore the Rust cache, keyed on the toolchain pin and Cargo.lock
         id: rust-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -626,6 +647,7 @@ jobs:
           python3 scripts/memory_scope.py --report "$out" -- cargo mutants --no-shuffle -vV --in-place --in-diff "$RUNNER_TEMP/mutation/git.diff" --baseline=skip --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 2300 --build-timeout 600 --output "$out" || rc=$?
           echo "$rc" > "$out/cargo-mutants.exit"
           echo "cargo-mutants exited $rc"
+          case "$rc" in 0|2|3) ;; *) echo "mutation-rust: shard $SHARD left no whole report (cargo-mutants exited $rc); the verdict reads it VOID"; exit "$rc" ;; esac
       - name: keep the shard's report
         if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -633,6 +655,16 @@ jobs:
           name: mutation-rust-shard-${{ matrix.shard }}
           path: ${{ runner.temp }}/shards/
           if-no-files-found: warn
+      # A leg whose own baseline is not green ran no mutant and left no whole report: it fails its
+      # job here, after its report is kept, so its colour agrees with the verdict, which reads that
+      # record VOID by name (SPEC-458 R17, ADR-475 D10).
+      - name: a leg whose own baseline is not green fails its job, after its report is kept
+        if: ${{ needs.mutation-plan.outputs.rust == 'true' && steps.baseline.outputs.green != 'true' }}
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: |
+          echo "mutation-rust: shard $SHARD left no whole report (its baseline recorded exit $(cat "$RUNNER_TEMP/shards/mutation-rust-shard-$SHARD/baseline/baseline.exit")); the verdict reads it VOID"
+          exit 1
 
   # One job per shard of the plan's Python matrix: the runner over the diff's Python mutants, each
   # shard's mutants round-robin as the plan sized them, stopping a file at its first survivor. It
@@ -1126,6 +1158,210 @@ jobs:
       - name: the study suite over the staged build (Chromium and WebKit, persistent profiles)
         run: pnpm --dir web/app test:study
 
+  # The benches (SPEC-618): per lane a build job with a read-only token, which runs every build
+  # and install script, and an upload job that alone holds CodSpeed's OIDC grant and installs and
+  # builds nothing. Each job always starts; the build job's plan decides once whether the lane
+  # applies and whether it uploads, and every later step reads that decision.
+  bench-rust-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    # actions/checkout only; every build script and proc macro runs here, with no OIDC grant.
+    permissions:
+      contents: read
+    outputs:
+      applicable: ${{ steps.plan.outputs.applicable }}
+      upload: ${{ steps.plan.outputs.upload }}
+      reason: ${{ steps.plan.outputs.reason }}
+    env:
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: the pinned Rust toolchain (rust-toolchain.toml)
+        run: rustup show
+      - name: the workspace metadata, from which the plan reads the bench packages' closure
+        run: cargo metadata --format-version 1 --locked > "$RUNNER_TEMP/metadata.json"
+      - name: the plan (does the diff reach a Rust bench; is this a fork pull request)
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: python3 scripts/perf-plan.py --lane rust --base HEAD^1 --head HEAD --metadata "$RUNNER_TEMP/metadata.json" --event "$EVENT" --repo "$REPO" --head-repo "$HEAD_REPO" --github-output "$GITHUB_OUTPUT" --step-summary "$GITHUB_STEP_SUMMARY"
+      # Every pull request, whether or not a bench applies: the records it adds or changes, and
+      # only those, are checked against the benchmark list and the pull request's own branch.
+      - name: the regression records this pull request adds or changes
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/records"
+          git diff --name-only --diff-filter=AM HEAD^1 HEAD -- perf/regressions.d | while read -r path; do
+            case "$path" in
+              *.json) cp "$path" "$RUNNER_TEMP/records/" ;;
+            esac
+          done
+          python3 scripts/perf-record.py check --dir "$RUNNER_TEMP/records" --branch "$HEAD_REF" --benchmarks perf/benchmarks.txt
+      - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
+        if: ${{ steps.plan.outputs.applicable == 'true' }}
+        env:
+          PROTOC_SHA256: 96553041f1a91ea0efee963cb16f462f5985b4d65365f3907414c360044d8065
+        run: |
+          curl -fsSL -o /tmp/protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v31.1/protoc-31.1-linux-x86_64.zip
+          echo "$PROTOC_SHA256  /tmp/protoc.zip" | sha256sum -c -
+          mkdir -p "$HOME/.local/protoc" && unzip -q /tmp/protoc.zip -d "$HOME/.local/protoc"
+          echo "$HOME/.local/protoc/bin" >> "$GITHUB_PATH"
+      # The Rust bench lane's one tool, compiled here beside no token and carried in the archive, so
+      # bench-rust installs nothing.
+      - name: cargo-codspeed 6.0.0, locked, into the runner's temporary folder
+        if: ${{ steps.plan.outputs.applicable == 'true' }}
+        run: |
+          cargo install --locked cargo-codspeed --version 6.0.0 --root "$RUNNER_TEMP/codspeed-tool"
+          echo "$RUNNER_TEMP/codspeed-tool/bin" >> "$GITHUB_PATH"
+      - name: build the benches
+        if: ${{ steps.plan.outputs.applicable == 'true' }}
+        run: cargo codspeed build -p deck-streak-engine-core -p deck-streak-fsrs7 -p deck-streak-ffi
+      - name: archive the bench binaries (an artifact drops the executable bit; tar keeps it)
+        if: ${{ steps.plan.outputs.upload == 'true' }}
+        run: tar -cf "$RUNNER_TEMP/bench-rust.tar" target/codspeed -C "$RUNNER_TEMP" codspeed-tool/bin/cargo-codspeed
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ steps.plan.outputs.upload == 'true' }}
+        with:
+          name: bench-rust-bin
+          path: ${{ runner.temp }}/bench-rust.tar
+          retention-days: 1
+
+  bench-rust:
+    needs: [bench-rust-build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    # OIDC to CodSpeed, with no secret; this job runs no install and no build script.
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: the plan, from bench-rust-build
+        env:
+          UPLOAD: ${{ needs.bench-rust-build.outputs.upload }}
+          REASON: ${{ needs.bench-rust-build.outputs.reason }}
+        run: |
+          echo "bench-rust: upload=$UPLOAD ($REASON)"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: ${{ needs.bench-rust-build.outputs.upload == 'true' }}
+        with:
+          persist-credentials: false
+      - name: the pinned Rust toolchain (rust-toolchain.toml)
+        if: ${{ needs.bench-rust-build.outputs.upload == 'true' }}
+        run: rustup show
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ needs.bench-rust-build.outputs.upload == 'true' }}
+        with:
+          name: bench-rust-bin
+          path: ${{ runner.temp }}
+      - name: unpack the bench binaries
+        if: ${{ needs.bench-rust-build.outputs.upload == 'true' }}
+        run: tar -xf "$RUNNER_TEMP/bench-rust.tar"
+      - name: the cargo-codspeed binary from the archive, on the path
+        if: ${{ needs.bench-rust-build.outputs.upload == 'true' }}
+        run: echo "$GITHUB_WORKSPACE/codspeed-tool/bin" >> "$GITHUB_PATH"
+      # The action's own instrument cache would save on a pull request too; it stays off, so only a
+      # push saves a cache, as the header says.
+      - uses: CodSpeedHQ/action@78102a468f96d8e0ccb92d0ec49425753fc42062 # v5.6.0
+        if: ${{ needs.bench-rust-build.outputs.upload == 'true' }}
+        with:
+          mode: simulation
+          run: cargo codspeed run
+          cache-instruments: false
+
+  bench-web-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    # actions/checkout only; every install script runs here, with no OIDC grant.
+    permissions:
+      contents: read
+    outputs:
+      applicable: ${{ steps.plan.outputs.applicable }}
+      upload: ${{ steps.plan.outputs.upload }}
+      reason: ${{ steps.plan.outputs.reason }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: the plan (does the diff reach a web bench; is this a fork pull request)
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: python3 scripts/perf-plan.py --lane web --base HEAD^1 --head HEAD --event "$EVENT" --repo "$REPO" --head-repo "$HEAD_REPO" --github-output "$GITHUB_OUTPUT" --step-summary "$GITHUB_STEP_SUMMARY"
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        if: ${{ steps.plan.outputs.applicable == 'true' }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: ${{ steps.plan.outputs.applicable == 'true' }}
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: the dependencies, and the sources web/app generates
+        if: ${{ steps.plan.outputs.applicable == 'true' }}
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --dir web/app exec paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --emit-ts-declarations --silent
+          pnpm --dir web/app exec svelte-kit sync
+      - name: archive the installed trees and the generated sources
+        if: ${{ steps.plan.outputs.upload == 'true' }}
+        run: tar -cf "$RUNNER_TEMP/bench-web.tar" node_modules web/app/node_modules web/app/.svelte-kit web/app/src/lib/paraglide
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ steps.plan.outputs.upload == 'true' }}
+        with:
+          name: bench-web-bin
+          path: ${{ runner.temp }}/bench-web.tar
+          retention-days: 1
+
+  bench-web:
+    needs: [bench-web-build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    # OIDC to CodSpeed, with no secret; this job runs no install and no build script.
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: the plan, from bench-web-build
+        env:
+          UPLOAD: ${{ needs.bench-web-build.outputs.upload }}
+          REASON: ${{ needs.bench-web-build.outputs.reason }}
+        run: |
+          echo "bench-web: upload=$UPLOAD ($REASON)"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: ${{ needs.bench-web-build.outputs.upload == 'true' }}
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        if: ${{ needs.bench-web-build.outputs.upload == 'true' }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: ${{ needs.bench-web-build.outputs.upload == 'true' }}
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: ${{ needs.bench-web-build.outputs.upload == 'true' }}
+        with:
+          name: bench-web-bin
+          path: ${{ runner.temp }}
+      - name: unpack the installed trees and the generated sources
+        if: ${{ needs.bench-web-build.outputs.upload == 'true' }}
+        run: tar -xf "$RUNNER_TEMP/bench-web.tar"
+      # The action's own instrument cache stays off here too.
+      - uses: CodSpeedHQ/action@78102a468f96d8e0ccb92d0ec49425753fc42062 # v5.6.0
+        if: ${{ needs.bench-web-build.outputs.upload == 'true' }}
+        with:
+          mode: simulation
+          run: pnpm exec vitest bench --run --config vitest.bench.config.ts
+          cache-instruments: false
+
   workflow-lint:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -1135,9 +1371,9 @@ jobs:
           persist-credentials: false
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
-          tool: zizmor
+          tool: zizmor@1.31.1
       - name: zizmor audits the workflows themselves
-        run: zizmor --no-online-audits --persona regular .github/workflows
+        run: zizmor --no-online-audits --persona regular .github
 
   base-is-dev:
     runs-on: ubuntu-24.04
@@ -1182,7 +1418,7 @@ jobs:
   ci:
     name: ${{ github.event_name == 'pull_request' && 'ci' || 'ci (push)' }}
     if: ${{ always() }}
-    needs: [rust, engine, release, web, card-sandbox, hygiene, mutation-plan, mutation-rust, mutation-python, mutation-python-release, mutation-rows, mutation-verdict, mutation-web-shard, mutation-web, web-engine, workflow-lint, base-is-dev]
+    needs: [rust, engine, release, web, card-sandbox, hygiene, mutation-plan, mutation-rust, mutation-python, mutation-python-release, mutation-rows, mutation-verdict, mutation-web-shard, mutation-web, web-engine, bench-rust-build, bench-rust, bench-web-build, bench-web, workflow-lint, base-is-dev]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

@@ -242,19 +242,15 @@ stage_python() {
     need_python && need_cargo && need_ruff || return 1
     # Both suites run whatever the first found, and the last line gives each one's tests and exit,
     # so a red suite never hides the other's result; a suite that ran no test fails (SPEC-054 R7).
-    local suite output code ran failed=0 verdicts="" lint
-    for suite in scripts/tests tools/parity-oracle agent/tests; do
-        output=$(python3 -m unittest discover -s "$suite" -p 'test_*.py' 2>&1)
-        code=$?
-        printf '%s\n' "$output"
-        ran=$(printf '%s\n' "$output" | grep -Eo '^Ran [0-9]+' | tail -n 1)
-        ran=${ran#Ran }
-        if [ "$code" -ne 0 ] || [ "${ran:-0}" -eq 0 ]; then failed=1; fi
-        verdicts+="${verdicts:+; }$suite ran ${ran:-0} test(s), exit $code"
-    done
-    # ruff, after every suite and whatever they found (SPEC-424 R5 to R7).
+    # Each test module runs in a process of its own, several at once (SPEC-633).
+    local suites=() suite output failed=0 lint
+    for suite in scripts/tests tools/parity-oracle agent/tests; do suites+=("$suite"); done
+    output=$(python3 scripts/python_stage.py "${suites[@]}" 2>&1) || failed=1
+    # Every runner line but its last, then that last line with the ruff fields joined: ruff runs
+    # after every suite, whatever they found (SPEC-424 R5 to R7).
+    printf '%s\n' "$output" | sed '$d'
     lint=$(ruff_arm) || failed=1
-    echo "python: $verdicts; $lint"
+    echo "$(printf '%s\n' "$output" | tail -n 1); $lint"
     return "$failed"
 }
 

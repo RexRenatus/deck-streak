@@ -39,6 +39,12 @@
       "test_ios_lane"
     ]
   },
+  "scripts/locale_census.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_locale_census"
+    ]
+  },
   "scripts/lock-digest-line.py": {
     "dir": "scripts/tests",
     "modules": [
@@ -96,6 +102,30 @@
       "test_mutation_rows_survivor_kills"
     ]
   },
+  "scripts/path_gate.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_path_gate"
+    ]
+  },
+  "scripts/perf-census.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_perf_census"
+    ]
+  },
+  "scripts/perf-plan.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_perf_plan"
+    ]
+  },
+  "scripts/perf-record.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_perf_record"
+    ]
+  },
   "scripts/public-scrub.py": {
     "dir": "scripts/tests",
     "modules": [
@@ -103,6 +133,12 @@
       "test_readings_taxonomy_scrub",
       "test_rail_contract",
       "test_deploy_templates"
+    ]
+  },
+  "scripts/python_stage.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_python_stage"
     ]
   },
   "scripts/release_gates.py": {

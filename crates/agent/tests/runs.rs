@@ -981,3 +981,113 @@ fn each_count_names_the_number_it_read() {
         ["the test file writes the statement 0 times, not once"]
     );
 }
+
+/// SPEC-469 A1 (R4, R5; ADR-486 D2, D3): the prune pin answers every vector its Lean port
+/// `lean/AgentPinGroups` wrote to `formal/vectors/agent-pin-groups.jsonl`, read at run time. A
+/// shebang vector's source is refused by `opens_with_a_shebang`, and by `prune_pin_problems` with
+/// the shebang sentence alone, exactly when the port refuses it. A count vector's source lexes,
+/// `statements_run_in` reads the port's run count, and `prune_pin_problems` names exactly the
+/// sentences the port's run count and word count imply.
+/// MUTATION COVERAGE, not red first: the counts already answer every vector on dev; rows S46902 and S46904 are its reds.
+#[test]
+fn the_prune_pin_answers_every_vector_of_its_lean_port() {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../formal/vectors/agent-pin-groups.jsonl");
+    let text = std::fs::read_to_string(&path).expect("the Lean port's vectors are readable");
+    let mut lines = text.lines();
+    let header: serde_json::Value =
+        serde_json::from_str(lines.next().expect("the vectors open with a header"))
+            .expect("the header is JSON");
+    let vectors: Vec<serde_json::Value> = lines
+        .map(|line| serde_json::from_str(line).expect("each vector is JSON"))
+        .collect();
+    assert_eq!(
+        (
+            header["schema"].as_str(),
+            header["entry"].as_str(),
+            header["covers"].as_str(),
+            header["anchor"].as_str(),
+        ),
+        (
+            Some("phx.formal.vectors.v1"),
+            Some("AgentPinGroups"),
+            Some("crates/agent/tests/runs.rs"),
+            Some("prune_pin_problems"),
+        )
+    );
+    assert_eq!(header["vectors"], serde_json::Value::from(vectors.len()));
+    let number = |vector: &serde_json::Value, key: &str| {
+        vector[key]
+            .as_u64()
+            .and_then(|n| usize::try_from(n).ok())
+            .expect("a count vector names both counts")
+    };
+    let (mut shebangs, mut counts) = (0, 0);
+    for vector in &vectors {
+        let source = vector["source"]
+            .as_str()
+            .expect("each vector names its source");
+        match vector["rule"].as_str() {
+            Some("opens_with_a_shebang") => {
+                let refused = vector["refused"]
+                    .as_bool()
+                    .expect("a shebang vector says whether the port refuses it");
+                assert_eq!(
+                    opens_with_a_shebang(source),
+                    refused,
+                    "the shebang check parted from its port: {source:?}"
+                );
+                let problems = prune_pin_problems(source);
+                if refused {
+                    assert_eq!(
+                        problems,
+                        [
+                            "the source opens with a first line rustc removes as a shebang before it lexes"
+                        ],
+                        "a source the port refuses was read: {source:?}"
+                    );
+                } else {
+                    assert!(
+                        !problems.iter().any(|problem| problem.contains("shebang")),
+                        "a source the port reads was refused as a shebang: {source:?}: {problems:?}"
+                    );
+                }
+                shebangs += 1;
+            }
+            Some("counts") => {
+                let tokens = tokens_of(source).unwrap_or_else(|error| {
+                    panic!("a count vector does not lex: {source:?}: {error}")
+                });
+                let (run, words) = (number(vector, "run"), number(vector, "delete_words"));
+                assert_eq!(
+                    statements_run_in(&tokens),
+                    run,
+                    "the run count parted from its port: {source}"
+                );
+                let expected: Vec<String> = [
+                    (run != 1).then(|| {
+                        format!(
+                            "the code hands the statement to sqlx::query! {run} times, not once"
+                        )
+                    }),
+                    (words != 1).then(|| {
+                        format!("the source writes the word delete {words} times, not once")
+                    }),
+                ]
+                .into_iter()
+                .flatten()
+                .collect();
+                assert_eq!(
+                    prune_pin_problems(source),
+                    expected,
+                    "the counts parted from their port: {source}"
+                );
+                assert_eq!(run, words, "a probe's run and its word parted: {source}");
+                counts += 1;
+            }
+            other => panic!("a vector of an unknown rule: {other:?}"),
+        }
+    }
+    assert_eq!((shebangs, counts), (96, 576), "the population changed");
+    eprintln!("examined {} vectors", shebangs + counts);
+}

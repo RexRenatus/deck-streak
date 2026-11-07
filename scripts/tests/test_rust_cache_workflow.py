@@ -35,7 +35,7 @@ COMPILES = [
     "cargo clippy --workspace --all-targets --locked",
     "cargo nextest run --workspace --locked --no-run",
 ]
-TOOLS = "cargo-nextest,cargo-deny"
+TOOLS = "cargo-nextest@0.9.149,cargo-deny@0.20.2"
 
 
 def workflow_text(name):
@@ -146,13 +146,25 @@ class TheRustCacheWorkflow(unittest.TestCase):
         mine = lookup_step(steps_of(load(CACHE_WORKFLOW)))
         self.assertEqual(paths(mine), RUST_CACHE)
         self.assertTrue(mine["with"]["key"].endswith(KEY_TAIL), "the key ends in the lockfile hash")
-        compared = []
+        compared, release = [], []
         for name in ("ci.yml", "mutation-weekly.yml"):
-            for step in rust_restores(name):
-                compared.append((name, step["with"]["key"]))
-        for name, key in examined("restore keys of ci.yml and mutation-weekly.yml", compared):
+            for job_id, job in (load(name).get("jobs") or {}).items():
+                for step in (job or {}).get("steps") or []:
+                    if action(step) == "actions/cache/restore" and paths(step) == RUST_CACHE:
+                        own = (name, job_id) == ("ci.yml", "release")
+                        (release if own else compared).append((name, step["with"]["key"]))
+        for name, key in examined("restore keys but the release job's", compared):
             self.assertEqual(mine["with"]["key"], key, f"{name} restores another key")
         self.assertEqual({name for name, _ in compared}, {"ci.yml", "mutation-weekly.yml"})
+        # The release job restores a key of its own, in the release profile, which no other
+        # workflow restores or saves.
+        ((_, release_key),) = examined("release job restores", release)
+        self.assertTrue(release_key.startswith("rust-release-"), "the release key's prefix")
+        self.assertTrue(release_key.endswith(KEY_TAIL), "the release key ends in the lockfile hash")
+        self.assertNotEqual(release_key, mine["with"]["key"], "the release key is its own")
+        for path in workflow_files(WORKFLOWS):
+            if path.name != "ci.yml":
+                self.assertNotIn("rust-release-", workflow_file_text(path), f"{path.name}")
 
     def test_it_looks_the_exact_key_up_and_every_later_step_stops_on_a_hit(self):
         steps = steps_of(load(CACHE_WORKFLOW))

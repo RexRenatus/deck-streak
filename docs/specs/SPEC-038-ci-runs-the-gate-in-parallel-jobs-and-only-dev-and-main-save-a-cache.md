@@ -820,6 +820,16 @@ shape it reads, among them an allowed advisory, an exempt package, `warn-only`, 
 out, a severity floor, a check turned off, a licence left out, a tag in place of a SHA, a path
 filter, a second event, a condition and a second review.
 
+## Amendment: the release job keeps a release-profile cache of its own (SPEC-631)
+
+Insert-only; every earlier byte is kept. R1 is amended: besides the `rust` job, the `release` job
+saves the same paths under its own key
+`rust-release-<runner os>-<hashFiles('rust-toolchain.toml')>-<hashFiles('Cargo.lock')>`, only when
+R2 allows it, and only after `cargo clean --workspace --release` has left the dependencies'
+release-profile artifacts alone in `target/`. It restores only that key, falling back to the newest
+entry of the same toolchain pin. In `ci.yml` the `rust` job stays the only job that saves the debug
+key, and no other job restores the release key. R2 is unchanged.
+
 ## 19. Amendments, by SPEC-424: the python stage checks ruff after cargo
 
 Insert-only under ruling (i) of section 8: every earlier byte is kept in order. It inserts this

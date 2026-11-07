@@ -6,7 +6,7 @@
 # and the second oracle's driver, corpus and registry (the same digests, and the corpus pinned by
 # its registry; SPEC-498).
 line-length = 100
-target-version = "py311"
+target-version = "py312"
 force-exclude = true
 extend-exclude = [
     "tools/parity-oracle/generate.py",

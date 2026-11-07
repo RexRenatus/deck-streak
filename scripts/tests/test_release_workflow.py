@@ -548,7 +548,7 @@ class TheReleaseBuildsTheSyncServer(unittest.TestCase):
         }
         self.assertEqual(len(pinned), 1, pinned)
         self.assertEqual([s["uses"] for s in install], sorted(pinned))
-        self.assertEqual(install[0]["with"]["tool"], "cargo-deny")
+        self.assertEqual(install[0]["with"]["tool"], "cargo-deny@0.20.2")
         audited = index_of(steps, AUDIT_SCRIPT)
         self.assertLess(steps.index(checkout[0]), audited)
         self.assertLess(steps.index(install[0]), audited)

@@ -1,7 +1,9 @@
 """Every CI job that proves mutation rows fetches the locked dependency graph first (SPEC-332).
 
 SPEC-416 holds every `ci.yml` job that runs a cargo-mutants baseline to the same rule, judged by the
-same `refusals()` with the anchor step it orders the fetch before given as a parameter.
+same `refusals()` with the anchor step it orders the fetch before given as a parameter. SPEC-458
+reads that population from every workflow, and holds every job that saves the Rust cache to the
+rule too, the save its anchor.
 
 A job restores the Rust cache by key, and with no exact hit it restores an older one by key prefix,
 whose registry can lack a package the current `Cargo.lock` adds. The rows runner's first cargo call
@@ -216,13 +218,16 @@ class TheJudgeRefusesEachPlantedShape(unittest.TestCase):
         self.assertEqual(["planted.yml:j: no step runs `cargo fetch --locked`"], got)
 
 
-def baseline_jobs():
-    """[(file, job, its steps)] for every `ci.yml` job that runs a cargo-mutants baseline."""
+def baseline_jobs(files=("ci.yml",)):
+    """[(file, job, its steps)] for every job of the workflow `files` that runs a cargo-mutants
+    baseline; `ci.yml` alone by default (SPEC-416), every workflow when SPEC-458 names them."""
+    texts = workflow_texts()
     found = []
-    for job, block in jobs(workflow_texts()["ci.yml"]).items():
-        job_steps = steps(block)
-        if any(runs_a_baseline(step) for step in job_steps):
-            found.append(("ci.yml", job, job_steps))
+    for file in files:
+        for job, block in jobs(texts[file]).items():
+            job_steps = steps(block)
+            if any(runs_a_baseline(step) for step in job_steps):
+                found.append((file, job, job_steps))
     return found
 
 
@@ -348,6 +353,139 @@ class TheJudgeRefusesEachPlantedBaselineShape(unittest.TestCase):
     def test_the_legs_own_baseline_script_is_a_baseline(self):
         job = jobs("\njobs:\n  j:\n    steps:\n" + LEG_BASELINE_RUN)["j"]
         self.assertEqual(1, len([s for s in steps(job) if runs_a_baseline(s)]))
+
+
+class AllWorkflowsBaselineJobsFetchTheLockedGraph(unittest.TestCase):
+    """SPEC-458 A1 (R1, R2): SPEC-416's rule over the mutant legs of every workflow (#827)."""
+
+    def test_each_baseline_job_of_every_workflow_fetches_after_its_cache_restore_and_before_cargo_mutants(
+        self,
+    ):
+        baseline = examined(
+            "jobs of every workflow that run a cargo-mutants baseline",
+            baseline_jobs(files=tuple(workflow_texts())),
+        )
+        held = [(file, job) for file, job, _ in baseline]
+        for job in (
+            ("ci.yml", "mutation-rust"),
+            ("mutation-weekly.yml", "rust"),
+            ("mutation-weekly.yml", "rehearsal"),
+        ):
+            self.assertIn(job, held)
+        found = []
+        for file, job, job_steps in baseline:
+            found.extend(refusals(file, job, job_steps, BASELINE_ANCHOR))
+        self.assertEqual([], found)
+
+
+def saves_the_rust_cache(step):
+    """True when a step saves the Rust cache's paths (SPEC-458 R3)."""
+    return "actions/cache/save@" in step and "~/.cargo/registry/cache/" in step
+
+
+SAVE_ANCHOR = Anchor("Rust cache save", saves_the_rust_cache, False)
+
+
+def saving_jobs():
+    """[(file, job, its steps)] for every job, in every workflow, holding a step that saves the
+    Rust cache's paths."""
+    found = []
+    for name, text in workflow_texts().items():
+        for job, block in jobs(text).items():
+            job_steps = steps(block)
+            if any(saves_the_rust_cache(step) for step in job_steps):
+                found.append((name, job, job_steps))
+    return found
+
+
+class EveryRustCacheSaveFetchesTheLockedGraph(unittest.TestCase):
+    """SPEC-458 A2 (R3, R4): every entry saved under the Rust key holds every target's packages."""
+
+    def test_each_job_that_saves_the_rust_cache_fetches_after_its_restore_and_before_its_save(
+        self,
+    ):
+        saving = examined("jobs that save the Rust cache", saving_jobs())
+        held = [(file, job) for file, job, _ in saving]
+        for job in (("ci.yml", "rust"), ("rust-cache.yml", "warm")):
+            self.assertIn(job, held)
+        found = []
+        for file, job, job_steps in saving:
+            found.extend(refusals(file, job, job_steps, SAVE_ANCHOR))
+        self.assertEqual([], found)
+
+
+SAVE_IF = "        if: ${{ steps.lookup.outputs.cache-hit != 'true' }}\n"
+SAVE_RESTORE = (
+    "      - name: restore by prefix\n" + SAVE_IF + "        uses: actions/cache/restore@abc\n"
+)
+SAVE_BUILD = (
+    "      - name: build\n"
+    + SAVE_IF
+    + "        run: cargo clippy --workspace --all-targets --locked\n"
+)
+SAVE_STEP = (
+    "      - name: save\n"
+    + SAVE_IF
+    + "        uses: actions/cache/save@abc\n"
+    + "        with:\n          path: |\n            ~/.cargo/registry/cache/\n            target/\n"
+)
+SAVE_FETCH_RUN = "cargo fetch --locked --manifest-path Cargo.toml"
+
+
+def planted_save(*step_blocks):
+    job = jobs("\njobs:\n  j:\n    steps:\n" + "".join(step_blocks))["j"]
+    return refusals("planted.yml", "j", steps(job), SAVE_ANCHOR)
+
+
+class TheJudgeRefusesEachPlantedSaveShape(unittest.TestCase):
+    """SPEC-458 A3 (R3, R5): positive controls on a job that saves the Rust cache."""
+
+    def test_the_judge_refuses_each_planted_shape_on_a_saving_job(self):
+        where = "planted.yml:j"
+        fetch = fetch_step(run=SAVE_FETCH_RUN, cond=SAVE_IF)
+        planted_shapes = [
+            ("the fixed shape", (SAVE_RESTORE, fetch, SAVE_BUILD, SAVE_STEP), []),
+            (
+                "no fetch",
+                (SAVE_RESTORE, SAVE_BUILD, SAVE_STEP),
+                [f"{where}: no step runs `{FETCH}`"],
+            ),
+            (
+                "a fetch before the restore",
+                (fetch, SAVE_RESTORE, SAVE_BUILD, SAVE_STEP),
+                [f"{where}: the fetch (step 0) is not after the last cache restore"],
+            ),
+            (
+                "a fetch after the save",
+                (SAVE_RESTORE, SAVE_BUILD, SAVE_STEP, fetch),
+                [f"{where}: the fetch (step 3) is not before the first Rust cache save"],
+            ),
+            (
+                "a swallowed fetch (|| true)",
+                (
+                    SAVE_RESTORE,
+                    fetch_step(run=f"{SAVE_FETCH_RUN} || true", cond=SAVE_IF),
+                    SAVE_BUILD,
+                    SAVE_STEP,
+                ),
+                [f"{where}: the fetch step swallows its exit code: run: {SAVE_FETCH_RUN} || true"],
+            ),
+            (
+                "continue-on-error",
+                (
+                    SAVE_RESTORE,
+                    fetch_step(
+                        run=SAVE_FETCH_RUN, extra="        continue-on-error: true\n", cond=SAVE_IF
+                    ),
+                    SAVE_BUILD,
+                    SAVE_STEP,
+                ),
+                [f"{where}: the fetch step carries continue-on-error"],
+            ),
+        ]
+        for name, blocks, expected in examined("planted save shapes", planted_shapes):
+            with self.subTest(shape=name):
+                self.assertEqual(expected, planted_save(*blocks))
 
 
 if __name__ == "__main__":

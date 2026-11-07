@@ -42,3 +42,11 @@ deck-streak-kernel.workspace = true
 # ADR-375 (SPEC-364 section 3): the runtime that runs the engine's own sync server as a child of the
 # one-way tests, on a loopback port, as the native adapter's login tests run it.
 tokio = { workspace = true, features = ["rt"] }
+# ADR-640 (SPEC-618 R9): the bench harness, for `benches/` alone.
+divan.workspace = true
+
+# SPEC-618 R9: the scheduler's day queue, event check, fold and schedule step, measured
+# by CodSpeed; Divan's `main` replaces the default harness.
+[[bench]]
+name = "scheduling"
+harness = false

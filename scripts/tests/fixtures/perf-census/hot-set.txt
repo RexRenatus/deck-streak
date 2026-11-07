@@ -1,0 +1,25 @@
+--------------------------------------------------------------------------------
+Profile data file 'callgrind.out.study-day' (creator: callgrind-3.22.0)
+--------------------------------------------------------------------------------
+Timerange: Basic block 0 - 412337
+Trigger: Program termination
+Profiled target:  target/release/examples/study_day (PID 4242, part 1)
+Events recorded:  Ir
+Events shown:     Ir
+Event sort order: Ir
+Thresholds:       90
+Auto-annotation:  off
+
+--------------------------------------------------------------------------------
+Ir
+--------------------------------------------------------------------------------
+3,000,000 (100.0%)  PROGRAM TOTALS
+
+--------------------------------------------------------------------------------
+Ir                 file:function
+--------------------------------------------------------------------------------
+1,200,000 (40.00%)  /build/deck-streak/crates/engine-core/src/scheduler.rs:deck_streak_engine_core::scheduler::day_queue::h0123456789abcdef [/build/deck-streak/target/release/examples/study_day]
+  700,000 (23.33%)  /build/deck-streak/crates/engine-core/src/answer.rs:deck_streak_engine_core::answer::shown_states::h1111111111111111 [/build/deck-streak/target/release/examples/study_day]
+  450,000 (15.00%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gnu/libc.so.6]
+  250,000 ( 8.33%)  /build/deck-streak/crates/fsrs7/src/replay.rs:<deck_streak_fsrs7::replay::Replay as core::iter::traits::iterator::Iterator>::next::h2222222222222222
+  100,000 ( 3.33%)  /build/deck-streak/crates/engine-core/src/answer.rs:deck_streak_engine_core::answer::shown_states::h3333333333333333 [/build/deck-streak/target/release/examples/study_day]

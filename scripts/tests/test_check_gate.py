@@ -68,9 +68,15 @@ PLANTED_ORACLE = (
     "    def test_two(self):\n"
     "        self.assertEqual(2, 2)\n"
 )
-# A python3 whose unittest runs nothing and exits 0, as Python 3.11's does; any other call passes.
+# The real python3, found here before run_gate narrows PATH.
+REAL_PYTHON3 = shutil.which("python3")
+# A python3 whose unittest runs nothing and exits 0, as Python 3.11's does; any other call, the
+# stage's module runner among them, runs the real python3.
 EMPTY_UNITTEST = (
-    "case \"$*\" in *unittest*) printf 'Ran 0 tests in 0.000s\\n\\nOK\\n' ;; esac\nexit 0\n"
+    'case "$*" in\n'
+    "*\"-m unittest\"*) printf 'Ran 0 tests in 0.000s\\n\\nOK\\n' ;;\n"
+    f"*) exec '{REAL_PYTHON3}' \"$@\" ;;\n"
+    "esac\n"
 )
 # A pin file of one requirement and one wheel's digest, the shape scripts/ruff-requirements.txt has
 # (SPEC-424 R1). The digest is built here, never written out whole.
@@ -153,6 +159,7 @@ def python_tree(where, guard, oracle, pin=DEFAULT_PIN):
             (tree / suite / "test_planted.py").write_text(text, encoding="utf-8")
     (tree / "scripts" / "ruff-requirements.txt").write_text(pin, encoding="utf-8")
     shutil.copy(CHECK, tree / "scripts" / "check.sh")
+    shutil.copy(REPO / "scripts" / "python_stage.py", tree / "scripts" / "python_stage.py")
     return tree / "scripts" / "check.sh"
 
 
