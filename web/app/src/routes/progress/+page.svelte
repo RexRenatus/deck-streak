@@ -31,6 +31,9 @@
         {:else}
           <p class="mt-2">{m.progress_none()}</p>
         {/each}
+        {#if progress.value.courses.length > 0}
+          <p class="mt-2 text-sm">{m.progress_ai_assisted()}</p>
+        {/if}
       </section>
     {:else if progress.kind === 'reopen'}
       <div role="alert">{m.reopen_from_telegram()}</div>

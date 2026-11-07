@@ -73,7 +73,7 @@ const ENGINE_STAND_IN = `
 const card = {
   id: '1', ordinal: 0, flag: 0, question: '<p>A card</p>', answer: '<p>Its answer</p>',
   css: '.card { color: navy; }</style><base href="https://cards.example/">',
-  labels: ['<1m', '<6m', '<10m', '4d'], undo: null, late: false
+  labels: ['<1m', '<6m', '<10m', '4d'], undo: null, late: false, assisted: false
 };
 const face = (text) => ({ text, css: card.css, autoplay: [], replay: [], omitted: [] });
 export default async function load() {}

@@ -1,0 +1,87 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S38800-MARKER-SPELLING",
+        "engine-core",
+        "src/ai_assisted.rs",
+        "pub const MARKER: &str = \"ai-assisted\";",
+        "pub const MARKER: &str = \"ai_assisted\";",
+        "ai_assisted::the_marker_is_the_tag_ai_assisted",
+        "the tag a source writes is a constant's literal, which no generated mutant changes"
+      ],
+      [
+        "S38801-CASE-FREE",
+        "engine-core",
+        "src/ai_assisted.rs",
+        "tag.eq_ignore_ascii_case(MARKER)",
+        "tag == MARKER",
+        "ai_assisted::the_marker_is_read_in_any_case",
+        "the engine compares tags without regard to case, so the rule does"
+      ],
+      [
+        "S38802-WHOLE-TAG",
+        "engine-core",
+        "src/ai_assisted.rs",
+        "tags.split_whitespace()\n        .any(|tag| tag.eq_ignore_ascii_case(MARKER))",
+        "tags.to_ascii_lowercase().contains(MARKER)",
+        "ai_assisted::only_the_whole_tag_marks_a_note",
+        "a longer tag, a child tag or a part does not mark a note"
+      ],
+      [
+        "S38803-ANY-TAG",
+        "engine-core",
+        "src/ai_assisted.rs",
+        ".any(|tag|",
+        ".all(|tag|",
+        "ai_assisted::a_note_among_other_tags_is_marked",
+        "the tag marks a note among other tags"
+      ],
+      [
+        "S38804-TAGS-READ",
+        "engine-core",
+        "src/dispatch.rs",
+        "\"select tags from notes where id = ?\"",
+        "\"select tags from notes where id <> ?\"",
+        "ai_assisted::the_core_reads_the_engines_own_tags",
+        "the fixed read selects the asked note's tags, a guard cargo-mutants never mutates"
+      ],
+      [
+        "S38805-NO-ROW",
+        "engine-core",
+        "src/dispatch.rs",
+        "[] => Ok(false),",
+        "[] => Ok(true),",
+        "ai_assisted::a_note_the_collection_lacks_reads_unmarked",
+        "a note the collection lacks reads unmarked"
+      ],
+      [
+        "S38806-CORE-RULE",
+        "engine-core",
+        "src/dispatch.rs",
+        "Ok(crate::ai_assisted::carries(tags))",
+        "Ok(!tags.is_empty())",
+        "ai_assisted::the_core_reads_the_engines_own_tags",
+        "the read is judged by the core's rule, not by any tag"
+      ],
+      [
+        "S38807-VIEW-KEY",
+        "web-engine",
+        "src/wasm.rs",
+        "\"assisted\": assisted,",
+        "\"assisted\": false,",
+        "ai_assisted_view::the_shown_card_carries_the_cores_marker_answer",
+        "the view carries the core's answer; the census is the one native killer for wasm32-only code"
+      ],
+      [
+        "S38808-VIEW-NOTE",
+        "web-engine",
+        "src/wasm.rs",
+        ".ai_assisted(card.note_id)",
+        ".ai_assisted(card.id)",
+        "ai_assisted_view::the_shown_card_carries_the_cores_marker_answer",
+        "the view reads the shown card's note, not the card's own id"
+      ]
+    ]
+  }
+}
