@@ -26,6 +26,7 @@ struct ReviewView: View {
             if model.phase == .finished {
                 Text("Congratulations! You have finished this deck for now.")
                     .font(.title3)
+                    .foregroundStyle(Color.tideInk)
                     .multilineTextAlignment(.center)
                     .padding()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -33,6 +34,7 @@ struct ReviewView: View {
                 CardFaceView(document: model.face.document)
             }
         }
+        .background(Color.tideBackground)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             AnswerBar(model: model, back: back)
         }
