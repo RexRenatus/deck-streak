@@ -182,7 +182,9 @@ stage_python() {
     # Both suites run whatever the first found, and the last line gives each one's tests and exit,
     # so a red suite never hides the other's result; a suite that ran no test fails (SPEC-054 R7).
     # Each test module runs in a process of its own, several at once (SPEC-633).
-    python3 scripts/python_stage.py scripts/tests tools/parity-oracle agent/tests
+    local suites=() suite
+    for suite in scripts/tests tools/parity-oracle agent/tests; do suites+=("$suite"); done
+    python3 scripts/python_stage.py "${suites[@]}"
 }
 
 stage_scrub() {
