@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
-  "_comment": "StrykerJS 10.1.1 over the Mini App (SPEC-039 R1, R6; ADR-057). A pull request's mutation-web job mutates each changed production file whole with --mutate; the weekly battery mutates everything below. A survivor fails the run (break 100). An equivalent mutant is recorded in scripts/mutation-equivalent.d/miniapp.json, bound by an anchor to the one survivor it excuses (SPEC-057, ADR-070), and no mutant is disabled, ignored or excluded.",
+  "_comment": "StrykerJS 10.1.1 over the Mini App (SPEC-039 R1, R6; SPEC-636 R1; ADR-057). A pull request's mutation-web job mutates each changed production file whole with --mutate; the weekly battery mutates everything below. A survivor fails the run (break 100). An equivalent mutant is recorded in scripts/mutation-equivalent.d/miniapp.json, bound by an anchor to the one survivor it excuses (SPEC-057, ADR-070), and no mutant is disabled, ignored or excluded.",
   "testRunner": "vitest",
   "plugins": ["@stryker-mutator/vitest-runner"],
   "vitest": { "configFile": "vite.config.ts" },
@@ -11,7 +11,8 @@
     "!src/**/*.test.*",
     "!src/**/*.spec.*",
     "!src/**/*.d.ts",
-    "!src/lib/paraglide/**"
+    "!src/lib/paraglide/**",
+    "scripts/build-tokens.ts"
   ],
   "reporters": ["json", "clear-text", "progress"],
   "jsonReporter": { "fileName": "reports/mutation/mutation.json" },
