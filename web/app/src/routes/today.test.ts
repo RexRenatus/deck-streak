@@ -79,7 +79,7 @@ describe('Today', () => {
     render(Today);
 
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('DeckStreak');
-    expect(document.body.textContent).toContain('Turn your daily Anki reviews into a streak worth keeping.');
+    expect(document.body.textContent).toContain('Turn your daily reviews into a streak worth keeping.');
     expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('Study day');
     expect(screen.getByRole('status').textContent).toBe('Loading…');
     expect(screen.queryByRole('alert')).toBeNull();
