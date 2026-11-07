@@ -142,6 +142,7 @@ R11. The engine's record follows the pin. SPEC-022's A1 check (`test_engine_spik
 | A21 | SPEC-022's A15: the recording server sees no upload and no local change in any scenario | `sync` test |
 | A22 | SPEC-022's A16: a second scheduled sync in one study day is refused | `sync` test |
 | A23 | SPEC-022's A17: an owner trigger within five minutes of a success returns it without syncing | `sync` test |
+| A24 | `deny.toml` holds no `[advisories]` ignore entry in either form, and its `unmaintained` scope is `"all"`; each planted defect reads one finding | `test_engine_pin.py` `deny_toml_admits_no_advisory_exception_and_no_narrowed_scope` |
 | A25 | no unmaintained crate this SPEC's amendments retire is a package of `Cargo.lock`; a planted lock holding each reads one finding per crate, and a clean planted lock none | `test_engine_pin.py` `the_retired_unmaintained_crates_are_absent_from_the_lockfile` |
 
 ```acceptance
@@ -168,6 +169,7 @@ A20: cargo test -p deck-streak-ingest --test settings -- --exact a_missing_sync_
 A21: cargo test -p deck-streak-ingest --test sync -- --exact a_sync_run_sends_no_upload_and_no_local_change
 A22: cargo test -p deck-streak-ingest --test sync -- --exact a_second_scheduled_sync_in_one_study_day_is_refused
 A23: cargo test -p deck-streak-ingest --test sync -- --exact an_owner_trigger_within_five_minutes_of_a_success_returns_it_without_syncing
+A24: python3 -m unittest discover -s scripts/tests -p test_engine_pin.py -k deny_toml_admits_no_advisory_exception_and_no_narrowed_scope
 A25: python3 -m unittest discover -s scripts/tests -p test_engine_pin.py -k the_retired_unmaintained_crates_are_absent_from_the_lockfile
 ```
 
@@ -437,3 +439,96 @@ red over the lockfile before the first fork lands, and green once the last one d
 https://github.com/askama-rs/askama/pull/771 and https://github.com/askama-rs/askama/issues/794.
 The upstream pull requests this fix owes are linked here when opened.
 Opened: https://github.com/askama-rs/askama/pull/796 (`basic-toml`) and https://github.com/ayrat555/frankenstein/pull/342 (`paste`).
+
+## 10. Amendment: the engine's six unmaintained notices leave deny.toml (#256)
+
+### Problem
+
+After §9, `deny.toml` carried six `[advisories]` ignore entries, each an unmaintained notice with no
+patched release: RUSTSEC-2025-0075, 0080, 0081, 0094 and 0098 (the five `unic` crates) and
+RUSTSEC-2025-0134 (`rustls-pemfile`), and it set no `unmaintained` key. An exception is not a fix,
+and a narrowed `unmaintained` scope is one too. The lockfile census (tomllib over `Cargo.lock`, 654
+packages): the engine alone names `unic-ucd-category` and `rustls-pemfile`, and the other four
+`unic` crates and `matches` are named only under `unic-ucd-category`, so these seven are all the
+lock loses when the engine drops its two. A read of every advisory file of every locked crate finds
+these six notices and no other that a locked version meets. Issues #248 to #253 and #256 track them.
+
+### Requirements
+
+R15. `deny.toml` holds no `[advisories]` ignore entry in either form and sets `unmaintained = "all"`,
+    the widest value and cargo-deny's default, so that no later default narrows it (A24), and A3
+    refuses any advisory exception.
+R16. The five `unic` crates, `rustls-pemfile` and `matches` leave the lockfile through the engine's
+    pin (A25). No other package leaves it or enters it: the engine packages' source moves, and the
+    engine's own dependency list loses the two crates; the lock's diff is read at review.
+R17. The engine's pin moves to the head of the fork's branch `deckstreak-blockbuf` once
+    RexRenatus/anki#1 is merged there (ADR-058's note). Every engine fact this SPEC and
+    `test_engine_pin.py` name is re-read at the new pin (A1 to A25); every file that names the pin
+    moves with it (the parity oracle's driver, its stand-in harness, the golden tests' planted
+    golden and the runbook's engine input); and the engine's goldens, their census and the schema
+    snapshot are written again at the new commit by the runbook's sandbox run
+    (`tools/parity-oracle/anki/RUNBOOK.md`), never by a builder or by CI.
+R18. Each upstream pull request this fix owes is opened and linked from this section.
+
+| crate | advisory | parent | route | where the fix lands |
+|---|---|---|---|---|
+| `unic-char-range`, `unic-common`, `unic-char-property`, `unic-ucd-category`, `unic-ucd-version` | RUSTSEC-2025-0075, 0080, 0081, 0094, 0098 | the engine (`rslib`: `media/files.rs` and `typeanswer.rs`) | the two call sites move to frozen Unicode 10 predicates generated from `unic-ucd-category` and proved equal to it on every code point, so names and answers are unchanged; `matches` leaves with `unic-ucd-category` | RexRenatus/anki#1, then this repository's `[patch]` rev |
+| `rustls-pemfile` | RUSTSEC-2025-0134 | the engine (`rslib/src/backend/mod.rs`) | the PEM item count moves to `rustls-pki-types`' PEM reader, the advisory's own successor, already in the lock; eight goldens equal | RexRenatus/anki#1, then this repository's `[patch]` rev |
+
+### Criteria
+
+A24 is new, in `scripts/tests/test_engine_pin.py`. It reads `deny.toml` and refuses each
+`[advisories]` ignore entry in either form and an `unmaintained` key that is absent or not `"all"`;
+a planted file holding each defect reads one finding apiece and stays red after the cure, and a
+clean plant reads none. A3 now refuses any advisory exception and any exception cargo deny applies,
+and keeps every allowed git source live; its row in §3 keeps the words it was decided with. A25's
+list of retired crates grows by the six, by insertion; its assertions are unchanged.
+
+### Red first
+
+With the six entries removed and `unmaintained = "all"` written, over the lock the base holds,
+`cargo deny --locked check advisories` fails naming exactly the six, and once the pin moves it
+passes with no ignore entry. A24 is red over the base's `deny.toml` and green once it is edited; A3's
+new form is red over the base's six entries; A25 is red over the base's lock for the six crates and
+green at the pin. The record is `docs/red-first/SPEC-055.md`, which takes the reds in the commit that
+removes the six entries and the greens in a later commit.
+
+### Manifest
+
+| file | change |
+|---|---|
+| `deny.toml` | changed: the six ignore entries and their comment leave; `unmaintained = "all"` |
+| `Cargo.toml` | changed: the engine's `[patch]` rev moves, with its comment |
+| `Cargo.lock` | changed by cargo: the five `unic` crates, `rustls-pemfile` and `matches` leave; the engine packages come from the new commit |
+| `scripts/tests/test_engine_pin.py` | changed: A24 added; A25's retired list grows by six, by insertion; A3 refuses any exception |
+| `tools/parity-oracle/anki/generate.py` | changed: the engine commit it pins, and the harness pin when the runbook's first step moves it |
+| `tools/parity-oracle/anki/fixtures/stand_in_harness.py`, `tools/parity-oracle/test_goldens.py`, `tools/parity-oracle/anki/RUNBOOK.md` | changed: the engine commit they name |
+| `tools/parity-oracle/goldens/anki.*.json`, `tools/parity-oracle/anki/stock-lines.sha256`, `tools/parity-oracle/anki/schema-snapshot.sql` | changed: written again at the new engine commit by the runbook's run |
+| `docs/specs/SPEC-055-the-engine-moves-to-26-09-3-on-a-patched-fork.md` | changed: this section, and A24's row and fence line |
+| `docs/red-first/SPEC-055.md` | changed: A24's red and green, and each notice's |
+| `docs/decisions/ADR-058-the-engine-pins-a-patched-fork-of-26-09-3-until-upstream-carries-the-fix.md` | changed: a note on the new pin |
+| `changelog.d/fix-deps-unmaintained-unic-rustls-pemfile.md` | added |
+
+### What this does not do
+
+- It leaves cargo-deny's `unsound` scope at its default; widening it is its own decision
+  (#1262).
+- It does not move the engine to current Unicode data; the frozen table keeps media names and typed
+  answers equal to released clients until an engine release carries a change (#256).
+
+### Risks
+
+- The frozen Unicode 10 table can drift from a later upstream move to current data; the fork entry
+  goes when an engine release drops `unic`, and its tests read the table against the release then.
+- An unmaintained notice published before the merge reds the audit with no entry to hold it; it is
+  then its own fix, never an ignore entry (R15).
+- The release's sync server audit reads the fork's lock with this `deny.toml` and no ignore entry; an
+  advisory there reds the release before any build, and is fixed the same way.
+- Open pull requests that change `Cargo.lock` conflict with this one textually; the later lander
+  regenerates the lock with cargo, never by a text merge.
+
+### Links
+
+#256, #248 to #253, https://github.com/ankitects/anki/issues/5882 and
+https://github.com/RexRenatus/anki/pull/1. The upstream pull requests this fix owes are linked here
+when opened.
