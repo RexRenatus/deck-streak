@@ -64,6 +64,9 @@ R4. **Nothing is weakened.** No assertion is removed and no test is skipped. No 
     or leg, threshold, timeout or path-gate entry changes. `PASSING_MUTATE` in
     `scripts/tests/test_mutation_workflows.py` gains the same entry, in step with `STRYKER_MUTATE`,
     so its fixture trees keep passing the configuration check.
+    The bench-exclusion test in `scripts/tests/test_perf_benches.py` (SPEC-618 A24) admits R1's
+    one path beside the `src/` root by an exact list, and still refuses a bench file anywhere
+    `mutate` reaches.
 
 ## 3. Acceptance criteria
 
@@ -82,7 +85,8 @@ Each test prints the population it examined as `examined N`, and N is above 0.
 ## 4. File manifest
 
 Part 1 holds the documents; part 2 the tests and the record; part 3 the class change; part 4 the
-record's reds and greens.
+record's reds and greens; part 5 the bench-exclusion test's one admitted path, with the record's
+note on it.
 
 | path | part | change |
 |---|---|---|
@@ -91,10 +95,11 @@ record's reds and greens.
 | `changelog.d/web-scripts-mutation-636.md` | 1 | new fragment |
 | `docs/schematics/mutation-testing.md` | 1 | the edge into the `web` class names the token compiler |
 | `scripts/tests/test_mutation_verdict.py` | 2 | new: A1 and A2, in one new test class |
-| `docs/red-first/SPEC-636.md` | 2, 4 | new: the record; part 4 adds the reds and greens |
+| `docs/red-first/SPEC-636.md` | 2, 4, 5 | new: the record; part 4 adds the reds and greens; part 5 a note on the test file changed after them |
 | `scripts/mutation-verdict.py` | 3 | the classifier, `STRYKER_MUTATE` and the exclusions walk gain the token compiler |
 | `web/app/stryker.config.json` | 3 | `mutate` gains `scripts/build-tokens.ts` |
 | `scripts/tests/test_mutation_workflows.py` | 3 | `PASSING_MUTATE` gains `scripts/build-tokens.ts`, in step with `STRYKER_MUTATE` |
+| `scripts/tests/test_perf_benches.py` | 5 | the bench-exclusion test admits the one exact path `scripts/build-tokens.ts` beside the `src/` root, by an exact list, and checks that the path is no bench file |
 
 ## 5. What this does NOT do
 
@@ -123,7 +128,8 @@ record's reds and greens.
 The pull request's mutation legs: the plan job classes this pull request's paths, and the scripts
 class mutates this change's lines of `scripts/mutation-verdict.py` under the Python runner, whose
 population maps the script to its test modules, `test_mutation_verdict` and
-`test_mutation_workflows` among them. A local run proves A1, A2 and the two test modules only.
+`test_mutation_workflows` among them. A local run proves A1, A2, the two test modules and
+`test_perf_benches.py` only.
 
 ## 8. Mutation rows
 
