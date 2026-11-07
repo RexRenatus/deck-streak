@@ -29,8 +29,10 @@ TLA = "formal/tla"
 VECTORS = "formal/vectors"
 TESTS = "crates/*/tests/formal_vectors_*.rs"
 LIST = "config/vectors-parity.json"
-KINDS = ("owed", "unimplemented")
+KINDS = ("owed", "unimplemented", "as_found")
+ENTRY_KINDS = ("owed", "unimplemented")
 ROW_KEYS = ("entry", "adr")
+AS_FOUND_KEYS = ("path", "adr")
 DECISIONS = "docs/decisions"
 ADR_ID = re.compile(r"ADR-[0-9]+")
 NAME = re.compile(r"[A-Za-z][A-Za-z0-9_]*")
@@ -159,20 +161,23 @@ def parity_rows(root):
     if not isinstance(data, dict):
         return []
     rows = []
-    for kind in KINDS:
+    for kind in ENTRY_KINDS:
         if isinstance(data.get(kind), list):
             rows += data[kind]
     return rows
 
 
 def list_findings(data):
-    """The list's shape (R9): each absent list, unknown key, and malformed, repeated or misplaced
-    row; with `{kind: {entry: row}}` of its complete rows."""
+    """The list's shape (R9, R19): each absent list, unknown key, and malformed, repeated or
+    misplaced row; with `{kind: {entry or path: row}}` of its complete rows. An absent `as_found`
+    list reads as an empty one."""
     data = data if isinstance(data, dict) else {}
     findings = [f"{LIST}: unknown key {key}" for key in data if key not in KINDS]
     rows, seen = {kind: {} for kind in KINDS}, set()
     for kind in KINDS:
-        listing = data.get(kind)
+        keys = ROW_KEYS if kind in ENTRY_KINDS else AS_FOUND_KEYS
+        article = "a" if kind in ENTRY_KINDS else "an"
+        listing = data.get(kind, None if kind in ENTRY_KINDS else [])
         if not isinstance(listing, list):
             findings.append(f'{LIST}: the "{kind}" list is absent')
             continue
@@ -182,18 +187,20 @@ def list_findings(data):
                 findings.append(f"{kind} row {number}: not an object")
                 continue
             findings += [
-                f"{kind} row {number}: unknown key {key}" for key in row if key not in ROW_KEYS
+                f"{kind} row {number}: unknown key {key}" for key in row if key not in keys
             ]
-            missing = [key for key in ROW_KEYS if key not in row]
+            missing = [key for key in keys if key not in row]
             findings += [f"{kind} row {number}: missing key {key}" for key in missing]
             if missing:
                 continue
-            identity = row["entry"]
+            identity = row[keys[0]]
             if identity in seen:
                 findings.append(f"{identity}: listed twice")
                 continue
             if previous is not None and identity < previous:
-                findings.append(f"{identity}: a {kind} row out of order, sorted by entry")
+                findings.append(
+                    f"{identity}: {article} {kind} row out of order, sorted by {keys[0]}"
+                )
             previous = identity
             seen.add(identity)
             rows[kind][identity] = row
@@ -270,7 +277,7 @@ def entry_findings(root):
                 f"{identity}: a stale owed row: one vectors test names {entry['vectors'][0]}"
             )
     texts = {}
-    for kind in KINDS:
+    for kind in ENTRY_KINDS:
         for identity, row in rows[kind].items():
             if identity not in lean:
                 findings.append(f"{identity}: a stale {kind} row: no such Lean entry")
@@ -283,7 +290,8 @@ def entry_findings(root):
 
 def vectors_findings(root):
     """Each vectors test that does not name exactly one declared path by its own slug, and each
-    vectors file not declared by exactly one Lean entry (R8)."""
+    vectors file not declared by exactly one Lean entry (R8), less what an `as_found` row
+    admits, with each `as_found` row that admits nothing or whose ADR lacks its path (R19)."""
     tests = vectors_tests(root)
     if not tests:
         return ["examined 0 vectors test(s): VOID"]
@@ -316,7 +324,30 @@ def vectors_findings(root):
             findings.append(f"{path}: a vectors file no Lean entry declares")
         elif len(owners) > 1:
             findings.append(f"{path}: declared by {len(owners)} Lean entries, not one")
-    return findings
+    return as_found_findings(root, findings)
+
+
+def admits(path, finding):
+    """Whether an `as_found` row for `path` admits `finding`: only a vectors test's file-name
+    finding or a vectors file's undeclared-file finding, never another finding on the path (R19)."""
+    if finding == f"{path}: a vectors file no Lean entry declares":
+        return True
+    return finding.startswith(f"{path}: names ") and ", so its file name is " in finding
+
+
+def as_found_findings(root, findings):
+    """`findings` less each one an `as_found` row admits, then each row with no finding of its
+    class behind it, as stale, and each row whose ADR file does not hold its path (R19)."""
+    rows = list_findings(read_list(root))[1]["as_found"]
+    kept = [finding for finding in findings if not any(admits(path, finding) for path in rows)]
+    texts = {}
+    for path, row in rows.items():
+        if not any(admits(path, finding) for finding in findings):
+            kept.append(f"{path}: an as_found row with no finding")
+        refused = admission(root, path, row["adr"], texts)
+        if refused:
+            kept.append(refused)
+    return kept
 
 
 def listed(what, rows):

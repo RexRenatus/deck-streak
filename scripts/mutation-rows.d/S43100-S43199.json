@@ -28,8 +28,8 @@
       [
         "S43103-TARGET-EDGE-UNCONDITIONAL",
         "crates/web-engine/Cargo.toml",
-        "[target.'cfg(target_arch = \"wasm32\")'.dependencies]",
-        "[dependencies]\ndeck-streak-engine-core.workspace = true\n\n[target.'cfg(target_arch = \"wasm32\")'.dependencies]",
+        "[dependencies]\ndeck-streak-companion.workspace = true\n",
+        "[dependencies]\ndeck-streak-companion.workspace = true\ndeck-streak-engine-core.workspace = true\n",
         "an edge moved off its target table is a new row's edge (SPEC-431 R3, A1)",
         "test_crate_edges.TheCrateGraphIsTheListedEdges.test_every_manifest_edge_has_one_row_and_every_row_an_edge"
       ],
@@ -132,8 +132,8 @@
       [
         "S43116-OWED-ROW-STALE",
         "config/vectors-parity.json",
-        "    {\"entry\": \"lean/TableCensusReach\", \"adr\": \"ADR-445\"}\n",
-        "    {\"entry\": \"lean/TableCensusReach\", \"adr\": \"ADR-445\"},\n    {\"entry\": \"lean/Wallet\", \"adr\": \"ADR-445\"}\n",
+        "    {\"entry\": \"lean/TokenProgress\", \"adr\": \"ADR-445\"}\n",
+        "    {\"entry\": \"lean/TokenProgress\", \"adr\": \"ADR-445\"},\n    {\"entry\": \"lean/Wallet\", \"adr\": \"ADR-445\"}\n",
         "an owed row for an entry that has its vectors test is stale (SPEC-431 R7, A4)",
         "test_formal_parity.EachFormalEntryMeetsItsVectorsTest.test_every_implemented_lean_entry_has_its_vectors_test_or_a_row"
       ],
@@ -272,6 +272,30 @@
         "`crates/daemon/src/snapshot-lister.rs`",
         "a row whose ADR does not name its path is unadmitted (SPEC-431 R14, A10)",
         "test_clock_reads.TheClockReadsAreTheListedSites.test_every_file_with_reads_is_admitted_by_an_adr_that_names_it"
+      ],
+      [
+        "S43134-AS-FOUND-ADMISSION-DROPPED",
+        "scripts/tests/test_formal_parity.py",
+        "    kept = [finding for finding in findings if not any(admits(path, finding) for path in rows)]",
+        "    kept = list(findings)",
+        "a vectors finding whose path holds an as-found row is admitted (SPEC-431 R19, A11)",
+        "test_formal_parity.EachFormalEntryMeetsItsVectorsTest.test_every_as_found_row_admits_a_vectors_finding_of_its_path"
+      ],
+      [
+        "S43135-AS-FOUND-STALE-ROW-PASSED",
+        "scripts/tests/test_formal_parity.py",
+        "            kept.append(f\"{path}: an as_found row with no finding\")",
+        "            pass",
+        "an as-found row with no vectors finding behind it fails as stale (SPEC-431 R19, A11)",
+        "test_formal_parity.EachFormalEntryMeetsItsVectorsTest.test_every_as_found_row_admits_a_vectors_finding_of_its_path"
+      ],
+      [
+        "S43136-AS-FOUND-TOKEN-UNCHECKED",
+        "scripts/tests/test_formal_parity.py",
+        "        refused = admission(root, path, row[\"adr\"], texts)",
+        "        refused = None",
+        "an as-found row whose ADR does not hold its path is unadmitted (SPEC-431 R19, A11)",
+        "test_formal_parity.EachFormalEntryMeetsItsVectorsTest.test_every_as_found_row_admits_a_vectors_finding_of_its_path"
       ]
     ]
   }

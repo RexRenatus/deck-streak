@@ -1,7 +1,22 @@
 {
   "owed": [
+    {"entry": "lean/RecordClassBinding", "adr": "ADR-445"},
+    {"entry": "lean/ReleaseCarry", "adr": "ADR-445"},
+    {"entry": "lean/ReleaseGates", "adr": "ADR-445"},
+    {"entry": "lean/RetiredListShape", "adr": "ADR-445"},
+    {"entry": "lean/SearchHolds", "adr": "ADR-445"},
     {"entry": "lean/SensitiveDeck", "adr": "ADR-445"},
-    {"entry": "lean/TableCensusReach", "adr": "ADR-445"}
+    {"entry": "lean/TableCensusReach", "adr": "ADR-445"},
+    {"entry": "lean/TokenProgress", "adr": "ADR-445"}
   ],
-  "unimplemented": []
+  "unimplemented": [
+    {"entry": "lean/DocsMermaidRead", "adr": "ADR-445"},
+    {"entry": "lean/PushJudge", "adr": "ADR-445"}
+  ],
+  "as_found": [
+    {"path": "crates/companion/tests/formal_vectors_decide.rs", "adr": "ADR-445"},
+    {"path": "crates/media/tests/formal_vectors_bind.rs", "adr": "ADR-445"},
+    {"path": "crates/media/tests/formal_vectors_gc.rs", "adr": "ADR-445"},
+    {"path": "formal/vectors/companion-frames.jsonl", "adr": "ADR-445"}
+  ]
 }
