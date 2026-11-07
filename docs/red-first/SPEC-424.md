@@ -77,3 +77,5 @@ the helper makes before the cure as after it. At the first push the gate's ruff 
 site section 10 lists, by file and code, and fails the stage with both arms' counts and exits.
 
 This commit changes three test files only for the lint cures (the keyword, cwd= and the blob helper), and no assertion.
+
+This commit changes two test files only to follow the merge's lint table excludes and to list the two new tests' opener stand-ins in the census register. No assertion line changes, and the lint table's expected excludes follow ruff.toml.

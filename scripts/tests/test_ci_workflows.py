@@ -8997,6 +8997,18 @@ DYNAMIC_IMPORTS = {
             "mock.patch.object(self.mc.urllib.request, 'urlopen', urlopen)",
             1,
         ),
+        (
+            "test_mutation_carry_kills",
+            "BaseChoice.test_the_request_helper_refuses_every_scheme_but_http_and_https_before_it_opens",
+            "mock.patch.object(self.mc.urllib.request, 'urlopen', urlopen)",
+            1,
+        ),
+        (
+            "test_mutation_carry_kills",
+            "BaseChoice.test_the_request_helper_hands_an_http_or_https_address_to_the_opener_unchanged.<locals>.fetched",
+            "mock.patch.object(self.mc.urllib.request, 'urlopen', urlopen)",
+            1,
+        ),
     ),
     **allowed(
         "an import of this repository's own script module by its constant name, `import mutation_rows`, after a sys.path insert of the constant scripts directory; it reads no workflow file",

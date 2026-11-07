@@ -38,8 +38,15 @@ BANNED = [
     "ftplib",
     "os.chdir",
 ]
-# The parity oracle's generator and registry, whose bytes their goldens pin (SPEC-029).
-EXCLUDES = ["tools/parity-oracle/generate.py", "tools/parity-oracle/registry"]
+# Each parity oracle's generator and registry, and the second oracle's corpus: their goldens pin
+# their bytes (SPEC-029, SPEC-498).
+EXCLUDES = [
+    "tools/parity-oracle/generate.py",
+    "tools/parity-oracle/registry",
+    "tools/parity-oracle/anki/generate.py",
+    "tools/parity-oracle/anki/corpus.py",
+    "tools/parity-oracle/anki/registry",
+]
 
 
 def config():
