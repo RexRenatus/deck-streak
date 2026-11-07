@@ -985,7 +985,7 @@ off. Section 3's cells are unchanged but one: with W3 off, WebKit reads one bare
 the handler preconnects; section 3 holds it as the `BARE in WebKit with W3 off` cell of
 `nav-blank`'s row.
 
-## 13. A carriage return from a card's field to the host's read-back (SPEC-462, ADR-479)
+## 14. A carriage return from a card's field to the host's read-back (SPEC-462, ADR-479)
 
 Kind: data flow, of one character from the collection to the frame. Read at DeckStreak `dev`
 83846ea3. A note field or a template can hold a carriage return written as a numeric character
@@ -1045,3 +1045,7 @@ attribute value are two. U+000D is read as a line feed, and its reference carrie
 read as U+FFFD, its reference too, so no attribute value carries it and the read-back refuses it;
 no parsed card document holds one. The iPhone and iPad card view (section 4) hands the card to its
 web view as one string and builds no host, so this path has no counterpart there.
+
+Rebuilt onto `dev` at `0ef74a05`: the host's refusal is now named `host-readback`, and the
+status region reads `frameCard`'s reason (SPEC-505, ADR-523), so the quiet status in the diagram
+above is the state at `83846ea3`. The path of the carriage return is unchanged.

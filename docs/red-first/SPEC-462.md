@@ -30,3 +30,9 @@ commit after that merge plants a NUL in the frame title in each instead, which t
 refuses with the same reason, keeps the review's former carriage-return face by a test of its own,
 and has the field test also read each field through the one composition the frame renders. No
 refusal is removed.
+
+That merge (6118295d) read red by name in the pull request run 42050736979, and the restating commit
+(fcb2de81) reads green in the pull request run at this delivery head. After it, a merge of current
+dev (7140a485) met this change only in the schematic, where dev had appended its own section 13
+first, so the schematic section this record's opening names as section 13 is now section 14; the
+commit after that merge changes only documents.

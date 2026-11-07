@@ -7,7 +7,7 @@ Filed as `docs/specs/SPEC-462-the-card-frames-host-carries-a-carriage-return-so-
 - **Decided by:** ADR-479 (the mechanism, the cure, production or test, the shape, the tests and
   rows, what stays out), beside ADR-421 (the host and its read-back), which it leaves as written.
 - **Amends:** SPEC-407, insert-only: a new last section on what A2 names as refused.
-- **Schematic:** `docs/schematics/card-frame-channels.md`, a new section 13, "A carriage return from
+- **Schematic:** `docs/schematics/card-frame-channels.md`, a new section 14, "A carriage return from
   a card's field to the host's read-back", insert-only.
 - **Status:** this delivery builds it, with its tests and `docs/red-first/SPEC-462.md`. **Mutation
   band:** S46200-S46299, unused: the web code is proved by StrykerJS (ADR-479 D5).
@@ -61,7 +61,7 @@ The refusal itself is not yet measured by a run: A1 to A4 are its first measurem
 - R3. A card whose field carries a carriage return as a numeric reference (decimal or hexadecimal, alone or before a line feed's reference, in text or in an attribute value) is kept by `frameDocument` and then by `frameHost`, and the host's one frame holds the frame document byte for byte.
 - R4. `CardFrame` renders such a card: its frame carries a `srcdoc` and no `data-card-refused`, and the card document it carries reads the carriage return as the line feed the frame read before SPEC-407.
 - R5. The host's read-back is unchanged, and among the code points U+0000 to U+00FF it refuses exactly U+0000, in the card document and in the title, as an enumerating test that reports its examined count; a double quote in the policy is still refused.
-- R6. Every test at `dev` stays and passes, except that SPEC-407's A2 test restates its two carriage-return plants as a NUL in the card document and a NUL in the title, under its own title, with its policy plant and its kept control unchanged.
+- R6. Every test at `dev` stays and passes, except that SPEC-407's A2 test restates its two carriage-return plants as a NUL in the card document and a NUL in the title, under its own title, with its policy plant and its kept control unchanged, and that the four host refusal plants later tests at `dev` build from a carriage return take a NUL in the frame title instead, each keeping its reason, with the review's carriage-return face kept by a test of its own (section 8).
 - R7. The planted card suite runs unchanged in every engine and passes, and the census of the card's sinks still names `frame-host.ts` once.
 - R8. No other production file changes: `CardFrame.svelte`, `frame-document.ts`, `policy.js`, `review.ts` and the iPhone and iPad card view stay as at `dev`.
 
@@ -91,12 +91,15 @@ is not red: it guards the refusal the base already makes.
 | path | part | change |
 |---|---|---|
 | `web/app/src/lib/card/frame-host.ts` | `miniapp` | changed: `attribute()` writes U+000D as `&#13;` after `&` and `"`; its comment (lines 15-19) |
-| `web/app/src/lib/card/frame-host.test.ts` | `miniapp` | changed: the import of `frameDocument`; A1, A2 and A4 appended inside the `describe`; A5's two carriage-return plants (lines 49-50) restated as NUL plants |
-| `web/app/src/lib/card/card-frame.test.ts` | `miniapp` | changed: A3 appended inside the `describe`, after line 70 |
+| `web/app/src/lib/card/frame-host.test.ts` | `miniapp` | changed: the imports of `frameDocument` and `frameCard`; A1, A2 and A4 appended inside the `describe`, A2 reading each field through `frameCard` too; A5's two carriage-return plants (lines 49-50) restated as NUL plants |
+| `web/app/src/lib/card/card-frame.test.ts` | `miniapp` | changed: A3 appended inside the `describe`, after its last test; the `host-readback` plant's title holds a NUL (section 8) |
+| `web/app/src/lib/card/frame-document.test.ts` | `miniapp` | changed: the two `host-readback` plants' titles hold a NUL (section 8) |
+| `web/app/src/lib/study/review.test.ts` | `miniapp` | changed: the host's reason test plants a NUL in the question frame's title, and the carriage-return face is kept by a test of its own (section 8) |
+| `web/app/src/lib/study/review-screen.test.ts` | `miniapp` | changed: one comment line restated (section 8) |
 | `docs/specs/SPEC-462-the-card-frames-host-carries-a-carriage-return-so-a-card-whose-field-holds-one-renders-again.md` | docs | added |
 | `docs/decisions/ADR-479-the-card-frames-host-writes-a-carriage-return-as-its-numeric-reference-and-its-read-back-stays-whole.md` | docs | added |
 | `docs/specs/SPEC-407-the-card-document-inherits-the-frame-policy-from-a-host-so-every-engine-holds-the-image-set-forms.md` | docs | changed: a new last section, insert-only |
-| `docs/schematics/card-frame-channels.md` | docs | changed: section 13 appended, insert-only |
+| `docs/schematics/card-frame-channels.md` | docs | changed: section 14 appended, insert-only |
 | `docs/red-first/SPEC-462.md` | docs | added |
 | `changelog.d/card-frame-carriage-return-462.md` | docs | added |
 
@@ -130,3 +133,27 @@ is not red: it guards the refusal the base already makes.
 | production files changed | | 1 |
 
 No comparison of the read-back is narrowed, and no card is exempted from it.
+
+## 8. The rebuild onto current dev
+
+Read at `dev` `0ef74a05`. Since section 1's read, SPEC-505 and ADR-523 named each frame refusal's
+reason: the host's read-back now refuses as `host-readback`, and `frameCard` in `frame-host.ts` is
+the one composition the frame renders and the study screen's status reads, so the status names a
+host refusal. Sections 1, 6 and 7 stay as read at `83846ea3`.
+
+Four plants at `dev` built a host refusal from a carriage return, which this change carries. Each
+now puts a NUL in the frame title, which no attribute value carries, so the host still refuses it
+with the same reason, and every other plant and assertion stays:
+
+| test at `dev` | its carriage-return plant | after |
+|---|---|---|
+| `web/app/src/lib/card/card-frame.test.ts` "a card the frame document refuses renders an empty frame marked with its reason" | the title `The\rcard` | the title `The\u0000card` |
+| `web/app/src/lib/card/frame-document.test.ts` "each frame check refuses with its own reason, the first failing check naming it" | the title `The\rcard` | the title `The\u0000card` |
+| `web/app/src/lib/card/frame-document.test.ts`, the `host-readback` fault of the pair tests | the title `The\rcard` | the title `The\u0000card` |
+| `web/app/src/lib/study/review.test.ts` "a face its host does not read back is refused in the status by the host's reason" | the face `<p>a&#13;b</p>` | renamed "a question whose frame title its host does not read back is refused in the status by the host's reason": the question frame's title holds a NUL |
+
+A face cannot reach the host's refusal after this change: the frame document's parse leaves no NUL
+in a face, and the host now carries a carriage return. So the review's test plants the title, and
+the face it planted before is kept, by "a face holding a carriage return reference is kept, and the
+status stays quiet". The field test of A2 also reads each field through `frameCard`. No refusal
+the read-back makes is removed.

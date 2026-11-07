@@ -116,7 +116,7 @@ document and one in the title as hosts the read-back refuses; that statement cha
 gains a new last section, insert-only, after its last line. ADR-421's D2 states the read-back (the
 head as written, the card document and the title exactly), and that statement still holds word for
 word, so ADR-421 is not amended. `docs/schematics/card-frame-channels.md` owns the card frame and
-gains a section 13, insert-only.
+gains a section 14, insert-only.
 
 Chosen against:
 - Two deliveries, the escaping first and the status region's reason second: rejected because #798 is met when the card renders, so the second is no part of it, and it would share `review.ts` and `review.test.ts` with #778 and #842; it is tracked as #938.
@@ -190,3 +190,4 @@ engine, unchanged.
 
 - Issue #798; #792, SPEC-407 and ADR-421 (the host and its read-back); SPEC-341 and ADR-352 (the card frame's layers).
 - The HTML standard's input-stream preprocessing (newline normalisation), its double-quoted attribute value state, its numeric character reference rules and its HTML fragment serialisation algorithm are the rules this ADR's mechanism cites.
+- Rebuilt onto `dev` at `0ef74a05`: SPEC-505 and ADR-523 have since named the host's refusal `host-readback` and moved the study screen's status onto `frameCard`, so the status now names a host refusal and the consequence above that leaves it quiet no longer holds; after this decision no face reaches that refusal, and the tests that planted it through a carriage return now plant a NUL in the frame title (SPEC-462 section 8).
