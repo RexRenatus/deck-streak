@@ -132,3 +132,9 @@ The rebuild onto current dev merged the original branch unchanged. The commit af
 the scheduler tests that dev added since onto their crate's clock, each collection such a test
 builds pinned before an engine opens it, with no assertion removed or loosened; it adds no
 criterion, so it carries no red of its own.
+
+That merge (1b883d77) read red by name in the pull request run 42418737996, on the threat model
+citations it moved. At the commit that moves the newer tests (31a3b73d), a local replay that made
+both pins inert and dropped the instant of the adapter's test constructor read the six criterion
+tests of A1 to A5 red by name, each on its own assertion, and green once the replay's edits were
+undone; the commit after it changes only documents.

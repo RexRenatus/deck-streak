@@ -51,6 +51,21 @@ Read at `83846ea3`. Every `git grep` below passes the positive `.` with the excl
   five in ingest. No production file holds one.
 - The core already takes the answer's time as a parameter: `crates/engine-core/src/answer.rs:149-163`
   `answer_request(.., answered_at_millis, ..)`, and the core tests build `CardAnswer` themselves.
+- Re-read at `31a3b73d`. The reads that the scheduler tests dev added since hand an engine moved
+  onto their crate's clock, each named by its line at `36efa139`: engine-core `backup_now.rs:57` and
+  `health.rs:414` (the answered time of a `CardAnswer`), `native_undo.rs:93-99` (`fn now_millis`,
+  its use `:129`), `stale_answer.rs:84-90` (`fn now_millis`, its use `:112`) and
+  `scheduler_seam.rs:145-151` (`fn now_millis`, its uses `:469`, `:470`, `:517` and `:1165`); ffi
+  `card_health.rs:111-116` (`fn now_secs`, its use `:149`) and `undo.rs:95-100` (`fn now_secs`, its
+  use `:150`). The reads that stay, each named by its line at `31a3b73d`: the 14 scratch-directory
+  stamps, engine-core `support/mod.rs:44` and `support/sync_server.rs:87`, ffi `card_health.rs:121`,
+  `face.rs:90`, `:225`, `:239`, `fixture.rs:36`, `review_actions.rs:71`, `review_pairs.rs:180`,
+  `seam.rs:20`, `support/mod.rs:19`, `support/sync_server.rs:99`, `undo.rs:106` and `voices.rs:51`;
+  ffi `backups.rs:52` (`fn now`, its read at `:53`: nanoseconds that name the scratch folder and the
+  planted backup files the adapter lists, reaching no scheduler); engine-core `health.rs:176` (the
+  one-day bracket in `created_in_milliseconds` on a card id the engine took from its own clock,
+  handing nothing to an engine); and the two planted texts in engine-core `scheduler_census.rs:317`
+  and `:320` (string literals, not reads).
 
 ## 2. Requirements
 
@@ -77,9 +92,13 @@ R2. **Every scheduler collection is pinned.** Engine-core's `support::synthetic`
 R3. **Every time a scheduler test hands the engine comes from its clock.** In engine-core and ffi
     tests, `CardAnswer`'s answered time, a `DeckTreeRequest`'s `now`, a collection's modified time
     and every review time are the clock's instant or a stated offset from it. No engine-core or ffi
-    test reads `SystemTime::now`, `TimestampMillis::now` or `TimestampSecs::now` outside its
-    clock module, except the 12 scratch-directory stamps of section 1, which name directories and
-    reach no engine.
+    test under `crates/engine-core/tests` or `crates/ffi/tests` reads `SystemTime::now`,
+    `TimestampMillis::now` or `TimestampSecs::now` outside its clock module, except the measured set
+    of section 1's re-read: the 14 scratch-directory stamps, which name directories and reach no
+    engine, ffi `backups.rs`'s `now`, which names the scratch folder and the planted backup files
+    the adapter lists and reaches no scheduler, engine-core `health.rs`'s one-day bracket in
+    `created_in_milliseconds`, which hands nothing to an engine, and the two planted texts in
+    engine-core `scheduler_census.rs`, string literals, not reads.
 R4. **The adapter's answer instant.** `Engine` gains a private field holding an optional answer
     instant. `Engine::new` (exported, signature unchanged) leaves it unset, and `Engine::answer` then
     stamps `now_millis()` exactly where it does at the base. `Engine::at_answer_time(message,
@@ -99,7 +118,12 @@ R6. **The engine's rule at the placed start.** In each crate, a collection place
 R7. **No wait and no wall-clock assertion.** No test changed or added here sleeps, waits for a
     time, or asserts on the wall clock or the time of day.
 R8. **Production unchanged.** No production file but `crates/ffi/src/engine.rs` changes, and in it
-    the one clock read stays `now_millis`, reached only through `answer` with the field unset.
+    re-read at `31a3b73d`, `now_millis` (its read at `:749`) stays the one answer-time read, reached
+    only through `answer` with the field unset, and the file's other two `SystemTime::now` reads
+    reach no scheduler: `choice_file`'s stamp (`:706`) names the full-sync choice's files and back
+    up now's backup (SPEC-516 R5), and the in-crate test
+    `while_a_choice_is_held_the_backups_are_listed_and_none_is_removed` (`:1205`) names its scratch
+    folder and its planted backup files.
 
 ## 3. Acceptance criteria of SPEC-443
 
@@ -146,6 +170,14 @@ after the clock's instant. A6 pins the engine's rule and is green at the base.
 | `crates/engine-core/tests/undo_change.rs` | 1 | changed: answered time on the clock (R3) |
 | `crates/ffi/src/engine.rs` | 1 | changed: the adapter's optional answer instant and its unexported constructor (R4) |
 | `crates/ffi/tests/support/clock.rs` | 1 | added: the adapter tests' clock, its version-1 placement and its version-2 pin (R1) |
+| `crates/engine-core/tests/backup_now.rs` | 1 | changed: answered times or the tree's now on the clock (R2, R3) |
+| `crates/engine-core/tests/health.rs` | 1 | changed: answered times or the tree's now on the clock (R2, R3) |
+| `crates/engine-core/tests/native_undo.rs` | 1 | changed: answered times or the tree's now on the clock (R2, R3) |
+| `crates/engine-core/tests/scheduler_seam.rs` | 1 | changed: answered times or the tree's now on the clock; its own collection pinned where it builds one (R2, R3) |
+| `crates/engine-core/tests/stale_answer.rs` | 1 | changed: answered times or the tree's now on the clock (R2, R3) |
+| `crates/ffi/tests/card_health.rs` | 1 | changed: answered times or the tree's now on the clock; its own collection pinned where it builds one (R2, R3) |
+| `crates/ffi/tests/undo.rs` | 1 | changed: answered times or the tree's now on the clock; its own collection pinned where it builds one (R2, R3) |
+| `docs/schematics/the-app-campaigns-surfaces-each-carry-a-stride-table-whose-every-control-cites-a-line-that-holds.md` | 1 | changed: five citations whose lines the merge moved, re-derived |
 | `crates/ffi/tests/exempt.rs` | 1 | changed: A3, A5 (placed, then pinned), A6; pinned, its engine on the clock's instant |
 | `crates/ffi/tests/round_trip.rs` | 1 | changed: A4; the native press on the injected instant; the refused answer's time on the clock |
 | `crates/ffi/tests/review_actions.rs` | 1 | changed: pinned; the tree's `now` on the clock |
@@ -230,6 +262,7 @@ killer observes it at every hour.
 
 Not applicable, decided by surface (ADR-457 D6): one test process per collection, no second actor,
 no shared state written by two parties, and no check followed by an act another actor can change;
-the clock's arithmetic is checked at every run by the engine's own timing. The one `@phx covers`
-line that names a file this delivery edits names `crates/ffi/src/engine.rs` item `run`, which
+the clock's arithmetic is checked at every run by the engine's own timing. Re-read at `31a3b73d`,
+the six `@phx covers` lines that name a file this delivery edits name `crates/ffi/src/engine.rs`
+items `run`, `sync`, `full_sync_count`, `full_sync_confirm`, `undo_offer` and `undo`, each of which
 stays byte-identical.

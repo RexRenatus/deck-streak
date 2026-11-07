@@ -299,8 +299,9 @@ Chosen against:
   lengthened (the placement's own assertion), and the adapter's two answer-instant rows. FORMAL:
   not applicable by surface (no second actor, no shared state written, no check followed by an act
   another actor can change; the clock's arithmetic is checked at every run by the engine's own
-  timing; the one `@phx covers` line on a file this delivery edits names
-  `crates/ffi/src/engine.rs` item `run`, which stays byte-identical).
+  timing; re-read at `31a3b73d`, the six `@phx covers` lines on a file this delivery edits name
+  `crates/ffi/src/engine.rs` items `run`, `sync`, `full_sync_count`, `full_sync_confirm`,
+  `undo_offer` and `undo`, each of which stays byte-identical).
 
 Chosen against:
 

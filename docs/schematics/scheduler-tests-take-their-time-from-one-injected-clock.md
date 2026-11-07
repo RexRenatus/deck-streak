@@ -163,9 +163,23 @@ The same cure reaches every engine-core and ffi scheduler test (SPEC-443 R3). Th
 reads handed to the engine: engine-core `answer.rs:111`, `dispatch.rs:74`, `exempt.rs:122`,
 `one_way.rs:243`, `replay.rs:135`, `review_pairs.rs:132`, `undo_answer.rs:79`, `undo_change.rs:131`;
 ffi `review_actions.rs:60`, `review_pairs.rs:144`, `round_trip.rs:142`, `:166`. The engine's own
-clock read in engine-core test code: `full_sync.rs:56` and `one_way.rs:70`. Afterwards, under
-`crates/engine-core/tests` and `crates/ffi/tests`, those spellings remain only in the 12 stamps that
-name scratch directories, which reach no engine, and in the two clock modules.
+clock read in engine-core test code: `full_sync.rs:56` and `one_way.rs:70`. The scheduler tests dev
+added since move onto their crate's clock the same way, each read named by its line at `36efa139`:
+engine-core `backup_now.rs:57` and `health.rs:414`, `native_undo.rs:93-99` (`fn now_millis`, its use
+`:129`), `stale_answer.rs:84-90` (`fn now_millis`, its use `:112`) and `scheduler_seam.rs:145-151`
+(`fn now_millis`, its uses `:469`, `:470`, `:517` and `:1165`, its own collection pinned where it
+builds one); ffi `card_health.rs:111-116` and `undo.rs:95-100` (each `fn now_secs`, its use `:149`
+and `:150`, each fixture pinned before the adapter opens it). Afterwards, re-read at `31a3b73d` with
+each line named at that commit, under `crates/engine-core/tests` and `crates/ffi/tests`, those
+spellings remain only in the two clock modules and in a measured set: the 14 stamps that name
+scratch directories, which reach no engine (engine-core `support/mod.rs:44`,
+`support/sync_server.rs:87`; ffi `card_health.rs:121`, `face.rs:90`, `:225`, `:239`,
+`fixture.rs:36`, `review_actions.rs:71`, `review_pairs.rs:180`, `seam.rs:20`, `support/mod.rs:19`,
+`support/sync_server.rs:99`, `undo.rs:106`, `voices.rs:51`); ffi `backups.rs:52`, its `now`, which
+names the scratch folder and the planted backup files the adapter lists and reaches no scheduler;
+engine-core `health.rs:176`, the one-day bracket in `created_in_milliseconds`, which hands nothing
+to an engine; and the two planted texts in engine-core `scheduler_census.rs:317` and `:320`, string
+literals, not reads.
 
 ## 3. The seam
 
