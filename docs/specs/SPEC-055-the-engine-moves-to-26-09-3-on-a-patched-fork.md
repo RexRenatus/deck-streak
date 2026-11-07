@@ -468,7 +468,8 @@ R17. The engine's pin moves to the head of the fork's branch `deckstreak-blockbu
     golden and the runbook's engine input); and the engine's goldens, their census and the schema
     snapshot are written again at the new commit by the runbook's sandbox run
     (`tools/parity-oracle/anki/RUNBOOK.md`), never by a builder or by CI.
-R18. Each upstream pull request this fix owes is opened and linked from this section.
+R18. This fix owes no upstream pull request: the engine's two fixes stay on DeckStreak's maintained
+    fork, and nothing goes to the engine's upstream repository, until the engine leaves the build.
 
 | crate | advisory | parent | route | where the fix lands |
 |---|---|---|---|---|
@@ -530,5 +531,4 @@ removes the six entries and the greens in a later commit.
 ### Links
 
 #256, #248 to #253, https://github.com/ankitects/anki/issues/5882 and
-https://github.com/RexRenatus/anki/pull/1. The upstream pull requests this fix owes are linked here
-when opened.
+https://github.com/RexRenatus/anki/pull/1. This fix owes no upstream pull request (R18).
