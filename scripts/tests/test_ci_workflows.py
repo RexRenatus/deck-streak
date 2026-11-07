@@ -8950,7 +8950,7 @@ DYNAMIC_IMPORTS = {
         ),
     ),
     **allowed(
-        "reaches the namespace of the fresh module the loader makes, by a constant name, to run the path gate script's text in it; that namespace holds only what the script defines, so it brings in no module of the test directory",
+        "reaches the namespace of the fresh module the loader makes, by a constant name, to run the path gate script's text in it; that namespace holds what the script defines plus the __file__ the loader sets and the __builtins__ exec adds, beside the five entries every new module starts with (__name__, __doc__, __package__, __loader__ and __spec__), so it brings in no module of the test directory",
         ("test_path_gate", "load", "module.__dict__", 1),
     ),
 }
