@@ -278,3 +278,17 @@ with its own.
 - #623 (the engine core), #624 (the umbrella and one library), #627 (sign-in), #628 (the sync
   server's deploy and cutover), #631 and #633 (sync), #632 (the review screen), #634 (the TestFlight
   pipeline), #650 (Swift mutation rows).
+
+## Amendment D11: when the detail pane gets a chosen deck review (the alternatives it was chosen against)
+
+SPEC-347 section 11 records the measurement. In the step `app-tests` of the job `release-and-app`, A8, A9 and A11 failed on the iPhone simulator alone in 7 of 23 jobs, each by a lost automation channel and none by an assertion; in 6 of them the iPhone branch of A11, the one act of the step that opens a review, waited 55 s or more for the app to idle after its tap (jobs 125950229908, 126670406983, 127069831839, 126946117990, 126669104649 and 126876461020). That tap made the pane build the card view of a review still loading, which the empty default deck at once ended.
+
+- Chosen: the model hands the pane a review once its start has answered, because the pane then builds a card view only for a card it shows, never for a review still loading, an empty deck builds none, and the change sits in the shell model alone (`ios/App/Sources/AppModel.swift`), with one decision inside the ceiling of a model.
+- A placeholder in the review screen while it loads, with no card view until a card: rejected, because it changes the review screen of SPEC-348 in `ios/App/Sources/ReviewView.swift`, which an open pull request also changes (#778), where the shell model alone decides when the pane gets a review.
+- The deck name with a progress view in the pane while the review opens: rejected, because the view file already holds its ceiling of 3 decisions (SPEC-347 R11), and the pane reading "Choose a deck" for the moment an open takes keeps the view unchanged.
+- Warming the app on each simulator before the step: rejected, because the boot order, the time from boot to the first test and the warm phases read the same in failed and passed jobs (step 9 boots the iPhone first in all 23), so nothing measured names the simulator.
+- A longer wait, a retry or a skip in `ShellFlowTests`: rejected, because each narrows A8, A9 or A11, and the failures are lost automation channels, not short waits (job 126871849883: 1910.141 s inside one query).
+
+Consequences: good, no card view is built for an empty deck, and a deck with cards builds its card view once, with its first document; bad, the pane reads "Choose a deck" while a chosen deck opens, for as long as the start takes.
+
+What would make this wrong: a later `release-and-app` job whose A11 iPhone tap still stalls the app with this change in place, as the tap of job 125950229908 did; the review open is then not the cause, and the iPhone unified log the step keeps after a failure decides the next design.

@@ -32,6 +32,8 @@ A11: green at ba3b30b0
 A12: green at 0668e8ac
 A13: green at 0668e8ac
 A14: green at 73a6bda1
+A16: red at cb6b5916: run 42046391860, job `release-and-app`, on the iPhone and on the iPad: AppModelTests.swift:45: error: -[DeckStreakTests.AppModelTests test_a16_a_chosen_decks_review_shows_once_its_first_answer_is_in] : XCTAssertEqual failed: ("Optional(DeckStreak.ReviewPhase.loading)") is not equal to ("Optional(DeckStreak.ReviewPhase.finished)") - A16: the pane is handed the review of
+A16: green at 75617018
 ```
 
 - A1 and A2 were read on R1's tree before rustfmt rewrapped two statements of `login.rs` below
@@ -125,3 +127,19 @@ opens the collection and keeps the host key, as their reds were read at 3cea6a34
 - At ba3b30b0 the step "the app, archived unsigned for a device" built again
   (`** ARCHIVE SUCCEEDED **`), and the executable imports the same required-reason categories,
   DiskSpace and FileTimestamp, both declared and none undeclared.
+
+A16 was committed with the seam alone and the open unchanged (313e71c1), its collection directory was created before the open in cb6b5916, and it read red by name on both simulators in the run of the pull request at cb6b5916. The open changed in 75617018, with the test unchanged since cb6b5916, and the run at this delivery head reads it green on both simulators. The commits after 75617018 change only documents.
+
+A16 was amended in place (SPEC-347 section 11): its opens are bounded at 30 s of turns of the main actor, and its review reads no device voice. On the iPhone simulator the first read of the device voices held the main thread 2561.135 s in the run at e4a01eab (job 127439579015) and 348.669 s in the run at cb6b5916 (job 127364560504), against 0.070 s and 0.054 s on the iPad simulator in the same jobs, and while the thread is held no turn of the main actor reads a deadline. The shell model takes the review it builds as an argument whose default is the review model's own (e678a4c5), so the app opens its reviews as before. The commit that writes this paragraph bounds the opens and plants a review whose voice read holds the main thread for 40 s, so the bound reads red by its own message on both simulators.
+
+The red below is quoted from the run of the pull request at 6985d269 (run 42137382843, job 127635777428), where A16 failed at its bound after 40.197 s on the iPhone simulator and 40.167 s on the iPad simulator (job 127635777428), once the planted read had let the main thread go. The commit that writes this paragraph makes the planted voice read return no voice at once, as the review model's own tests do, with the bound and the assertion unchanged. The fence above keeps A16's first red and green, because the record keeps one red per criterion; the amended red:
+
+```text
+A16: red at 6985d269: run 42137382843, job `release-and-app`, on the iPhone and on the iPad: AppModelTests.swift:52: error: -[DeckStreakTests.AppModelTests test_a16_a_chosen_decks_review_shows_once_its_first_answer_is_in] : failed - A16: the collection and the review open within 30 seconds; the decks listed read 1 and the phases handed []
+```
+
+The amended A16 turns green at 08883787, the commit that removed the planted stall, and the commits after 08883787 change only documents; the run of the pull request at this delivery head reads A16 green on both simulators:
+
+```text
+A16: green at 08883787
+```
