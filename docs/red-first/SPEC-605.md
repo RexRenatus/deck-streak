@@ -11,4 +11,7 @@ A1: green at 498bfb8
 A2: not red: generated from the field table the red commit extends; row S60502 proves it can fail
 ```
 
-The commits after 498bfb8 change only documents.
+After 498bfb8 the delivery's own commit changes only documents. Its three merges of the
+development branch bring in other deliveries' changes: one adds SPEC-611's tests to
+`scripts/tests/test_formal_config.py` (126 lines added, none removed), and the A1 and A2 tests
+read the same, byte for byte, from 498bfb8 to the delivery's head.

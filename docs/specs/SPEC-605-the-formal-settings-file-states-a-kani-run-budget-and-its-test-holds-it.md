@@ -82,12 +82,12 @@ the reader. Row S60502 proves A2 can fail.
 
 - It changes no other field or value of the settings file and adds no per-entry budget for a Kani
   entry: no Kani run of this tree has been measured whole, and the rule on the entries map's keys is
-  an open item of its own (#802).
-- It adds no range test for the field: holding each budget field to the range the formal checker
-  reads is an open item of its own (#802).
+  SPEC-611's, which admits only a `tla/` key (#802).
+- It adds no range test for the field: SPEC-611's bounded rule reads every budget the reader's
+  field table names, this field included, and its A3 reads the field's committed value (#802).
 - It changes no harness, witness, proof, crate or workflow, and no Rust file: the field is read by the
-  formal checker, outside this repository, and held here by the settings test alone, whose further
-  holding of the budget fields is an open item of its own (#802).
+  formal checker, outside this repository, and held here by the settings test alone, which holds
+  the budget fields to the checker's range by SPEC-611's rule (#802).
 
 ## 6. Risks
 
@@ -116,4 +116,4 @@ the reader. Row S60502 proves A2 can fail.
 | ADR-295 | amended by one field, `budgets.kani_seconds`, decided by ADR-626; its decision is kept |
 | SPEC-295 A1 and A3 | kept: the same tests, generated from the table this change extends |
 
-No byte of SPEC-295 or ADR-295 changes.
+No earlier byte of SPEC-295 or ADR-295 changes; each names the field in a last section of its own.
