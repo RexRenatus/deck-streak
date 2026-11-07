@@ -16,7 +16,6 @@ mod support;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use anki::card::CardId;
 use anki::collection::{Collection, CollectionBuilder};
@@ -82,6 +81,8 @@ struct Built {
     collection: PathBuf,
     /// The cards, one per Basic note, in the order they were added.
     cards: Vec<i64>,
+    /// The clock the collection was pinned at: every time the test hands the engine (SPEC-443 R3).
+    clock: support::clock::Clock,
 }
 
 /// The test's own engine handle on a closed collection file.
@@ -91,8 +92,9 @@ fn engine(collection: &Path) -> Collection {
         .expect("the engine opens the test's collection")
 }
 
-/// `count` Basic notes in the default deck, so `count` cards, with the engine's own API, and the
-/// collection's creation moved back `DAYS_BACK` days as the core's day test moves it.
+/// `count` Basic notes in the default deck, so `count` cards, with the engine's own API, the
+/// collection's cutoff pinned before any engine schedules it (SPEC-443 R2), and its creation then
+/// moved back `DAYS_BACK` days as the core's day test moves it, which moves only its day count.
 fn built(test: &str, count: usize) -> Built {
     let dir = support::scratch("engine-core-replay", test);
     std::fs::create_dir_all(dir.join("collection.media")).expect("a media directory");
@@ -119,6 +121,9 @@ fn built(test: &str, count: usize) -> Built {
                 .expect("the note has one card")
         })
         .collect();
+    col.close(None).expect("the engine closes the collection");
+    let clock = support::clock::pin(&collection);
+    let col = engine(&collection);
     col.storage
         .db()
         .execute("update col set crt = crt - ?", [DAYS_BACK * 86_400])
@@ -128,15 +133,8 @@ fn built(test: &str, count: usize) -> Built {
         dir,
         collection,
         cards,
+        clock,
     }
-}
-
-fn now_millis() -> i64 {
-    let millis = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("the clock reads after the epoch")
-        .as_millis();
-    i64::try_from(millis).expect("the clock's milliseconds fit an i64")
 }
 
 /// Answers `card` with `rating` at `at`, as the engine's own reviewer does: the review-log row's
@@ -298,7 +296,7 @@ fn values(entry: &CardReplay) -> (u32, u32) {
 fn a_deck_sets_replay_reads_only_its_home_decks_cards() {
     let built = built("replay-home-decks", 3);
     let (home, moved, filtered) = (built.cards[0], built.cards[1], built.cards[2]);
-    let first = now_millis() - DAY_MS;
+    let first = built.clock.at_millis() - DAY_MS;
     let mut col = engine(&built.collection);
     for (offset, card) in (0..).zip(&built.cards) {
         answer(&mut col, *card, Rating::Good, first + offset);
@@ -344,7 +342,7 @@ fn a_deck_sets_replay_reads_only_its_home_decks_cards() {
 fn a_deleted_cards_reviews_are_not_replayed() {
     let built = built("replay-deleted-card", 2);
     let (kept, deleted) = (built.cards[0], built.cards[1]);
-    let first = now_millis() - DAY_MS;
+    let first = built.clock.at_millis() - DAY_MS;
     let mut col = engine(&built.collection);
     answer(&mut col, kept, Rating::Good, first);
     answer(&mut col, deleted, Rating::Good, first + 1);
@@ -376,7 +374,7 @@ fn a_deleted_cards_reviews_are_not_replayed() {
 fn a_card_with_no_kept_review_has_no_entry() {
     let built = built("replay-no-kept-review", 3);
     let (forgotten, unseen, answered) = (built.cards[0], built.cards[1], built.cards[2]);
-    let first = now_millis() - DAY_MS;
+    let first = built.clock.at_millis() - DAY_MS;
     let mut col = engine(&built.collection);
     answer(&mut col, forgotten, Rating::Good, first);
     col.reschedule_cards_as_new(&[CardId(forgotten)], true, false, false, None)
@@ -406,8 +404,8 @@ fn a_review_cards_due_is_its_last_review_day_plus_its_interval() {
     // rollover of rslib/src/scheduler/mod.rs:58-70 at the engine's pin), so the engine's due of the
     // Easy card, less its interval, is the engine day of the review.
     let mut col = engine(&built.collection);
-    answer(&mut col, easy, Rating::Easy, now_millis());
-    answer(&mut col, again, Rating::Again, now_millis());
+    answer(&mut col, easy, Rating::Easy, built.clock.at_millis());
+    answer(&mut col, again, Rating::Again, built.clock.at_millis());
     col.set_due_date(&[CardId(again)], "0", None)
         .expect("the engine makes the card a review card due today");
     col.close(None).expect("the engine closes the collection");
@@ -461,7 +459,7 @@ fn a_review_before_today_began_is_due_that_many_whole_days_back_plus_its_interva
     let built = built("replay-review-before-today", 1);
     let card = built.cards[0];
     let mut col = engine(&built.collection);
-    answer(&mut col, card, Rating::Easy, now_millis());
+    answer(&mut col, card, Rating::Easy, built.clock.at_millis());
     let reviewed_at = newest_row(&col, card) / 1000;
     col.close(None).expect("the engine closes the collection");
     // Today is the engine day 1000 and began 2 days and 1234 seconds before the next rollover less
@@ -486,7 +484,12 @@ fn a_learning_card_keeps_its_due_and_interval() {
     let built = built("replay-learning-card", 1);
     let card = built.cards[0];
     let mut col = engine(&built.collection);
-    answer(&mut col, card, Rating::Good, now_millis() - DAY_MS);
+    answer(
+        &mut col,
+        card,
+        Rating::Good,
+        built.clock.at_millis() - DAY_MS,
+    );
     col.close(None).expect("the engine closes the collection");
 
     let replay = replay_of(&built, &[HOME], MAX_IVL);
@@ -565,7 +568,12 @@ fn the_replay_moves_no_stamp_no_undo_and_no_row() {
     let built = built("replay-writes-nothing", 2);
     let reviewed = built.cards[0];
     let mut col = engine(&built.collection);
-    answer(&mut col, reviewed, Rating::Good, now_millis() - DAY_MS);
+    answer(
+        &mut col,
+        reviewed,
+        Rating::Good,
+        built.clock.at_millis() - DAY_MS,
+    );
     col.close(None).expect("the engine closes the collection");
     close(&opened(&built));
     let before = every_row(&built.collection);
@@ -583,7 +591,7 @@ fn the_replay_moves_no_stamp_no_undo_and_no_row() {
     );
 
     let dispatcher = opened(&built);
-    let (studied, _) = answer_head(&dispatcher);
+    let (studied, _) = answer_head(&dispatcher, built.clock.at_millis());
     let status = undo_status(&dispatcher);
     let answered = replayed_on(&dispatcher, &[HOME], MAX_IVL, UNREAD_DAY);
     let after = undo_status(&dispatcher);
@@ -744,7 +752,12 @@ fn the_stock_fields_survive_a_sync_round_trip_alone() {
     let built = built("replay-sync-round-trip", 1);
     let card = built.cards[0];
     let mut col = engine(&built.collection);
-    answer(&mut col, card, Rating::Easy, now_millis() - DAY_MS);
+    answer(
+        &mut col,
+        card,
+        Rating::Easy,
+        built.clock.at_millis() - DAY_MS,
+    );
     col.close(None).expect("the engine closes the collection");
     seed(&auth, &built.collection);
 
@@ -814,7 +827,7 @@ fn the_stock_fields_survive_a_sync_round_trip_alone() {
 fn the_engines_forget_reads_as_a_reset_and_set_due_does_not() {
     let built = built("replay-forget-and-set-due", 3);
     let (moved, plain, forgotten) = (built.cards[0], built.cards[1], built.cards[2]);
-    let first = now_millis() - 2 * DAY_MS;
+    let first = built.clock.at_millis() - 2 * DAY_MS;
     let mut col = engine(&built.collection);
     // The moved card: Good, the engine's set-due-date, Good. The plain card: two Goods at the same
     // gap. The forgotten card: Good, the engine's Forget, Good.
@@ -867,7 +880,12 @@ fn the_last_kept_review_is_the_engines_last_review_time() {
     let built = built("replay-last-review", 1);
     let card = built.cards[0];
     let mut col = engine(&built.collection);
-    answer(&mut col, card, Rating::Good, now_millis() - DAY_MS);
+    answer(
+        &mut col,
+        card,
+        Rating::Good,
+        built.clock.at_millis() - DAY_MS,
+    );
     col.set_due_date(&[CardId(card)], "0", None)
         .expect("the engine sets the card's due date");
     let later = newest_row(&col, card);
@@ -892,9 +910,10 @@ fn the_last_kept_review_is_the_engines_last_review_time() {
     );
 }
 
-/// Answers the queue's head Good through the owner's press, and returns its card and the record
-/// the review keeps: the engine's undo status right after, and the newest review row's id.
-fn answer_head(dispatcher: &Dispatcher) -> (i64, Recorded) {
+/// Answers the queue's head Good through the owner's press at `at`, the clock's instant, and
+/// returns its card and the record the review keeps: the engine's undo status right after, and the
+/// newest review row's id.
+fn answer_head(dispatcher: &Dispatcher, at: i64) -> (i64, Recorded) {
     let request = GetQueuedCardsRequest {
         fetch_limit: 1,
         intraday_learning_only: false,
@@ -919,7 +938,7 @@ fn answer_head(dispatcher: &Dispatcher) -> (i64, Recorded) {
         current_state: states.current,
         new_state: states.good,
         rating: card_answer::Rating::Good as i32,
-        answered_at_millis: now_millis(),
+        answered_at_millis: at,
         milliseconds_taken: 1000,
     };
     dispatcher
@@ -951,12 +970,17 @@ fn an_undone_answer_leaves_the_replay_as_before_it() {
     let built = built("replay-undone-answer", 2);
     let (reviewed, studied) = (built.cards[0], built.cards[1]);
     let mut col = engine(&built.collection);
-    answer(&mut col, reviewed, Rating::Easy, now_millis() - DAY_MS);
+    answer(
+        &mut col,
+        reviewed,
+        Rating::Easy,
+        built.clock.at_millis() - DAY_MS,
+    );
     col.close(None).expect("the engine closes the collection");
 
     let dispatcher = opened(&built);
     let before = replayed(&dispatcher, &[HOME], MAX_IVL);
-    let (card, recorded) = answer_head(&dispatcher);
+    let (card, recorded) = answer_head(&dispatcher, built.clock.at_millis());
     let answered = replayed(&dispatcher, &[HOME], MAX_IVL);
     let gesture = OwnerGesture::from_tap(ExemptWrite::Undo, Target::Card(card))
         .expect("an undo takes a card");
@@ -985,7 +1009,7 @@ fn an_undone_answer_leaves_the_replay_as_before_it() {
 fn two_replays_of_one_collection_are_equal() {
     let built = built("replay-twice", 2);
     let (first, second) = (built.cards[0], built.cards[1]);
-    let start = now_millis() - 2 * DAY_MS;
+    let start = built.clock.at_millis() - 2 * DAY_MS;
     let mut col = engine(&built.collection);
     answer(&mut col, first, Rating::Good, start);
     answer(&mut col, second, Rating::Easy, start + DAY_MS);
@@ -1030,7 +1054,12 @@ fn a_parameter_vector_of_another_length_is_refused_whole() {
     let built = built("replay-parameter-length", 1);
     let card = built.cards[0];
     let mut col = engine(&built.collection);
-    answer(&mut col, card, Rating::Good, now_millis() - DAY_MS);
+    answer(
+        &mut col,
+        card,
+        Rating::Good,
+        built.clock.at_millis() - DAY_MS,
+    );
     col.close(None).expect("the engine closes the collection");
 
     // The lengths the scheduler itself reads as an older model's (17, 19 and 21) and lengths it

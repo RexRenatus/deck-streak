@@ -15,8 +15,6 @@
 
 mod support;
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
 use anki_proto::collection::UndoStatus;
 use anki_proto::scheduler::card_answer::Rating;
 use anki_proto::scheduler::{CardAnswer, GetQueuedCardsRequest, QueuedCards};
@@ -127,17 +125,10 @@ fn flag(dispatcher: &Dispatcher, card: i64, flag: u32) -> Recorded {
     }
 }
 
-fn now_millis() -> i64 {
-    let millis = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("the clock reads after the epoch")
-        .as_millis();
-    i64::try_from(millis).expect("the clock's milliseconds fit an i64")
-}
-
-/// Answers the queue's head Good through the owner's press, and returns its card and the record
-/// the review keeps: the engine's undo status right after, and the newest review row's id.
-fn answer_head(dispatcher: &Dispatcher) -> (i64, Recorded) {
+/// Answers the queue's head Good through the owner's press at `at`, the clock's instant, and
+/// returns its card and the record the review keeps: the engine's undo status right after, and the
+/// newest review row's id.
+fn answer_head(dispatcher: &Dispatcher, at: i64) -> (i64, Recorded) {
     let request = GetQueuedCardsRequest {
         fetch_limit: 1,
         intraday_learning_only: false,
@@ -162,7 +153,7 @@ fn answer_head(dispatcher: &Dispatcher) -> (i64, Recorded) {
         current_state: states.current,
         new_state: states.good,
         rating: Rating::Good as i32,
-        answered_at_millis: now_millis(),
+        answered_at_millis: at,
         milliseconds_taken: 1000,
     };
     dispatcher
@@ -324,7 +315,7 @@ fn a_confirmed_undo_of_a_flag_puts_back_the_flag_the_card_had() {
 #[test]
 fn an_undo_of_a_bury_after_an_answer_leaves_the_answer() {
     let (synthetic, dispatcher) = opened("undo-bury-after-answer");
-    let (answered, answer) = answer_head(&dispatcher);
+    let (answered, answer) = answer_head(&dispatcher, synthetic.clock.at_millis());
     let after_answer = reads(&dispatcher, answered);
     let review = first_row(&dispatcher, Read::Review(answer.review));
     let buried = other(&synthetic, answered);
@@ -354,7 +345,7 @@ fn an_undo_of_a_bury_after_a_later_change_is_refused_and_changes_nothing() {
     let (synthetic, dispatcher) = opened("undo-bury-after-a-later-change");
     let buried = synthetic.cards[0];
     let recorded = bury(&dispatcher, buried);
-    let (answered, answer) = answer_head(&dispatcher);
+    let (answered, answer) = answer_head(&dispatcher, synthetic.clock.at_millis());
     let buried_rows = reads(&dispatcher, buried);
     let answered_rows = reads(&dispatcher, answered);
     let review = first_row(&dispatcher, Read::Review(answer.review));
@@ -589,8 +580,8 @@ fn an_old_record_decodes_as_an_answer() {
 
 #[test]
 fn a_record_of_an_unknown_kind_is_refused_and_leaves_the_answer() {
-    let (_synthetic, dispatcher) = opened("undo-unknown-kind");
-    let (card, recorded) = answer_head(&dispatcher);
+    let (synthetic, dispatcher) = opened("undo-unknown-kind");
+    let (card, recorded) = answer_head(&dispatcher, synthetic.clock.at_millis());
     let unknown = Recorded {
         kind: UNKNOWN_KIND,
         ..recorded.clone()

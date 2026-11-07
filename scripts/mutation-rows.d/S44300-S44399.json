@@ -1,0 +1,114 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S44300-CORE-PIN-STAMPS-A-DAY-EARLY",
+        "engine-core",
+        "tests/support/clock.rs",
+        "[predicted - DAY_SECS]",
+        "[predicted - 2 * DAY_SECS]",
+        "exempt::the_core_fixture_holds_the_engines_cutoff_twelve_hours_after_the_clock",
+        "the core's pin writes the creation stamp at the cutoff before its predicted one, so the engine reads day 0; written two days back, the pin's own reading of the engine's timing finds day 1 at every hour and in every zone (SPEC-443 R1, A5)"
+      ],
+      [
+        "S44301-CORE-LEAD-SHORTENED",
+        "engine-core",
+        "tests/support/clock.rs",
+        "pub const LEAD_SECS: i64 = 43_200;",
+        "pub const LEAD_SECS: i64 = 39_600;",
+        "exempt::the_core_fixture_holds_the_engines_cutoff_twelve_hours_after_the_clock",
+        "the core's pin holds the next cutoff more than 39 600 s and at most 43 200 s after the clock's instant; with the lead shortened to 39 600 s, the cutoff falls at most 39 600 s after it, outside the fixture test's literal window (SPEC-443 R1, A5)"
+      ],
+      [
+        "S44302-CORE-JUST-BEFORE-WIDENED",
+        "engine-core",
+        "tests/support/clock.rs",
+        "pub const JUST_BEFORE_SECS: i64 = 300;",
+        "pub const JUST_BEFORE_SECS: i64 = 900;",
+        "exempt::a_core_good_press_just_before_the_cutoff_moves_the_card_to_tomorrow",
+        "the side start places the core's cutoff five minutes after the instant, so a Good press's ten-minute step reaches it and the card is due on day 1; widened to 900 s, the step falls short of the cutoff and the card stays in the learning queue (SPEC-443 R6, A6)"
+      ],
+      [
+        "S44303-ADAPTER-PIN-STAMPS-A-DAY-EARLY",
+        "ffi",
+        "tests/support/clock.rs",
+        "[predicted - DAY_SECS]",
+        "[predicted - 2 * DAY_SECS]",
+        "exempt::the_adapter_fixture_holds_the_engines_cutoff_twelve_hours_after_the_clock",
+        "the adapter tests' pin writes the creation stamp at the cutoff before its predicted one, so the engine reads day 0; written two days back, the pin's own reading of the engine's timing finds day 1 at every hour and in every zone (SPEC-443 R1, A5)"
+      ],
+      [
+        "S44304-ADAPTER-LEAD-SHORTENED",
+        "ffi",
+        "tests/support/clock.rs",
+        "pub const LEAD_SECS: i64 = 43_200;",
+        "pub const LEAD_SECS: i64 = 39_600;",
+        "exempt::the_adapter_fixture_holds_the_engines_cutoff_twelve_hours_after_the_clock",
+        "the adapter tests' pin holds the next cutoff more than 39 600 s and at most 43 200 s after the clock's instant; with the lead shortened to 39 600 s, the cutoff falls at most 39 600 s after it, outside the fixture test's literal window (SPEC-443 R1, A5)"
+      ],
+      [
+        "S44305-ADAPTER-JUST-BEFORE-WIDENED",
+        "ffi",
+        "tests/support/clock.rs",
+        "pub const JUST_BEFORE_SECS: i64 = 300;",
+        "pub const JUST_BEFORE_SECS: i64 = 900;",
+        "exempt::an_adapter_good_press_just_before_the_cutoff_moves_the_card_to_tomorrow",
+        "the side start places the adapter fixture's cutoff five minutes after the instant, so a native Good press's ten-minute step reaches it and the card is due on day 1; widened to 900 s, the step falls short of the cutoff and the card stays in the learning queue (SPEC-443 R6, A6)"
+      ],
+      [
+        "S44306-ADAPTER-STAMPS-ITS-OWN-CLOCK",
+        "ffi",
+        "src/engine.rs",
+        "self.answered_at_millis.unwrap_or_else(now_millis)",
+        "self.answered_at_millis.filter(|_| false).unwrap_or_else(now_millis)",
+        "round_trip::a_native_press_answers_only_its_card_with_its_grade",
+        "an answer through an engine started at an instant records that instant as each review's id, the second made unique by the engine; with the set instant ignored, the adapter stamps its own clock and the ids fall after the instant (SPEC-443 R4, A4)"
+      ],
+      [
+        "S44307-CONSTRUCTOR-DROPS-ITS-INSTANT",
+        "ffi",
+        "src/engine.rs",
+        "answered_at_millis: Some(answered_at_millis),",
+        "answered_at_millis: Some(answered_at_millis).filter(|_| false),",
+        "round_trip::a_native_press_stamps_each_review_at_the_injected_instant_on_each_side_of_the_cutoff",
+        "the tests' constructor keeps the instant it is given, so each press records it; with the instant dropped, the adapter stamps its own clock and each review's id falls after the instant on both sides of the cutoff (SPEC-443 R4, A4)"
+      ],
+      [
+        "S44308-CORE-DAY-LENGTHENED",
+        "engine-core",
+        "tests/support/clock.rs",
+        "pub const DAY_SECS: i64 = 86_400;",
+        "pub const DAY_SECS: i64 = 86_401;",
+        "exempt::the_core_fixture_holds_the_engines_cutoff_twelve_hours_after_the_clock",
+        "the core's placement writes the creation stamp one day of 86 400 s before its start; with a day of 86 401 s, the engine's version-1 cutoff falls one second before the start the placement's own assertion reads (SPEC-443 R1, A5)"
+      ],
+      [
+        "S44309-ADAPTER-DAY-LENGTHENED",
+        "ffi",
+        "tests/support/clock.rs",
+        "pub const DAY_SECS: i64 = 86_400;",
+        "pub const DAY_SECS: i64 = 86_401;",
+        "exempt::the_adapter_fixture_holds_the_engines_cutoff_twelve_hours_after_the_clock",
+        "the adapter tests' placement writes the creation stamp one day of 86 400 s before its start; with a day of 86 401 s, the engine's version-1 cutoff falls one second before the start the placement's own assertion reads (SPEC-443 R1, A5)"
+      ],
+      [
+        "S44310-CORE-PIN-HOUR-ONE-LATE",
+        "engine-core",
+        "tests/support/clock.rs",
+        "(rollover + hours).rem_euclid(24)",
+        "(rollover + hours + 1).rem_euclid(24)",
+        "exempt::the_core_fixture_holds_the_engines_cutoff_twelve_hours_after_the_clock",
+        "the core's pin moves the rollover hour by the hours it predicted, so the engine's next cutoff is the predicted one; set one hour late, the cutoff falls an hour past the prediction the pin's own assertion reads (SPEC-443 R1, A5)"
+      ],
+      [
+        "S44311-ADAPTER-PIN-HOUR-ONE-LATE",
+        "ffi",
+        "tests/support/clock.rs",
+        "(rollover + hours).rem_euclid(24)",
+        "(rollover + hours + 1).rem_euclid(24)",
+        "exempt::the_adapter_fixture_holds_the_engines_cutoff_twelve_hours_after_the_clock",
+        "the adapter tests' pin moves the rollover hour by the hours it predicted, so the engine's next cutoff is the predicted one; set one hour late, the cutoff falls an hour past the prediction the pin's own assertion reads (SPEC-443 R1, A5)"
+      ]
+    ]
+  }
+}
