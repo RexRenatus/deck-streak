@@ -15,7 +15,7 @@ export type Layer = 'W1' | 'W2' | 'W3' | 'W4';
 export interface Listener {
   /** The HTTP listener's origin, counting requests by path. */
   http: string;
-  /** The TCP listener's origin, counting connections that carry no request (a preconnect). */
+  /** The TCP listener's origin, counting every connection and each request by its path (SPEC-461). */
   tcp: string;
   /** The UDP listener's port on the loopback address, counting datagrams (a STUN request). */
   udp: number;
@@ -77,17 +77,9 @@ function loads(id: string, alone: Layer | null, html: (http: string) => string, 
   return { id, alone, click: false, html: (l) => html(`${l.http}/${id}`), css: (l) => css(`${l.http}/${id}`), paths: [`/${id}/`] };
 }
 
-/** A card whose full-frame link or button acts when clicked, toward the HTTP listener. */
-function clicks(id: string, alone: Layer | null, html: (http: string) => string): PlantedCard {
-  return { id, alone, click: true, html: (l) => html(`${l.http}/${id}`), css: () => COVER, paths: [`/${id}/`] };
-}
-
-/**
- * A card whose full-frame link acts when clicked, toward the TCP listener, which counts every
- * connection, a bare one with no request included (SPEC-402 R10; ADR-498 D7, D9).
- */
-function clicksAtTcp(id: string, alone: Layer | null, html: (tcp: string) => string): PlantedCard {
-  return { id, alone, click: true, html: (l) => html(`${l.tcp}/${id}`), css: () => COVER, paths: ['tcp'] };
+/** A card whose full-frame link or button acts when clicked, toward the TCP listener (SPEC-461). */
+function clicks(id: string, alone: Layer | null, html: (tcp: string) => string): PlantedCard {
+  return { id, alone, click: true, html: (l) => html(`${l.tcp}/${id}`), css: () => COVER, paths: ['tcp', `/${id}/`] };
 }
 
 /** The page's bridge, as a card script reaches for it: each call that throws is passed over. */
@@ -192,20 +184,20 @@ export const PLANTED: readonly PlantedCard[] = [
   // (the SVG link the control: its handler starts no preconnect), and an SVG link that asks for a
   // new window with no target at all, W1's own channel. The cover class sets a position and no
   // size, so the image and each svg carry the frame's size themselves
-  clicksAtTcp(
+  clicks(
     'nav-blank-area',
     'W4',
     (t) =>
       `<img class="cover" usemap="#m" alt="" width="100%" height="100%" src="${PIXEL}">` +
       `<map name="m"><area shape="default" target="_blank" href="${t}/1" alt="open"></map>`
   ),
-  clicksAtTcp(
+  clicks(
     'nav-blank-svg',
     'W4',
     (t) =>
       `<svg class="cover" width="100%" height="100%"><a target="_blank" href="${t}/1"><rect width="100%" height="100%"/></a></svg>`
   ),
-  clicksAtTcp(
+  clicks(
     'nav-show-new',
     'W1',
     (t) =>
@@ -262,6 +254,12 @@ export const UNOBSERVABLE: readonly Unobservable[] = [
 ];
 
 export const BARE: readonly Bare[] = [
+  {
+    engine: 'webkit',
+    id: 'nav-blank',
+    layer: 'W3',
+    why: "with W3 off the link's target is back and the sandbox refuses the popup, and WebKit's click handler preconnects to the link's host"
+  },
   {
     engine: 'webkit',
     id: 'nav-blank-area',

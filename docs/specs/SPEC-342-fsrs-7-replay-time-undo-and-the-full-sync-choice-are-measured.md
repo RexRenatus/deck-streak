@@ -340,3 +340,16 @@ web target (`wasm32-unknown-unknown`) check: fail (getrandom)
 
 #641 reads M1 and M2's cost per review against the review-log row count that SPEC-334 row 1.2's
 collection-size measurement records. This delivery reads no figure from any real collection.
+
+## 8. Amendments: A1's dev-dependency pin names `divan` (SPEC-618)
+
+SPEC-618's bench lanes add the FSRS-7 crate's replay bench, whose harness is the renamed Divan
+crate, so `crates/fsrs7/Cargo.toml` gains a `divan` dev-dependency beside `fsrs6`. A1's pin of
+the crate's `[dev-dependencies]` in `scripts/tests/test_fsrs7_pin.py` admits `divan` and `fsrs6`
+by name, exactly, in place of `fsrs6` alone; its pin of the crate's `[dependencies]`, `fsrs7`
+alone, does not move. A planted crate whose dev-dependencies are `divan`, `fsrs6` and `tempfile`
+is still refused, its finding naming the three, and so is the planted `fsrs6` and `tempfile`
+pair, whose finding now names `divan` and `fsrs6` as the admitted list. The engine still resolves
+the registry's scheduler and the crate the pinned one, and M5 does not move. SPEC-618's A29
+decides the pin, recorded in `docs/red-first/SPEC-618.md`; A1 keeps its command and stands as
+written above.

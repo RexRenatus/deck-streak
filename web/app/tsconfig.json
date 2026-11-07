@@ -14,7 +14,8 @@
   },
   // svelte-check reads this project, which covers src, tests and the app's configuration; the card
   // harness and its two configurations are type-checked too (SPEC-341), and so are the study suite
-  // and its two (SPEC-350). `$app/tsconfig` names no files, so the list is complete here.
+  // and its two (SPEC-350) and the web benches (SPEC-618). `$app/tsconfig` names no files, so the
+  // list is complete here.
   "include": [
     "src",
     "tests",
@@ -25,8 +26,14 @@
     "vite.card.config.ts",
     "playwright.card.config.ts",
     "policy-header.ts",
+    // The engine suite, its harness page and its two configurations (SPEC-628).
+    "tests-engine/**/*.ts",
+    "engine-harness/**/*.ts",
+    "vite.engine.config.ts",
+    "playwright.engine.config.ts",
     "tests-study/**/*.ts",
     "vite.study.config.ts",
-    "playwright.study.config.ts"
+    "playwright.study.config.ts",
+    "bench/**/*.ts"
   ]
 }

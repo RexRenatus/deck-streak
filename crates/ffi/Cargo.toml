@@ -32,6 +32,8 @@ anki.workspace = true
 # ADR-358 (SPEC-347 R3): the runtime that runs the engine's own sync server as a child of the login
 # test, on a loopback port.
 tokio = { workspace = true, features = ["rt"] }
+# ADR-640 (SPEC-618 R9): the bench harness, for `benches/` alone.
+divan.workspace = true
 
 [features]
 # ADR-345 D3: the Swift bindings generator, turned on only by the XCFramework workflow; a workspace
@@ -43,3 +45,14 @@ bindgen = ["uniffi/cli", "uniffi/cargo-metadata"]
 [[bin]]
 name = "uniffi-bindgen-swift"
 path = "src/bin/uniffi-bindgen-swift.rs"
+
+# SPEC-618 R9: the native adapter's answer and face entries, measured by CodSpeed over
+# collections the benches build with the engine's own API; Divan's `main` replaces the default
+# harness.
+[[bench]]
+name = "grading"
+harness = false
+
+[[bench]]
+name = "render"
+harness = false

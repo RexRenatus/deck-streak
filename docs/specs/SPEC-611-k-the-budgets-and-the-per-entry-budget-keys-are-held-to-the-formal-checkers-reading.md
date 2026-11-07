@@ -105,7 +105,7 @@ R1 is decided by A1, R2 by A2, R3 by A3 and R4 by A4. R5 is a rule of the docume
   `FormalConfig` that fails for a reason that is not the file's reddens A4, which is why R4 places
   the two tests that read no committed file in a class of their own.
 - **Anchors.** The new code repeats no line an existing row on `scripts/tests/test_formal_config.py`
-  anchors on, and the builder's anchor census proves each anchor occurs exactly once.
+  anchors on, and an anchor census at the base and the head proves each find occurs once.
 
 ## 7. The mutation rows
 

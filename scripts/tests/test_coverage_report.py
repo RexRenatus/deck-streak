@@ -21,7 +21,7 @@ FIXTURES = REPO / "scripts" / "tests" / "fixtures" / "coverage"
 CONFIG = REPO / "config" / "coverage.json"
 WORKFLOW = REPO / ".github" / "workflows" / "coverage.yml"
 LANES = ("rust", "web", "python")
-KINDS = ("deprecated", "timing", "test", "declaration", "generated")
+KINDS = ("deprecated", "timing", "test", "declaration", "generated", "bench")
 FLOAT = re.compile(r"(?<![\w/.-])[0-9]+[.][0-9]+(?![\w/.-])")
 HINTS = re.compile(
     r"LCOV_EXCL|pragma: no cover|istanbul ignore|v8 ignore|c8 ignore|coverage\(off\)|llvm-cov:ignore"
