@@ -41,6 +41,7 @@ def run(module):
     suite, name = module
     done = subprocess.run(
         ["python3", "-m", "unittest", "discover", "-s", suite, "-p", name],
+        env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
         capture_output=True,
         text=True,
         check=False,
