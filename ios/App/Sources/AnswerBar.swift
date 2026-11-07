@@ -38,7 +38,11 @@ struct AnswerBar: View {
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
-        .background(.bar)
+        .background(Color.tideCard)
+        .overlay(alignment: .top) {
+            Color.tideBorder.frame(height: 1)
+        }
+        .tint(Color.tideAccent)
     }
 
     /// One rating's button: its title is its accessible name, and its interval, shown under the

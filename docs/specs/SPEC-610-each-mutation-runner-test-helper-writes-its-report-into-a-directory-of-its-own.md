@@ -115,3 +115,31 @@ neither test module.
 |---|---|---|---|
 | S61000 | `scripts/tests/test_mutation_python.py` | `Tree.report` keeps its own directory and its cleanup, but writes the report into the parent of the scenario tree again | `test_mutation_python.TheTreeReportHelperWritesIntoItsOwnDirectory.test_the_tree_report_helper_writes_its_report_and_costs_into_a_directory_of_its_own` (A1) |
 | S61001 | `scripts/tests/test_mutation_python_cli_kills.py` | `report_of` keeps its own directory and its cleanup, but writes the report into the parent of the scenario tree again | `test_mutation_python_cli_kills.TheRunPrintsAndWritesItsReport.test_the_cli_report_helper_writes_its_report_and_costs_into_a_directory_of_its_own` (A2) |
+
+## 10. Amendments
+
+A later change closes a gap the first A1 and A2 left open. Each called its helper once, so a helper
+that kept one directory for its tree, or for its test, and wrote every report there would have
+passed them, though R1 and R2 say the directory is made per call. A1 now calls `Tree.report` twice
+and A2 calls `report_of` twice, and each asserts that the two reports went into two different
+directories, both gone at the test's cleanup. The helpers already made a directory per call, so no
+helper changes, and the acceptance block above is unchanged: the criteria keep their names and
+their commands.
+
+The change touched these files beyond the rows above:
+- `scripts/tests/test_mutation_python.py`: the A1 test calls `Tree.report` twice.
+- `scripts/tests/test_mutation_python_cli_kills.py`: the A2 test calls `report_of` twice.
+- `scripts/mutation-rows.d/S61000-S61099.json`: rows S61002 and S61003.
+- `docs/decisions/ADR-632-a-report-helper-takes-a-temporary-directory-per-run-removed-with-its-test.md`: an amendment that weighs a with-block directory inside each helper.
+- `docs/red-first/SPEC-610.md`: a paragraph on how the new assertions are shown able to fail.
+- `changelog.d/report-helper-per-call-610.md`: the changelog fragment of the change.
+
+Rows the change leaves unchanged:
+- `scripts/mutation_python.py` is unchanged.
+
+| id | target | mutant | killer |
+|---|---|---|---|
+| S61002 | `scripts/tests/test_mutation_python.py` | `Tree.report` keeps the directory of its first call and writes every later report there | `test_mutation_python.TheTreeReportHelperWritesIntoItsOwnDirectory.test_the_tree_report_helper_writes_its_report_and_costs_into_a_directory_of_its_own` |
+| S61003 | `scripts/tests/test_mutation_python_cli_kills.py` | `report_of` keeps the directory of its first call and writes every later report there | `test_mutation_python_cli_kills.TheRunPrintsAndWritesItsReport.test_the_cli_report_helper_writes_its_report_and_costs_into_a_directory_of_its_own` |
+
+The `mutation-rows` job proves rows S61002 and S61003, as section 7 says of S61000 and S61001.

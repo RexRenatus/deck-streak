@@ -78,6 +78,20 @@
       "reason": "Test code, which the report does not measure."
     },
     {
+      "glob": "crates/*/benches/**",
+      "lane": "rust",
+      "kind": "bench",
+      "reason": "Benchmark code, which CodSpeed measures and the report does not.",
+      "cite": "SPEC-618"
+    },
+    {
+      "glob": "web/app/bench/**",
+      "lane": "web",
+      "kind": "bench",
+      "reason": "Benchmark code, which CodSpeed measures and the report does not.",
+      "cite": "SPEC-618"
+    },
+    {
       "glob": "web/app/src/**/*.d.ts",
       "lane": "web",
       "kind": "declaration",

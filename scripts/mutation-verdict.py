@@ -965,8 +965,10 @@ CENSUS_SECONDS = {"deck-streak-progression": 1521}
 #: projection (SPEC-039 R18, SPEC-362 R2).
 SHARD_BOUND_SECONDS = 10800
 #: The most legs each workflow's run holds: the 256 jobs of one run, less the most every other job
-#: of that workflow can generate, 67 in `ci.yml` and 22 in `mutation-weekly.yml` (SPEC-362 R3).
-LEG_CEILING = {"ci": 189, "battery": 234}
+#: of that workflow can generate, 71 in `ci.yml` (67 and the four bench jobs) and 22 in
+#: `mutation-weekly.yml` (SPEC-362 R3). The `ci` figure is signed in
+#: docs/rulings/OWNER-RULING-2026-11-05-rust-ceiling-185.md (SPEC-618).
+LEG_CEILING = {"ci": 185, "battery": 234}
 #: Signed in docs/rulings/OWNER-RULING-2026-10-16-release-legs-python-305-rust-192.md (SPEC-423 R9).
 RUST_RELEASE_CEILING = 192
 #: The legs one matrix generates, the most a release Rust ceiling may reach (SPEC-423 R7).
@@ -1573,7 +1575,36 @@ def judge_rows(verdict: Verdict, plan: dict, rows: object, klass: str) -> int:
             path = plan["row_overlaps"].get(identifier)
             if path is not None and classify(path) == klass:
                 carried += 1
+    leave_rows_to_the_leg_report(verdict, plan, proved, klass)
     return carried
+
+
+#: The classes whose verdict credits a KILLED row to its examined count (`klass_rows`): a row of any
+#: other path, or of no changed line, is counted by none of them (SPEC-625 R1).
+ROW_CREDITING = frozenset({"rust", "oracle", "scripts"})
+
+
+def leave_rows_to_the_leg_report(verdict: Verdict, plan: dict, proved: dict, klass: str) -> None:
+    """SPEC-625 R1, R2: the scripts class names, in plan order, each selected row the leg killed
+    that no class credits, with the path of its changed line or the words that it covers none. It
+    returns nothing, so no row it names reaches a count (R3)."""
+    if klass != "scripts":
+        return
+    uncredited = []
+    for ident in plan["rows"]:
+        overlap = plan["row_overlaps"].get(ident)
+        killed = proved.get(ident, {}).get("verdict") == "KILLED"
+        if killed and (overlap is None or classify(overlap) not in ROW_CREDITING):
+            uncredited.append((ident, overlap))
+    if uncredited:
+        verdict.say(
+            f"rows left to the leg report: {len(uncredited)} of {len(plan['rows'])} selected"
+        )
+    for ident, overlap in uncredited:
+        reason = (
+            "it covers no changed line" if overlap is None else f"its changed line is in {overlap}"
+        )
+        verdict.say(f"row left to the leg report: {ident}: {reason}")
 
 
 def partial_reason(report: object, code: int | None, source: str) -> str | None:

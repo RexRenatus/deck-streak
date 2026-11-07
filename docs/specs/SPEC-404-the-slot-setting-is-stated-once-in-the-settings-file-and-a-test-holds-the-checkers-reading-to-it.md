@@ -118,7 +118,7 @@ decided by the local formal check of section 4, which no repository test runs.
 - **The presence harness runs every settings test under each planted refusal.** A new test that
   errors where it should fail reddens A3, which is why R5 is stated.
 - **Anchors.** The new code repeats no line an existing row of `S29500` to `S29530` anchors on, and
-  the builder's anchor census proves each anchor occurs exactly once.
+  an anchor census at the base and the head proves each find occurs once.
 
 ## 8. The mutation rows
 

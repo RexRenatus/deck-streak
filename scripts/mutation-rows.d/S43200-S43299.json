@@ -1,0 +1,339 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S43200-F1-READS-F64",
+        "economy",
+        "tests/integer_money.rs",
+        "if matches!(current, \"f32\" | \"f64\") {",
+        "if matches!(current, \"f32\") {",
+        "integer_money::a_float_planted_in_the_economy_is_refused_by_its_rule",
+        "F1 counts the type words f32 and f64; dropping f64, the planted cast `as f64` is no longer refused"
+      ],
+      [
+        "S43201-F2-READS-A-FLOAT-SUFFIX",
+        "economy",
+        "tests/integer_money.rs",
+        "if suffixed {",
+        "if suffixed && false {",
+        "integer_money::a_float_planted_in_the_economy_is_refused_by_its_rule",
+        "F2 counts a word ending in a float suffix; disabled, the planted `to_f64` is no longer refused"
+      ],
+      [
+        "S43202-F3-READS-A-DECIMAL",
+        "economy",
+        "tests/integer_money.rs",
+        "if decimal && !after_dot {",
+        "if decimal && !after_dot && false {",
+        "integer_money::a_float_planted_in_the_economy_is_refused_by_its_rule",
+        "F3 counts a decimal literal; disabled, the planted `1.5` is no longer refused"
+      ],
+      [
+        "S43203-F3-SKIPS-A-FIELD-PATH",
+        "economy",
+        "tests/integer_money.rs",
+        "let after_dot = at > 0 && dot(at - 1);",
+        "let after_dot = at > 0 && dot(at - 1) && false;",
+        "integer_money::a_whole_number_shape_is_not_a_float",
+        "F3 does not start at a number after a dot; without the guard, the nested field path `nested.0.1` counts as a float"
+      ],
+      [
+        "S43204-F4-READS-AN-EXPONENT",
+        "economy",
+        "tests/integer_money.rs",
+        "if exponent && !radix {",
+        "if exponent && !radix && false {",
+        "integer_money::a_float_planted_in_the_economy_is_refused_by_its_rule",
+        "F4 counts an exponent literal; disabled, the planted `1e3` is no longer refused"
+      ],
+      [
+        "S43205-F4-SKIPS-A-RADIX-PREFIX",
+        "economy",
+        "tests/integer_money.rs",
+        ".any(|prefix| current.starts_with(prefix));",
+        ".any(|prefix| current.starts_with(prefix)) && false;",
+        "integer_money::a_whole_number_shape_is_not_a_float",
+        "F4 skips a number opened by 0x, 0o or 0b; without the guard, the hex literal `0x1E` counts as an exponent"
+      ],
+      [
+        "S43206-F5-READS-A-TRAILING-DOT",
+        "economy",
+        "tests/integer_money.rs",
+        "if trailing && !range {",
+        "if trailing && !range && false {",
+        "integer_money::a_float_planted_in_the_economy_is_refused_by_its_rule",
+        "F5 counts a trailing-dot literal; disabled, the planted `2.` is no longer refused"
+      ],
+      [
+        "S43207-F5-SKIPS-A-RANGE",
+        "economy",
+        "tests/integer_money.rs",
+        "let range = dot(at + 2);",
+        "let range = dot(at + 2) && false;",
+        "integer_money::a_whole_number_shape_is_not_a_float",
+        "F5 skips a number before two dots; without the guard, the range `0..10` counts as a trailing-dot float"
+      ],
+      [
+        "S43208-A-FLOAT-IS-NAMED-BY-ITS-ITEM",
+        "economy",
+        "tests/integer_money.rs",
+        "let declares = word(at).is_some_and(|text| ITEM_KEYWORDS.contains(&text)) && !lifetime;",
+        "let declares = word(at).is_some_and(|text| ITEM_KEYWORDS.contains(&text)) && !lifetime && false;",
+        "integer_money::the_economy_holds_floats_only_at_its_listed_sites",
+        "each float is named by the item after the last item keyword; unnamed, the head's sites are no longer the listed items"
+      ],
+      [
+        "S43209-A-LISTED-FLOAT-SITE-GONE-IS-REFUSED",
+        "economy",
+        "tests/integer_money.rs",
+        "if gone {",
+        "if gone && false {",
+        "integer_money::a_listed_float_site_gone_or_grown_is_refused",
+        "the judge refuses a listed float site that is gone; disabled, the planted `scaled_fine` without its cast passes"
+      ],
+      [
+        "S43210-A-FLOAT-COUNT-MUST-EQUAL",
+        "economy",
+        "tests/integer_money.rs",
+        "let equal = count == *listed_count;",
+        "let equal = count >= *listed_count;",
+        "integer_money::a_listed_float_site_gone_or_grown_is_refused",
+        "the judge compares a site's count with its listed count for equality; compared by at-least, a grown count passes"
+      ],
+      [
+        "S43211-THE-LISTED-FLOAT-COUNTS",
+        "economy",
+        "tests/integer_money.rs",
+        "(\"rules.rs\", \"scaled_fine\", 1),",
+        "(\"rules.rs\", \"scaled_fine\", 2),",
+        "integer_money::the_economy_holds_floats_only_at_its_listed_sites",
+        "the listed map holds scaled_fine's one cast; a changed count no longer equals the head's sites"
+      ],
+      [
+        "S43212-AN-UPDATE-IS-A-REWRITE",
+        "daemon",
+        "tests/append_only_tables.rs",
+        "let target = if is(at, \"update\") {",
+        "let target = if is(at, \"update\") && false {",
+        "append_only_tables::a_planted_rewrite_of_an_append_only_table_is_refused_by_kind",
+        "an UPDATE of a registered table is a rewrite; disabled, the planted updates in every spelling are no longer refused"
+      ],
+      [
+        "S43213-UPDATE-OR-IS-READ",
+        "daemon",
+        "tests/append_only_tables.rs",
+        "let or_action = is(at + 1, \"or\");",
+        "let or_action = is(at + 1, \"or\") && false;",
+        "append_only_tables::a_planted_rewrite_of_an_append_only_table_is_refused_by_kind",
+        "UPDATE OR <action> names its table after the action; not read, the planted UPDATE OR IGNORE rewrites are not refused"
+      ],
+      [
+        "S43214-A-DELETE-IS-A-REWRITE",
+        "daemon",
+        "tests/append_only_tables.rs",
+        "} else if is(at, \"delete\") && is(at + 1, \"from\") {",
+        "} else if is(at, \"delete\") && is(at + 1, \"from\") && false {",
+        "append_only_tables::a_planted_rewrite_of_an_append_only_table_is_refused_by_kind",
+        "a DELETE FROM a registered table is a rewrite; disabled, the planted deletes are no longer refused"
+      ],
+      [
+        "S43215-A-REPLACE-IS-A-REWRITE",
+        "daemon",
+        "tests/append_only_tables.rs",
+        "} else if is(at, \"replace\") && is(at + 1, \"into\") {",
+        "} else if is(at, \"replace\") && is(at + 1, \"into\") && false {",
+        "append_only_tables::a_planted_rewrite_of_an_append_only_table_is_refused_by_kind",
+        "REPLACE INTO and INSERT OR REPLACE INTO a registered table are rewrites; disabled, neither planted kind is refused"
+      ],
+      [
+        "S43216-AN-UPSERT-IS-A-REWRITE",
+        "daemon",
+        "tests/append_only_tables.rs",
+        "let upsert = (0..statement.len()).any(|at| is(at, \"do\") && is(at + 1, \"update\"));",
+        "let upsert = (0..statement.len()).any(|at| is(at, \"do\") && is(at + 1, \"update\")) && false;",
+        "append_only_tables::a_planted_rewrite_of_an_append_only_table_is_refused_by_kind",
+        "an INSERT INTO a registered table whose statement holds DO UPDATE is a rewrite; disabled, the planted upserts are not refused"
+      ],
+      [
+        "S43217-A-DECORATED-NAME-IS-READ",
+        "daemon",
+        "tests/append_only_tables.rs",
+        "let plain = !written.contains(['\"', '`', '[', '.']);",
+        "let plain = !written.contains(['\"', '`', '[', '.']) || true;",
+        "append_only_tables::a_planted_rewrite_of_an_append_only_table_is_refused_by_kind",
+        "a quoted, bracketed or main-qualified table is read through its decoration; read raw, those planted spellings are not refused"
+      ],
+      [
+        "S43218-A-TABLE-IS-A-WHOLE-WORD",
+        "daemon",
+        "tests/append_only_tables.rs",
+        "let whole = name.len() == table.len();",
+        "let whole = name.len() == table.len() || true;",
+        "append_only_tables::an_insert_a_read_or_another_table_is_not_a_rewrite",
+        "a registered table is matched as a whole word; without the bound, coin_ledger_archive and old_badges_earned read as registered"
+      ],
+      [
+        "S43219-SQL-COMMENTS-ARE-DROPPED",
+        "daemon",
+        "tests/append_only_tables.rs",
+        "if opens_comment {",
+        "if opens_comment && false {",
+        "append_only_tables::an_insert_a_read_or_another_table_is_not_a_rewrite",
+        "SQL comments are dropped before matching; kept, a rewrite inside a migration's comment is refused"
+      ],
+      [
+        "S43220-THE-MIGRATIONS-ARE-READ",
+        "daemon",
+        "tests/append_only_tables.rs",
+        "for (index, statement) in statements(&text).into_iter().enumerate() {",
+        "for (index, statement) in statements(&text).into_iter().enumerate().filter(|_| false) {",
+        "append_only_tables::a_planted_rewrite_of_an_append_only_table_is_refused_by_kind",
+        "every statement of every migration is matched; skipped, the planted migration's rewrites are not refused"
+      ],
+      [
+        "S43221-A-PLACEHOLDER-WRITE-FAILS-CLOSED",
+        "daemon",
+        "tests/append_only_tables.rs",
+        "if placeholder {",
+        "if placeholder && false {",
+        "append_only_tables::a_write_the_check_cannot_read_fails_closed",
+        "a write keyword joined to a placeholder is unreadable; disabled, the planted format! writes are not refused"
+      ],
+      [
+        "S43222-A-JOIN-PREFIX-FAILS-CLOSED",
+        "daemon",
+        "tests/append_only_tables.rs",
+        "if join_prefix {",
+        "if join_prefix && false {",
+        "append_only_tables::a_write_the_check_cannot_read_fails_closed",
+        "a literal ending in a write keyword is unreadable; disabled, the planted join prefixes are not refused"
+      ],
+      [
+        "S43223-A-QUERY-FILE-MACRO-FAILS-CLOSED",
+        "daemon",
+        "tests/append_only_tables.rs",
+        "word.starts_with(\"query_file\")",
+        "word.starts_with(\"query_file\") && false",
+        "append_only_tables::a_write_the_check_cannot_read_fails_closed",
+        "every sqlx macro that reads its SQL from a file is unreadable; disabled, the planted query_file! is not refused"
+      ],
+      [
+        "S43224-A-SANCTIONED-WRITE-GONE-IS-REFUSED",
+        "daemon",
+        "tests/append_only_tables.rs",
+        "if gone {",
+        "if gone && false {",
+        "append_only_tables::a_sanctioned_write_gone_or_doubled_is_refused",
+        "the judge refuses a sanctioned write that is gone; disabled, the planted tree without the badges erase passes"
+      ],
+      [
+        "S43225-THE-REGISTER-NAMES-COIN-LEDGER",
+        "daemon",
+        "tests/append_only_tables.rs",
+        "        \"coin_ledger\",\n        \"economy\",\n        \"migrations/008201_economy_wallet_and_shop.sql\",",
+        "        \"coin_ledgers\",\n        \"economy\",\n        \"migrations/008201_economy_wallet_and_shop.sql\",",
+        "append_only_tables::the_append_only_tables_take_only_their_sanctioned_writes",
+        "the register names coin_ledger with its migration; respelled, the head's two sanctioned coin_ledger writes are not found"
+      ],
+      [
+        "S43226-A-PLAIN-INSERT-IS-NOT-KEYED",
+        "ingest",
+        "tests/sync_write_idempotency.rs",
+        "let keyed = do_nothing || or_ignore;",
+        "let keyed = do_nothing || or_ignore || true;",
+        "sync_write_idempotency::a_planted_sync_write_that_can_apply_twice_is_refused",
+        "an INSERT with no conflict clause is PLAIN; classed KEYED, the planted unlisted plain insert is not refused"
+      ],
+      [
+        "S43227-AN-UPDATE-INCREMENT-IS-READ",
+        "ingest",
+        "tests/sync_write_idempotency.rs",
+        "let in_update = is_word(statement, 0, \"update\");",
+        "let in_update = is_word(statement, 0, \"update\") && false;",
+        "sync_write_idempotency::a_planted_sync_write_that_can_apply_twice_is_refused",
+        "an UPDATE's SET list is read for a self reference; disabled, the planted `due_count = due_count + 1` is not refused"
+      ],
+      [
+        "S43228-EXCLUDED-IS-THE-NEW-VALUE",
+        "ingest",
+        "tests/sync_write_idempotency.rs",
+        ".is_some_and(|qualifier| qualifier == \"excluded\");",
+        ".is_some_and(|qualifier| qualifier == \"excluded\") && false;",
+        "sync_write_idempotency::an_idempotent_write_shape_is_classed_not_refused",
+        "a column read through excluded. is the would-be inserted value; without the exemption, an upsert of excluded values is refused"
+      ],
+      [
+        "S43229-AN-UPSERT-INCREMENT-IS-READ",
+        "ingest",
+        "tests/sync_write_idempotency.rs",
+        "if upsert_set {",
+        "if upsert_set && false {",
+        "sync_write_idempotency::a_planted_sync_write_that_can_apply_twice_is_refused",
+        "a DO UPDATE SET list is read for a self reference; disabled, the planted table-qualified increment is not refused"
+      ],
+      [
+        "S43230-DO-NOTHING-IS-KEYED",
+        "ingest",
+        "tests/sync_write_idempotency.rs",
+        "let do_nothing = holds(statement, &[\"do\", \"nothing\"]);",
+        "let do_nothing = holds(statement, &[\"do\", \"nothing\"]) && false;",
+        "sync_write_idempotency::an_idempotent_write_shape_is_classed_not_refused",
+        "an insert whose conflict clause does nothing is KEYED; not read, it is classed PLAIN"
+      ],
+      [
+        "S43231-INSERT-OR-IGNORE-IS-KEYED",
+        "ingest",
+        "tests/sync_write_idempotency.rs",
+        "let or_ignore = or_action(\"ignore\");",
+        "let or_ignore = or_action(\"ignore\") && false;",
+        "sync_write_idempotency::an_idempotent_write_shape_is_classed_not_refused",
+        "INSERT OR IGNORE is KEYED; not read, it is classed PLAIN"
+      ],
+      [
+        "S43232-AN-UNCLASSIFIED-WRITE-MODULE-IS-REFUSED",
+        "ingest",
+        "tests/sync_write_idempotency.rs",
+        "if !classified {",
+        "if !classified && false {",
+        "sync_write_idempotency::a_write_module_is_classified_and_a_listed_one_holds_a_write",
+        "a module holding a write that is neither sync nor exempt is refused; disabled, the planted rogue module passes"
+      ],
+      [
+        "S43233-A-LISTED-MODULE-HOLDS-A-WRITE",
+        "ingest",
+        "tests/sync_write_idempotency.rs",
+        "if holds_none {",
+        "if holds_none && false {",
+        "sync_write_idempotency::a_write_module_is_classified_and_a_listed_one_holds_a_write",
+        "a listed module that holds no write is refused; disabled, the planted read-only state module passes"
+      ],
+      [
+        "S43234-AN-UNREADABLE-SYNC-WRITE-IS-REFUSED",
+        "ingest",
+        "tests/sync_write_idempotency.rs",
+        "let cannot_read = with_write || placeholder;",
+        "let cannot_read = (with_write || placeholder) && false;",
+        "sync_write_idempotency::a_planted_sync_write_that_can_apply_twice_is_refused",
+        "a WITH holding a write and a write joined to a placeholder are unreadable; disabled, neither planted write is refused"
+      ],
+      [
+        "S43235-STATE-IS-A-SYNC-MODULE",
+        "ingest",
+        "tests/sync_write_idempotency.rs",
+        "const SYNC_MODULES: [&str; 3] = [\"skip.rs\", \"state.rs\", \"sync_runs.rs\"];",
+        "const SYNC_MODULES: [&str; 2] = [\"skip.rs\", \"sync_runs.rs\"];",
+        "sync_write_idempotency::every_sync_write_names_its_idempotency",
+        "state.rs is a sync module; dropped from the list, its four upserts sit in an unclassified module"
+      ],
+      [
+        "S43236-A-LISTED-PLAIN-SITE-GONE-IS-REFUSED",
+        "ingest",
+        "tests/sync_write_idempotency.rs",
+        "if gone {",
+        "if gone && false {",
+        "sync_write_idempotency::a_write_module_is_classified_and_a_listed_one_holds_a_write",
+        "the judge refuses a listed PLAIN site that is gone; disabled, the planted skip module without record_prior passes"
+      ]
+    ]
+  }
+}

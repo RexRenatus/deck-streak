@@ -1,13 +1,13 @@
-// The suite's listeners (SPEC-341 R8): an HTTP server, a TCP server and a UDP socket on the loopback
-// address, each on a port the system chose, counting what really arrives. A request counts by its
-// path, a TCP connection that carries no request (a preconnect) counts on a server that answers
-// nothing, and a datagram (a STUN request) counts on the socket. The suite reads every arrival here
-// and never from the browser's own request events, which a channel outside the page's fetch
-// machinery would not raise.
+// The suite's listeners (SPEC-341 R8, SPEC-461 R2): two HTTP servers and a UDP socket on the
+// loopback address, each on a port the system chose, counting what really arrives. A request counts
+// by its path at either server; the TCP listener, which the sentinel never reaches, also counts each
+// connection it accepts as `tcp`, with a request or without one (a preconnect); and a datagram (a
+// STUN request) counts on the socket. The suite reads every arrival here and never from the browser's
+// own request events, which a channel outside the page's fetch machinery would not raise.
 import { createSocket, type Socket as Datagrams } from 'node:dgram';
 import { once } from 'node:events';
 import { createServer as createHttpServer, type Server as HttpServer } from 'node:http';
-import { createServer as createTcpServer, type AddressInfo, type Server as TcpServer } from 'node:net';
+import type { AddressInfo } from 'node:net';
 import type { Page } from '@playwright/test';
 import type { Listener } from './planted';
 
@@ -39,7 +39,7 @@ export class Listeners {
 
   private constructor(
     private readonly http: HttpServer,
-    private readonly tcp: TcpServer,
+    private readonly tcp: HttpServer,
     private readonly udp: Datagrams
   ) {
     http.on('request', (request, response) => {
@@ -49,9 +49,15 @@ export class Listeners {
       response.writeHead(200, { 'content-type': 'text/plain', 'cache-control': 'no-store', connection: 'close' });
       response.end();
     });
-    tcp.on('connection', (socket) => {
+    tcp.on('connection', () => {
       this.connections += 1;
-      socket.destroy();
+    });
+    // every request by its path, with no sentinel branch: the sentinel is the HTTP listener's alone
+    tcp.on('request', (request, response) => {
+      const path = new URL(request.url ?? '/', 'http://listener').pathname;
+      this.requests.set(path, (this.requests.get(path) ?? 0) + 1);
+      response.writeHead(200, { 'content-type': 'text/plain', 'cache-control': 'no-store', connection: 'close' });
+      response.end();
     });
     udp.on('message', () => {
       this.datagrams += 1;
@@ -61,7 +67,7 @@ export class Listeners {
   /** Starts the three listeners on the loopback address. */
   static async start(): Promise<Listeners> {
     const http = createHttpServer();
-    const tcp = createTcpServer();
+    const tcp = createHttpServer();
     const udp = createSocket('udp4');
     http.listen(0, LOOPBACK);
     tcp.listen(0, LOOPBACK);
@@ -137,6 +143,7 @@ export class Listeners {
 
   async close(): Promise<void> {
     this.http.closeAllConnections();
+    this.tcp.closeAllConnections();
     await Promise.all([
       new Promise((resolve) => this.http.close(resolve)),
       new Promise((resolve) => this.tcp.close(resolve)),

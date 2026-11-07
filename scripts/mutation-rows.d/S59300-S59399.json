@@ -32,6 +32,14 @@
         "\"hex\": \"#5f656b\"",
         "A one-byte change to the light muted value in the token file is killed by the colour set census",
         "test_tide_tokens.TheAppCopiesTheTokens.test_each_colour_set_holds_its_tokens_values"
+      ],
+      [
+        "S59305-NO-VIEW-OVERRIDES-THE-COLOUR-SCHEME",
+        "ios/App/Sources/DeckListView.swift",
+        ".navigationTitle(\"Decks\")",
+        ".navigationTitle(\"Decks\").preferredColorScheme(.light)",
+        "A planted light colour scheme override in one view is killed by the scheme census",
+        "test_tide_native.TheNativeViewsReadTheTideSets.test_no_view_or_property_list_overrides_the_colour_scheme"
       ]
     ]
   }

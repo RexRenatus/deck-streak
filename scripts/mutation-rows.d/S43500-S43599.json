@@ -1,0 +1,672 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S43500-REMOVES-A-TABLE",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "if then(verb, \"TABLE\") {",
+        "if then(verb, \"TABLE\") && words.is_empty() {",
+        "additive_migrations::every_destructive_class_is_found_in_a_planted_migration",
+        "a statement that removes a table is a hit (SPEC-435 R4); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43501-REMOVES-A-COLUMN",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "if opens(\"ALTER\", \"TABLE\") && holds(verb) {",
+        "if opens(\"ALTER\", \"TABLE\") && holds(verb) && words.is_empty() {",
+        "additive_migrations::every_destructive_class_is_found_in_a_planted_migration",
+        "a statement that removes a column is a hit (SPEC-435 R4); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43502-REMOVES-AN-INDEX",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "if then(verb, \"INDEX\") {",
+        "if then(verb, \"INDEX\") && words.is_empty() {",
+        "additive_migrations::every_destructive_class_is_found_in_a_planted_migration",
+        "a statement that removes an index is a hit (SPEC-435 R4); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43503-REMOVES-A-VIEW",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "if then(verb, \"VIEW\") {",
+        "if then(verb, \"VIEW\") && words.is_empty() {",
+        "additive_migrations::every_destructive_class_is_found_in_a_planted_migration",
+        "a statement that removes a view is a hit (SPEC-435 R4); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43504-REMOVES-A-TRIGGER",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "if then(verb, \"TRIGGER\") {",
+        "if then(verb, \"TRIGGER\") && words.is_empty() {",
+        "additive_migrations::every_destructive_class_is_found_in_a_planted_migration",
+        "a statement that removes a trigger is a hit (SPEC-435 R4); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43505-RENAMES",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "if opens(\"ALTER\", \"TABLE\") && holds(\"RENAME\") {",
+        "if opens(\"ALTER\", \"TABLE\") && holds(\"RENAME\") && words.is_empty() {",
+        "additive_migrations::every_destructive_class_is_found_in_a_planted_migration",
+        "a statement that renames is a hit (SPEC-435 R4); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43506-DELETES-ROWS-BY-DELETE-FROM",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "then(\"DELETE\", \"FROM\")",
+        "then(\"DELETE\", \"FROMX\")",
+        "additive_migrations::every_destructive_class_is_found_in_a_planted_migration",
+        "a DELETE FROM statement deletes rows (SPEC-435 R4); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43507-DELETES-ROWS-BY-OR-REPLACE",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "then(\"OR\", \"REPLACE\")",
+        "then(\"OR\", \"REPLACEX\")",
+        "additive_migrations::every_destructive_class_is_found_in_a_planted_migration",
+        "an OR REPLACE statement deletes rows (SPEC-435 R4); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43508-DELETES-ROWS-BY-REPLACE-INTO",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "opens(\"REPLACE\", \"INTO\")",
+        "opens(\"REPLACE\", \"INTOX\")",
+        "additive_migrations::every_destructive_class_is_found_in_a_planted_migration",
+        "a statement opening REPLACE INTO deletes rows (SPEC-435 R4); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43509-A-COLUMN-REMOVAL-OPENS-ALTER-TABLE",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "opens(\"ALTER\", \"TABLE\") && holds(verb)",
+        "(opens(\"ALTER\", \"TABLE\") || true) && holds(verb)",
+        "additive_migrations::every_destructive_class_is_found_in_a_planted_migration",
+        "a column is removed only by a statement opening ALTER TABLE (SPEC-435 R4); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43510-A-RENAME-OPENS-ALTER-TABLE",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "opens(\"ALTER\", \"TABLE\") && holds(\"RENAME\")",
+        "(opens(\"ALTER\", \"TABLE\") || true) && holds(\"RENAME\")",
+        "additive_migrations::every_destructive_class_is_found_in_a_planted_migration",
+        "a rename is only a statement opening ALTER TABLE, never a column named rename (SPEC-435 R4); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43511-DASH-COMMENTS-ARE-BLANKED",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "next == Some('-')",
+        "next == Some('~')",
+        "additive_migrations::a_comment_or_a_literal_is_no_hit_and_a_split_statement_is_one",
+        "a -- comment is blanked before the text is split (SPEC-435 R2); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43512-BLOCK-COMMENTS-ARE-BLANKED",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "next == Some('*')",
+        "next == Some('~')",
+        "additive_migrations::a_comment_or_a_literal_is_no_hit_and_a_split_statement_is_one",
+        "a /* */ comment is blanked before the text is split (SPEC-435 R2); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43513-SINGLE-QUOTED-LITERALS-ARE-BLANKED",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "chars[at] == '\\'' ||",
+        "chars[at] == '~' ||",
+        "additive_migrations::a_comment_or_a_literal_is_no_hit_and_a_split_statement_is_one",
+        "a single-quoted literal is blanked (SPEC-435 R2); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43514-DOUBLE-QUOTED-IDENTIFIERS-ARE-BLANKED",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "|| chars[at] == '\"' {",
+        "|| chars[at] == '~' {",
+        "additive_migrations::a_comment_or_a_literal_is_no_hit_and_a_split_statement_is_one",
+        "a double-quoted identifier is blanked (SPEC-435 R2); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43515-A-STATEMENT-ENDS-AT-ITS-SEMICOLON",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "blanked.split(';')",
+        "blanked.split('\\u{0}')",
+        "additive_migrations::a_comment_or_a_literal_is_no_hit_and_a_split_statement_is_one",
+        "the blanked text is split into statements at ; (SPEC-435 R3); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43516-A-STATEMENTS-LINE-IS-ITS-FIRST-CHARACTER",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "statement[..offset].matches('\\n')",
+        "statement[..offset.min(0)].matches('\\n')",
+        "additive_migrations::a_comment_or_a_literal_is_no_hit_and_a_split_statement_is_one",
+        "a statement's line is that of its first character that is not white space (SPEC-435 R3); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43517-AN-UNLISTED-HIT-IS-REFUSED",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "if !listed {",
+        "if !listed && census.hits.is_empty() {",
+        "additive_migrations::an_unlisted_recounted_unruled_or_stale_admission_is_refused",
+        "a hit no row lists is refused (SPEC-435 R6); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43518-A-RECOUNTED-ROW-IS-REFUSED",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "} else if found != row.count {",
+        "} else if found != row.count && found == usize::MAX {",
+        "additive_migrations::an_unlisted_recounted_unruled_or_stale_admission_is_refused",
+        "a row whose count differs from the hits found is refused (SPEC-435 R6); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43519-AN-UNRULED-ROW-IS-REFUSED",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "if !text.contains(row.migration) {",
+        "if !text.contains(row.migration) && text.is_empty() {",
+        "additive_migrations::an_unlisted_recounted_unruled_or_stale_admission_is_refused",
+        "a row whose SPEC file does not name its migration is refused (SPEC-435 R6); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43520-A-STALE-ROW-IS-REFUSED",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "if found == 0 {",
+        "if found == usize::MAX {",
+        "additive_migrations::an_unlisted_recounted_unruled_or_stale_admission_is_refused",
+        "a row the census does not reach is refused as stale (SPEC-435 R6); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43522-EXAMINED-ZERO-IS-VOID",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "if names.is_empty() {",
+        "if names.len() == usize::MAX {",
+        "additive_migrations::an_empty_migration_directory_is_void",
+        "an empty migrations directory is refused as VOID (SPEC-435 R7); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43523-THE-REMOVAL-VERBS-PARTS",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "const REMOVAL_PARTS: [&str; 2] = [\"DR\", \"OP\"];",
+        "const REMOVAL_PARTS: [&str; 2] = [\"DR\", \"OX\"];",
+        "additive_migrations::every_destructive_class_is_found_in_a_planted_migration",
+        "the removal verb is joined from its two parts (SPEC-435 R5); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43524-A-COLUMN-REMOVAL-HOLDS-THE-VERB",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "holds(verb) {",
+        "(holds(verb) || true) {",
+        "additive_migrations::every_destructive_class_is_found_in_a_planted_migration",
+        "a column is removed only by an ALTER TABLE that holds the removal verb (SPEC-435 R4); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43525-A-RENAME-HOLDS-RENAME",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "holds(\"RENAME\") {",
+        "(holds(\"RENAME\") || true) {",
+        "additive_migrations::every_destructive_class_is_found_in_a_planted_migration",
+        "a rename is only an ALTER TABLE that holds RENAME, never one that adds a column (SPEC-435 R4); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43530-A-PLUS-ASSIGN-IS-A-SITE",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        "(\"+=\", true),",
+        "(\"+=\", false),",
+        "bounded_arithmetic::the_matcher_finds_each_unchecked_operator_in_a_planted_source_and_nothing_else",
+        "+= is an unchecked operator site (SPEC-435 R10); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43531-A-MINUS-ASSIGN-IS-A-SITE",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        "(\"-=\", true),",
+        "(\"-=\", false),",
+        "bounded_arithmetic::the_matcher_finds_each_unchecked_operator_in_a_planted_source_and_nothing_else",
+        "-= is an unchecked operator site (SPEC-435 R10); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43532-A-TIMES-ASSIGN-IS-A-SITE",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        "(\"*=\", true),",
+        "(\"*=\", false),",
+        "bounded_arithmetic::the_matcher_finds_each_unchecked_operator_in_a_planted_source_and_nothing_else",
+        "*= is an unchecked operator site (SPEC-435 R10); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43533-PLUS-IS-AN-OPERATOR",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        "const BINARY: [char; 3] = ['+', '-', '*'];",
+        "const BINARY: [char; 3] = ['~', '-', '*'];",
+        "bounded_arithmetic::the_matcher_finds_each_unchecked_operator_in_a_planted_source_and_nothing_else",
+        "a binary + is an unchecked operator site (SPEC-435 R10); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43534-MINUS-IS-AN-OPERATOR",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        "const BINARY: [char; 3] = ['+', '-', '*'];",
+        "const BINARY: [char; 3] = ['+', '~', '*'];",
+        "bounded_arithmetic::the_matcher_finds_each_unchecked_operator_in_a_planted_source_and_nothing_else",
+        "a binary - is an unchecked operator site (SPEC-435 R10); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43535-TIMES-IS-AN-OPERATOR",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        "const BINARY: [char; 3] = ['+', '-', '*'];",
+        "const BINARY: [char; 3] = ['+', '-', '~'];",
+        "bounded_arithmetic::the_matcher_finds_each_unchecked_operator_in_a_planted_source_and_nothing_else",
+        "a binary * is an unchecked operator site (SPEC-435 R10); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43536-A-CLOSING-PAREN-ENDS-AN-OPERAND",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        "const OPERAND_ENDS: [char; 3] = [')', ']', '?'];",
+        "const OPERAND_ENDS: [char; 3] = ['~', ']', '?'];",
+        "bounded_arithmetic::the_matcher_finds_each_unchecked_operator_in_a_planted_source_and_nothing_else",
+        "a ) ends an operand, so the operator after it is binary (SPEC-435 R10); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43537-A-CLOSING-BRACKET-ENDS-AN-OPERAND",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        "const OPERAND_ENDS: [char; 3] = [')', ']', '?'];",
+        "const OPERAND_ENDS: [char; 3] = [')', '~', '?'];",
+        "bounded_arithmetic::the_matcher_finds_each_unchecked_operator_in_a_planted_source_and_nothing_else",
+        "a ] ends an operand, so the operator after it is binary (SPEC-435 R10); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43538-A-QUESTION-MARK-ENDS-AN-OPERAND",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        "const OPERAND_ENDS: [char; 3] = [')', ']', '?'];",
+        "const OPERAND_ENDS: [char; 3] = [')', ']', '~'];",
+        "bounded_arithmetic::the_matcher_finds_each_unchecked_operator_in_a_planted_source_and_nothing_else",
+        "a ? ends an operand, so the operator after it is binary (SPEC-435 R10); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43539-A-WORD-ENDS-AN-OPERAND",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        "if is_word(chars[previous]) {",
+        "if is_word(chars[previous]) && chars.is_empty() {",
+        "bounded_arithmetic::the_matcher_finds_each_unchecked_operator_in_a_planted_source_and_nothing_else",
+        "a word ends an operand, so the operator after it is binary (SPEC-435 R10); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43540-A-KEYWORD-ENDS-NO-OPERAND",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        "return !KEYWORDS.contains(&word.as_str());",
+        "return !KEYWORDS.contains(&word.as_str()) || true;",
+        "bounded_arithmetic::the_matcher_finds_each_unchecked_operator_in_a_planted_source_and_nothing_else",
+        "an operator after a keyword is unary, a dereference or a pointer type, never a site (SPEC-435 R10); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43541-AN-ARROW-IS-NEVER-A-SITE",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        "(\"->\", false),",
+        "(\"->\", true),",
+        "bounded_arithmetic::the_matcher_finds_each_unchecked_operator_in_a_planted_source_and_nothing_else",
+        "-> and => are read as pairs and are never sites (SPEC-435 R10); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43542-TEST-ITEMS-ARE-BLANKED",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        "const TEST_ATTRIBUTE: &str = \"#[cfg(test)]\";",
+        "const TEST_ATTRIBUTE: &str = \"#[cfg(tests)]\";",
+        "bounded_arithmetic::the_matcher_finds_each_unchecked_operator_in_a_planted_source_and_nothing_else",
+        "a #[cfg(test)] item is blanked before a site is read (SPEC-435 R9); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43543-A-SITE-OUTSIDE-EVERY-BODY-IS-ITEM-LEVEL",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        "None => sites.item_level += 1,",
+        "None => {}",
+        "bounded_arithmetic::the_matcher_finds_each_unchecked_operator_in_a_planted_source_and_nothing_else",
+        "a site outside every function body is counted as item level (SPEC-435 R11); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43544-THE-INNERMOST-FUNCTION-NAMES-A-SITE",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        ".max_by_key(|body| body.start)",
+        ".min_by_key(|body| body.start)",
+        "bounded_arithmetic::the_matcher_finds_each_unchecked_operator_in_a_planted_source_and_nothing_else",
+        "a site belongs to the innermost function that holds it (SPEC-435 R10); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43545-A-CHARACTER-LITERAL-READS-AS-AN-OPERAND",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        "blanked[at] = '0';",
+        "blanked[at] = ' ';",
+        "bounded_arithmetic::the_matcher_finds_each_unchecked_operator_in_a_planted_source_and_nothing_else",
+        "a character literal is blanked to an operand (SPEC-435 R9); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43546-SUM-IS-A-SITE",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        "const SUMS: [&str; 2] = [\"sum\", \"product\"];",
+        "const SUMS: [&str; 2] = [\"sumx\", \"product\"];",
+        "bounded_arithmetic::the_matcher_finds_each_unchecked_operator_in_a_planted_source_and_nothing_else",
+        "a .sum( call is an unchecked operator site (SPEC-435 R10); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43547-PRODUCT-IS-A-SITE",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        "const SUMS: [&str; 2] = [\"sum\", \"product\"];",
+        "const SUMS: [&str; 2] = [\"sum\", \"productx\"];",
+        "bounded_arithmetic::the_matcher_finds_each_unchecked_operator_in_a_planted_source_and_nothing_else",
+        "a .product( call is an unchecked operator site (SPEC-435 R10); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43548-A-TURBOFISH-BEFORE-THE-CALL",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        "starts_with(chars, cursor, \"::<\")",
+        "starts_with(chars, cursor, \"::~\")",
+        "bounded_arithmetic::the_matcher_finds_each_unchecked_operator_in_a_planted_source_and_nothing_else",
+        "a .sum or .product call is a site with a turbofish before its ( (SPEC-435 R10); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43549-AN-EXPONENTS-SIGN-IS-PART-OF-ITS-LITERAL",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        "matches!(chars[at - 1], 'e' | 'E')",
+        "matches!(chars[at - 1], '@' | '~')",
+        "bounded_arithmetic::the_matcher_finds_each_unchecked_operator_in_a_planted_source_and_nothing_else",
+        "the sign of a decimal literal's exponent is no site (SPEC-435 R10); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43550-STRING-LITERALS-ARE-BLANKED",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        "} else if let Some(end) = string_end(&chars, at) {",
+        "} else if let Some(end) = string_end(&chars, at).filter(|_| false) {",
+        "bounded_arithmetic::the_matcher_finds_each_unchecked_operator_in_a_planted_source_and_nothing_else",
+        "a string literal is blanked before a site is read (SPEC-435 R9); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43551-LINE-COMMENTS-ARE-BLANKED",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        "next == Some('/')",
+        "next == Some('~')",
+        "bounded_arithmetic::the_matcher_finds_each_unchecked_operator_in_a_planted_source_and_nothing_else",
+        "a // comment is blanked before a site is read (SPEC-435 R9); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43552-BLOCK-COMMENTS-ARE-BLANKED",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        "next == Some('*')",
+        "next == Some('~')",
+        "bounded_arithmetic::the_matcher_finds_each_unchecked_operator_in_a_planted_source_and_nothing_else",
+        "a /* */ comment is blanked before a site is read (SPEC-435 R9); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43553-AN-UNLISTED-FN-IS-REFUSED",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        "if !listed {",
+        "if !listed && sites.is_empty() {",
+        "bounded_arithmetic::an_unlisted_recounted_or_stale_fn_is_refused",
+        "a function no row lists is refused (SPEC-435 R12); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43554-A-RECOUNTED-ROW-IS-REFUSED",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        "} else if found != row.sites {",
+        "} else if found != row.sites && found == usize::MAX {",
+        "bounded_arithmetic::an_unlisted_recounted_or_stale_fn_is_refused",
+        "a row whose count differs from the sites found is refused (SPEC-435 R12); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43555-A-STALE-ROW-IS-REFUSED",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        "if found == 0 {",
+        "if found == usize::MAX {",
+        "bounded_arithmetic::an_unlisted_recounted_or_stale_fn_is_refused",
+        "a row the census does not reach is refused as stale (SPEC-435 R12); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43556-EXAMINED-ZERO-IS-VOID",
+        "economy",
+        "tests/bounded_arithmetic.rs",
+        "if sources.is_empty() {",
+        "if sources.len() == usize::MAX {",
+        "bounded_arithmetic::an_empty_population_is_refused",
+        "six crates with no source are refused as VOID (SPEC-435 R13); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43560-THE-SQL-ESCAPE-ARM",
+        "kernel",
+        "tests/allow_list_arms.rs",
+        "if word == \"AssertSqlSafe\" &&",
+        "if word == \"AssertSqlSafeX\" &&",
+        "allow_list_arms::each_arm_finds_its_planted_site_and_nothing_else",
+        "an AssertSqlSafe( call is a sql-escape site (SPEC-435 R15); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43561-THE-SQL-ESCAPE-NEEDS-ITS-PAREN",
+        "kernel",
+        "tests/allow_list_arms.rs",
+        "blanked.get(after) == Some(&'(')",
+        "(blanked.get(after) == Some(&'(') || true)",
+        "allow_list_arms::each_arm_finds_its_planted_site_and_nothing_else",
+        "AssertSqlSafe is a site only as a call, never in a use line (SPEC-435 R15); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43562-VAR-IS-AN-ENVIRONMENT-READ",
+        "kernel",
+        "tests/allow_list_arms.rs",
+        "\"var\" | \"var_os\" | \"vars\" | \"vars_os\"",
+        "\"varx\" | \"var_os\" | \"vars\" | \"vars_os\"",
+        "allow_list_arms::each_arm_finds_its_planted_site_and_nothing_else",
+        "env::var( is an env-read site (SPEC-435 R15); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43563-VAR-OS-IS-AN-ENVIRONMENT-READ",
+        "kernel",
+        "tests/allow_list_arms.rs",
+        "\"var\" | \"var_os\" | \"vars\" | \"vars_os\"",
+        "\"var\" | \"var_osx\" | \"vars\" | \"vars_os\"",
+        "allow_list_arms::each_arm_finds_its_planted_site_and_nothing_else",
+        "env::var_os( is an env-read site (SPEC-435 R15); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43564-VARS-IS-AN-ENVIRONMENT-READ",
+        "kernel",
+        "tests/allow_list_arms.rs",
+        "\"var\" | \"var_os\" | \"vars\" | \"vars_os\"",
+        "\"var\" | \"var_os\" | \"varsx\" | \"vars_os\"",
+        "allow_list_arms::each_arm_finds_its_planted_site_and_nothing_else",
+        "env::vars( is an env-read site (SPEC-435 R15); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43565-VARS-OS-IS-AN-ENVIRONMENT-READ",
+        "kernel",
+        "tests/allow_list_arms.rs",
+        "\"var\" | \"var_os\" | \"vars\" | \"vars_os\"",
+        "\"var\" | \"var_os\" | \"vars\" | \"vars_osx\"",
+        "allow_list_arms::each_arm_finds_its_planted_site_and_nothing_else",
+        "env::vars_os( is an env-read site (SPEC-435 R15); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43566-BASH-IS-A-SHELL",
+        "kernel",
+        "tests/allow_list_arms.rs",
+        "\"bash\" | \"sh\" | \"dash\" | \"zsh\" | \"ksh\" | \"fish\"",
+        "\"bashx\" | \"sh\" | \"dash\" | \"zsh\" | \"ksh\" | \"fish\"",
+        "allow_list_arms::each_arm_finds_its_planted_site_and_nothing_else",
+        "a spawn of bash is a shell site (SPEC-435 R15); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43567-SH-IS-A-SHELL",
+        "kernel",
+        "tests/allow_list_arms.rs",
+        "\"bash\" | \"sh\" | \"dash\" | \"zsh\" | \"ksh\" | \"fish\"",
+        "\"bash\" | \"shx\" | \"dash\" | \"zsh\" | \"ksh\" | \"fish\"",
+        "allow_list_arms::each_arm_finds_its_planted_site_and_nothing_else",
+        "a spawn of sh is a shell site (SPEC-435 R15); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43568-DASH-IS-A-SHELL",
+        "kernel",
+        "tests/allow_list_arms.rs",
+        "\"bash\" | \"sh\" | \"dash\" | \"zsh\" | \"ksh\" | \"fish\"",
+        "\"bash\" | \"sh\" | \"dashx\" | \"zsh\" | \"ksh\" | \"fish\"",
+        "allow_list_arms::each_arm_finds_its_planted_site_and_nothing_else",
+        "a spawn of dash is a shell site (SPEC-435 R15); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43569-ZSH-IS-A-SHELL",
+        "kernel",
+        "tests/allow_list_arms.rs",
+        "\"bash\" | \"sh\" | \"dash\" | \"zsh\" | \"ksh\" | \"fish\"",
+        "\"bash\" | \"sh\" | \"dash\" | \"zshx\" | \"ksh\" | \"fish\"",
+        "allow_list_arms::each_arm_finds_its_planted_site_and_nothing_else",
+        "a spawn of zsh is a shell site (SPEC-435 R15); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43570-KSH-IS-A-SHELL",
+        "kernel",
+        "tests/allow_list_arms.rs",
+        "\"bash\" | \"sh\" | \"dash\" | \"zsh\" | \"ksh\" | \"fish\"",
+        "\"bash\" | \"sh\" | \"dash\" | \"zsh\" | \"kshx\" | \"fish\"",
+        "allow_list_arms::each_arm_finds_its_planted_site_and_nothing_else",
+        "a spawn of ksh is a shell site (SPEC-435 R15); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43571-FISH-IS-A-SHELL",
+        "kernel",
+        "tests/allow_list_arms.rs",
+        "\"bash\" | \"sh\" | \"dash\" | \"zsh\" | \"ksh\" | \"fish\"",
+        "\"bash\" | \"sh\" | \"dash\" | \"zsh\" | \"ksh\" | \"fishx\"",
+        "allow_list_arms::each_arm_finds_its_planted_site_and_nothing_else",
+        "a spawn of fish is a shell site (SPEC-435 R15); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43572-A-PROGRAM-NOT-WRITTEN-AS-A-LITERAL-IS-CONFIGURED",
+        "kernel",
+        "tests/allow_list_arms.rs",
+        "arms.sites.push((line, \"configured\"));",
+        "arms.passes.push(line);",
+        "allow_list_arms::each_arm_finds_its_planted_site_and_nothing_else",
+        "a spawn whose program is not a literal is a configured site (SPEC-435 R15); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43573-A-LITERAL-PROGRAM-THAT-IS-NO-SHELL-PASSES",
+        "kernel",
+        "tests/allow_list_arms.rs",
+        "arms.passes.push(line);",
+        "arms.sites.push((line, \"configured\"));",
+        "allow_list_arms::each_arm_finds_its_planted_site_and_nothing_else",
+        "a spawn of a literal program that is no shell is examined and passes (SPEC-435 R15); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43574-A-SHELL-IS-JUDGED-BY-ITS-LAST-PART",
+        "kernel",
+        "tests/allow_list_arms.rs",
+        "program.rsplit('/')",
+        "program.split('/')",
+        "allow_list_arms::each_arm_finds_its_planted_site_and_nothing_else",
+        "a shell is named by the last / part of its path (SPEC-435 R15); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43575-COMMENTS-AND-LITERALS-ARE-BLANKED",
+        "kernel",
+        "tests/allow_list_arms.rs",
+        "next == Some('/')",
+        "next == Some('~')",
+        "allow_list_arms::each_arm_finds_its_planted_site_and_nothing_else",
+        "a commented spawn is blanked and is no site (SPEC-435 R14); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43576-AN-UNLISTED-SITE-IS-REFUSED",
+        "kernel",
+        "tests/allow_list_arms.rs",
+        "if !listed {",
+        "if !listed && sites.is_empty() {",
+        "allow_list_arms::an_unlisted_recounted_or_stale_arm_row_is_refused",
+        "a site no row lists is refused (SPEC-435 R16); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43577-A-RECOUNTED-ROW-IS-REFUSED",
+        "kernel",
+        "tests/allow_list_arms.rs",
+        "} else if found != row.count {",
+        "} else if found != row.count && found == usize::MAX {",
+        "allow_list_arms::an_unlisted_recounted_or_stale_arm_row_is_refused",
+        "a row whose count differs from the sites found is refused (SPEC-435 R16); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43578-A-STALE-ROW-IS-REFUSED",
+        "kernel",
+        "tests/allow_list_arms.rs",
+        "if found == 0 {",
+        "if found == usize::MAX {",
+        "allow_list_arms::an_unlisted_recounted_or_stale_arm_row_is_refused",
+        "a row the census does not reach is refused as stale (SPEC-435 R16); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43580-EXAMINED-ZERO-IS-VOID",
+        "kernel",
+        "tests/allow_list_arms.rs",
+        "if sources.is_empty() {",
+        "if sources.len() == usize::MAX {",
+        "allow_list_arms::an_empty_source_set_is_void_and_every_source_kind_is_read",
+        "a tree with no source is refused as VOID (SPEC-435 R17); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43581-BUILD-SCRIPTS-JOIN-THE-POPULATION",
+        "kernel",
+        "tests/allow_list_arms.rs",
+        "if build.is_file() {",
+        "if build.is_file() && build.as_os_str().is_empty() {",
+        "allow_list_arms::an_empty_source_set_is_void_and_every_source_kind_is_read",
+        "a crate's build.rs joins the population (SPEC-435 R14); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43582-EXAMPLES-JOIN-THE-POPULATION",
+        "kernel",
+        "tests/allow_list_arms.rs",
+        "krate.join(\"examples\")",
+        "krate.join(\"examples_\")",
+        "allow_list_arms::an_empty_source_set_is_void_and_every_source_kind_is_read",
+        "a crate's examples join the population (SPEC-435 R14); the census is test code, which cargo-mutants never mutates"
+      ]
+    ]
+  }
+}
