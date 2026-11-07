@@ -364,3 +364,12 @@ Where it runs: the module runs in CI's `hygiene` job (`ci.yml:298`), through `ch
 `bash scripts/check.sh python scrub secrets` (`ci.yml:351`), whose body runs `unittest discover` over the suite
 (`check.sh:186`). That job runs on every pull request into `dev` or `main` and every push to them (`ci.yml:12-17`).
 The aggregate `ci` needs `hygiene` (`ci.yml:1021`), so no required check changes.
+
+Three reader rules meet the jobs the merged `dev` at `63c7d6c1` holds (SPEC-430 R14 to R16, ADR-444 D11 and D12).
+A step that runs Python's test discovery (`-m unittest discover`) is read as the gate's `python` stage: the reader
+follows it to `stage_python` in `check.sh`, as it follows `bash scripts/check.sh python`, so `coverage.yml`'s
+`coverage-python`, which runs the gate's suites under `coverage run`, is a shared job and holds its one restore of
+the shared key before its suites. A `cargo codspeed build` is read as a build of another profile, so `ci.yml`'s
+`bench-rust-build` is cache-free. And beside the shared key the census admits one more Rust key, the release
+profile's own (`rust-release-`), in a job that builds no cache profile: `ci.yml`'s `release` restores and saves it,
+its fallback is the release key's prefix, and its save keys on that restore under the dev-push guard.

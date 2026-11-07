@@ -323,6 +323,71 @@ runs cargo, so the walk is proved to follow calls past the handler's own body (S
 - Reading only the handler's own body: rejected, because `prove`'s body holds no cargo list; its two lists sit below it, in `run_killer` and `builds`, which `prove_row` calls.
 - A list of the subcommands that build, script by script: rejected, because it is a list of names this rule does not hold, and it keeps passing a subcommand after its handler starts to build.
 
+## D11. A discovery run reads the gate's python stage, and a bench build builds another profile
+
+The merged `dev` at `63c7d6c1` holds two jobs the reader of D1 and D10 misreads. `coverage.yml`'s
+`coverage-python` restores the shared key (its step 4, with no `if:` and no `lookup-only`) and runs
+the gate's three Python suites by `coverage run -m unittest discover -s "$suite"`
+(`coverage.yml:275`), which the cargo reader does not follow, so the job falls outside the census
+while it holds a restore. `ci.yml`'s `bench-rust-build` runs `cargo codspeed build`, which the
+fail-closed rule for a subcommand no rule names reads as a build of the cache's profile, so the job
+would read shared with no restore.
+
+So a step whose bare `run:` script holds `-m unittest discover` is read as the gate's `python`
+stage: the reader reads `stage_python` in `check.sh` at its root exactly as it reads
+`bash scripts/check.sh python`, a body that calls `need_cargo` and shows no cargo command counting
+as one build of the cache's profile, one script deep (SPEC-430 R14). The `python` stage is where the
+repository says what its Python suites need, so a job that runs them another way inherits that
+need. A single-module run names its tests and is no call. And a `codspeed` call whose first word is
+`build` reads as `other`, before the install and flag rules, while every other `codspeed`
+subcommand keeps the fail-closed reading (SPEC-430 R15). What the tree shows: the job pins
+cargo-codspeed at 6.0.0, builds the benches, archives what it built as `target/codspeed` (the
+`bench-rust-bin` artifact) for `bench-rust`, and holds no `actions/cache` step; the workspace's
+`[profile.bench]` inherits release (SPEC-618 R9). `bench-rust` runs `cargo codspeed run` only inside
+the bench action's `with: run:`, which the reader does not read.
+
+Rows S43061 to S43064 hold the two rules, killed by A10
+(`test_the_cargo_census_follows_test_discovery_to_the_python_stage`) and A11
+(`test_a_codspeed_build_builds_another_profile`).
+
+## D11, chosen against
+
+- Chosen: following a discovery run to the gate's `python` stage and reading a bench build as another profile, because both read only what the tree says, and the census still derives every job it holds.
+- A hand table of jobs that run cargo through something the reader does not follow: rejected, because it drifts the day a job is added, and it is a list a census should derive.
+- Editing `coverage.yml` to call `bash scripts/check.sh python`, or adding a restore to `bench-rust-build`: rejected, because the checks pass at `dev` with no workflow change (SPEC-430 R11), and a workflow is outside this delivery.
+- Excluding either job: rejected, because it is a weakening: the census would stop seeing a job that restores the shared key.
+- Following every `unittest` run: rejected, because a single-module run names its tests, and the stage does not run it.
+
+## D12. The release profile's own key
+
+The merged `dev` holds a third: `ci.yml`'s `release` restores (its step 5, `id: release-cache`) and
+saves (its step 10, keyed on that restore's primary key, under the push-to-`dev`-or-`main` and
+cache-miss `if:`) a Rust key of its own,
+`rust-release-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}`,
+with the one fallback `rust-release-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-`
+(ADR-654). The census read that as a cache-free job restoring under another key, a Rust save not
+keyed on a shared restore, and a Rust key and fallback that are not the shared ones.
+
+So beside the shared key the census admits one more Rust key, the release profile's own:
+`SHAPE_RELEASE_KEY`, the shared key's text with `rust-release-` for its `rust-`, and its one
+fallback, `SHAPE_RELEASE_FALLBACK`, the toolchain's prefix likewise (SPEC-430 R16). A step keyed on
+it hashes its inputs when each fallback line is the release fallback; a cache-free job may restore
+it; and a Rust save may key on a restore of it, its `if:` still judged by the module's save
+scenarios. A shared job still restores the shared key once, a job on another runner still restores
+no Rust cache, and a release job still reads no cache. The release profile's builds never read
+`target/debug`, so `dev` gave its release job a key whose one writer is that job (ADR-654); the
+census still holds one shared key for every job that builds the cache's profile.
+
+Rows S43065 to S43068 hold the rule, killed by A12
+(`test_the_release_profile_key_serves_a_job_that_builds_no_cache_profile`).
+
+## D12, chosen against
+
+- Chosen: admitting the release profile's own key, by its exact text, in a job that builds no cache profile, because it is the one key `dev` decided for that profile, and a job that builds the cache's profile still restores only the shared key.
+- Moving the release job back to the shared key: rejected, because it is a workflow change outside this delivery, and it undoes the release-profile cache `dev` decided.
+- Admitting any key that hashes the lock and the toolchain: rejected, because a second debug key would then pass, and the census would stop holding one shared key.
+- Naming the release job in a hand list: rejected, because it drifts the day a job is added, and it is a list a census should derive.
+
 ## Consequences
 
 - Good, because a restore removed, a key that drifts by one character, a pull request that writes a

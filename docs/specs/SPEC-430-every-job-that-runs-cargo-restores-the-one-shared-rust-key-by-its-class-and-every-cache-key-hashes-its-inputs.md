@@ -139,19 +139,56 @@ R13. **The Python read follows the subcommand** (ADR-444 D10). A `python3` call 
     `importlib` is read whole. A1 prints the Python calls it read, scoped, unscoped and whole, and names each call
     whose read drops an argument list the whole script holds.
 
+R14. **A discovery run is the gate's python stage** (ADR-444 D11). A step whose `run:` script, read bare as R2
+    reads it, holds Python's test discovery, `-m` then `unittest` then `discover` separated by blanks
+    (`SHAPE_DISCOVERY`), runs what the gate's `python` stage runs: the reader reads the body of `stage_python` in
+    `scripts/check.sh` at its root exactly as it reads a `bash scripts/check.sh python` call, so a body that calls
+    `need_cargo` and shows no cargo command counts as one call that builds the cache's profile. A tree that lacks
+    `scripts/check.sh` is R2's problem by name, and a `check.sh` with no `python` stage is the problem
+    `<file>:<job>:<index>: check.sh has no stage python`. One script deep, as R2. A single-module run
+    (`python3 -m unittest <module>`, with no `discover`) is no call. The stage and not a list of suites, because the
+    gate's `python` stage is where the repository says what its Python suites need (`need_cargo`, for the guard
+    tests that build and audit the workspace): a job that runs those suites another way inherits that need, and a
+    job that ran a cargo-free suite by discovery is held to the shared restore, the fail-closed direction R3
+    already takes.
+
+R15. **A bench build builds another profile** (ADR-444 D11). A `codspeed` call whose first word is `build` reads as
+    `other`, before R3's install and flag rules; every other `codspeed` subcommand keeps R3's fail-closed reading, a
+    build of the cache's profile. What the tree shows: `ci.yml`'s `bench-rust-build` builds the benches by
+    `cargo codspeed build`, with cargo-codspeed pinned at 6.0.0 in the same job, and archives the bench binaries it
+    built as `target/codspeed` (the `bench-rust-bin` artifact) for `bench-rust`; it holds no `actions/cache` step;
+    and the workspace's `[profile.bench]` inherits release (SPEC-618 R9).
+
+R16. **The release profile's own key** (ADR-444 D12). Beside the shared key, the census admits one more Rust key,
+    the release profile's own, `SHAPE_RELEASE_KEY` (`rust-release-` followed by the shared key's text after its
+    `rust-`), with its one fallback, `SHAPE_RELEASE_FALLBACK` (`rust-release-` followed by the toolchain's prefix
+    after its `rust-`). Under R7, a Rust cache step whose resolved key is the release key hashes its inputs when
+    each fallback line is the release fallback, and any other line is the problem
+    `<where>: the release Rust fallback <line> is not the release key's prefix`. Under R5, a cache-free job's
+    restore under the release key is no problem; a shared job still restores the shared key once, a job on
+    another runner still restores no Rust cache, and a release job still reads no cache. Under R6, a Rust save
+    whose key resolves, through an earlier restore in its job, to the release key keys on that restore, and its
+    `if:` is still judged by the module's save scenarios. Why: the release profile's builds never read
+    `target/debug`, so `dev` gave its release job a key of its own whose one writer is that job, on a push to
+    `dev` or `main` that missed it (ADR-654); the census keeps one shared key for every job that builds the
+    cache's profile, and no rule here loosens that.
+
 ## 3. Acceptance criteria of SPEC-430
 
 | id | criterion | decided by |
 |---|---|---|
-| A1 | every job of every workflow that runs cargo is examined and classed, and each meets its class (R2 to R5, R9, R13): every `ci.yml` job whose stages compile the cache's profile is shared, and every job holding a non-lookup shared restore runs cargo | `test_ci_workflows.py` `test_every_job_that_runs_cargo_restores_the_one_shared_rust_key` |
+| A1 | every job of every workflow that runs cargo is examined and classed, and each meets its class (R2 to R5, R9, R13 to R16): every `ci.yml` job whose stages compile the cache's profile is shared, and every job holding a non-lookup shared restore runs cargo | `test_ci_workflows.py` `test_every_job_that_runs_cargo_restores_the_one_shared_rust_key` |
 | A2 | the cargo census refuses each planted shape of section 8's A2 rows and passes each planted negative control | `test_ci_workflows.py` `test_the_cargo_census_refuses_each_planted_shape` |
-| A3 | only the warm job or a push to `dev` or `main` that missed saves the Rust key, every writer is admitted by the module's save scenarios, and every Rust save keys on a shared restore (R6, R9): the saves read equal the `actions/cache/save` steps `action` reads, and the Rust saves those whose `paths` are `RUST_CACHE` | `test_ci_workflows.py` `test_only_the_warm_job_or_a_push_to_dev_or_main_saves_the_rust_key` |
+| A3 | only the warm job or a push to `dev` or `main` that missed saves the Rust key, every writer is admitted by the module's save scenarios, and every Rust save keys on a shared restore (R6, R9, R16): the saves read equal the `actions/cache/save` steps `action` reads, and the Rust saves those whose `paths` are `RUST_CACHE` | `test_ci_workflows.py` `test_only_the_warm_job_or_a_push_to_dev_or_main_saves_the_rust_key` |
 | A4 | the writer census refuses each planted shape of section 8's A4 rows | `test_ci_workflows.py` `test_the_writer_census_refuses_each_planted_shape` |
-| A5 | every cache key hashes its lock and toolchain inputs (R7, R9): the keys read by class equal the cache steps `paths` reads by class | `test_ci_workflows.py` `test_every_cache_key_hashes_its_lock_and_toolchain_inputs` |
+| A5 | every cache key hashes its lock and toolchain inputs (R7, R9, R16): the keys read by class equal the cache steps `paths` reads by class | `test_ci_workflows.py` `test_every_cache_key_hashes_its_lock_and_toolchain_inputs` |
 | A6 | the key census refuses each planted shape of section 8's A6 rows | `test_ci_workflows.py` `test_the_key_census_refuses_each_planted_shape` |
 | A7 | no key or fallback carries a run-unique part (R8, R9): the texts examined equal the keys plus the fallback lines `lines_of` reads, every save's key resolved | `test_ci_workflows.py` `test_no_cache_key_carries_a_run_unique_part` |
 | A8 | the run-unique census refuses each planted shape of section 8's A8 rows | `test_ci_workflows.py` `test_the_run_unique_census_refuses_each_planted_shape` |
 | A9 | the Python read follows the subcommand the step names (R13): a planted subcommand whose handler reaches a cargo argument list only through a function it calls is a job that runs cargo (the negative control), a planted subcommand that reaches none is not, a call that names no subcommand and a dispatch over two expressions keep every branch, and a script that names a run-time lookup is read whole, each as section 8's A9 rows plant it | `test_ci_workflows.py` `test_the_python_read_follows_the_subcommand_the_step_names` |
+| A10 | the cargo census follows a test discovery run to the gate's `python` stage (R14): a planted job that runs discovery with no restore is a shared job refused for its restore, one that restores the shared key first passes, a single-module run is no job that runs cargo, and a `check.sh` with no `python` stage is the problem by name | `test_ci_workflows.py` `test_the_cargo_census_follows_test_discovery_to_the_python_stage` |
+| A11 | a `cargo codspeed build` builds another profile (R15): a planted bench build with no restore is cache-free and passes, one that restores another key is refused as a cache-free restore, and a `cargo codspeed run` with no restore is a shared job refused for its restore | `test_ci_workflows.py` `test_a_codspeed_build_builds_another_profile` |
+| A12 | the release profile's own key serves a job that builds no cache profile (R16): a planted release-profile job that restores and saves the release key under the dev-push guard passes all three censuses, a release-key fallback that is not the release key's prefix is refused, and a shared job that restores only the release key is refused for its restore | `test_ci_workflows.py` `test_the_release_profile_key_serves_a_job_that_builds_no_cache_profile` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_every_job_that_runs_cargo_restores_the_one_shared_rust_key
@@ -163,6 +200,9 @@ A6: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k tes
 A7: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_no_cache_key_carries_a_run_unique_part
 A8: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_run_unique_census_refuses_each_planted_shape
 A9: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_python_read_follows_the_subcommand_the_step_names
+A10: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_cargo_census_follows_test_discovery_to_the_python_stage
+A11: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_a_codspeed_build_builds_another_profile
+A12: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_release_profile_key_serves_a_job_that_builds_no_cache_profile
 ```
 
 The module runs in CI's `hygiene` job, through `check.sh`'s `python` stage, on every pull request into `dev` or `main`
@@ -176,7 +216,7 @@ expected refusals.
 | path | part | change |
 |---|---|---|
 | `scripts/tests/test_ci_workflows.py` | 1 | changed, insert-only: R1's class, its `SHAPE_*` constants and `shape_*` helpers above `class TheEngineBuildsInEveryRustJob`; no existing line changes |
-| `scripts/mutation-rows.d/S43000-S43099.json` | 1 | added: rows S43000-S43060 (section 8) |
+| `scripts/mutation-rows.d/S43000-S43099.json` | 1 | added: rows S43000-S43068 (section 8) |
 | `docs/specs/SPEC-430-every-job-that-runs-cargo-restores-the-one-shared-rust-key-by-its-class-and-every-cache-key-hashes-its-inputs.md` | 1 | added |
 | `docs/decisions/ADR-444-the-cache-shape-is-four-checks-in-the-workflow-tests-each-cargo-job-classed-by-what-it-builds-and-where-it-runs.md` | 1 | added |
 | `docs/schematics/ci-jobs-and-caches.md` | 1 | changed: one insert-only section after its last line |
@@ -220,6 +260,14 @@ That is 19 jobs: 9 shared, 7 cache-free, 3 release and 0 on another runner alone
 writers are 19 steps (4 `actions/cache/save`, 8 `actions/setup-node`, 7 `pnpm/action-setup`), of which 4 save and 2
 save the Rust key (`ci.yml:76`, `rust-cache.yml:92`), each under its guard (ADR-444 D2). Sites cured: none.
 
+Over the merged `dev` at `63c7d6c1`, the reader meets three jobs that the table above predates, and reads each
+under R14 to R16 with no workflow change: `coverage.yml`'s `coverage-python` runs the gate's Python suites by
+`coverage run -m unittest discover -s "$suite"`, so under R14 it is shared, and it meets R5 with one restore of the
+shared key at step 4, under no `if:`, before its first build at step 8; `ci.yml`'s `bench-rust-build` builds by
+`cargo codspeed build` and holds no `actions/cache` step, so under R15 it is cache-free with no restore; and
+`ci.yml`'s `release` runs `cargo fetch` and `check.sh` `test-release` (`--release`) and restores (step 5) and saves
+(step 10) the release profile's own key, so under R16 it is cache-free with that restore and that save admitted.
+
 ## 6. What this does NOT cover
 
 - It changes no workflow and no job's cache use: the three listings, `fsrs7-measure.yml` and the release builds keep
@@ -252,7 +300,7 @@ save the Rust key (`ci.yml:76`, `rust-cache.yml:92`), each under its guard (ADR-
   passes. Detected by: the whole-script read of every script that names a run-time lookup (R13), A1's print of each
   call whose read drops a list the whole script holds, and A9's negative control.
 
-## 8. Hand rows S43000-S43060
+## 8. Hand rows S43000-S43068
 
 Each row's mutant is one helper change, its target `scripts/tests/test_ci_workflows.py`, its find written from the
 landed line and occurring exactly once, and its killer the named test of `test_ci_workflows.TheCachesHoldTheirShape`.
@@ -321,6 +369,14 @@ A planted job named below is part of that test's fixtures, with the verdict the 
 | S43058-A-RUN-TIME-LOOKUP-READS-THE-WHOLE-SCRIPT | drops the run-time lookup arm | A9: a `python3 scripts/table.py prove` job with no restore, whose handler `getattr` reaches, refused |
 | S43059-A-CARGO-CALL-NEEDS-A-SUBCOMMAND-WORD | drops the subcommand-word test | A2: a `cargo = x` job, passed and not a job that runs cargo, beside a `cargo build` job with no restore, refused |
 | S43060-AN-OPTION-BEFORE-THE-SUBCOMMAND-IS-SKIPPED | drops the option skip | A2: a `cargo --locked test` job with no restore, refused |
+| S43061-A-CODSPEED-BUILD-BUILDS-ANOTHER-PROFILE | makes the bench build test never true | A11: `benched`, a `cargo codspeed build` job with no restore, reads shared and is refused |
+| S43062-ONLY-A-CODSPEED-BUILD-BUILDS-ANOTHER-PROFILE | widens the bench build test to every `codspeed` subcommand | A11: `bench-run`, a `cargo codspeed run` job with no restore, reads cache-free and is passed |
+| S43063-A-DISCOVERY-RUN-IS-READ | makes the discovery pattern miss `discover` | A10: `discovered` and `covered` leave the population |
+| S43064-A-DISCOVERY-RUN-READS-THE-PYTHON-STAGE | names another stage for the discovery read | A10: the problem of a `check.sh` with no `python` stage names another stage |
+| S43065-THE-RELEASE-KEY-HAS-ITS-OWN-RULE | makes the release key branch never true | A12: `release` reads the shared-key and toolchain-prefix lines |
+| S43066-THE-RELEASE-FALLBACK-IS-ITS-PREFIX | makes the release fallback check never true | A12: `drifted`, whose release fallback drops the toolchain hash, reads no problem |
+| S43067-A-CACHE-FREE-JOB-MAY-RESTORE-THE-RELEASE-KEY | makes the cache-free admission never true | A12: `release` reads the cache-free restore problem |
+| S43068-A-RUST-SAVE-MAY-KEY-ON-A-RELEASE-RESTORE | makes the writer admission never true | A12: `release`'s save reads the shared-restore problem |
 
 Each A2, A4, A6, A8 and A9 fixture also holds a positive control that passes (a shared job that restores first, a
 Rust save under the dev-push guard, the three good keys, a key of `runner.os` and `hashFiles` alone, a
