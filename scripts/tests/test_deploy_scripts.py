@@ -1891,13 +1891,26 @@ sys.exit(f"execve failed: errno {ctypes.get_errno()}")
             work = Path(tmp) / "work"
             work.mkdir()
             made = Path(tmp) / "made.bash"
-            lead = ["-c", 'set -a; . "$1"; set +a; shift; . "$@"', "bash", str(made)]
+            # The lead sources the made file and then the step, each by its quoted path, so its
+            # text holds no argument expansion; bash names itself "bash", as it did before.
+            lead = [
+                "-c",
+                f"set -a; . {shlex.quote(str(made))}; set +a; "
+                f". {shlex.quote(str(DEPLOY))} caddy-install",
+                "bash",
+            ]
+            # The elevation setting as the world gives every other step: a plain mapping of the
+            # value the shared test environment holds, written as each setting of a held file is.
+            elevation = {"DECKSTREAK_DEPLOY_ELEVATE": ""}
+            self.assertLessEqual(
+                elevation.items(),
+                self.world.env.items(),
+                "the world gives the elevation setting another value",
+            )
             for i, vector in examined(f"of {len(vectors)} deploy entry vectors", to_run):
                 block = [bytes.fromhex(entry) for entry in vector["entries"]]
-                # The elevation setting as the world gives every other step, written as each
-                # setting of a held file is.
                 made.write_text(
-                    f"{ELEVATE}={shlex.quote(self.world.env[ELEVATE])}\n"
+                    "".join(f"{key}={shlex.quote(value)}\n" for key, value in elevation.items())
                     + "".join(f"{name}=made\n" for name in vector["made"]),
                     encoding="utf-8",
                 )
@@ -1916,8 +1929,6 @@ sys.exit(f"execve failed: errno {ctypes.get_errno()}")
                             self.EXEC_ENTRIES,
                             " ".join(entry.hex() for entry in entries),
                             *lead,
-                            str(DEPLOY),
-                            "caddy-install",
                         ],
                         entries,
                         sourced=made,
