@@ -1,10 +1,11 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { frameDocument } from '#lib/card/frame-document.js';
 import { EngineError } from '#lib/engine/client.js';
 import type { CardView, Head, UndoOffer } from '#lib/engine/protocol.js';
+import { m } from '#lib/paraglide/messages.js';
 import {
   Review,
   step,
@@ -463,24 +464,45 @@ describe('the review', () => {
     expect([review.side, review.escaped, review.status]).toEqual(['answer', true, 'reparse-element']);
   });
 
-  // SPEC-505 R2, R3; ADR-523 D2. The status reads the one composition the frame renders, its host
-  // included: a face whose document is kept but whose host does not read it back (a carriage
-  // return, which the host's parser reads as a line feed) is refused in the status by the host.
-  it("a face its host does not read back is refused in the status by the host's reason", async () => {
-    const question = '<p>a&#13;b</p>';
+  // SPEC-505 R2, R3; ADR-523 D2; SPEC-462 section 8. The status reads the one composition the frame
+  // renders, its host included: a question whose face is kept but whose frame title its host does
+  // not read back is refused in the status by the host. A NUL is the one character the host still
+  // refuses in a title, so the question frame's title message returns one, for this test alone.
+  it("a question whose frame title its host does not read back is refused in the status by the host's reason", async () => {
+    const title = vi
+      .spyOn(m, 'study_question_frame')
+      .mockReturnValue('The\u0000card' as ReturnType<typeof m.study_question_frame>);
+    try {
+      const question = view(1).question;
+      const review = new Review(
+        async () => new FakeClient([head(view(1))]),
+        () => 0,
+        () => undefined
+      );
+      review.start();
+      await review.settled();
+      // the face's document alone is kept, so only its host refuses it
+      expect(frameDocument(question, view(1).css, 'card card1').refused).toBeUndefined();
+      expect([review.side, review.escaped, review.status]).toEqual(['question', true, 'host-readback']);
+      // the control: the answer frame's title holds no NUL, so the answer is kept
+      review.act('show-answer');
+      expect([review.side, review.escaped, review.status]).toEqual(['answer', false, null]);
+    } finally {
+      title.mockRestore();
+    }
+  });
+
+  // SPEC-462 R4; ADR-479 D2. The face the test above planted before the host carried a carriage
+  // return: its reference now reaches the host and is read back whole, so the status stays quiet.
+  it('a face holding a carriage return reference is kept, and the status stays quiet', async () => {
     const review = new Review(
-      async () => new FakeClient([head(view(1, { question }))]),
+      async () => new FakeClient([head(view(1, { question: '<p>a&#13;b</p>' }))]),
       () => 0,
       () => undefined
     );
     review.start();
     await review.settled();
-    // the face's document alone is kept, so only its host refuses it
-    expect(frameDocument(question, view(1).css, 'card card1').refused).toBeUndefined();
-    expect([review.side, review.escaped, review.status]).toEqual(['question', true, 'host-readback']);
-    // the control: the answer, with no carriage return, is kept
-    review.act('show-answer');
-    expect([review.side, review.escaped, review.status]).toEqual(['answer', false, null]);
+    expect([review.side, review.escaped, review.status]).toEqual(['question', false, null]);
   });
 
   it('the frame shows the faces the engine completed', async () => {

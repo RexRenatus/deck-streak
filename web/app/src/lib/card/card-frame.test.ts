@@ -79,7 +79,7 @@ describe('the card frame', () => {
       [{ html: CARD, css: CSS, title: 'The card', classes: 'card card0' }, 'class-list'],
       [{ html: CARD, css: `${CSS}</style><base href="https://cards.example/">`, title: 'The card' }, 'style-closed'],
       [{ html: `${mutation}<link rel="preconnect" href="https://cards.example/">`, css: CSS, title: 'The card' }, 'reparse-element'],
-      [{ html: CARD, css: CSS, title: 'The\rcard' }, 'host-readback']
+      [{ html: CARD, css: CSS, title: 'The\u0000card' }, 'host-readback']
     ];
     for (const [props, reason] of plants) {
       const shown = render(CardFrame, props);

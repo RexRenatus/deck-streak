@@ -23,3 +23,10 @@ A4: red at 53ffe0c883b245b9fd627afcfbd926a413d128d5: AssertionError: expected [ 
 A4: green at 34274161acb09aa353c28679e2f51e65b25e076e
 A5: not red: restates SPEC-407's A2 plants as NULs, which the base already refuses; it guards the read-back
 ```
+
+The rebuild onto current dev merged the original branch unchanged. Current dev had since built four
+host refusal plants from a carriage return, in the card frame, frame document and review tests; the
+commit after that merge plants a NUL in the frame title in each instead, which the host still
+refuses with the same reason, keeps the review's former carriage-return face by a test of its own,
+and has the field test also read each field through the one composition the frame renders. No
+refusal is removed.

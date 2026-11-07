@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { frameDocument } from './frame-document';
-import { frameHost, hosted } from './frame-host';
+import { frameCard, frameHost, hosted } from './frame-host';
 
 // SPEC-407 R1 to R3, R7; ADR-421 D2 to D4. The card frame's host: a head carrying the host policy
 // and one frame whose `srcdoc` is the card document, read back byte for byte. These tests parse the
@@ -125,6 +125,7 @@ describe('the card frame host', () => {
       const host = frameHost(doc.srcdoc ?? '', 'The card');
       expect(host.refused, field).toBeUndefined();
       expect(parsed(host.srcdoc).body.children[0].getAttribute('srcdoc')).toBe(doc.srcdoc);
+      expect(frameCard(field, '.card { color: navy; }', 'The card'), field).toEqual(host);
     }
   });
 
