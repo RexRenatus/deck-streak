@@ -115,6 +115,7 @@ PASSING_MUTATE = [
     "!src/**/*.spec.*",
     "!src/**/*.d.ts",
     "!src/lib/paraglide/**",
+    "scripts/build-tokens.ts",
 ]
 #: A Stryker configuration the configuration check passes: the Vitest runner, the json report and
 #: R2's production code as its `mutate`.
