@@ -57,3 +57,19 @@ merge also brings dev's own changes under `scripts` and `formal`, so the check a
 for this delivery's own files, and no later commit changes them:
 `git diff --quiet 8abe309c HEAD -- deploy scripts/tests/test_deploy_scripts.py scripts/mutation-rows.d/S47300-S47399.json formal/lean/Formal/DeployEntryRefusal.lean formal/lean/Formal/DeployEntryRefusalVectors.lean formal/vectors/deploy-entry-refusal.jsonl`
 exits 0.
+
+A third merge commit, b1815f50, brings a later dev into this branch. Its one conflict, among
+the formal ledger test's new entries in `scripts/tests/test_formal_obligations.py`, keeps this
+entry's line beside the lines dev gained, and against the dev it brings in it changes only this
+delivery's own files; the formal ledger test reads green at b1815f50. The deploy tests'
+stand-in censuses, which read `scripts/tests/test_deploy_scripts.py` as text, read the vectors
+test red in the pull request's run 42247224305: the census of the elevation setting refused the
+line that wrote the setting from a computed value, and the stub scan refused the shell lead that
+sourced the made settings and the script through argument expansions. 202fe307 gives the setting
+its value as a plain mapping of the value the shared test environment holds, asserted to be the
+environment's own, and spells the lead with the quoted paths of the made settings and the
+script and no argument expansion, so the step runs the same commands under the same settings;
+it changes no existing assertion, no vector and no deploy script. Nothing after 202fe307 changes
+this delivery's own files:
+`git diff --quiet 202fe307 HEAD -- deploy scripts/tests/test_deploy_scripts.py scripts/mutation-rows.d/S47300-S47399.json formal/lean/Formal/DeployEntryRefusal.lean formal/lean/Formal/DeployEntryRefusalVectors.lean formal/vectors/deploy-entry-refusal.jsonl`
+exits 0.
