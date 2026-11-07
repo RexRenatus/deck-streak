@@ -38,7 +38,8 @@ commit.
    the exit is zero, and VOID otherwise (`:230-248`); the table goes to `sweep.md` and the step
    summary (`:254-256`). Both jobs run on the label `ADMITTED_RUNNERS` admits
    (`scripts/tests/test_ci_workflows.py:44`) with `timeout-minutes: 30` (`xcframework.yml:180`,
-   `:269`).
+   `:269`). Since that commit, both jobs run on the runner `apple_job_runner` routes them to
+   (`scripts/tests/test_ci_workflows.py:135` at `d274b8b2`).
 4. Nothing on Linux reads the rows. The only test that names a sweep,
    `card_probe_problems` (`scripts/tests/test_ci_workflows.py:8699`), checks that the
    `card-isolation` job's run text holds `pathlib.Path("ios/CardIsolation")` and
@@ -113,7 +114,7 @@ R7. **The job.** Each `ios/*/swift-mutants.json` is swept by exactly one job of
 sweep --package ios/<package> --report "$REPORT" --run-seconds <n>` after the package's test step
 and prints the interpreter's version first. That job runs no inline Python program, and its
 report upload runs under `if: ${{ always() }}`. `harness-wire` sweeps `ios/HarnessWire` and
-`card-isolation` sweeps `ios/CardIsolation`, on the admitted label.
+`card-isolation` sweeps `ios/CardIsolation`, each on its routed runner (`apple_job_runner`).
 
 R8. **The bound.** For each sweeping job, the projection P is the job's measured minutes outside
 the sweep plus the live run count (the file's rows plus its distinct killers) times the measured

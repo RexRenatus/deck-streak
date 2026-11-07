@@ -95,3 +95,10 @@ measure, with no assertion removed.
 That merge (5ee3f573) read red by name in the pull request run 42036285053, and the adapting commit
 (d274b8b2) reads green in the pull request run at this delivery head; the commit after it changes
 only documents.
+
+This branch was then merged onto current dev twice: at 76ecfe5d with no conflict, and at 46c5551d,
+where one hunk of the census allow-list in the workflow tests conflicted and the entries of both
+sides were kept. The commit after those merges re-words the runner in R7 and in the docstring of the
+test that holds it, and adds the routing to the measured problem, with no assertion changed. No run
+reads the adapting commit alone, so its green is read in the pull request run at the commit that
+adds this paragraph.

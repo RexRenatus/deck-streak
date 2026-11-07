@@ -11383,7 +11383,7 @@ class EachSwiftRowFileIsSweptByItsPackagesJob(unittest.TestCase):
 
     def test_each_swift_row_file_is_swept_by_one_job_through_the_module(self):
         """SPEC-397 A7 (R7): each row file is swept by exactly one xcframework.yml job, through the
-        module's sweep step after the package's tests, on the admitted runner; that job runs no
+        module's sweep step after the package's tests, on its routed runner; that job runs no
         inline Python program, and its report upload runs whatever the outcome."""
         jobs = load("xcframework.yml")["jobs"]
         files = examined("Swift row files", sorted(REPO.glob("ios/*/swift-mutants.json")))
