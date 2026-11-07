@@ -374,6 +374,9 @@ server an erase empties every table but the store's record, and on a device it r
 | `review_log`, `review_retraction` | `collection` | the same | exported and erased, through the open gate |
 | `review_client` | `collection` | the same | exported and erased, through the open gate; its own erase keeps every review |
 | `outbox`, `applied_ops`, `undo_journal`, `schedule`, `device_setting` | `collection` | the same | exported and erased |
+| `media_file` | `collection` | `crates/collection/migrations/000002_media_store.sql` (SPEC-601) | exported and erased |
+| `media_name` | `collection` | the same | exported and erased |
+| `media_pin` | `collection` | the same | exported and erased |
 
 ## Overloaded words, held apart
 

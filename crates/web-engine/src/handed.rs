@@ -18,10 +18,15 @@ impl Handed {
     /// as refused, in the order handed.
     #[must_use]
     pub fn admit(pairs: Vec<(MediaHash, Vec<u8>)>) -> Self {
-        Self {
-            files: pairs,
-            refused: Vec::new(),
+        let mut handed = Self::default();
+        for (hash, bytes) in pairs {
+            if MediaHash::of(bytes.as_slice()) == hash {
+                handed.files.push((hash, bytes));
+            } else {
+                handed.refused.push(hash);
+            }
         }
+        handed
     }
 
     /// Every hash whose bytes did not hash to it, in the order handed.
@@ -33,7 +38,8 @@ impl Handed {
     /// At most `limit` bytes of the admitted file of `hash`, or `None` when none was admitted.
     #[must_use]
     pub fn read(&self, hash: &MediaHash, limit: u64) -> Option<Vec<u8>> {
-        let _ = (&self.files, hash, limit);
-        None
+        let (_, bytes) = self.files.iter().find(|(admitted, _)| admitted == hash)?;
+        let kept = usize::try_from(limit).map_or(bytes.len(), |cap| cap.min(bytes.len()));
+        bytes.get(..kept).map(<[u8]>::to_vec)
     }
 }

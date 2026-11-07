@@ -27,8 +27,19 @@ impl StoreMedia {
 }
 
 impl Reader for StoreMedia {
+    /// At most `limit` bytes of the file `name` is bound to, read through the store's
+    /// [`CasReader`](deck_streak_collection::CasReader), which checks each file's length.
     fn read(&self, name: &str, limit: u64) -> Option<Vec<u8>> {
-        let _ = (name, limit);
-        None
+        self.media.reader().read(name, limit)
+    }
+
+    /// A face over the store inlines fonts, as `MediaFolder` does.
+    fn inlines_fonts(&self) -> bool {
+        true
+    }
+
+    /// A face over the store shows a video, as `MediaFolder` does.
+    fn shows_video(&self) -> bool {
+        true
     }
 }

@@ -52,6 +52,9 @@ pub const DECLARED: &[(&str, Erase)] = &[
     ("undo_journal", Erase::Delete),
     ("schedule", Erase::Delete),
     ("device_setting", Erase::Delete),
+    ("media_file", Erase::Delete),
+    ("media_name", Erase::Delete),
+    ("media_pin", Erase::Delete),
 ];
 
 /// The tables the port neither exports nor erases: the gate itself, which holds no personal data
@@ -101,13 +104,19 @@ pub const ERASE_UNDO_JOURNAL: &str = "DELETE FROM undo_journal";
 pub const ERASE_SCHEDULE: &str = "DELETE FROM schedule";
 /// The device setting.
 pub const ERASE_DEVICE_SETTING: &str = "DELETE FROM device_setting";
+/// The media names.
+pub const ERASE_MEDIA_NAMES: &str = "DELETE FROM media_name";
+/// The media pins.
+pub const ERASE_MEDIA_PINS: &str = "DELETE FROM media_pin";
+/// The media files' rows, after the names and pins that name them.
+pub const ERASE_MEDIA_FILES: &str = "DELETE FROM media_file";
 /// The file rebuilt, so no freed page keeps an erased value.
 pub const VACUUM_FILE: &str = "VACUUM";
 /// The log moved into the file and emptied.
 pub const CHECKPOINT: &str = "PRAGMA wal_checkpoint(TRUNCATE)";
 
 /// The server's deletes, children before the rows they name, so no foreign key breaks.
-const ERASES: [&str; 18] = [
+const ERASES: [&str; 21] = [
     ERASE_CLIENT_RECORDS,
     ERASE_RETRACTIONS,
     ERASE_REVIEWS,
@@ -126,6 +135,9 @@ const ERASES: [&str; 18] = [
     ERASE_UNDO_JOURNAL,
     ERASE_SCHEDULE,
     ERASE_DEVICE_SETTING,
+    ERASE_MEDIA_NAMES,
+    ERASE_MEDIA_PINS,
+    ERASE_MEDIA_FILES,
 ];
 
 /// The store's record.
@@ -166,9 +178,15 @@ pub const EXPORT_UNDO_JOURNAL: &str = "SELECT * FROM undo_journal";
 pub const EXPORT_SCHEDULE: &str = "SELECT * FROM schedule";
 /// The device setting.
 pub const EXPORT_DEVICE_SETTING: &str = "SELECT * FROM device_setting";
+/// The media files' rows.
+pub const EXPORT_MEDIA_FILE: &str = "SELECT * FROM media_file";
+/// The media names.
+pub const EXPORT_MEDIA_NAME: &str = "SELECT * FROM media_name";
+/// The media pins.
+pub const EXPORT_MEDIA_PIN: &str = "SELECT * FROM media_pin";
 
 /// Each declared table's export statement, in [`DECLARED`]'s order.
-const EXPORTS: [(&str, &str); 19] = [
+const EXPORTS: [(&str, &str); 22] = [
     ("store_meta", EXPORT_STORE_META),
     ("study_rule", EXPORT_STUDY_RULE),
     ("notetypes", EXPORT_NOTETYPES),
@@ -188,6 +206,9 @@ const EXPORTS: [(&str, &str); 19] = [
     ("undo_journal", EXPORT_UNDO_JOURNAL),
     ("schedule", EXPORT_SCHEDULE),
     ("device_setting", EXPORT_DEVICE_SETTING),
+    ("media_file", EXPORT_MEDIA_FILE),
+    ("media_name", EXPORT_MEDIA_NAME),
+    ("media_pin", EXPORT_MEDIA_PIN),
 ];
 
 /// One exported value: an integer or a real as a number, a text as itself, a blob as lowercase hex.

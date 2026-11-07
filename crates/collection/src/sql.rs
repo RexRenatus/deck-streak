@@ -113,6 +113,23 @@ pub const STORE_REVIEW_ROW_COUNT: &str = "SELECT count(*) FROM review_log";
 /// The review log's rescheduling rows.
 pub const STORE_RESCHEDULE_ROW_COUNT: &str =
     "SELECT count(*) FROM review_log WHERE kind = 4 AND ease = 0";
+/// The state of the `media_file` row of `?1`.
+pub const MEDIA_FILE_STATE: &str = "SELECT state FROM media_file WHERE hash = ?1";
+/// A placed file's present row: `?1` its hash, `?2` its size, `?3` its kind, `?4` the time; a row
+/// the store already holds turns present again.
+pub const MEDIA_FILE_PUT: &str = "INSERT INTO media_file \
+     (hash, size, kind, state, synced, added_ms, last_seen_ms) VALUES (?1, ?2, ?3, 0, 0, ?4, ?4) \
+     ON CONFLICT (hash) DO UPDATE SET size = excluded.size, state = 0, \
+     last_seen_ms = excluded.last_seen_ms";
+/// The name `?1` bound to the file `?2`, from origin `?3` at `?4`, live again if it was unbound.
+pub const MEDIA_NAME_BIND: &str = "INSERT INTO media_name (name, hash, origin, bound_ms, unbound) \
+     VALUES (?1, ?2, ?3, ?4, 0) ON CONFLICT (name) DO UPDATE SET hash = excluded.hash, \
+     origin = excluded.origin, bound_ms = excluded.bound_ms, unbound = 0";
+/// The hash, size and state of the file the live name `?1` is bound to.
+pub const MEDIA_NAME_READ: &str = "SELECT f.hash, f.size, f.state FROM media_name n \
+     JOIN media_file f ON f.hash = n.hash WHERE n.name = ?1 AND n.unbound = 0";
+/// The `media_file` row of `?1` set to the state `?2`.
+pub const MEDIA_FILE_QUARANTINE: &str = "UPDATE media_file SET state = ?2 WHERE hash = ?1";
 
 /// A register entry for the constant `$name`.
 macro_rules! registered {
@@ -163,6 +180,11 @@ pub const STATEMENTS: &[Statement] = &[
     registered!(STORE_NOTE_COUNT),
     registered!(STORE_REVIEW_ROW_COUNT),
     registered!(STORE_RESCHEDULE_ROW_COUNT),
+    registered!(MEDIA_FILE_STATE),
+    registered!(MEDIA_FILE_PUT),
+    registered!(MEDIA_NAME_BIND),
+    registered!(MEDIA_NAME_READ),
+    registered!(MEDIA_FILE_QUARANTINE),
     registered!(data_rights::OPEN_GATE),
     registered!(data_rights::CLOSE_GATE),
     registered!(data_rights::ANONYMISE_STORE_RECORD),
@@ -184,6 +206,9 @@ pub const STATEMENTS: &[Statement] = &[
     registered!(data_rights::ERASE_UNDO_JOURNAL),
     registered!(data_rights::ERASE_SCHEDULE),
     registered!(data_rights::ERASE_DEVICE_SETTING),
+    registered!(data_rights::ERASE_MEDIA_NAMES),
+    registered!(data_rights::ERASE_MEDIA_PINS),
+    registered!(data_rights::ERASE_MEDIA_FILES),
     registered!(data_rights::VACUUM_FILE),
     registered!(data_rights::CHECKPOINT),
     registered!(data_rights::EXPORT_STORE_META),
@@ -205,4 +230,7 @@ pub const STATEMENTS: &[Statement] = &[
     registered!(data_rights::EXPORT_UNDO_JOURNAL),
     registered!(data_rights::EXPORT_SCHEDULE),
     registered!(data_rights::EXPORT_DEVICE_SETTING),
+    registered!(data_rights::EXPORT_MEDIA_FILE),
+    registered!(data_rights::EXPORT_MEDIA_NAME),
+    registered!(data_rights::EXPORT_MEDIA_PIN),
 ];
