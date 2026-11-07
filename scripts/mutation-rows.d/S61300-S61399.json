@@ -1,0 +1,38 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S61300-THE-ENGINE-CONFIG-RUNS-FIREFOX",
+        "web/app/playwright.engine.config.ts",
+        ",\n    { name: 'firefox', use: { ...devices['Desktop Firefox'] } }\n",
+        "\n",
+        "the engine configuration stops declaring the firefox project, so the engine suite runs in two engines (SPEC-613 A1)",
+        "test_ci_workflows.TheEngineAndStudySuitesRunInFirefox.test_the_engine_and_study_configurations_declare_three_engines"
+      ],
+      [
+        "S61301-THE-STUDY-CONFIG-RUNS-FIREFOX",
+        "web/app/playwright.study.config.ts",
+        ",\n    { name: 'firefox', use: { ...devices['Desktop Firefox'] } }\n",
+        "\n",
+        "the study configuration stops declaring the firefox project, so the study suite runs in two engines (SPEC-613 A1)",
+        "test_ci_workflows.TheEngineAndStudySuitesRunInFirefox.test_the_engine_and_study_configurations_declare_three_engines"
+      ],
+      [
+        "S61302-THE-ENGINE-JOB-INSTALLS-FIREFOX",
+        ".github/workflows/ci.yml",
+        "--only-shell chromium webkit firefox\n",
+        "--only-shell chromium webkit\n",
+        "the web-engine job stops installing Firefox, so both suites have no third browser (SPEC-613 A2)",
+        "test_ci_workflows.TheEngineAndStudySuitesRunInFirefox.test_the_web_engine_job_installs_every_engine_before_each_suite"
+      ],
+      [
+        "S61303-FIREFOX-SYNCS-AS-A-USER-OF-ITS-OWN",
+        "web/app/playwright.engine.config.ts",
+        "SYNC_USER3: `${process.env.ENGINE_SYNC_USER}-firefox:",
+        "SYNC_USER3: `${process.env.ENGINE_SYNC_USER}:",
+        "the firefox project syncs as the chromium user, so one project uploads reach another server collection (SPEC-613 A3)",
+        "test_ci_workflows.TheEngineAndStudySuitesRunInFirefox.test_each_engine_project_syncs_as_a_user_of_its_own"
+      ]
+    ]
+  }
+}
