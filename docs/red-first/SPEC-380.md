@@ -119,3 +119,8 @@ A13 and A14 are read by name on both simulators at this pull request's head. A s
 commit, f06f2397, brings current dev in again with no conflict, and 7699b937 fits one bench dev
 added to the required field; the commits after 7699b937 change only SPEC-380's manifest and this
 record.
+
+A third merge commit, 06dd800e, brings current dev in again with no conflict. Dev's escape-hatch
+census pins the number of crate sources it reads at 419, and the merged tree holds 420, the one
+source this delivery adds, so 77ddb45c fits that pin to 420 in its assertion and its message and
+changes nothing else. The commits after 77ddb45c change only SPEC-380's manifest and this record.
