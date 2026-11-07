@@ -552,6 +552,54 @@
         "if False:",
         "A Rust save may key on a restore of the release profile key (SPEC-430 R16, A12)",
         "test_ci_workflows.TheCachesHoldTheirShape.test_the_release_profile_key_serves_a_job_that_builds_no_cache_profile"
+      ],
+      [
+        "S43069-A-DELEGATING-MAIN-HANDS-ITS-DISPATCH-ON",
+        "scripts/tests/test_ci_workflows.py",
+        "if len(delegates) == 1:",
+        "if len(delegates) == -1:",
+        "A main that only delegates hands its dispatch to the one function it calls (SPEC-430 R17, A13)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_a_main_that_delegates_its_dispatch_is_read_along_the_subcommand"
+      ],
+      [
+        "S43070-ONLY-A-DISPATCHING-FUNCTION-IS-A-DELEGATE",
+        "scripts/tests/test_ci_workflows.py",
+        "        and any(isinstance(test, ast.If) and shape_dispatch(test.test) for test in ast.walk(node))\n",
+        "",
+        "Only a function that holds a dispatch is a delegate (SPEC-430 R17, A13)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_a_main_that_delegates_its_dispatch_is_read_along_the_subcommand"
+      ],
+      [
+        "S43071-EXACTLY-ONE-DELEGATE-IS-FOLLOWED",
+        "scripts/tests/test_ci_workflows.py",
+        "delegates = [node for node in dispatching if node.name in named]",
+        "delegates = [node for node in dispatching if node.name in named][-1:]",
+        "Two dispatching functions leave the read unscoped (SPEC-430 R17, A13)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_a_main_that_delegates_its_dispatch_is_read_along_the_subcommand"
+      ],
+      [
+        "S43072-A-BUILD-GUARDED-BY-MORE-MEETS-THE-RESTORE",
+        "scripts/tests/test_ci_workflows.py",
+        "restore = {**restore, \"if\": steps[first].get(\"if\")}",
+        "restore = dict(restore)",
+        "A first build whose if adds conditions to the restore's meets the restore (SPEC-430 R18, A14)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_a_first_build_guarded_by_the_restores_conditions_and_more_meets_it"
+      ],
+      [
+        "S43073-AN-OR-OR-A-PARENTHESIS-KEEPS-THE-EQUAL-IF",
+        "scripts/tests/test_ci_workflows.py",
+        "not re.search(r\"\\|\\||[()]\", guard + build)",
+        "True",
+        "A guard with an or or a parenthesis keeps the equal if (SPEC-430 R18, A14)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_a_first_build_guarded_by_the_restores_conditions_and_more_meets_it"
+      ],
+      [
+        "S43074-EVERY-RESTORE-CONDITION-IS-THE-BUILDS",
+        "scripts/tests/test_ci_workflows.py",
+        "conditions[0] <= conditions[1]",
+        "True",
+        "Each of the restore's conditions is one of the build's (SPEC-430 R18, A14)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_a_first_build_guarded_by_the_restores_conditions_and_more_meets_it"
       ]
     ]
   }

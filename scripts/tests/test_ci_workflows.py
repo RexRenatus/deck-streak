@@ -3595,6 +3595,8 @@ SHAPE_PYTHON_CALL = re.compile(
     r"\bpython3[ \t]+(scripts/[^\s;&|)`'\"]+\.py)(?:[ \t]+([a-z][a-z0-9-]*)(?=[\s;&|)`]|$))?"
 )
 SHAPE_DISCOVERY = re.compile(r"-m[ \t]+unittest[ \t]+discover\b")  # test discovery (R14)
+# An `if:` inside its one enclosing `${{ }}`, whose conditions a first build's guard reads (R18).
+SHAPE_CONDITION = re.compile(r"^\s*\$\{\{\s*(.*?)\s*\}\}\s*$", re.S)
 # The names through which a run can reach a name no walk follows, so a script naming one is read
 # whole (R13). Strings, never called.
 SHAPE_RUN_TIME_LOOKUPS = frozenset(
@@ -3748,7 +3750,8 @@ def shape_python_read(text, word):
     names, until no new name is reached. With a subcommand, and a dispatch over one expression,
     `main` is read along that subcommand; with neither, every branch is kept. A script naming a
     run-time lookup is read whole. `dropped` is the line of each list the whole script holds and
-    this read does not."""
+    this read does not. A `main` with no dispatch of its own that calls, by name, exactly one
+    top-level function holding one is read through that function (R17)."""
     tree = ast.parse(text)
     whole = shape_argv_lists([tree])
     if SHAPE_RUN_TIME_LOOKUPS & shape_names(tree):
@@ -3765,6 +3768,21 @@ def shape_python_read(text, word):
     mains = [
         node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "main"
     ]
+    # A main that holds no dispatch and calls one top-level function that holds one delegates (R17).
+    dispatching = [
+        node
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef)
+        and any(isinstance(test, ast.If) and shape_dispatch(test.test) for test in ast.walk(node))
+    ]
+    named = {
+        node.func.id
+        for node in (ast.walk(mains[-1]) if mains and mains[-1] not in dispatching else [])
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    }
+    delegates = [node for node in dispatching if node.name in named]
+    if len(delegates) == 1:
+        mains = delegates
     subjects = {
         shape_dispatch(node.test)[0]
         for node in (ast.walk(mains[-1]) if mains else [])
@@ -3774,7 +3792,7 @@ def shape_python_read(text, word):
     if word is not None and len(subjects) == 1:
         last = mains[-1]
         kept = [last.args, *last.decorator_list, *shape_prune(last.body, word)]
-        defs["main"] = [node for node in defs["main"] if node is not last] + kept
+        defs[last.name] = [node for node in defs[last.name] if node is not last] + kept
         scope = "scoped"
     roots = [node for node in tree.body if not isinstance(node, defined)]
     reached, todo = set(), list(roots)
@@ -3885,7 +3903,8 @@ def shape_reads_a_cache(step):
 
 def shape_shared_problems(where, steps, restores, calls):
     """A shared job's restore (SPEC-430 R5): exactly one restore of the shared key that is not a
-    lookup, before the job's first build of the cache's profile, under that step's `if:` or none."""
+    lookup, before the job's first build of the cache's profile, under that step's `if:` or none, or
+    under part of it: conditions that step's `if:` joins to more by `&&` (R18)."""
     shared = [
         (at, step)
         for at, step in restores
@@ -3900,6 +3919,15 @@ def shape_shared_problems(where, steps, restores, calls):
         return [
             f"{where}: restores the shared Rust key at step {at}, after its first build at {first}"
         ]
+    # A first build whose `if:` holds each of the restore's conditions and more, joined by `&&`, with
+    # no `||` and no parenthesis in either, runs only when the restore ran (R18).
+    guard, build = (str(step.get("if", "")) for step in (restore, steps[first]))
+    conditions = [
+        {part.strip() for part in SHAPE_CONDITION.sub(r"\1", text).split("&&")}
+        for text in (guard, build)
+    ]
+    if not re.search(r"\|\||[()]", guard + build) and conditions[0] <= conditions[1]:
+        restore = {**restore, "if": steps[first].get("if")}
     if "if" in restore and restore.get("if") != steps[first].get("if"):
         return [f"{where}: restores the shared Rust key under another if than its first build's"]
     return []
