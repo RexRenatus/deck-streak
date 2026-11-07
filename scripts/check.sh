@@ -248,7 +248,7 @@ stage_python() {
     output=$(python3 scripts/python_stage.py "${suites[@]}" 2>&1) || failed=1
     # Every runner line but its last, then that last line with the ruff fields joined: ruff runs
     # after every suite, whatever they found (SPEC-424 R5 to R7).
-    printf '%s\n' "$output" | sed '$d'
+    [[ $output == *$'\n'* ]] && printf '%s\n' "${output%$'\n'*}"
     lint=$(ruff_arm) || failed=1
     echo "$(printf '%s\n' "$output" | tail -n 1); $lint"
     return "$failed"
