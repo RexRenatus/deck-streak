@@ -343,3 +343,32 @@ with ADR-583, which takes the sqlx crates from a fork in the same change.
 | hold guards | `62f267049e5ea70f5afe599c32ce5f9e430fe95d` | tests only: the checksum, host key and PHC values and the sync header's decoding, taken at `a078820`, which the next commit must keep | the moves below leave the fork |
 | block-buffer | `327d41d2e4d73adb7425289621ae5716e2c76870` | block-buffer 0.12.0 moves to 0.12.1 and digest 0.10 leaves the sync server's graph (GHSA-qwgh-2vcv-g2f7): sha1 0.11, pbkdf2 0.13, `axum-extra` and the `linkchecker` member removed | upstream requires sha1 0.11 and pbkdf2 0.13 and carries no digest 0.10 path |
 | pulldown-cmark | `dca72f352730abb4222389cc148e46387c17f97f` | the fork's lock moves pulldown-cmark from 0.13.0 to 0.13.5, which clears RUSTSEC-2026-0414; no manifest or source file changes | upstream's lock carries pulldown-cmark 0.13.5 or later |
+
+## Note, appended by SPEC-055's amendment: the pin moves to the fork's unmaintained-crate commits
+
+This note leaves the body above as it was decided. The fork's branch `deckstreak-blockbuf` takes the
+six commits of RexRenatus/anki#1 over `dca72f352730abb4222389cc148e46387c17f97f` by a merge commit,
+`15c1cba6631aed653b255543b794c625dfbf9e1f`, and one commit after it. Two add tests only: the frozen Unicode 10 predicates against
+`unic-ucd-category` on every code point, and the PEM item count against `rustls-pemfile`'s
+`read_all` over eight goldens. The next generates the tables, the next two move the call sites and
+drop `unic-ucd-category` and `rustls-pemfile` from both fork manifests, and the last drops them from
+the fork's licence list. The commit after the merge drops from the fork's own `.deny.toml` the six
+ignore entries those crates needed. A new tag, `deckstreak-pin-26.09.3-wasm32-unmaint`, names that
+commit, the branch's head; the earlier tags stay where they are. The root manifest's `[patch]` entry
+takes `anki` and `anki_proto` by `rev` from it. Read with ADR-336 and ADR-348, which this note leaves
+as they stand, with ADR-583, whose sqlx fork stays, and with ADR-657, whose three forks stay.
+
+| record | measured |
+|---|---|
+| the pinned commit | `2d8e3150f5e392f5cfaa7bfe8485c479186307a9`, the head of branch `deckstreak-blockbuf`, tagged `deckstreak-pin-26.09.3-wasm32-unmaint` (`git ls-remote`) |
+| `git diff --stat 26.09.3 2d8e315` on the fork | 45 files changed, 2247 insertions(+), 1500 deletions(-) |
+
+| patch | commit | reason | removal condition |
+|---|---|---|---|
+| Unicode 10 guard | `bc8d3e87b66730f86e408e155fbe0ca78db3c78b` | tests only: the predicates equal `unic-ucd-category` on every code point | an engine release drops `unic` |
+| PEM guard | `85cb770632b131263dd210217a7c59aa38b959ed` | tests only: the item count equals `read_all` over eight goldens | an engine release drops `rustls-pemfile` |
+| Unicode 10 tables | `75ba1157fedc01f60b2f94651ce5e2491cfdff11` | the tables, generated from `unic-ucd-category` | as the guard |
+| unic | `7cfb68530aa4f34ba552fbd45d06887f6918da68` | the media name and type-answer call sites use the tables; RUSTSEC-2025-0075, 0080, 0081, 0094 and 0098 leave the lock | as the guard |
+| rustls-pemfile | `3555a27ade8b5181e3fe8c7eb1e9f5792c47c596` | the PEM count uses `rustls-pki-types`; RUSTSEC-2025-0134 leaves the lock | as the guard |
+| licence list | `e68c6b50e4be6511400064a1e2e6fccfdd97f079` | the fork's licence list drops the removed crates; no source file changes | as the guards |
+| deny list | `2d8e3150f5e392f5cfaa7bfe8485c479186307a9` | the fork's `.deny.toml` drops the six ignore entries the removed crates needed; no build file changes | as the guards |
