@@ -54,6 +54,8 @@
 //!   writes nothing (SPEC-414 R1 to R6).
 //! - [`backup_now`]: back up now, the open collection written into one new file on the owner's
 //!   word by the core's fixed statement and read back from it (SPEC-516 R4, R5).
+//! - [`ai_assisted`]: whether a card was made with AI assistance: the one tag its note carries and
+//!   the rule that reads it from the note's tags (SPEC-388 R1, R2).
 //!
 //! The core depends on the engine and on one crate of this workspace, the isolated FSRS-7
 //! scheduler, which [`replay`] alone names; only the two client adapters depend on it (ADR-356 D4
@@ -61,6 +63,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod ai_assisted;
 pub mod answer;
 pub mod backup_now;
 pub mod credential;

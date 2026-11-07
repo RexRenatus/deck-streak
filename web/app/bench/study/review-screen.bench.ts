@@ -19,7 +19,8 @@ const CARD: CardView = {
   css: '.card { color: navy; }',
   labels: ['<1m', '<6m', '<10m', '4d'],
   undo: null,
-  late: false
+  late: false,
+  assisted: false
 };
 
 const HEAD: Head = { counts: { new: 1, learning: 0, review: 2 }, card: CARD };
