@@ -256,3 +256,87 @@ table `SCRIPT_MUTATIONS`.
 | `S42634-AN-ALLOW-LIST-ENTRY-ADMITS-ONLY-ITS-OWN-COUNT` | `scripts/tests/test_lean_escape_hatches.py` | `if found and found == count:` | `if found:` | A9 |
 | `S42635-AN-UNUSED-ALLOW-LIST-ENTRY-IS-REFUSED` | `scripts/tests/test_lean_escape_hatches.py` | `stale.append(entry)` | `pass` | A9 |
 | `S42636-A-MODULE-THAT-NAMES-THE-KEY-IS-REFUSED` | `scripts/tests/test_lean_escape_hatches.py` | `if token == KEY:` | `if False:` | A8 |
+
+## The reading on the current development branch
+
+The commits the sections above name were merged unchanged onto the development branch's commit
+`63c7d6c` by `ca919da`, whose second parent is `c61d4da`. No commit after it changes a Lean module or a test file. The red and green lines above stay as
+CI read them at those commits. Each build below is `lake build` with the Lean that
+`formal/lean/lean-toolchain` names, read against that file first, in an export of the named
+commit's `formal/lean` outside the work tree; the plant is section 4's.
+
+| step | export | exit | diagnostic and last line |
+|---|---|---|---|
+| 0 | the base, `63c7d6c`, with no plant | 0 | no line holds `warning` or `error`; `Build completed successfully (71 jobs).` |
+| 1 | the base, `63c7d6c`, with the plant | 0 | `` warning: Formal/PlantedWarning.lean:2:6: Variable name `unused` is not explicitly referenced. ``; `Build completed successfully (72 jobs).` |
+| 2 | the head, `ca919da`, with the plant | 1 | `` error: Formal/PlantedWarning.lean:2:6: Variable name `unused` is not explicitly referenced. ``; `error: build failed` |
+| 3 | the head, `ca919da`, with no plant | 0 | no line holds `warning` or `error`; `Build completed successfully (71 jobs).` |
+| 4 | step 1's export, already built, given the head's lakefile, no clean | 1 | `` error: Formal/PlantedWarning.lean:2:6: Variable name `unused` is not explicitly referenced. ``; `error: build failed` |
+| 5 | the head, `ca919da`, the plant headed by `set_option warningAsError false` | 0 | `` warning: Formal/PlantedWarning.lean:3:6: Variable name `unused` is not explicitly referenced. ``; `Build completed successfully (72 jobs).` |
+
+Step 0 read no warning. The toolchain pin is the same file at `b25ed04` and at `63c7d6c`, so section 4's
+oracle stands as read above. At the head the guard printed `examined 69 Lean files under formal/lean`, `read 16010 lines`, `allowed 0 entries`, and a local run of
+`test_formal_config.py` and `test_lean_escape_hatches.py` at the head passed every criterion test
+by name.
+
+The formal checker's Lean check and its ratchet-only check, at the base and at the head:
+
+```text
+At the base:
+FORMAL EXAMINED entries=35 properties=102 witnesses=106 configs=0 landings=20 rulings=0 deferred=0
+FORMAL SURFACES deny=0 contexts=0 rows=3309 land=0 retired=0
+FORMAL OK exit=0
+FORMAL EXAMINED entries=67 properties=219 witnesses=261 configs=44 landings=20 rulings=0 deferred=0
+FORMAL SURFACES deny=0 contexts=0 rows=3309 land=0 retired=0
+FORMAL OK exit=0
+
+At the head:
+FORMAL EXAMINED entries=35 properties=102 witnesses=106 configs=0 landings=20 rulings=0 deferred=0
+FORMAL SURFACES deny=0 contexts=0 rows=3346 land=0 retired=0
+FORMAL OK exit=0
+FORMAL EXAMINED entries=67 properties=219 witnesses=261 configs=44 landings=20 rulings=0 deferred=0
+FORMAL SURFACES deny=0 contexts=0 rows=3346 land=0 retired=0
+FORMAL OK exit=0
+```
+
+The first three lines of each part are the Lean check and the next three the ratchet-only check. Of the 102 Lean theorem rows the Lean check reads, 0 read a different `clean` at the head than at the base. The toolchain identity is the same at both.
+
+Each Lean entry's clean-landing count, read by the formal ramp for one theorem of each entry, at the base and at the head:
+
+| entry | theorem | clean landings at the base | at the head | eligible | flip | ramp |
+|---|---|---|---|---|---|---|
+| `lean/AgentPinGroups` | `a_source_is_refused_as_a_shebang_exactly_when_it_opens_with_one` | 10 | 10 | `false` | `unmoved` | `report` |
+| `lean/Chest` | `the_epic_odds_lie_between_the_base_and_the_ceiling` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/CompanionDecide` | `decide_admits_exactly_when_every_condition_holds` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/DocsMermaidRead` | `every_line_that_may_open_a_mermaid_fence_is_read_or_refused_by_name` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/DueReorder` | `the_reorder_is_a_permutation_of_the_stock_queue` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/Exchange` | `totals_keep_every_row` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/FieldMerge` | `merge_comm` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/Fsrs7MemoryState` | `a_replayed_state_lies_in_the_schedulers_bounds` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/Fsrs7PortState` | `a_refused_event_leaves_the_state_unchanged` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/Fsrs7Schedule` | `the_interval_is_a_day_or_more_and_never_past_the_maximum` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/Fsrs7Stock` | `the_stock_difficulty_lies_in_the_stock_range` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/HabitWriting` | `the_writing_day_pays_each_confirmed_course_and_the_bonus_only_over_a_full_set` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/IdSlot` | `next_id_residue` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/MediaBind` | `bind_keeps_a_bound_hash` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/MediaGc` | `a_kept_file_is_never_deleted` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/NextMilestone` | `pick_is_least` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/OpenLapse` | `at_most_one_step_per_day` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/PathGate` | `the_gate_skips_exactly_the_changes_no_read_reaches` | 2 | 2 | `false` | `unmoved` | `report` |
+| `lean/PushJudge` | `judge_idempotent` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/RecordClassBinding` | `each_record_is_judged_in_its_own_class_alone` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/ReleaseCarry` | `the_listing_is_rerun_plus_carried_once` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/ReleaseGates` | `a_release_is_published_only_when_every_gate_holds` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/ReplayHistory` | `the_selection_keeps_the_rated_reviews_after_the_last_reset` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/RetiredListShape` | `every_retired_list_is_refused_by_name_or_read_as_before` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/ReviewKey` | `fold_sorted_perm_invariant` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/RoadToC2` | `the_current_band_is_a1_or_the_end_of_the_run_from_a1` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/SearchHolds` | `holds_inescapable` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/SensitiveDeck` | `a_marked_deck_or_an_ancestor_refuses_the_card` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/SkipTariff` | `the_price_is_a_ladder_entry` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/SyncClock` | `tick_gt_seen` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/TableCensusReach` | `refused_within_dev_and_a_lone_character_spared` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/TokenBonus` | `the_bonus_never_passes_its_cap` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/TokenProgress` | `every_reading_ends_within_its_text` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/Wallet` | `clip_debit_pays_within_its_bounds` | 20 | 20 | `true` | `unmoved` | `report` |
+| `lean/XpReconciliation` | `a_closed_row_is_never_lowered_by_a_recompute` | 20 | 20 | `true` | `unmoved` | `report` |
