@@ -5,19 +5,10 @@
 all-features = true
 
 [advisories]
-# Every advisory in the RustSec database is an error; an exception names its advisory id and why.
-# The six below are "unmaintained" notices (none is a vulnerability) on crates that reach this
-# workspace only through Anki's engine (ADR-022): the unic crates under its unic-ucd-category, and
-# rustls-pemfile. Each was re-read at 26.09.3 (SPEC-055). An engine upgrade re-reads every one of
-# them, and scripts/tests/test_engine_pin.py refuses an exception cargo deny no longer encounters.
-ignore = [
-    { id = "RUSTSEC-2025-0075", reason = "unic-char-range: unmaintained, not vulnerable; the engine's unic-ucd-category (ADR-022)" },
-    { id = "RUSTSEC-2025-0080", reason = "unic-common: unmaintained, not vulnerable; the engine's unic-ucd-category (ADR-022)" },
-    { id = "RUSTSEC-2025-0081", reason = "unic-char-property: unmaintained, not vulnerable; the engine's unic-ucd-category (ADR-022)" },
-    { id = "RUSTSEC-2025-0094", reason = "unic-ucd-category: unmaintained, not vulnerable; a direct dependency of the engine (ADR-022)" },
-    { id = "RUSTSEC-2025-0098", reason = "unic-ucd-version: unmaintained, not vulnerable; the engine's unic-ucd-category (ADR-022)" },
-    { id = "RUSTSEC-2025-0134", reason = "rustls-pemfile: unmaintained, not vulnerable; a direct dependency of the engine (ADR-022)" },
-]
+# Every advisory in the RustSec database is an error, and none is ignored: an exception is not a
+# fix (SPEC-055's amendments). Unmaintained notices are errors across the whole graph, cargo-deny's
+# default scope, written out so that no later default narrows it (SPEC-055 R15).
+unmaintained = "all"
 
 [licenses]
 # Licences compatible with shipping inside an AGPL-3.0-or-later work.
