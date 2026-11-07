@@ -3919,8 +3919,8 @@ def shape_shared_problems(where, steps, restores, calls):
         return [
             f"{where}: restores the shared Rust key at step {at}, after its first build at {first}"
         ]
-    # A first build whose `if:` holds each of the restore's conditions and more, joined by `&&`, with
-    # no `||` and no parenthesis in either, runs only when the restore ran (R18).
+    # A first build whose `if:` holds each of the restore's conditions and more, joined by `&&`,
+    # with no `||` and no parenthesis in either, runs only when the restore ran (R18).
     guard, build = (str(step.get("if", "")) for step in (restore, steps[first]))
     conditions = [
         {part.strip() for part in SHAPE_CONDITION.sub(r"\1", text).split("&&")}
