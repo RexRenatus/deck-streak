@@ -2,7 +2,9 @@
 // sound it cannot play (section 10), and the end of a sound the player already replaced, which
 // leaves the new list where it is. Each model opens its own fresh copy of the fixture, whose deck
 // `Review` holds a text card, an image card, a sound card and a speech card, in that order. The
-// model's VoiceOver reading and installed voices are handed in, so a test decides both.
+// model's VoiceOver reading and installed voices are handed in, so a test decides both. The
+// fixture's second collection holds one image occlusion card, which the model withholds: no
+// reveal and no rating, only a flag and a bury (SPEC-380 A14).
 import AVFoundation
 import Foundation
 import XCTest
@@ -154,6 +156,43 @@ final class ReviewModelTests: XCTestCase {
             "the refused confirmation says why")
         XCTAssertEqual(model.undo.label, "Undo flag", "the flag is what the review offers now")
         XCTAssertTrue(model.flagged, "the later flag stands")
+    }
+
+    @MainActor
+    func test_a_withheld_card_reveals_nothing_and_takes_no_rating() async throws {
+        let (engine, occlusion) = try await openedOcclusion()
+        let session = ReviewSession(engine: engine)
+        let model = ReviewModel(
+            deck: occlusion, session: session, voiceOverRunning: { true }, installed: { [] })
+        await model.start()
+        let shown = model.face
+
+        // Show Answer on the withheld card: no answer face, and no reveal.
+        await model.perform(.showAnswer)
+        XCTAssertEqual(
+            "\(model.phase) revealed \(model.revealed) face kept \(model.face == shown)",
+            "withheld revealed false face kept true",
+            "A14: Show Answer on a withheld card reveals nothing")
+
+        // Every rating: nothing sent, and the engine still holds the card new.
+        for rating in Rating.allCases {
+            await model.perform(.rate(rating))
+        }
+        let sent = await session.sentAnswers
+        let after = try await ReviewSession(engine: engine).next(autoplay: false, installed: [])
+        XCTAssertEqual(
+            "\(model.phase) answered \(model.answered) sent \(sent) "
+                + "new \(after.counts.new) learning \(after.counts.learning)",
+            "withheld answered 0 sent 0 new 1 learning 0",
+            "A14: no rating is taken on a withheld card, and it stays due")
+
+        // A flag marks the card and returns to it; a bury moves on, here to the designed end.
+        await model.perform(.flag)
+        let flag = "\(model.phase) \(model.flagged)"
+        await model.perform(.bury)
+        XCTAssertEqual(
+            "flag \(flag) bury \(model.phase)", "flag withheld true bury finished",
+            "A14: a flag keeps the withheld card, and a bury moves on to the designed end")
     }
 
     // MARK: - Steps
