@@ -11,9 +11,13 @@ struct DataView: View {
         Form {
             Section(DataWords.jsonTitle) {
                 Text(model.jsonCopy).accessibilityIdentifier("data-json")
+                    .foregroundStyle(Color.tideInk)
             }
+            .listRowBackground(Color.tideCard)
+            .listRowSeparatorTint(Color.tideBorder)
             Section(DataWords.backupsTitle) {
                 Text(DataWords.backupsAbout)
+                    .foregroundStyle(Color.tideMuted)
                 Button(DataWords.backUpNow) {
                     Task { await model.backUpNow() }
                 }
@@ -21,13 +25,16 @@ struct DataView: View {
                 .disabled(model.working)
                 if model.working {
                     Text(DataWords.working).accessibilityIdentifier("data-working")
+                        .foregroundStyle(Color.tideMuted)
                 }
                 if model.backups.isEmpty {
                     Text(DataWords.backupsNone).accessibilityIdentifier("data-backups-none")
+                        .foregroundStyle(Color.tideMuted)
                 }
                 ForEach(model.backups) { copy in
                     HStack {
                         Text(DataWords.line(copy))
+                            .foregroundStyle(Color.tideInk)
                         Spacer()
                         Button(DataWords.export) {
                             Task { await model.export(copy) }
@@ -36,11 +43,20 @@ struct DataView: View {
                     }
                 }
                 Text(model.message).accessibilityIdentifier("data-message")
+                    .foregroundStyle(Color.tideMuted)
             }
+            .listRowBackground(Color.tideCard)
+            .listRowSeparatorTint(Color.tideBorder)
             Section(DataWords.serverTitle) {
                 Text(model.serverAge).accessibilityIdentifier("data-server-age")
+                    .foregroundStyle(Color.tideInk)
             }
+            .listRowBackground(Color.tideCard)
+            .listRowSeparatorTint(Color.tideBorder)
         }
+        .scrollContentBackground(.hidden)
+        .background(Color.tideBackground)
+        .tint(Color.tideAccent)
         .navigationTitle(DataWords.title)
         .task { await model.list() }
         .fileExporter(

@@ -1,0 +1,24 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S46001-THE-CORE-SENDS-THE-SHOWN-STATE",
+        "engine-core",
+        "src/dispatch.rs",
+        "let request = answer.checked(input)?;",
+        "let request = { let mut request = anki_proto::scheduler::CardAnswer::decode(answer.checked(input)?.as_slice()).map_err(|_| AnswerRefusal::Undecodable)?; let card = anki_proto::cards::CardId { cid: request.card_id }.encode_to_vec(); let states = self.backend.run_service_method(13, 23, &card).map_err(|error| AnswerRefusal::Engine { error })?; request.current_state = anki_proto::scheduler::SchedulingStates::decode(states.as_slice()).map_err(|_| AnswerRefusal::Undecodable)?.current; request.encode_to_vec() };",
+        "stale_answer::a_second_press_on_the_states_shown_before_the_first_is_refused_by_the_engine",
+        "the core sends the engine the state the card was shown with; sending the engine's own state read at answer time instead (ADR-376 D3's rejected option), a press on a card that changed after it was shown would pass the engine's comparison (SPEC-460 A1)"
+      ],
+      [
+        "S46002-THE-ENGINES-REFUSAL-REACHES-THE-PRESS",
+        "engine-core",
+        "src/dispatch.rs",
+        ".map_err(|error| AnswerRefusal::Engine { error })",
+        ".or_else(|_| Ok(Vec::new()))",
+        "stale_answer::a_press_on_the_states_shown_before_a_due_date_was_set_is_refused_by_the_engine",
+        "the core hands the engine's refusal back to the press; read as an empty reply, a refused answer would look recorded to both adapters (SPEC-460 A2)"
+      ]
+    ]
+  }
+}

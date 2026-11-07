@@ -273,6 +273,8 @@
         {"kind": "tla", "entry": "tla/UndoOwnAnswer", "property": "AnUndoRunsOnlyOnAConfirm", "state": "present"},
         {"kind": "tla", "entry": "tla/UndoOwnAnswer", "property": "AnUndoRestoresOnlyTheOfferedChange", "state": "present"},
         {"kind": "tla", "entry": "tla/UndoOwnAnswer", "property": "ARestoreRunsOnlyOnAConfirm", "state": "present"},
+        {"kind": "tla", "entry": "tla/AnswerOnTheShownState", "property": "AnAnswerCarriesTheStateItWasShown", "state": "present"},
+        {"kind": "tla", "entry": "tla/AnswerOnTheShownState", "property": "NoAnswerIsRecordedOnAChangedCard", "state": "present"},
         {"kind": "tla", "entry": "tla/SkipDayWrite", "property": "NoUploadOutsidePreview", "state": "present"},
         {"kind": "tla", "entry": "tla/SkipDayWrite", "property": "FullSyncDemandWritesNothing", "state": "present"},
         {"kind": "tla", "entry": "tla/SkipDayWrite", "property": "RestoreCheckAndPriorStateBeforeChange", "state": "present"},
@@ -306,6 +308,8 @@
         {"kind": "tla", "entry": "tla/DueReorderInput", "property": "NoScoreOrReorderWritesACardField", "state": "present"},
         {"kind": "tla", "entry": "tla/DueReorderInput", "property": "OffIsTheStockOrder", "state": "present"},
         {"kind": "tla", "entry": "tla/DueReorderInput", "property": "ScoresOfAnotherDayOrSnapshotNeverApply", "state": "present"},
+        {"kind": "tla", "entry": "tla/OneInstrumentReader", "property": "AtMostOneReader", "state": "present"},
+        {"kind": "tla", "entry": "tla/OneInstrumentReader", "property": "ADueWeeklyRunRunsOnceTheLockIsFree", "state": "present"},
         {"kind": "lean", "entry": "lean/Fsrs7MemoryState", "property": "a_replayed_state_lies_in_the_schedulers_bounds", "state": "present"},
         {"kind": "lean", "entry": "lean/Fsrs7MemoryState", "property": "the_batch_replays_each_card_as_alone", "state": "present"},
         {"kind": "lean", "entry": "lean/Fsrs7MemoryState", "property": "a_review_reads_through_its_clamped_rating_and_gap", "state": "present"},
@@ -502,9 +506,29 @@
         "the record is trusted as committed until it is admitted only from an owner-signed commit"
       ],
       "status": "tied"
+    },
+    {
+      "id": "O18",
+      "property": "A gated Rust job is skipped only when the change touches nothing it reads",
+      "layers": ["ci"],
+      "artifacts": [
+        {"kind": "lean", "entry": "lean/PathGate", "property": "the_gate_skips_exactly_the_changes_no_read_reaches", "state": "present"},
+        {"kind": "lean", "entry": "lean/PathGate", "property": "a_skipped_job_passes_only_on_the_gates_own_skip", "state": "present"}
+      ],
+      "ties": [
+        {"method": "vectors", "for": "lean/PathGate", "test": "scripts/tests/test_path_gate.py::TheLeanVectors.test_every_vector_is_the_gates_decision"}
+      ],
+      "gaps": [
+        "a Lean port proves the port; the vectors tie it to scripts/path_gate.py",
+        "the read map's completeness is held by the read-map census and the dev trace, not proved",
+        "the YAML wiring is held by test_path_gate_wiring.py, not proved",
+        "a skip inherits the base tip's result: decide compares HEAD^1 with the merge commit, so while dev's push run is red for a gated job, a PR touching no read path reads ci green; the red stays visible on dev and in the NET"
+      ],
+      "status": "tied"
     }
   ],
   "entries": [
+    {"entry": "tla/AnswerOnTheShownState", "disposition": "re-point", "act": "new with the stale-state pin (SPEC-460): re-stamped if the answer door it covers moves; re-pointed onto the store's own answer write, keeping its two properties", "obligations": ["O11"]},
     {"entry": "tla/AwardOnce", "disposition": "re-stamp", "act": "re-read against the model and re-stamped when the span it covers moves, with no weakening", "obligations": ["O11"]},
     {"entry": "tla/BandUpOnce", "disposition": "keep", "act": "unaffected by the engine's replacement; nothing, unless a delivery's covers check shows a moved span", "obligations": []},
     {"entry": "tla/BearerGuard", "disposition": "keep", "act": "unaffected by the engine's replacement; nothing, unless a delivery's covers check shows a moved span", "obligations": []},
@@ -518,8 +542,10 @@
     {"entry": "tla/HabitXpFollowsItsLog", "disposition": "keep", "act": "unaffected by the engine's replacement; nothing, unless a delivery's covers check shows a moved span", "obligations": []},
     {"entry": "tla/HeldFlush", "disposition": "re-stamp", "act": "re-read against the model and re-stamped when the span it covers moves, its flush read as the head advancing, with no weakening", "obligations": ["O11"]},
     {"entry": "tla/LandmarkOnce", "disposition": "re-stamp", "act": "re-read against the model and re-stamped when the span it covers moves, with no weakening", "obligations": ["O11"]},
+    {"entry": "tla/LogCaptureFloor", "disposition": "keep", "act": "new with the test log capture's floor model (SPEC-475): unaffected by the engine's replacement; re-stamped when an item of the capture helper it covers moves, with no weakening", "obligations": []},
     {"entry": "tla/MinimumClientHandshake", "disposition": "re-point", "act": "takes the phone as a new caller in the first phase; re-pointed onto the op log's handshake in the second, keeping its property", "obligations": ["O1a", "O11"]},
     {"entry": "tla/MintReadsTheFinalBase", "disposition": "keep", "act": "unaffected by the engine's replacement; nothing, unless a delivery's covers check shows a moved span", "obligations": []},
+    {"entry": "tla/OneInstrumentReader", "disposition": "re-stamp", "act": "new with the instrument lock (SPEC-470): re-read against the model and re-stamped when the lock, the runs or the collection read it covers move, with no weakening", "obligations": ["O11"]},
     {"entry": "tla/OpLog", "disposition": "re-stamp", "act": "stamped when the sync core lands: its judge, the writer's commit and the device's pull and verdict handlers gain covers, each re-read against the model, with no weakening", "obligations": ["O1", "O2", "O3", "O11"]},
     {"entry": "tla/PasskeyOnce", "disposition": "keep", "act": "unaffected by the engine's replacement; nothing, unless a delivery's covers check shows a moved span", "obligations": []},
     {"entry": "tla/RelightOrder", "disposition": "re-stamp", "act": "re-read against the model and re-stamped when the span it covers moves, with no weakening", "obligations": ["O11"]},
@@ -534,6 +560,7 @@
     {"entry": "tla/TracedSetCovers", "disposition": "keep", "act": "unaffected by the engine's replacement; nothing, unless a delivery's covers check shows a moved span", "obligations": []},
     {"entry": "tla/UndoOwnAnswer", "disposition": "re-point", "act": "re-stamped if the answer seam edits the rate call it covers; re-pointed onto the store's own undo, a retraction on the op log, keeping its four properties", "obligations": ["O11"]},
     {"entry": "tla/WalletFloor", "disposition": "keep", "act": "unaffected by the engine's replacement; nothing, unless a delivery's covers check shows a moved span", "obligations": []},
+    {"entry": "lean/AgentPinGroups", "disposition": "keep", "act": "new with the token groups proof of the agent pins (SPEC-469): re-stamped when a pin span it covers moves, with no weakening", "obligations": []},
     {"entry": "lean/Chest", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
     {"entry": "lean/CompanionDecide", "disposition": "keep", "act": "new with the scheduling companion's interface (SPEC-501); re-stamped when the decision or the handshake it covers moves, with no weakening", "obligations": ["O6"]},
     {"entry": "lean/DeployEntryRefusal", "disposition": "keep", "act": "new with the Caddy steps' settings check (SPEC-473); re-stamped when the function it covers moves, with no weakening", "obligations": []},
@@ -551,6 +578,7 @@
     {"entry": "lean/MediaGc", "disposition": "keep", "act": "new with the media core (SPEC-513): a sweep keeps every live, pinned, young or imported file; re-stamped when the decision it covers moves, with no weakening", "obligations": ["O13"]},
     {"entry": "lean/NextMilestone", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
     {"entry": "lean/OpenLapse", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
+    {"entry": "lean/PathGate", "disposition": "keep", "act": "new with the path gate (SPEC-634): the gate's skip and admit decisions; re-stamped when a covered span of the path gate moves, with no weakening", "obligations": ["O18"]},
     {"entry": "lean/PushJudge", "disposition": "re-stamp", "act": "stamped when the sync core lands: its judge gains a cover and its test reads the vectors byte-equal", "obligations": ["O1", "O16"]},
     {"entry": "lean/RecordClassBinding", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
     {"entry": "lean/ReleaseCarry", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},

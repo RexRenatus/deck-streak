@@ -3,6 +3,7 @@
 - **Issue:** #827, which records the release run's red baselines and the weekly legs' same
   gap; this delivery refers to it and closes nothing. **Context(s):** CI (`.github/workflows/`)
   and its tests (`scripts/tests/`); no crate, no test under `crates/` and no verdict code changes.
+- **Since ADR-509:** the red baselines #827 records are cargo-mutants' own; each `mutation-rust` leg of `ci.yml` now runs its own unmutated baseline under a time budget before cargo-mutants, which skips its own, and a leg whose baseline is red, past its time budget or unrecorded reads VOID with its reason.
 - **Decided by:** ADR-430 (one fetch step in each job that runs a cargo-mutants baseline, judged
   by SPEC-332's judge; the verdict already reads a red baseline as VOID and is unchanged).
 - **Schematic:** `docs/schematics/ci-jobs-and-caches.md`, a section appended for SPEC-416: the
@@ -142,3 +143,16 @@ which occur once in `ci.yml` (the `rust` and `release` jobs' fetch lines follow 
 | `S41600-THE-MUTANT-LEG-FETCHES-NOTHING` | `.github/workflows/ci.yml` | the step's `run:` becomes `echo skipped` | `test_rows_jobs_fetch_graph.EveryMutantsJobFetchesTheLockedGraph.test_each_baseline_job_fetches_after_its_cache_restore_and_before_cargo_mutants` |
 | `S41601-THE-MUTANT-LEG-SWALLOWS-ITS-FETCH` | `.github/workflows/ci.yml` | the step's `run:` gains `\|\| true` | the same |
 | `S41602-THE-MUTANT-LEG-FETCHES-UNDER-ANOTHER-IF` | `.github/workflows/ci.yml` | the step's `if:` reads `== 'false'` | the same |
+
+## Amendment: every workflow's mutant legs fetch first, and the Rust leg reads red with no whole report (SPEC-458)
+
+SPEC-458 R1 reads R1's population from every workflow file under `.github/workflows/`, not from `ci.yml` alone, and holds R2 and
+R3 for each job it adds. This SPEC's own A1 still reads `ci.yml`; SPEC-458 A1 reads every workflow, and SPEC-458 A6 holds this
+SPEC's tests unchanged.
+
+- Section 5's first bullet is delivered by SPEC-458 R1 and R2: the weekly `rust` leg gains a fetch step right after its restore,
+  and the rehearsal's fetch moves to right after its restore. Its premise is corrected there: a scheduled run restores the default
+  branch's entry, not `dev`'s.
+- Section 5's third bullet is delivered by SPEC-458 R6: `mutation-rust` fails its job, after its report is uploaded, on any exit
+  outside the verdict's `WHOLE_EXITS`.
+- Section 5's fourth bullet is delivered by SPEC-458 R3 and R4: the warm-up fetches the locked graph before it builds and saves.

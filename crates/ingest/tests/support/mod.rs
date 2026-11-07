@@ -780,14 +780,23 @@ fn sync_setting_from_another_client(runtime: &Runtime, mut col: Collection, endp
 
 /// Plays the owner's other Anki client sending what it changed in the collection at `collection`
 /// to the server at `endpoint` with the engine's own normal sync (SPEC-083 A39). No code of this
-/// workspace runs here.
+/// workspace runs here. The collection's modified stamp is read before the sync and after it: a
+/// sync that left the stamp where it was carried nothing to the server, the engine's answer when
+/// both sides hold one stamp, so it is refused by name (SPEC-459 R2).
 ///
 /// # Panics
 ///
-/// When the engine fails.
+/// When the engine fails, or when the sync left the collection's modified stamp where it was.
 pub fn sync_on_another_client(runtime: &Runtime, collection: &Path, endpoint: &str) {
+    let before = synthetic::modified(collection);
     let col = CollectionBuilder::new(collection)
         .build()
         .unwrap_or_else(|error| panic!("the other client opens its collection: {error}"));
     sync_setting_from_another_client(runtime, col, endpoint);
+    let after = synthetic::modified(collection);
+    assert_ne!(
+        after, before,
+        "the other client's sync carried no change to the server: its stamp stayed {before} \
+         (SPEC-459 R2)"
+    );
 }

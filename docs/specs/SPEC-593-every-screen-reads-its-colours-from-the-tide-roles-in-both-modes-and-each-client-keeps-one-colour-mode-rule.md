@@ -128,7 +128,7 @@ extension that names the six colour sets, and no view or property list sets a co
 (`preferredColorScheme`, `overrideUserInterfaceStyle` or `UIUserInterfaceStyle`), so the app
 follows the system appearance (ADR-616 D2).
 
-## 3. Acceptance criteria of SPEC-593 (the web part)
+## 3. Acceptance criteria of SPEC-593 (the web and native parts)
 
 | id | criterion | decided by |
 |---|---|---|
@@ -142,6 +142,9 @@ follows the system appearance (ADR-616 D2).
 | A8 | no script enters the page for the mode: the shell carries no script and the page policy admits nothing new (R9) | the SPEC-400 tests in `csp.test.ts`, unchanged |
 | A9 | the Telegram mapping and its contrast proof are unchanged (R10) | the SPEC-028 A8 and A9 tests |
 | A13 | every class list that holds `bg-card` holds a `border` width class, and a planted card without the border is refused (R5) | `test_tide_screens.py` |
+| A10 | every native view reads its colours only through the Tide extension, and a planted `Color(red:green:blue:)` in a view is refused (R11) | `test_tide_native.py` |
+| A11 | no view or property list overrides the colour scheme, and a planted `.preferredColorScheme(.light)` is refused (R11) | `test_tide_native.py` |
+| A12 | the Tide extension names every Tide colour set the catalog holds, all six, and a set it does not name is refused (R7, R11) | `test_tide_native.py` |
 
 ```acceptance
 A1: pnpm exec vitest run web/app/src/lib/design/tokens.test.ts -t "the Tide palette compiles to twelve custom properties in both modes"
@@ -162,9 +165,15 @@ A9: pnpm exec vitest run web/app/src/lib/design/tokens.test.ts -t "every colour 
 A9: pnpm exec vitest run web/app/src/lib/design/tokens.test.ts -t "every text and background pair meets AA contrast in both Telegram palettes"
 A13: python3 -m unittest discover -s scripts/tests -p test_tide_screens.py -k test_every_card_carries_the_border_role
 A13: python3 -m unittest discover -s scripts/tests -p test_tide_screens.py -k test_a_planted_card_without_the_border_is_refused
+A10: python3 -m unittest discover -s scripts/tests -p test_tide_native.py -k test_every_view_reads_colours_only_through_the_tide_extension
+A10: python3 -m unittest discover -s scripts/tests -p test_tide_native.py -k test_a_planted_colour_literal_in_a_view_is_refused
+A11: python3 -m unittest discover -s scripts/tests -p test_tide_native.py -k test_no_view_or_property_list_overrides_the_colour_scheme
+A11: python3 -m unittest discover -s scripts/tests -p test_tide_native.py -k test_a_planted_scheme_override_is_refused
+A12: python3 -m unittest discover -s scripts/tests -p test_tide_native.py -k test_the_tide_extension_names_every_colour_set_in_the_catalog
+A12: python3 -m unittest discover -s scripts/tests -p test_tide_native.py -k test_a_colour_set_the_extension_does_not_name_is_refused
 ```
 
-A10 to A12 are the native part, delivered by the second pull request (section 7). A13 is carried by
+A10 to A12 are the native part, moved here from section 7 by the second pull request. A13 is carried by
 the web part, beside A6 in the same census module.
 
 ## 4. File manifest
@@ -228,6 +237,7 @@ the web part, beside A6 in the same census module.
 | `scripts/mutation-equivalent.d/miniapp.json` | web | changed: six equivalence records for colour-mode.ts (R8) |
 | `docs/specs/planned/SPEC-057-every-surviving-mutant-is-killed-or-recorded-equivalent-before-the-first-mutation-gated-release.md` | web | changed: the miniapp campaign row refilled from its battery pair (R8) |
 | `ios/App/Sources/TideColours.swift` | native | new: one `Color` extension naming the six colour sets (R11) |
+| `ios/swift-roles.json` | native | changed: one register row naming `TideColours.swift` a view with no decision (R11) |
 | `ios/App/Sources/AccountView.swift` | native | changed: colours through the Tide extension (R11) |
 | `ios/App/Sources/AnswerBar.swift` | native | changed: colours through the Tide extension (R11) |
 | `ios/App/Sources/CardFaceView.swift` | native | changed: colours through the Tide extension (R11) |
@@ -293,26 +303,11 @@ S59399 stay unused.
 
 ## 7. Delivered by the native pull request
 
-| id | criterion | delivered by |
-|---|---|---|
-| A10 | every native view reads its colours only through the Tide extension, and a planted `Color(red:green:blue:)` in a view is refused (R11) | the native pull request, `test_tide_native.py` |
-| A11 | no view or property list overrides the colour scheme, and a planted `.preferredColorScheme(.light)` is refused (R11) | the native pull request, `test_tide_native.py` |
-| A12 | the Tide extension names every Tide colour set the catalog holds, all six, and a set it does not name is refused (R7, R11) | the native pull request, `test_tide_native.py` |
-
 The native pull request changes the views listed in section 4 and adds `TideColours.swift`: the
 root of each screen takes `TideBackground`, its text `TideInk` or `TideMuted`, its panels
 `TideCard`, its rules `TideBorder` and its tint `TideAccent` (ADR-615 D4). In the commit that adds
-`test_tide_native.py`, it moves these three rows into section 3 and these lines into its acceptance
-block:
-
-```text
-A10: python3 -m unittest discover -s scripts/tests -p test_tide_native.py -k test_every_view_reads_colours_only_through_the_tide_extension
-A10: python3 -m unittest discover -s scripts/tests -p test_tide_native.py -k test_a_planted_colour_literal_in_a_view_is_refused
-A11: python3 -m unittest discover -s scripts/tests -p test_tide_native.py -k test_no_view_or_property_list_overrides_the_colour_scheme
-A11: python3 -m unittest discover -s scripts/tests -p test_tide_native.py -k test_a_planted_scheme_override_is_refused
-A12: python3 -m unittest discover -s scripts/tests -p test_tide_native.py -k test_the_tide_extension_names_every_colour_set_in_the_catalog
-A12: python3 -m unittest discover -s scripts/tests -p test_tide_native.py -k test_a_colour_set_the_extension_does_not_name_is_refused
-```
+`test_tide_native.py`, it moved its three rows into section 3 and their lines into its acceptance
+block.
 
 The Swift change itself is compiled in continuous integration, and its compile is read there by
 name; no census here stands in for it.

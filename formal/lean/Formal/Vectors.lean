@@ -1,3 +1,4 @@
+import Formal.AgentPinGroupsVectors
 import Formal.ChestVectors
 import Formal.CompanionDecideVectors
 import Formal.DeployEntryRefusalVectors
@@ -14,6 +15,7 @@ import Formal.MediaBindVectors
 import Formal.MediaGcVectors
 import Formal.NextMilestoneVectors
 import Formal.OpenLapseVectors
+import Formal.PathGateVectors
 import Formal.RecordClassBindingVectors
 import Formal.ReleaseCarryVectors
 import Formal.ReleaseGatesVectors
@@ -45,6 +47,7 @@ lists it as support.
 
 def main (args : List String) : IO UInt32 := do
   match args with
+  | ["AgentPinGroups"] => Formal.AgentPinGroupsVectors.run
   | ["Chest"] => Formal.ChestVectors.run
   | ["CompanionDecide"] => Formal.CompanionDecideVectors.run
   | ["DeployEntryRefusal"] => Formal.DeployEntryRefusalVectors.run
@@ -61,6 +64,7 @@ def main (args : List String) : IO UInt32 := do
   | ["MediaGc"] => Formal.MediaGcVectors.run
   | ["NextMilestone"] => Formal.NextMilestoneVectors.run
   | ["OpenLapse"] => Formal.OpenLapseVectors.run
+  | ["PathGate"] => Formal.PathGateVectors.run
   | ["RecordClassBinding"] => Formal.RecordClassBindingVectors.run
   | ["ReleaseCarry"] => Formal.ReleaseCarryVectors.run
   | ["ReleaseGates"] => Formal.ReleaseGatesVectors.run
