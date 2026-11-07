@@ -27,7 +27,6 @@ SERIAL_MODULES = (
     ("test_dispatch_shards.py", "unmeasured on the box"),
     ("test_engine_pin.py", "spawns cargo"),
     ("test_fork_lock_guard.py", "spawns cargo"),
-    ("test_memory_scope.py", "unmeasured on the box"),
     ("test_mutation_rows.py", "spawns cargo"),
 )
 RAN = re.compile(r"^Ran (\d+) tests?\b", re.M)

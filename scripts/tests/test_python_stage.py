@@ -21,7 +21,6 @@ TAIL = (
     ("test_dispatch_shards.py", "unmeasured on the box"),
     ("test_engine_pin.py", "spawns cargo"),
     ("test_fork_lock_guard.py", "spawns cargo"),
-    ("test_memory_scope.py", "unmeasured on the box"),
     ("test_mutation_rows.py", "spawns cargo"),
 )
 # A module that ends its process while it is imported, so it prints no Ran line.
@@ -136,7 +135,7 @@ class TheVerdictLine(unittest.TestCase):
                 (
                     {"one": everything},
                     ["one"],
-                    "python: one ran 10 test(s), exit 0",
+                    f"python: one ran {len(TAIL) + 1} test(s), exit 0",
                     0,
                     ["tail 0"] * len(TAIL) + ["a 0"],
                     [f"serial: one/{name} ({why})" for name, why in TAIL],
