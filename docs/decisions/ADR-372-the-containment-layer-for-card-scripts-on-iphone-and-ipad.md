@@ -233,6 +233,16 @@ below.
 - Rejected, because it puts two rows' views live at once, against the lazy order chosen above:
   keeping the previous row's view alive until the next row's view loads (a rolling keep).
 
+The planted suite's permitted-loads test builds its card views one after the other in the same lazy
+order, so a view whose load followed the previous view's teardown waited on WebKit's GPU and
+networking processes after they had exited idle (`reason=IdleExit`), and in a session where they
+had, that view never finished loading. So that test holds the same keeper: after it makes its probe
+and before it builds its first view, it calls `Probe.keeper(ruleList:)` with its own probe's rule
+list, asserts that the keeper loaded, and removes it after its last view. The keeper is not one of
+the test's views and nothing is read from it, so every view, wait, reading and assertion of the
+test is unchanged; its own load is asserted, so it only adds a way to fail. The options rejected
+above stay rejected for this test, for the same reasons.
+
 ## Decision Outcome
 
 Card scripts on iPhone and iPad run only when the switch is on and the factory reads back every
