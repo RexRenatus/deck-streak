@@ -373,3 +373,9 @@ the shared key before its suites. A `cargo codspeed build` is read as a build of
 `bench-rust-build` is cache-free. And beside the shared key the census admits one more Rust key, the release
 profile's own (`rust-release-`), in a job that builds no cache profile: `ci.yml`'s `release` restores and saves it,
 its fallback is the release key's prefix, and its save keys on that restore under the dev-push guard.
+
+Two more reader rules meet the mutation jobs of the same merged `dev` (SPEC-430 R17 and R18, ADR-444 D13). A
+Python script whose `main` only calls one dispatching function is read along the subcommand through that function,
+so `ci.yml`'s `mutation-plan` and `mutation-verdict`, which call `scripts/mutation_rows.py legs` and `merge`, reach
+no cargo argument list; and a shared restore stands before a first build whose `if:` adds conditions to the
+restore's by `&&`, so `mutation-rust`'s one restore meets its cargo-mutants step.

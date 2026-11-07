@@ -173,11 +173,30 @@ R16. **The release profile's own key** (ADR-444 D12). Beside the shared key, the
     `dev` or `main` that missed it (ADR-654); the census keeps one shared key for every job that builds the
     cache's profile, and no rule here loosens that.
 
+R17. **A main that only delegates hands its dispatch on** (ADR-444 D13). When a script's last top-level `main`
+    holds no dispatch of its own (no `if` whose test R13 reads as a dispatch) and calls, by a bare name, exactly
+    one top-level function that holds one, R13's walk reads that function in `main`'s place: its dispatch is the
+    one the walk follows along the subcommand, its other statements are kept, and `main` itself is read whole, so
+    the walk still reaches every name `main` names. None, or two or more, such functions leave R13 as it is.
+    Why: `dev`'s `scripts/mutation_rows.py` runs its command line through one `dispatch` function that its `main`
+    calls inside its signal handling, so R13 found no dispatch in `main` and kept every branch, and its `legs`
+    and `merge` calls reached the `prove` branch's cargo argument lists.
+
+R18. **A first build guarded by the restore's conditions and more** (ADR-444 D13). Under R5, a shared restore
+    under an `if:` also stands before a first build whose `if:` holds each of the restore's conditions and more:
+    each `if:` is read with one enclosing `${{ }}` removed and split at `&&` into conditions, and when neither
+    text holds `||` or a parenthesis and each of the restore's conditions is one of the build's, the restore
+    reads as under the build's `if:`. A build that runs only when the restore's conditions hold never runs
+    without the restore, as a build after a restore under no `if:` never does. Any other pair keeps R5's equal
+    `if:`. Why: `dev`'s `ci.yml` job `mutation-rust` restores the shared key under
+    `needs.mutation-plan.outputs.rust == 'true'` and runs cargo-mutants under that condition
+    `&& steps.baseline.outputs.green == 'true'`.
+
 ## 3. Acceptance criteria of SPEC-430
 
 | id | criterion | decided by |
 |---|---|---|
-| A1 | every job of every workflow that runs cargo is examined and classed, and each meets its class (R2 to R5, R9, R13 to R16): every `ci.yml` job whose stages compile the cache's profile is shared, and every job holding a non-lookup shared restore runs cargo | `test_ci_workflows.py` `test_every_job_that_runs_cargo_restores_the_one_shared_rust_key` |
+| A1 | every job of every workflow that runs cargo is examined and classed, and each meets its class (R2 to R5, R9, R13 to R18): every `ci.yml` job whose stages compile the cache's profile is shared, and every job holding a non-lookup shared restore runs cargo | `test_ci_workflows.py` `test_every_job_that_runs_cargo_restores_the_one_shared_rust_key` |
 | A2 | the cargo census refuses each planted shape of section 8's A2 rows and passes each planted negative control | `test_ci_workflows.py` `test_the_cargo_census_refuses_each_planted_shape` |
 | A3 | only the warm job or a push to `dev` or `main` that missed saves the Rust key, every writer is admitted by the module's save scenarios, and every Rust save keys on a shared restore (R6, R9, R16): the saves read equal the `actions/cache/save` steps `action` reads, and the Rust saves those whose `paths` are `RUST_CACHE` | `test_ci_workflows.py` `test_only_the_warm_job_or_a_push_to_dev_or_main_saves_the_rust_key` |
 | A4 | the writer census refuses each planted shape of section 8's A4 rows | `test_ci_workflows.py` `test_the_writer_census_refuses_each_planted_shape` |
@@ -189,6 +208,8 @@ R16. **The release profile's own key** (ADR-444 D12). Beside the shared key, the
 | A10 | the cargo census follows a test discovery run to the gate's `python` stage (R14): a planted job that runs discovery with no restore is a shared job refused for its restore, one that restores the shared key first passes, a single-module run is no job that runs cargo, and a `check.sh` with no `python` stage is the problem by name | `test_ci_workflows.py` `test_the_cargo_census_follows_test_discovery_to_the_python_stage` |
 | A11 | a `cargo codspeed build` builds another profile (R15): a planted bench build with no restore is cache-free and passes, one that restores another key is refused as a cache-free restore, and a `cargo codspeed run` with no restore is a shared job refused for its restore | `test_ci_workflows.py` `test_a_codspeed_build_builds_another_profile` |
 | A12 | the release profile's own key serves a job that builds no cache profile (R16): a planted release-profile job that restores and saves the release key under the dev-push guard passes all three censuses, a release-key fallback that is not the release key's prefix is refused, and a shared job that restores only the release key is refused for its restore | `test_ci_workflows.py` `test_the_release_profile_key_serves_a_job_that_builds_no_cache_profile` |
+| A13 | a `main` that only delegates hands its dispatch on (R17): a planted `main` that calls one dispatching function is read along the subcommand, so its cargo-free subcommand reaches no cargo list, and a `main` that calls two keeps every branch | `test_ci_workflows.py` `test_a_main_that_delegates_its_dispatch_is_read_along_the_subcommand` |
+| A14 | a first build guarded by the restore's conditions and more meets the restore (R18): a planted build whose `if:` adds a condition to the restore's passes, and one with `||`, one with another condition and one whose restore adds a condition are each refused | `test_ci_workflows.py` `test_a_first_build_guarded_by_the_restores_conditions_and_more_meets_it` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_every_job_that_runs_cargo_restores_the_one_shared_rust_key
@@ -203,6 +224,8 @@ A9: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k tes
 A10: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_cargo_census_follows_test_discovery_to_the_python_stage
 A11: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_a_codspeed_build_builds_another_profile
 A12: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_release_profile_key_serves_a_job_that_builds_no_cache_profile
+A13: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_a_main_that_delegates_its_dispatch_is_read_along_the_subcommand
+A14: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_a_first_build_guarded_by_the_restores_conditions_and_more_meets_it
 ```
 
 The module runs in CI's `hygiene` job, through `check.sh`'s `python` stage, on every pull request into `dev` or `main`
@@ -216,7 +239,7 @@ expected refusals.
 | path | part | change |
 |---|---|---|
 | `scripts/tests/test_ci_workflows.py` | 1 | changed, insert-only: R1's class, its `SHAPE_*` constants and `shape_*` helpers above `class TheEngineBuildsInEveryRustJob`; no existing line changes |
-| `scripts/mutation-rows.d/S43000-S43099.json` | 1 | added: rows S43000-S43068 (section 8) |
+| `scripts/mutation-rows.d/S43000-S43099.json` | 1 | added: rows S43000-S43074 (section 8) |
 | `docs/specs/SPEC-430-every-job-that-runs-cargo-restores-the-one-shared-rust-key-by-its-class-and-every-cache-key-hashes-its-inputs.md` | 1 | added |
 | `docs/decisions/ADR-444-the-cache-shape-is-four-checks-in-the-workflow-tests-each-cargo-job-classed-by-what-it-builds-and-where-it-runs.md` | 1 | added |
 | `docs/schematics/ci-jobs-and-caches.md` | 1 | changed: one insert-only section after its last line |
@@ -268,6 +291,13 @@ shared key at step 4, under no `if:`, before its first build at step 8; `ci.yml`
 `ci.yml`'s `release` runs `cargo fetch` and `check.sh` `test-release` (`--release`) and restores (step 5) and saves
 (step 10) the release profile's own key, so under R16 it is cache-free with that restore and that save admitted.
 
+The same merged `dev` holds three mutation jobs that the reader reads under R17 and R18 with no workflow change:
+`ci.yml`'s `mutation-plan` (`python3 scripts/mutation_rows.py legs`) and `mutation-verdict` (`... merge`) reach no
+cargo argument list under R17, so `mutation-plan`, whose own cargo calls are two `cargo mutants --list`, is
+cache-free with no Rust restore, and `mutation-verdict` runs no cargo; and `mutation-rust`'s one restore of the
+shared key stands under R18 before its cargo-mutants step, whose `if:` adds `steps.baseline.outputs.green == 'true'`
+to the restore's.
+
 ## 6. What this does NOT cover
 
 - It changes no workflow and no job's cache use: the three listings, `fsrs7-measure.yml` and the release builds keep
@@ -300,7 +330,7 @@ shared key at step 4, under no `if:`, before its first build at step 8; `ci.yml`
   passes. Detected by: the whole-script read of every script that names a run-time lookup (R13), A1's print of each
   call whose read drops a list the whole script holds, and A9's negative control.
 
-## 8. Hand rows S43000-S43068
+## 8. Hand rows S43000-S43074
 
 Each row's mutant is one helper change, its target `scripts/tests/test_ci_workflows.py`, its find written from the
 landed line and occurring exactly once, and its killer the named test of `test_ci_workflows.TheCachesHoldTheirShape`.
@@ -377,6 +407,12 @@ A planted job named below is part of that test's fixtures, with the verdict the 
 | S43066-THE-RELEASE-FALLBACK-IS-ITS-PREFIX | makes the release fallback check never true | A12: `drifted`, whose release fallback drops the toolchain hash, reads no problem |
 | S43067-A-CACHE-FREE-JOB-MAY-RESTORE-THE-RELEASE-KEY | makes the cache-free admission never true | A12: `release` reads the cache-free restore problem |
 | S43068-A-RUST-SAVE-MAY-KEY-ON-A-RELEASE-RESTORE | makes the writer admission never true | A12: `release`'s save reads the shared-restore problem |
+| S43069-A-DELEGATING-MAIN-HANDS-ITS-DISPATCH-ON | makes the delegation never taken | A13: `legs`, a delegating `main`'s cargo-free subcommand, reads shared and unrestored |
+| S43070-ONLY-A-DISPATCHING-FUNCTION-IS-A-DELEGATE | drops the dispatch test from the delegates | A13: `legs` reads shared and unrestored |
+| S43071-EXACTLY-ONE-DELEGATE-IS-FOLLOWED | widens the delegation to two dispatching functions | A13: `either-legs` reaches no cargo list and leaves the population |
+| S43072-A-BUILD-GUARDED-BY-MORE-MEETS-THE-RESTORE | makes the guard admission never taken | A14: `narrowed` reads the another-if problem |
+| S43073-AN-OR-OR-A-PARENTHESIS-KEEPS-THE-EQUAL-IF | drops the `||` and parenthesis refusal | A14: `either` reads no problem |
+| S43074-EVERY-RESTORE-CONDITION-IS-THE-BUILDS | makes the condition test always true | A14: `unrelated` and `widened` read no problem |
 
 Each A2, A4, A6, A8 and A9 fixture also holds a positive control that passes (a shared job that restores first, a
 Rust save under the dev-push guard, the three good keys, a key of `runner.os` and `hashFiles` alone, a

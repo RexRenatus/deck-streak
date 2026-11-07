@@ -388,6 +388,34 @@ Rows S43065 to S43068 hold the rule, killed by A12
 - Admitting any key that hashes the lock and the toolchain: rejected, because a second debug key would then pass, and the census would stop holding one shared key.
 - Naming the release job in a hand list: rejected, because it drifts the day a job is added, and it is a list a census should derive.
 
+## D13. A delegating main and a guarded first build
+
+The merged `dev` holds three more jobs the census misread. `ci.yml`'s `mutation-plan` and
+`mutation-verdict` call `scripts/mutation_rows.py legs` and `... merge`, whose `main` runs one
+`dispatch` function inside its signal handling, so R13 found no dispatch in `main`, kept every
+branch, and read both jobs as building the cache's profile with no restore. `ci.yml`'s
+`mutation-rust` restores the shared key under `needs.mutation-plan.outputs.rust == 'true'` and runs
+cargo-mutants under that condition `&& steps.baseline.outputs.green == 'true'`, which R5's equal
+`if:` refused.
+
+So a `main` with no dispatch of its own that calls, by name, exactly one top-level function holding
+one is read through that function (SPEC-430 R17), and a shared restore stands before a first build
+whose `if:` holds each of its conditions and more, joined by `&&`, with no `||` and no parenthesis in
+either (SPEC-430 R18). Where a dispatch or a guard is ambiguous, two delegates or a `||`, the
+earlier reading stands.
+
+Rows S43069 to S43071 hold R17, killed by A13
+(`test_a_main_that_delegates_its_dispatch_is_read_along_the_subcommand`), and rows S43072 to S43074
+hold R18, killed by A14 (`test_a_first_build_guarded_by_the_restores_conditions_and_more_meets_it`).
+
+## D13, chosen against
+
+- Chosen: reading through the one function a `main` delegates to, and admitting a build guard that adds conditions to the restore's, because both read what the tree states, and each keeps the earlier reading for the ambiguous shape.
+- Editing `mutation_rows.py` to dispatch in `main`, or the mutation jobs to restore under their build's `if:`: rejected, because the checks pass at `dev` with no script or workflow change, and both are outside this delivery.
+- Excluding the three jobs: rejected, because it is a weakening, and the census would stop seeing jobs that run cargo.
+- Following every function a `main` calls: rejected, because two dispatches would then be read as one.
+- Reading the whole expression grammar of `if:`: rejected, because a `||`, a parenthesis or a status function changes when a step runs, and the equal `if:` already judges those.
+
 ## Consequences
 
 - Good, because a restore removed, a key that drifts by one character, a pull request that writes a
