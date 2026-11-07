@@ -181,3 +181,29 @@ class TheModulesWriteNoBytecode(unittest.TestCase):
             entries = examined("planted suite entries", sorted(suite.rglob("*")))
             self.assertEqual([path.name for path in entries if path.suffix == ".pyc"], [])
             self.assertEqual([path.name for path in entries if path.name == "__pycache__"], [])
+
+
+class TheModulesWriteNoBytecodeWithoutACachePrefix(unittest.TestCase):
+    def test_module_processes_write_no_bytecode_with_no_cache_prefix(self):
+        """A caller's PYTHONPYCACHEPREFIX sends bytecode out of the planted suite, where A4 does not
+        look. This run drops the prefix as well, so any bytecode a module process writes would land
+        beside the planted module, and only the runner can keep it from being written."""
+        dropped = ("PYTHONDONTWRITEBYTECODE", "PYTHONPYCACHEPREFIX")
+        env = {key: value for key, value in os.environ.items() if key not in dropped}
+        with tempfile.TemporaryDirectory() as scratch:
+            suite = Path(scratch) / "suite"
+            suite.mkdir()
+            (suite / "test_planted.py").write_text(planted("planted"), encoding="utf-8")
+            done = subprocess.run(
+                ["python3", str(RUNNER), "suite"],
+                cwd=scratch,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=120,
+            )
+            self.assertEqual(done.stdout.splitlines()[-1], "python: suite ran 1 test(s), exit 0")
+            entries = examined("planted suite entries", sorted(suite.rglob("*")))
+            self.assertEqual([path.name for path in entries if path.suffix == ".pyc"], [])
+            self.assertEqual([path.name for path in entries if path.name == "__pycache__"], [])
