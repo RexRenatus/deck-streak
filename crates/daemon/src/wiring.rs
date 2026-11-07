@@ -47,6 +47,7 @@ use deck_streak_coordination::obligations::Obligations;
 use deck_streak_coordination::recompute::analytics_step::AnalyticsStep;
 use deck_streak_coordination::recompute::badges::BadgesStep;
 use deck_streak_coordination::recompute::band_badges::BandBadgesStep;
+use deck_streak_coordination::recompute::chests::{ChestStep, ChestSweepStep, TokenBonusStep};
 use deck_streak_coordination::recompute::day_bonuses::DayBonusesStep;
 use deck_streak_coordination::recompute::habit_badges::HabitBadgesStep;
 use deck_streak_coordination::recompute::habits::HabitsStep;
@@ -301,7 +302,11 @@ pub fn recompute_fold_with_relights(
     fold.register(Phase::DaySteps, Box::new(HabitsStep))?;
     let writing = WritingStep::new(courses.clone());
     fold.register(Phase::DaySteps, Box::new(writing))?;
+    let chests = ChestStep::new();
+    fold.register(Phase::DaySteps, Box::new(chests))?;
+    fold.register(Phase::DaySteps, Box::new(ChestSweepStep))?;
     fold.register(Phase::DerivedBonuses, Box::new(DayBonusesStep))?;
+    fold.register(Phase::DerivedBonuses, Box::new(TokenBonusStep))?;
     fold.register(Phase::CoinMint, Box::new(MintStep))?;
     let habit_badges = HabitBadgesStep::new(courses.clone());
     fold.register(Phase::Awards, Box::new(habit_badges))?;
@@ -837,6 +842,9 @@ mod tests {
     use deck_streak_coordination::recompute::analytics_step::ANALYTICS_STEP;
     use deck_streak_coordination::recompute::badges::BADGES_STEP;
     use deck_streak_coordination::recompute::band_badges::BAND_BADGES_STEP;
+    use deck_streak_coordination::recompute::chests::{
+        CHEST_STEP, CHEST_SWEEP_STEP, TOKEN_BONUS_STEP,
+    };
     use deck_streak_coordination::recompute::day_bonuses::DAY_BONUSES_STEP;
     use deck_streak_coordination::recompute::habit_badges::HABIT_BADGES_STEP;
     use deck_streak_coordination::recompute::habits::HABITS_STEP;
@@ -1024,7 +1032,10 @@ mod tests {
                 (Phase::DaySteps, PROGRESS_STEP),
                 (Phase::DaySteps, HABITS_STEP),
                 (Phase::DaySteps, WRITING_STEP),
+                (Phase::DaySteps, CHEST_STEP),
+                (Phase::DaySteps, CHEST_SWEEP_STEP),
                 (Phase::DerivedBonuses, DAY_BONUSES_STEP),
+                (Phase::DerivedBonuses, TOKEN_BONUS_STEP),
                 (Phase::CoinMint, MINT_STEP),
                 (Phase::Awards, HABIT_BADGES_STEP),
                 (Phase::Awards, BADGES_STEP),
@@ -1060,17 +1071,40 @@ mod tests {
         let fold = recompute_fold(AnalyticsSettings::default()).expect("every step in its phase");
         let steps = fold.steps();
         assert_eq!(
-            steps.get(2..7),
+            steps.get(2..9),
             Some(
                 &[
                     (Phase::StreaksAndGovernor, STREAKS_STEP),
                     (Phase::DaySteps, PROGRESS_STEP),
                     (Phase::DaySteps, HABITS_STEP),
                     (Phase::DaySteps, WRITING_STEP),
+                    (Phase::DaySteps, CHEST_STEP),
+                    (Phase::DaySteps, CHEST_SWEEP_STEP),
                     (Phase::DerivedBonuses, DAY_BONUSES_STEP),
                 ][..]
             ),
             "the habit step is phase 4's, after the streaks and before the derived bonuses (SPEC-078 R5)"
+        );
+    }
+
+    /// SPEC-411 A17 (R14): the chest and sweep steps run in production in phase 4, right after the
+    /// writing step and in that order, and the token-bonus step in phase 5, right after the day
+    /// bonuses step.
+    #[test]
+    fn the_recompute_fold_registers_the_chest_steps_in_their_phases() {
+        let fold = recompute_fold(AnalyticsSettings::default()).expect("every step in its phase");
+        let steps = fold.steps();
+        let at = |step: (Phase, &str)| steps.iter().position(|registered| *registered == step);
+        let writing = at((Phase::DaySteps, WRITING_STEP)).expect("the writing step");
+        let day_bonuses = at((Phase::DerivedBonuses, DAY_BONUSES_STEP)).expect("the bonus step");
+        assert_eq!(
+            [
+                at((Phase::DaySteps, CHEST_STEP)),
+                at((Phase::DaySteps, CHEST_SWEEP_STEP)),
+                at((Phase::DerivedBonuses, TOKEN_BONUS_STEP)),
+            ],
+            [Some(writing + 1), Some(writing + 2), Some(day_bonuses + 1)],
+            "the chest and sweep steps follow the writing step, the token bonus the day bonuses"
         );
     }
 
