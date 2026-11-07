@@ -226,5 +226,160 @@ class ThePlantedControls(unittest.TestCase):
         )
 
 
+class TheReaderRefusesEachMapByItsReason(unittest.TestCase):
+    """MUTATION COVERAGE: the map reader's refusals, each read as its exact reason with the owner it
+    names, and the maps it admits, each read as the document itself. Each test names, by
+    `line:col` in `scripts/path_gate.py`, the generated mutants it kills."""
+
+    def test_the_object_hook_raises_its_own_error_on_a_key_held_twice(self):
+        """MUTATION COVERAGE 31:26: the hook raises `TwiceError` with its own text on a key held
+        twice in one object, and keeps an object whose keys differ."""
+        gate = load("path_gate_reader", SCRIPT.read_text(encoding="utf-8"))
+        with self.assertRaises(gate.TwiceError) as raised:
+            gate._once([("schema", "read-map.v1"), ("schema", "read-map.v1")])
+        self.assertEqual(str(raised.exception), "a key twice")
+        self.assertEqual(gate._once([("always", []), ("jobs", {})]), {"always": [], "jobs": {}})
+
+    def test_a_key_held_twice_is_refused_with_its_reason(self):
+        """MUTATION COVERAGE 50:22: a map that holds `always` twice."""
+        gate = load("path_gate_reader", SCRIPT.read_text(encoding="utf-8"))
+        text = '{"schema": "read-map.v1", "always": [], "always": [], "jobs": {}}'
+        self.assertEqual(gate.read_map(text, []), (None, "the map holds a key twice in one object"))
+
+    def test_text_that_is_not_json_is_refused_with_its_reason(self):
+        """MUTATION COVERAGE 52:16 and 52:22: an open object, an empty text and a key with no
+        value."""
+        gate = load("path_gate_reader", SCRIPT.read_text(encoding="utf-8"))
+        for text in examined("texts that are not JSON", ("{", "", '{"schema": }')):
+            with self.subTest(text=text):
+                self.assertEqual(gate.read_map(text, []), (None, "the map is not JSON"))
+
+    def test_a_document_without_exactly_its_three_keys_is_refused_with_its_reason(self):
+        """MUTATION COVERAGE 53:39, 54:16 and 54:22: an object with a fourth key, which the key-set
+        test alone refuses, an object with no `jobs`, and a list."""
+        gate = load("path_gate_reader", SCRIPT.read_text(encoding="utf-8"))
+        texts = (
+            '{"schema": "read-map.v1", "always": [], "jobs": {}, "never": []}',
+            '{"schema": "read-map.v1", "always": []}',
+            "[]",
+        )
+        for text in examined("documents without the three keys", texts):
+            with self.subTest(text=text):
+                self.assertEqual(
+                    gate.read_map(text, []),
+                    (None, "the map is not an object of schema, always and jobs"),
+                )
+
+    def test_a_schema_other_than_read_map_v1_is_refused_with_its_reason(self):
+        """MUTATION COVERAGE 56:16: a map of the schema `read-map.v2`."""
+        gate = load("path_gate_reader", SCRIPT.read_text(encoding="utf-8"))
+        text = '{"schema": "read-map.v2", "always": [], "jobs": {}}'
+        self.assertEqual(gate.read_map(text, []), (None, "the map's schema is not read-map.v1"))
+
+    def test_jobs_that_is_not_an_object_is_refused_with_its_reason(self):
+        """MUTATION COVERAGE 59:16 and 59:22: `jobs` held as a list of job names."""
+        gate = load("path_gate_reader", SCRIPT.read_text(encoding="utf-8"))
+        text = '{"schema": "read-map.v1", "always": [], "jobs": ["rust"]}'
+        self.assertEqual(gate.read_map(text, []), (None, "the map's jobs is not an object"))
+
+    def test_a_job_that_is_not_an_object_of_reads_is_refused_by_its_name(self):
+        """MUTATION COVERAGE 62:40 and 63:20: a job object with a second key, which the key-set
+        test alone refuses, and a job held as a list."""
+        gate = load("path_gate_reader", SCRIPT.read_text(encoding="utf-8"))
+        cases = (
+            (
+                '{"schema": "read-map.v1", "always": [], '
+                '"jobs": {"rust": {"reads": [], "also": []}}}',
+                "the job rust is not an object of reads",
+            ),
+            (
+                '{"schema": "read-map.v1", "always": [], "jobs": {"engine": ["crates/"]}}',
+                "the job engine is not an object of reads",
+            ),
+        )
+        for text, reason in examined("jobs that are not an object of reads", cases):
+            with self.subTest(reason=reason):
+                self.assertEqual(gate.read_map(text, []), (None, reason))
+
+    def test_entries_that_are_not_a_list_of_strings_are_refused_by_their_owner(self):
+        """MUTATION COVERAGE 37:36 and 68:20: `always` held as one string, which is no list
+        though each of its characters is a string, and a job's reads that hold a number."""
+        gate = load("path_gate_reader", SCRIPT.read_text(encoding="utf-8"))
+        self.assertEqual(gate._strings("crates/"), False)
+        self.assertEqual(gate._strings(["crates/", "Cargo.toml"]), True)
+        cases = (
+            (
+                '{"schema": "read-map.v1", "always": "crates/", "jobs": {}}',
+                "always is not a list of strings",
+            ),
+            (
+                '{"schema": "read-map.v1", "always": [], '
+                '"jobs": {"rust": {"reads": ["crates/", 7]}}}',
+                "rust is not a list of strings",
+            ),
+        )
+        for text, reason in examined("owners that are not a list of strings", cases):
+            with self.subTest(reason=reason):
+                self.assertEqual(gate.read_map(text, []), (None, reason))
+
+    def test_an_empty_entry_is_refused_by_its_owner(self):
+        """MUTATION COVERAGE 60:15, 70:25 and 71:24: an empty entry in `always`, named `always`,
+        and one in a job's reads, named by the job."""
+        gate = load("path_gate_reader", SCRIPT.read_text(encoding="utf-8"))
+        cases = (
+            (
+                '{"schema": "read-map.v1", "always": [""], "jobs": {}}',
+                "always holds an empty entry",
+            ),
+            (
+                '{"schema": "read-map.v1", "always": ["crates/"], '
+                '"jobs": {"rust": {"reads": ["Cargo.toml", ""]}}}',
+                "rust holds an empty entry",
+            ),
+        )
+        for text, reason in examined("owners with an empty entry", cases):
+            with self.subTest(reason=reason):
+                self.assertEqual(gate.read_map(text, []), (None, reason))
+
+    def test_a_directory_named_without_its_trailing_slash_is_refused_by_its_owner(self):
+        """MUTATION COVERAGE 65:90, 65:93, 72:22, 72:33, 72:52 and 73:24: an entry a tracked path
+        holds as a directory, written without its `/`, one level deep in a job's reads and two
+        levels deep in `always`; the same directories written with their `/`, an exact path and a
+        name that only begins a directory's name are admitted as written."""
+        gate = load("path_gate_reader", SCRIPT.read_text(encoding="utf-8"))
+        tracked = ["crates/engine/src/lib.rs", "tools/x.py", "Cargo.toml"]
+        cases = (
+            (
+                '{"schema": "read-map.v1", "always": [], "jobs": {"rust": {"reads": ["tools"]}}}',
+                "rust names the directory tools without its trailing /",
+            ),
+            (
+                '{"schema": "read-map.v1", "always": ["crates/engine"], "jobs": {}}',
+                "always names the directory crates/engine without its trailing /",
+            ),
+        )
+        for text, reason in examined("directories named without their /", cases):
+            with self.subTest(reason=reason):
+                self.assertEqual(gate.read_map(text, tracked), (None, reason))
+        text = (
+            '{"schema": "read-map.v1", "always": ["crates/engine/"], '
+            '"jobs": {"rust": {"reads": ["tools/", "Cargo.toml", "tool"]}}}'
+        )
+        admitted = {
+            "schema": "read-map.v1",
+            "always": ["crates/engine/"],
+            "jobs": {"rust": {"reads": ["tools/", "Cargo.toml", "tool"]}},
+        }
+        self.assertEqual(gate.read_map(text, tracked), (admitted, None))
+
+    def test_a_star_entry_is_never_read_as_a_directory(self):
+        """MUTATION COVERAGE 72:25: `*` reads every path, so a tracked directory named `*` never
+        makes it a directory written without its `/`; the map is admitted as written."""
+        gate = load("path_gate_reader", SCRIPT.read_text(encoding="utf-8"))
+        text = '{"schema": "read-map.v1", "always": ["*"], "jobs": {"rust": {"reads": ["*"]}}}'
+        admitted = {"schema": "read-map.v1", "always": ["*"], "jobs": {"rust": {"reads": ["*"]}}}
+        self.assertEqual(gate.read_map(text, ["*/notes.md"]), (admitted, None))
+
+
 if __name__ == "__main__":
     unittest.main()
