@@ -79,3 +79,13 @@ site section 10 lists, by file and code, and fails the stage with both arms' cou
 This commit changes three test files only for the lint cures (the keyword, cwd= and the blob helper), and no assertion.
 
 This commit changes two test files only to follow the merge's lint table excludes and to list the two new tests' opener stand-ins in the census register. No assertion line changes, and the lint table's expected excludes follow ruff.toml.
+
+A14: red at 66b4aef: AssertionError: {'runs': 1} != ('raised', 'ValueError', 'not an http or https address: ftp://forge/x')
+
+A14: green at 700a6fe
+
+A15: not red: it holds the http and https opens the cure keeps
+
+G1: red at 66b4aef in ci run 42014050522, exit 1 on both ruff arms; green at the push that carries this record
+
+Merge: the lint-table red at 66b4aef in ci run 42014050522 came from the merge and the census red from the two new tests' opener stand-ins, both cured at 786f100
