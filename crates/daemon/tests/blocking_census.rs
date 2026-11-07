@@ -591,7 +591,7 @@ fn the_repository_lists_exactly_todays_blocking_sites() {
             .any(|file| file == "crates/vault/src/unicode_other_tests.rs")
     );
     assert_eq!(LEVEL, Level::Warn);
-    assert!(!found.files.is_empty());
+    assert_ne!(found.files, Vec::<String>::new());
     assert!(found.bodies > 0);
     assert_eq!(verdict(RULE, LEVEL, &found.keys, LISTED), Ok(Vec::new()));
 }
