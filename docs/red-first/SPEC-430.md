@@ -109,3 +109,9 @@ for each row.
 The class came to `dev` through a merge of its original branch onto a later `dev`: no commit
 above was rewritten, and the merge adds the same 1487 lines to the module and removes none. Each
 green is read again by name at the head of the pull request that carries the merge.
+
+The class meets the jobs current dev added: three reader rules, each with its criterion.
+
+A10: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_cargo_census_follows_test_discovery_to_the_python_stage
+A11: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_a_codspeed_build_builds_another_profile
+A12: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_release_profile_key_serves_a_job_that_builds_no_cache_profile

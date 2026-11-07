@@ -5046,6 +5046,164 @@ class TheCachesHoldTheirShape(unittest.TestCase):
             ),
         )
 
+    def test_the_cargo_census_follows_test_discovery_to_the_python_stage(self):
+        restore = "      - name: restore\n" + self.RESTORE
+        discovered = self.job(
+            "discovered", self.runs("python3 -m unittest discover -s scripts/tests -p 'test_*.py'")
+        )
+        planted = "on:\n  pull_request:\n    branches: [dev]\njobs:\n" + "".join(
+            [
+                discovered,
+                self.job(
+                    "covered",
+                    restore,
+                    self.runs(
+                        "for suite in scripts/tests agent/tests; do\n"
+                        '  coverage run -m unittest discover -s "$suite"\n'
+                        "done\n"
+                    ),
+                ),
+                self.job("single", self.runs("python3 -m unittest scripts.tests.test_x")),
+            ]
+        )
+        check = (
+            "#!/usr/bin/env bash\nSTAGES_ALL=(python)\n\nneed_cargo() { command -v cargo; }\n\n"
+            "stage_python() {\n    need_cargo && python3 -m unittest discover -s scripts/tests\n}\n"
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            directory = self.plant(scratch, {"discovery": planted}, {"check.sh": check})
+            problems, population = shape_cargo_census(directory, Path(scratch), [])
+        self.assertEqual(
+            problems,
+            self.in_both(
+                {"discovery": ["<f>:discovered: restores the shared Rust key 0 times, not once"]}
+            ),
+        )
+        self.assertEqual(
+            [f"{name} {job} {cls}" for name, job, cls in population],
+            self.in_both({"discovery": ["<f> discovered shared", "<f> covered shared"]}),
+        )
+        lacking = "on:\n  pull_request:\n    branches: [dev]\njobs:\n" + discovered
+        clippy = (
+            "#!/usr/bin/env bash\nSTAGES_ALL=(clippy)\n\nneed_cargo() { command -v cargo; }\n\n"
+            "stage_clippy() {\n    need_cargo && cargo clippy --workspace\n}\n"
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            directory = self.plant(scratch, {"lacking": lacking}, {"check.sh": clippy})
+            problems, population = shape_cargo_census(directory, Path(scratch), [])
+        self.assertEqual(
+            problems,
+            self.in_both({"lacking": ["<f>:discovered:0: check.sh has no stage python"]}),
+        )
+        self.assertEqual(population, [])
+
+    def test_a_codspeed_build_builds_another_profile(self):
+        restore = "      - name: restore\n" + self.RESTORE
+        keyed = restore.replace("Cargo.lock') }}\n", "Cargo.lock') }}-bench\n")
+        planted = "on:\n  pull_request:\n    branches: [dev]\njobs:\n" + "".join(
+            [
+                self.job("benched", self.runs("cargo codspeed build -p engine")),
+                self.job("bench-keyed", keyed, self.runs("cargo codspeed build -p engine")),
+                self.job("bench-run", self.runs("cargo codspeed run")),
+            ]
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            directory = self.plant(scratch, {"bench": planted})
+            problems, population = shape_cargo_census(directory, Path(scratch), [])
+        self.assertEqual(
+            problems,
+            self.in_both(
+                {
+                    "bench": [
+                        "<f>:bench-keyed: a cache-free job restores the Rust cache under another"
+                        " key at 0",
+                        "<f>:bench-run: restores the shared Rust key 0 times, not once",
+                    ]
+                }
+            ),
+        )
+        self.assertEqual(
+            [f"{name} {job} {cls}" for name, job, cls in population],
+            self.in_both(
+                {
+                    "bench": [
+                        "<f> benched cache-free",
+                        "<f> bench-keyed cache-free",
+                        "<f> bench-run shared",
+                    ]
+                }
+            ),
+        )
+
+    def test_the_release_profile_key_serves_a_job_that_builds_no_cache_profile(self):
+        release = self.RESTORE.replace("key: rust-", "key: rust-release-") + (
+            "          restore-keys: |\n"
+            "            rust-release-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-\n"
+        )
+        drift = "-${{ hashFiles('rust-toolchain.toml') }}-\n"
+        self.assertEqual(release.count(drift), 1)
+        restore = "      - id: release-cache\n" + release
+        drifted = "      - id: release-cache\n" + release.replace(drift, "-\n")
+        save = (
+            "      - name: save\n        if: "
+            + self.GUARD.replace("steps.rust-cache.", "steps.release-cache.")
+            + "\n        uses: actions/cache/save\n        with:\n"
+            + self.RUST_PATHS
+            + "          key: ${{ steps.release-cache.outputs.cache-primary-key }}\n"
+        )
+        planted = "on:\n  push:\n    branches: [dev, main]\njobs:\n" + "".join(
+            [
+                self.job(
+                    "release", restore, self.runs("cargo nextest run --workspace --release"), save
+                ),
+                self.job("drifted", drifted, self.runs("cargo build --release")),
+                self.job("shared", restore, self.runs("cargo test")),
+            ]
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            directory = self.plant(scratch, {"released": planted})
+            problems, population = shape_cargo_census(directory, Path(scratch), [])
+        self.assertEqual(
+            problems,
+            self.in_both(
+                {"released": ["<f>:shared: restores the shared Rust key 0 times, not once"]}
+            ),
+        )
+        self.assertEqual(
+            [f"{name} {job} {cls}" for name, job, cls in population],
+            self.in_both(
+                {
+                    "released": [
+                        "<f> release cache-free",
+                        "<f> drifted cache-free",
+                        "<f> shared shared",
+                    ]
+                }
+            ),
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            directory = self.plant(scratch, {"released": planted})
+            problems, population = shape_writer_census(directory)
+        self.assertEqual(problems, [])
+        self.assertEqual(
+            [f"{where} {uses} {rust}" for where, uses, rust in population],
+            self.in_both({"released": ["<f>:release:2 actions/cache/save True"]}),
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            directory = self.plant(scratch, {"released": planted})
+            problems, population = shape_key_census(directory)
+        self.assertEqual(
+            problems,
+            self.in_both(
+                {
+                    "released": [
+                        "<f>:drifted:0: the release Rust fallback rust-release-${{ runner.os }}- is"
+                        " not the release key's prefix"
+                    ]
+                }
+            ),
+        )
+
 
 class TheEngineBuildsInEveryRustJob(unittest.TestCase):
     def test_every_job_that_compiles_rust_installs_the_pinned_protoc_first(self):
