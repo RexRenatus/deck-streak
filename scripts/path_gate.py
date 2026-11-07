@@ -12,9 +12,6 @@ repository path. `always` joins every job's reads, and a job with no entry reads
 `reads`, `decide` and `admit` are pure functions of their arguments; the Lean entry `PathGate`
 ports each one and covers it by name, and its vectors tie the port to this file. The module uses
 the standard library alone, has no command line, opens no file and starts no program.
-
-`decide` is a stand-in that answers "run" on every input, the base's behaviour, until the decision
-lands (SPEC-634 R4).
 """
 
 import json
@@ -104,11 +101,23 @@ def decide(event, job, changed, m):
 
     `event` is the triple of the event name, the pull request's base ref and base-is-dev's release
     flag; `changed` is the change list, or None when it cannot be read; `m` is the map, or None
-    when it is refused. This stand-in keeps every input and answers "run" on each, as the base
-    runs every job on every change.
+    when it is refused. The answer is "skip" only for a pull request into dev whose change list is
+    readable and not empty, on an admitted map, when the job reads no changed path; it is "run" on
+    every other input. The empty list is tested before None.
     """
     kind, base_ref, release = event
-    return "run"
+    if kind != "pull_request" or base_ref != "dev" or release != "false":
+        return "run"
+    if changed == []:
+        return "run"
+    if changed is None:
+        return "run"
+    if m is None:
+        return "run"
+    for q in changed:
+        if reads(m, job, q):
+            return "run"
+    return "skip"
 
 
 def admit(needs, gate_ok, gate_out):
