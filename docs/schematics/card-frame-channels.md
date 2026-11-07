@@ -984,3 +984,68 @@ off. Section 3's cells are unchanged but one: with W3 off, WebKit reads one bare
 `nav-blank`, as for `nav-blank-area`, because the target returns, the sandbox refuses the popup and
 the handler preconnects; section 3 holds it as the `BARE in WebKit with W3 off` cell of
 `nav-blank`'s row.
+
+## 14. A carriage return from a card's field to the host's read-back (SPEC-462, ADR-479)
+
+Kind: data flow, of one character from the collection to the frame. Read at DeckStreak `dev`
+83846ea3. A note field or a template can hold a carriage return written as a numeric character
+reference, `&#13;` or `&#xD;`. The engine completes the face without parsing it as HTML
+(`crates/engine-core/src/face.rs:188-211`, `crates/engine-core/src/media.rs:170`), so the reference
+reaches `frameDocument` as written. Its inert parse (`web/app/src/lib/card/frame-document.ts:42`)
+resolves the reference to U+000D, and the composed document (`:51`) serialises the body with
+U+000D raw, which `frameDocument`'s read-back (`:53-58`) does not compare. `CardFrame.svelte:16`
+hands that document to `frameHost`. Before SPEC-462 the host's escaping (`frame-host.ts:20-22`)
+wrote only `&` and `"`, so the host held U+000D raw, its parse (`:46`) read it as a line feed, the
+one frame gave back a line feed, and the comparison at `:49` refused the card: `CardFrame.svelte:19`
+rendered a frame with no document, and the status region, which reads only `frameDocument`'s
+refusal (`web/app/src/lib/study/review.ts:247-252`), said nothing. SPEC-462 writes U+000D as its
+reference in the host, after `&` and `"`; the parse resolves it to U+000D, the comparison is
+unchanged and holds, and the nested frame parses the frame document as the card frame parsed it
+before SPEC-407.
+
+```mermaid
+flowchart TD
+  field["a note field or template holding a carriage return reference"]
+  engine["the engine completes the face<br/>face.rs, media.rs: no HTML parse,<br/>the reference kept as written"]
+  inert["frameDocument parses the card as a body<br/>frame-document.ts:42: the reference becomes U+000D"]
+  composed["the composed frame document<br/>frame-document.ts:51: U+000D written raw"]
+  docCheck{"frameDocument read-back<br/>head, stripped elements, srcset, body attributes<br/>frame-document.ts:53-58"}
+  escapeOld["the host's escaping before SPEC-462<br/>ampersand and quote only, U+000D raw"]
+  escapeNew["the host's escaping after SPEC-462<br/>ampersand, quote, then U+000D as its reference<br/>frame-host.ts:20-22"]
+  hostParse["the host parsed as the frame will parse it<br/>frame-host.ts:46"]
+  hostCheck{"host read-back, unchanged<br/>head as written, card document and title exactly<br/>frame-host.ts:47-50"}
+  refusedFrame["refused as escaped: a frame with no document<br/>CardFrame.svelte:19, the status region quiet"]
+  nested["the nested frame parses the frame document<br/>U+000D read as a line feed, as before SPEC-407"]
+  field --> engine
+  engine --> inert
+  inert --> composed
+  composed --> docCheck
+  docCheck -->|kept| escapeOld
+  docCheck -->|kept| escapeNew
+  escapeOld --> hostParse
+  escapeNew --> hostParse
+  hostParse --> hostCheck
+  hostCheck -->|before: a line feed came back| refusedFrame
+  hostCheck -->|after: U+000D came back| nested
+```
+
+What each SPEC-462 test reads on this path. Every oracle is a parse the test makes itself with
+`DOMParser`, never the module's own reader.
+
+| the test | where on the path | at `dev` | after SPEC-462 |
+|---|---|---|---|
+| A1, `frame-host.test.ts` | the host's escaping and its read-back, given a card document or a title holding U+000D | refused | kept, read back byte for byte |
+| A2, `frame-host.test.ts` | a field's reference through `frameDocument`, then the host | refused | kept, the frame document in the one frame byte for byte |
+| A3, `card-frame.test.ts` | `CardFrame` with a field holding a reference | a frame marked refused | a frame with a `srcdoc` and the card's text |
+| A4, `frame-host.test.ts` | the read-back's population, U+0000 to U+00FF, card document and title | U+0000 and U+000D refused | U+0000 refused, the rest kept |
+| A5, `frame-host.test.ts` | SPEC-407's A2, its plants a NUL in the card, a NUL in the title, a quote in the policy | refused | refused |
+
+The characters the host's escaping leaves as written and the parser changes inside a double-quoted
+attribute value are two. U+000D is read as a line feed, and its reference carries it. U+0000 is
+read as U+FFFD, its reference too, so no attribute value carries it and the read-back refuses it;
+no parsed card document holds one. The iPhone and iPad card view (section 4) hands the card to its
+web view as one string and builds no host, so this path has no counterpart there.
+
+Rebuilt onto `dev` at `0ef74a05`: the host's refusal is now named `host-readback`, and the
+status region reads `frameCard`'s reason (SPEC-505, ADR-523), so the quiet status in the diagram
+above is the state at `83846ea3`. The path of the carriage return is unchanged.
