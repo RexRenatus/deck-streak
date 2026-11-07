@@ -46,8 +46,15 @@ Chosen option: a thread pool of module processes and a serial tail. `scripts/pyt
 each suite's `test_*.py` modules in name order, names each tail module on one `serial:` line, runs
 the other modules in the pool and then the tail modules one by one, prints each module's output in
 module-name order, then the verdict line. `stage_python` calls it with the three suites.
-`SERIAL_MODULES` lists five modules that spawn cargo and four entries a local run may not measure,
-the deploy class among them as the pattern `test_deploy_*.py`.
+`SERIAL_MODULES` lists five modules that spawn cargo (`test_bin_kind_census.py`,
+`test_check_gate.py`, `test_engine_pin.py`, `test_fork_lock_guard.py` and `test_mutation_rows.py`)
+and three entries a local run may not measure (`test_ci_workflows.py`, `test_dispatch_shards.py`
+and the deploy class as the pattern `test_deploy_*.py`), each with its reason. A CI census of the
+tail cleared one module, `test_memory_scope.py`, which left the tail for the pool; of the other
+entries, four read hits not yet resolved, three run cargo under a timeout, and the deploy class
+stays whole. Each module process starts with `PYTHONDONTWRITEBYTECODE=1` added to its inherited
+environment, so no pooled module leaves bytecode under the tree for a tail module or the secrets
+stage to read.
 
 ### Consequences
 
@@ -62,8 +69,9 @@ the deploy class among them as the pattern `test_deploy_*.py`.
 
 SPEC-633 A1 is red against a runner that keeps every input and runs serially, and green once the
 pool runs modules at once. A2 pins the verdict line and the tail lines. A3, SPEC-054 A13's test,
-is red once the stage calls the runner, until its planted tree carries the runner. The pull
-request's `hygiene` run reads the stage's time against B.
+is red once the stage calls the runner, until its planted tree carries the runner. A4 is red while
+module processes write bytecode, and green once each starts with bytecode writes off. The pull
+request's `hygiene` run reads the stage's time against B, 600 s (job 128188919143).
 
 ## What would make this wrong
 

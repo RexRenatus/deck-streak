@@ -55,7 +55,7 @@ stand-in.
 
 **(iii) Per-module time.** The one-at-a-time run timed each module, and the bound B below follows
 from the slowest of them.
-The slowest module's time plus 60 s stays below 456 s, so B is 456 s (set against the serial figure of job 127832581467).
+The slowest module's time plus 60 s stays below 600 s, so B is 600 s (set against the serial figure of job 127832581467).
 
 **The serial tail.** These modules never share a run, and run one after another after the pool:
 
@@ -69,23 +69,41 @@ The slowest module's time plus 60 s stays below 456 s, so B is 456 s (set agains
 | `test_ci_workflows.py` | unmeasured on the box |
 | `test_deploy_*.py` | unmeasured on the box |
 | `test_dispatch_shards.py` | unmeasured on the box |
-| `test_memory_scope.py` | unmeasured on the box |
 
 Run at once, the modules that spawn cargo would contend for one target directory and for the
-runner's disk. The four "unmeasured" entries are modules a local run may not run (the deploy class
+runner's disk. The three "unmeasured" entries are modules a local run may not run (the deploy class
 by its pattern); they stay in the tail until a CI run of the stand-in census clears them. The
 reason text is what the runner prints.
 
-**The bound B** is the larger of 456 s and the slowest module's own time plus 60 s, since one module alone above 396 s would put 456 s out of reach; it is 456 s here, against dev's serial 1121 s (job 127832581467).
+**The tail census.** This pull request's first pooled `hygiene` run timed every tail module.
+Its stage read 576 s, 348.980 s of it in the tail and 227.020 s in the pool (job 128188919143).
+Each tail entry but the deploy class was then read at its source for the static census's classes,
+plus `CARGO_TARGET_DIR`, `cargo clean` and a timeout on a call that runs cargo. Of the nine entries
+the tail then held, one read cleared: `test_memory_scope.py`, whose one environment write is a
+restored `mock.patch.dict` and whose timeouts are workflow text, so it now runs in the pool. Four
+read hits not yet resolved (`test_bin_kind_census.py`, `test_ci_workflows.py`,
+`test_dispatch_shards.py` and `test_mutation_rows.py`), three run cargo under a timeout
+(`test_check_gate.py`, `test_engine_pin.py` and `test_fork_lock_guard.py`), and the deploy class
+stays whole in the tail.
+
+**Bytecode.** The same run read two reds that the pool caused. A module that imports a sibling
+module left its bytecode under the tree, so a tail module that scrubs the deploy templates found
+five `.pyc` files, and the secrets stage after the python stage read one finding, which a local
+scan of a local run's bytecode traced to a test module's `.pyc` file. Each module process
+therefore starts with bytecode writes off.
+
+**The bound B** is the larger of 600 s and the slowest module's own time plus 60 s, since one module alone above 540 s would put 600 s out of reach; it is 600 s here, against dev's serial 1121 s (job 127832581467).
+The pooled stage read 576 s, its tail 348.980 s and its pool 227.020 s (job 128188919143).
+The one move the census clears projects 570.47 s (job 128188919143), so the maintainers set B at 600 s.
 
 ## 2. Requirements
 
-- **R1.** `scripts/python_stage.py <suite>...` lists each suite's top-level `test_*.py` modules in name order and runs each one as `python3 -m unittest discover -s <suite> -p <module file>`, in a process of its own. `python3` is the one PATH finds, never `sys.executable`, so a stand-in on PATH answers every module run.
+- **R1.** `scripts/python_stage.py <suite>...` lists each suite's top-level `test_*.py` modules in name order and runs each one as `python3 -m unittest discover -s <suite> -p <module file>`, in a process of its own. `python3` is the one PATH finds, never `sys.executable`, so a stand-in on PATH answers every module run. Each module process inherits the stage's environment with `PYTHONDONTWRITEBYTECODE=1` added, so no module writes bytecode under the tree.
 - **R2.** The modules outside the serial tail run in a pool of at most `PYTHON_STAGE_JOBS` processes at once, by default `os.cpu_count()`. `PYTHON_STAGE_JOBS=1` runs them one after another, which is the rollback.
-- **R3.** `SERIAL_MODULES` holds each tail entry with its reason, and an entry may be an `fnmatch` pattern. The tail's modules run one after another after the pool, and the runner first prints one `serial: <suite>/<module> (<reason>)` line per tail module.
+- **R3.** `SERIAL_MODULES` holds each tail entry with its reason, and an entry may be an `fnmatch` pattern: the eight entries of section 1's table, five that spawn cargo and three unmeasured. The tail's modules run one after another after the pool, and the runner first prints one `serial: <suite>/<module> (<reason>)` line per tail module.
 - **R4.** The runner prints each module's output in module-name order, suite by suite in argument order, the tail's modules among them, then the stage's verdict line `python: <suite> ran N test(s), exit c; ...`. N is the sum of each module's last `Ran N` line (0 for a module that printed none), and c is the suite's first non-zero module exit, else 0.
 - **R5.** A suite with no module, or one that ran 0 tests, fails the stage, and so does a non-zero module exit: the runner then exits 1, else 0 (SPEC-054 R7).
-- **R6.** `stage_python` keeps `need_python && need_cargo` and its comments, and calls `python3 scripts/python_stage.py scripts/tests tools/parity-oracle agent/tests` in place of its loop; no other line of `scripts/check.sh` changes.
+- **R6.** `stage_python` keeps `need_python && need_cargo` and its comments, keeps its suite loop over `scripts/tests tools/parity-oracle agent/tests`, and calls `python3 scripts/python_stage.py "${suites[@]}"` with the suites it collected; no other line of `scripts/check.sh` changes.
 - **R7.** SPEC-054 A13's test, `ThePythonStageRunsEverySuite`, plants the runner beside its copy of `scripts/check.sh`. Its python3 stand-in answers a `-m unittest` call with `Ran 0 tests` and hands every other call to the real python3, found before the test narrows PATH. Every assertion keeps its text.
 
 R1 to R5 are the runner; R6 is the stage's one call; R7 keeps the gate's own test of the stage
@@ -98,27 +116,29 @@ true to the stage it now runs.
 | A1 | two planted modules that each wait up to ten seconds for the other both pass when the runner runs two modules at once, and the first times out when `PYTHON_STAGE_JOBS=1` runs them one after another (R1, R2) | `python3 -m unittest discover -s scripts/tests -p test_python_stage.py -k test_two_modules_run_at_once` |
 | A2 | the verdict line gives each suite's tests and exit in argument order; a red module, a suite with no module and a module that ran no test each fail the stage; each module's output comes in module-name order; every tail entry, the pattern too, runs and is named with its reason (R3, R4, R5) | `python3 -m unittest discover -s scripts/tests -p test_python_stage.py -k test_the_verdict_line_sums_each_suite` |
 | A3 | SPEC-054 A13's four cases hold over the runner: a red suite leaves the others run and named, a suite that ran no test fails by name, so does one whose unittest exits 0 having run nothing, and green suites pass (R6, R7) | `python3 -m unittest discover -s scripts/tests -p test_check_gate.py -k ThePythonStageRunsEverySuite` |
+| A4 | a planted test module that imports a planted sibling module leaves no `.pyc` file and no `__pycache__` folder under its suite, even when the stage's own environment allows bytecode writes (R1) | `python3 -m unittest discover -s scripts/tests -p test_python_stage.py -k test_module_processes_write_no_bytecode` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_python_stage.py -k test_two_modules_run_at_once
 A2: python3 -m unittest discover -s scripts/tests -p test_python_stage.py -k test_the_verdict_line_sums_each_suite
 A3: python3 -m unittest discover -s scripts/tests -p test_check_gate.py -k ThePythonStageRunsEverySuite
+A4: python3 -m unittest discover -s scripts/tests -p test_python_stage.py -k test_module_processes_write_no_bytecode
 ```
 
 A2 pins rules the serial runner already keeps, so it is recorded `not red` with its reason.
 
 The pull request's own `hygiene` run accepts the stage as a whole. Its `python.log` reads the same Ran
 count per suite as the base's run 42199982313 (1902, 119 and 12), plus the tests this change adds and
-any that dev adds before the run, and its `timings.tsv` reads python at 456 s or less (B, against job 127832581467).
+any that dev adds before the run, and its `timings.tsv` reads python at 600 s or less (B, against job 127832581467).
 
 ## 4. File manifest
 
 | path | part | change |
 |---|---|---|
 | `scripts/python_stage.py` | gate scripts | added: the module runner, its pool and its serial tail |
-| `scripts/check.sh` | gate scripts | changed: `stage_python` calls the runner in place of its loop |
+| `scripts/check.sh` | gate scripts | changed: `stage_python` hands the suites of its loop to the runner |
 | `scripts/mutation-python.json` | mutation scripts | changed: one entry maps the runner to `test_python_stage` |
-| `scripts/tests/test_python_stage.py` | tests | added: the A1 and A2 tests |
+| `scripts/tests/test_python_stage.py` | tests | added: the A1, A2 and A4 tests |
 | `scripts/tests/fixtures/python_stage/barrier_a.py` | tests | added: a planted module for A1 |
 | `scripts/tests/fixtures/python_stage/barrier_b.py` | tests | added: the other planted module for A1 |
 | `scripts/tests/test_check_gate.py` | tests | changed: `python_tree` copies the runner, and `EMPTY_UNITTEST` hands every call but `-m unittest` to the real python3 |
@@ -130,7 +150,7 @@ any that dev adds before the run, and its `timings.tsv` reads python at 456 s or
 
 ## 5. What this does NOT cover
 
-- Clearing the "unmeasured" entries: a CI run of the stand-in census over the four entries a local
+- Clearing the "unmeasured" entries: a CI run of the stand-in census over the three entries a local
   run may not run would show which of them can join the pool. Until then they stay in the tail.
 - Pooling the modules that spawn cargo: each would need a target directory of its own, and the
   runner's disk would need room for them at once. They stay in the tail.
