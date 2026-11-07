@@ -24,6 +24,9 @@ mod support;
 #[path = "support/health.rs"]
 mod health_fixture;
 
+#[path = "support/clock.rs"]
+mod clock;
+
 use std::path::Path;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -108,13 +111,6 @@ fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
     items
 }
 
-fn now_secs() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("the clock reads after the epoch")
-        .as_secs()
-}
-
 fn text(bytes: Vec<u8>) -> String {
     String::from_utf8(bytes).expect("the engine's text is UTF-8")
 }
@@ -131,6 +127,7 @@ fn opened(test: &str) -> (Arc<Engine>, health_fixture::Health) {
         .join(format!("{test}-{}-{stamp}", std::process::id()));
     let fixture =
         health_fixture::build(&dir).expect("the builder writes the card health collection");
+    let clock = clock::pin(&fixture.collection);
     let engine = Engine::new(Vec::new()).expect("the engine starts from the default init message");
     let mut open = Vec::new();
     for (field, path) in [
@@ -146,7 +143,11 @@ fn opened(test: &str) -> (Arc<Engine>, health_fixture::Health) {
         .run(service, method, open)
         .expect("the adapter opens the card health collection");
     let mut tree_request = Vec::new();
-    wire::put_varint_field(&mut tree_request, 1, now_secs());
+    wire::put_varint_field(
+        &mut tree_request,
+        1,
+        u64::try_from(clock.at_secs()).expect("the clock reads after the epoch"),
+    );
     let (service, method) = DECK_TREE;
     let tree = engine
         .run(service, method, tree_request)

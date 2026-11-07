@@ -127,3 +127,8 @@ press's ids; S44308 and S44309 at the placement's own check. Over the adapter's 
 changes, the generated mutants number 4: 3 caught, and 1 unviable (`at_answer_time`'s body replaced
 by a default, which does not compile because `Engine` has no default; S44307 holds the instant it
 stores).
+
+The rebuild onto current dev merged the original branch unchanged. The commit after that merge moves
+the scheduler tests that dev added since onto their crate's clock, each collection such a test
+builds pinned before an engine opens it, with no assertion removed or loosened; it adds no
+criterion, so it carries no red of its own.

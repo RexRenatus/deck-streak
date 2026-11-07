@@ -22,8 +22,6 @@
 
 mod support;
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
 use anki_proto::backend::BackendError;
 use anki_proto::backend::backend_error::Kind;
 use anki_proto::scheduler::{
@@ -81,14 +79,6 @@ fn shown(dispatcher: &Dispatcher) -> Vec<(i64, SchedulingStates)> {
         .collect()
 }
 
-fn now_millis() -> i64 {
-    let millis = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("the clock reads after the epoch")
-        .as_millis();
-    i64::try_from(millis).expect("the clock's milliseconds fit an i64")
-}
-
 /// An owner's press of `grade` on `card`, recorded with `request` through the one door.
 fn press(
     dispatcher: &Dispatcher,
@@ -103,13 +93,18 @@ fn press(
 
 /// The request an adapter writes for a press of `grade` on `card`, shown with `states`: the
 /// grade's pick of the next state and the grade's own rating.
-fn request(card: i64, states: &SchedulingStates, grade: Grade) -> Vec<u8> {
+fn request(
+    card: i64,
+    states: &SchedulingStates,
+    grade: Grade,
+    clock: support::clock::Clock,
+) -> Vec<u8> {
     answer_request(
         card,
         states.current.clone(),
         grade.pick(states.again.clone(), states.good.clone()),
         grade,
-        now_millis(),
+        clock.at_millis(),
         1000,
     )
 }
@@ -164,7 +159,7 @@ fn a_second_press_on_the_states_shown_before_the_first_is_refused_by_the_engine(
         shown(&dispatcher)
             .try_into()
             .expect("the queue shows the synthetic collection's two new cards");
-    let bytes = request(card, &states, Grade::Good);
+    let bytes = request(card, &states, Grade::Good, synthetic.clock);
 
     let recorded = press(&dispatcher, card, Grade::Good, &bytes);
     let answered = (snapshot(&dispatcher, card), newest(&dispatcher));
@@ -175,7 +170,7 @@ fn a_second_press_on_the_states_shown_before_the_first_is_refused_by_the_engine(
         &dispatcher,
         second,
         Grade::Good,
-        &request(second, &second_states, Grade::Good),
+        &request(second, &second_states, Grade::Good, synthetic.clock),
     );
     let other_reps = snapshot(&dispatcher, second)
         .get(REPS)
@@ -229,7 +224,7 @@ fn a_press_on_the_states_shown_before_a_due_date_was_set_is_refused_by_the_engin
         &dispatcher,
         card,
         Grade::Good,
-        &request(card, &states, Grade::Good),
+        &request(card, &states, Grade::Good, synthetic.clock),
     ));
     let after = (snapshot(&dispatcher, card), newest(&dispatcher));
 
