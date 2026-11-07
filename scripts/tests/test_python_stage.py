@@ -152,3 +152,33 @@ class TheVerdictLine(unittest.TestCase):
                 self.assertEqual(done.returncode, code, done.stdout)
                 self.assertEqual([line for line in lines if line in marks], order)
                 self.assertEqual([line for line in lines if line.startswith("serial: ")], tail)
+
+
+class TheModulesWriteNoBytecode(unittest.TestCase):
+    def test_module_processes_write_no_bytecode(self):
+        """A4: a planted test module that imports a planted sibling module leaves no bytecode under
+        its suite, though this run's environment allows bytecode writes, so only the runner can
+        turn them off."""
+        env = {key: value for key, value in os.environ.items() if key != "PYTHONDONTWRITEBYTECODE"}
+        with tempfile.TemporaryDirectory() as scratch:
+            suite = Path(scratch) / "suite"
+            suite.mkdir()
+            (suite / "sibling.py").write_text("VALUE = 1\n", encoding="utf-8")
+            (suite / "test_imports.py").write_text(
+                "import unittest\n\nimport sibling\n\n\nclass Imports(unittest.TestCase):\n"
+                "    def test_value(self):\n        self.assertEqual(sibling.VALUE, 1)\n",
+                encoding="utf-8",
+            )
+            done = subprocess.run(
+                ["python3", str(RUNNER), "suite"],
+                cwd=scratch,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=120,
+            )
+            self.assertEqual(done.stdout.splitlines()[-1], "python: suite ran 1 test(s), exit 0")
+            entries = examined("planted suite entries", sorted(suite.rglob("*")))
+            self.assertEqual([path.name for path in entries if path.suffix == ".pyc"], [])
+            self.assertEqual([path.name for path in entries if path.name == "__pycache__"], [])

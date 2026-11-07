@@ -21,3 +21,7 @@ tree it plants had no runner. 0f78e662, the one commit that changes a test file 
 green, plants the runner and keeps the text of every assertion, and A3 read green. A2 pins rules
 the serial runner already keeps, so it has no red line. The commit after 0f78e662 changes only this
 record.
+
+A4 was committed alone with its test, against the runner whose module processes inherit the stage's
+environment as it is, so a planted module that imports a planted sibling leaves bytecode under its
+suite and the A4 test fails on the bytecode it finds.
