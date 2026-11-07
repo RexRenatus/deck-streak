@@ -122,3 +122,9 @@ The merge of current dev at 037933d02588f04e6ba485f9f630327fcc6a8eb2 brought a c
 A10: green at 1c3998d0d63e1dfb1df339b2a11d64dba1028799
 A11: green at 1c3998d0d63e1dfb1df339b2a11d64dba1028799
 A12: green at 1c3998d0d63e1dfb1df339b2a11d64dba1028799
+
+The class meets the mutation jobs current dev added: two reader rules, each with its criterion.
+
+A13: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_a_main_that_delegates_its_dispatch_is_read_along_the_subcommand
+A14: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_a_first_build_guarded_by_the_restores_conditions_and_more_meets_it
+A1 read red in CI at d6b27b44909e0ce518e9c704e173994c99aca7f8 on exactly three mutation jobs of the merged dev, and its test is unchanged. A13 and A14 are pushed with the rules they hold, so no CI run reads them red at a commit of their own: their rows S43069 to S43074 each apply a mutant that drops or widens part of a rule, and the mutation-rows job proves each row by its killer failing under its mutant.

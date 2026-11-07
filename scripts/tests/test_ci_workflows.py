@@ -5244,6 +5244,161 @@ class TheCachesHoldTheirShape(unittest.TestCase):
             ),
         )
 
+    def test_a_main_that_delegates_its_dispatch_is_read_along_the_subcommand(self):
+        delegated = textwrap.dedent(
+            """\
+            import argparse
+            import contextlib
+            import subprocess
+
+
+            def run_tests(package):
+                return subprocess.call(["cargo", "test", "-p", package])
+
+
+            def legs(args):
+                return 0
+
+
+            @contextlib.contextmanager
+            def ending():
+                yield
+
+
+            def dispatch(argv=None):
+                parser = argparse.ArgumentParser()
+                parser.add_argument("verb", choices=["prove", "legs"])
+                parser.add_argument("--package")
+                args = parser.parse_args(argv)
+                if args.verb == "prove":
+                    return run_tests(args.package)
+                if args.verb == "legs":
+                    return legs(args)
+                return 2
+
+
+            def main(argv=None):
+                with ending():
+                    return dispatch(argv)
+
+
+            if __name__ == "__main__":
+                raise SystemExit(main())
+            """
+        )
+        twice = textwrap.dedent(
+            """\
+            import argparse
+            import subprocess
+
+
+            def first(args):
+                if args.verb == "legs":
+                    return 0
+                return 2
+
+
+            def second(args):
+                if args.verb == "prove":
+                    return subprocess.call(["cargo", "test"])
+                return 0
+
+
+            def main():
+                parser = argparse.ArgumentParser()
+                parser.add_argument("verb")
+                args = parser.parse_args()
+                return first(args) and second(args)
+
+
+            if __name__ == "__main__":
+                raise SystemExit(main())
+            """
+        )
+        planted = "on:\n  pull_request:\n    branches: [dev]\njobs:\n" + "".join(
+            [
+                self.job("legs", self.runs("python3 scripts/delegated.py legs")),
+                self.job("prove-unrestored", self.runs("python3 scripts/delegated.py prove")),
+                self.job(
+                    "prove-restored",
+                    "      - name: restore\n" + self.RESTORE,
+                    self.runs("python3 scripts/delegated.py prove"),
+                ),
+                self.job("either-legs", self.runs("python3 scripts/twice.py legs")),
+            ]
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            directory = self.plant(
+                scratch, {"delegating": planted}, {"delegated.py": delegated, "twice.py": twice}
+            )
+            problems, population = shape_cargo_census(directory, Path(scratch), [])
+        once = "restores the shared Rust key 0 times, not once"
+        self.assertEqual(
+            problems,
+            self.in_both(
+                {"delegating": [f"<f>:prove-unrestored: {once}", f"<f>:either-legs: {once}"]}
+            ),
+        )
+        self.assertEqual(
+            [f"{name} {job} {cls}" for name, job, cls in population],
+            self.in_both(
+                {
+                    "delegating": [
+                        "<f> prove-unrestored shared",
+                        "<f> prove-restored shared",
+                        "<f> either-legs shared",
+                    ]
+                }
+            ),
+        )
+
+    def test_a_first_build_guarded_by_the_restores_conditions_and_more_meets_it(self):
+        rust = "needs.plan.outputs.rust == 'true'"
+        green = "steps.base.outputs.green == 'true'"
+
+        def guarded(name, restore_if, build_if):
+            return self.job(
+                name,
+                "      - if: ${{ " + restore_if + " }}\n" + self.RESTORE,
+                "      - if: ${{ " + build_if + " }}\n        run: cargo test\n",
+            )
+
+        planted = "on:\n  pull_request:\n    branches: [dev]\njobs:\n" + "".join(
+            [
+                guarded("narrowed", rust, f"{rust} && {green}"),
+                guarded("either", rust, f"{rust} && {green} || github.event_name == 'push'"),
+                guarded("unrelated", rust, f"needs.plan.outputs.web == 'true' && {green}"),
+                guarded("widened", f"{rust} && {green}", rust),
+            ]
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            directory = self.plant(scratch, {"guarded": planted})
+            problems, population = shape_cargo_census(directory, Path(scratch), [])
+        other = "restores the shared Rust key under another if than its first build's"
+        self.assertEqual(
+            problems,
+            self.in_both(
+                {
+                    "guarded": [
+                        f"<f>:either: {other}",
+                        f"<f>:unrelated: {other}",
+                        f"<f>:widened: {other}",
+                    ]
+                }
+            ),
+        )
+        self.assertEqual(
+            [f"{name} {job} {cls}" for name, job, cls in population],
+            self.in_both(
+                {
+                    "guarded": [
+                        f"<f> {job} shared"
+                        for job in ("narrowed", "either", "unrelated", "widened")
+                    ]
+                }
+            ),
+        )
+
 
 class TheEngineBuildsInEveryRustJob(unittest.TestCase):
     def test_every_job_that_compiles_rust_installs_the_pinned_protoc_first(self):
