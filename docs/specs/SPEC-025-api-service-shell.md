@@ -341,3 +341,31 @@ A19: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_group.p
 A20: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_group.py -k APipeIsClosedOnEveryPath
 A21: python3 -m unittest discover -s scripts/tests -p test_mutation_rows_group.py -k test_sigint_to_the_runner_ends_the_killers_group
 ```
+
+## 12. Amendment: a hang-up, a signal while the killer starts and a second signal leave no killer running (#432)
+
+Issue #432, which follows section 10 (#409). Section 10 gives SIGTERM a handler that exits through
+`run_in_own_group`'s cleanup. Four edges were left: SIGHUP had no handler, so a hang-up ended the
+runner with no cleanup; a SIGTERM handled while `subprocess.Popen` was starting the killer raised
+its exit before the `try` whose `finally` ends the group; a second SIGTERM handled inside that
+`finally`, before the group kill, abandoned the cleanup; and `main()` never restored the handler it
+installed. Section 10 promised none of these.
+
+Made by SPEC-465's delivery, insert-only under ruling (i) of SPEC-038 section 8: every earlier
+byte is kept in order, and this section is the only insertion. Its criteria are SPEC-465's A6 to
+A13, in SPEC-465's acceptance section and red-first record, so this section adds no criterion of
+its own.
+
+- **It extends section 10's guarantee.** A SIGHUP of the runner, to its pid or its group, now ends
+  the killer's group as a SIGTERM does, and the runner exits `128 + signum` (129); a runner started
+  with SIGHUP ignored keeps it ignored. Section 10's sentence "`main()` now installs a SIGTERM
+  handler that exits with status 128 plus the signal number" now reads for both signals through
+  one handler, which records the first signal and ignores every later one, so a cleanup runs to its
+  end, and which holds a signal that arrives while a killer is starting until the cleanup that ends
+  its group is in place. `main()` restores both handlers it found, on every way out.
+- **Row S02506 is re-anchored.** Its line, the SIGTERM installation, is the line this cure
+  replaces. The row keeps its id, its killer and its description, and its find is now the new
+  installation of the one handler for SIGTERM.
+- **The other limits stand.** A descendant that leaves the group is not reached, a SIGKILL of the
+  runner runs no cleanup, and SIGINT is untouched (A21).
+- **Files.** SPEC-465's manifest.

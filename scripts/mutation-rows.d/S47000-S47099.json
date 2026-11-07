@@ -1,0 +1,51 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S47001-A-PANIC-RELEASES-THE-INSTRUMENT-LOCK",
+        "ingest",
+        "src/lock.rs",
+        "if std::thread::panicking() {",
+        "if false {",
+        "lock::a_task_that_panics_releases_the_lock_and_its_caller_sees_the_panic",
+        "a task whose work panics unlocks while the panic unwinds, so a panicked run never keeps the lock (SPEC-470 R4, A5)"
+      ],
+      [
+        "S47002-A-STOPPED-TASK-KEEPS-THE-LOCK",
+        "ingest",
+        "src/lock.rs",
+        "std::mem::forget(held);",
+        "drop(held);",
+        "lock::a_task_its_runtime_drops_keeps_the_lock_until_the_process_ends",
+        "a task its runtime drops keeps the lock until the process exits, so a stopping process never frees it while its read may run (SPEC-470 R3, A6)"
+      ],
+      [
+        "S47003-THE-HELD-LOCK-RUNS-IN-ITS-OWN-TASK",
+        "ingest",
+        "src/lock.rs",
+        "match tokio::spawn(task).await {",
+        "match Ok::<_, tokio::task::JoinError>(task.await) {",
+        "lock::a_held_lock_handed_to_a_task_runs_to_its_end_when_its_caller_stops_waiting",
+        "the work runs in a task of its own, so a caller that stops waiting leaves it to end and release the lock (SPEC-470 R2, A4)"
+      ],
+      [
+        "S47004-THE-CALLER-SEES-THE-WORKS-PANIC",
+        "ingest",
+        "src/lock.rs",
+        "Ok(panic) => std::panic::resume_unwind(panic),",
+        "Ok(_) => Err(io::Error::other(\"the work panicked\")),",
+        "lock::a_task_that_panics_releases_the_lock_and_its_caller_sees_the_panic",
+        "a panic in the work resumes in its caller, never read as an error (SPEC-470 R4, A5)"
+      ],
+      [
+        "S47005-AN-INSTRUMENT-RUN-HOLDS-THE-LOCK-TO-ITS-END",
+        "coordination",
+        "src/instruments.rs",
+        "let ended = held.hold_to_end(run).await;",
+        "let ended: io::Result<_> = Ok((run.await, held.release()));",
+        "instruments_lock::a_run_whose_caller_went_away_keeps_the_lock_until_its_read_ends",
+        "run_held hands its lock and its run to a task that runs to the end, so a dropped caller never frees the lock while its read runs (SPEC-470 R2, A1)"
+      ]
+    ]
+  }
+}

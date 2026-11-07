@@ -357,3 +357,57 @@ Section 4's manifest, for this part (insert-only; the table above is unchanged):
 - `docs/red-first/SPEC-417.md`: changed in this part: its amendments section, A13
 - `changelog.d/mutation-rows-417.md`: unchanged in this part
 - `changelog.d/mutation-rows-legs-822.md`: added in this part: the changelog fragment
+
+## 12. Amendments: the `ci` ceiling is 185 (`docs/rulings/OWNER-RULING-2026-11-05-rust-ceiling-185.md`)
+
+SPEC-618's four bench jobs are four more jobs a pull request run generates: at the bench lanes'
+head the ceiling test counts 71 other `ci.yml` jobs, 67 and the four bench jobs, and derives 185
+against the module's 189. The signed record `docs/rulings/OWNER-RULING-2026-11-05-rust-ceiling-185.md`
+admits that one figure, and with it the Rust share of the pull request run's joint line. This
+section amends R11, R14 and section 10's SPEC-362 pins as section 11 left them; it moves no
+criterion of this SPEC, and SPEC-618's section 9 criteria decide the figures it names. Every other
+requirement and criterion stands as written above, section 11's included.
+
+- **R11, as amended.** `LEG_CEILING["ci"]` is 185: the run's budget less every other `ci.yml` job,
+  71, with the rows job counted at `ROWS_MAX_LEGS`, 18, and the four bench jobs counted. The
+  ceiling test's derivation still reads `ROWS_MAX_LEGS` from `scripts/mutation_rows.py`'s text,
+  never imported, and the comment above `LEG_CEILING` names 71 other `ci.yml` jobs, 67 and the four
+  bench jobs, and cites the signed record. `LEG_CEILING["battery"]` stays 234, and
+  `RUST_RELEASE_CEILING` stays 192, which lies inside `LEG_CEILING["ci"]` to `RUST_MATRIX_LEGS`.
+- **R14, as amended.** Every test pin of the `ci` ceiling, or of a figure derived from it, follows
+  185 and keeps its relation to the ceiling:
+  - each refusal that names the pull request run's ceiling names 185, and each
+    `legs 1 of ceiling 189` and `legs 2 of ceiling 189` reads 185;
+  - `test_a_listing_beyond_the_ceiling_is_refused_whole`: the pull request's case is one ingest
+    mutant past 185 legs of 68, 12581 mutants, projected at 1585206 s serially and refused naming
+    185, and its comment says 185 legs hold 12580; the battery's 15913 and 15912 stay;
+  - `test_a_listing_that_needs_exactly_the_shard_cap_is_sized_at_the_cap`: `("ci", 185)`, and with
+    no ceiling named, 185 mutants of one leg each size at 185 legs and 186 are refused;
+  - `test_the_sizing_constants_are_the_measured_ones` and `test_the_ceiling_is_the_runs_job_budget`:
+    `LEG_CEILING` and the derived ceilings equal `{"ci": 185, "battery": 234}`;
+  - SPEC-423's tests: the placeholder release ceiling, equal to `LEG_CEILING["ci"]`, is 185, the
+    figure one past it is 186 and the figure one below it 184, the range's ends are 185 and 256,
+    and the range's refusal reads `outside 185..256`; a release ceiling of 200 or 256 keeps its
+    figures;
+  - the pull request run's joint line, in SPEC-422's and SPEC-423's tests, shares 217 legs, 32
+    Python and 185 Rust, and its runner-minutes are `(32 x 1800 + 185 x 10800) // 60`, 34260;
+  - `scripts/tests/test_ci_workflows.py`'s register entries name each call these pins change, with
+    its count.
+- **The deciders.** A10's and A12's commands in section 3's fence stand, and they now read the
+  figures above. SPEC-618's A25 (`test_dispatch_shards.py`), A26 (`test_mutation_verdict.py`), A27
+  (SPEC-423's tests) and A28 (SPEC-422's joint line) decide them at 185, each recorded in
+  `docs/red-first/SPEC-618.md`.
+- **Section 9's rows, as amended.** `S36201` is re-anchored with its mutant unchanged: its find
+  `"ci": 189` becomes `"ci": 185`, and its replacement stays `"ci": 194`. No row is added or
+  retired.
+- **Section 10's SPEC-362 pins, as amended (a tightening).**
+
+| SPEC-362 pin | old | new | derivation |
+|---|---|---|---|
+| R3's value, `LEG_CEILING["ci"]` (`scripts/mutation-verdict.py:971`) | 190 -> 189 | 185 | 256 less 71: the four bench jobs counted |
+| the joint line's share of legs, 32 Python and the Rust ceiling | 222 -> 221 | 217 | 32 plus 185 |
+| the joint line's runner-minutes, `(32 x 1800 + ceiling x 10800) // 60` | 35160 -> 34980 | 34260 | 32 x 1800 + 185 x 10800 |
+| the refused pull request listing of ingest mutants | 12921 -> 12853 | 12581 | 185 legs of 68 mutants hold 12580; one more is refused |
+
+No bound rises: the pull request run's ceiling falls by 4, and the release run's 192 Rust legs,
+held to `RUST_RELEASE_CEILING`, do not move. This part's files are listed in SPEC-618's section 4.

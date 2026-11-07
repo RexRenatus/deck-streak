@@ -126,9 +126,11 @@ A9: pnpm exec vitest run web/app/src/lib/design/tokens.test.ts -t "every text an
 - **A colour set that does not compile.** The census reads JSON on Linux; the asset catalog
   compiler runs only in CI. Detected by the `apple-on-change` run's app tests and unsigned archive,
   which compile the catalog on this pull request.
-- **A StrykerJS survivor in `build-tokens.ts`.** The changed file is mutated whole at
-  `thresholds.break` 100. Detected by the local StrykerJS run before the push and by CI's
-  `mutation-web`; a survivor is killed by a new assertion, never filtered.
+- **A StrykerJS survivor in `build-tokens.ts`.** Detected by the ranged StrykerJS run over the
+  four ranges the delivery adds to the file, run before the push and recorded beside the
+  whole-file baseline in `docs/red-first/SPEC-578.md`: CI's `mutation-web` mutated no file under
+  `web/app/scripts/` in this delivery's pull request. A survivor there is killed by a new
+  assertion or recorded there as equivalent, never filtered.
 - **A pin over the custom property names.** The screens round will read `--tide-<mode>-<role>`; a
   rename then is a change to A1, read by its test.
 - **The catalog absent at the cut.** This delivery is cut only after SPEC-579's pull request merges;

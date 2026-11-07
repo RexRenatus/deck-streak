@@ -10,6 +10,12 @@ the catalog and the icon set it names (A10 to A12). The public scrub admits a bi
 listed path with the listed sha256 and size (SPEC-033 as SPEC-579 amends it); that half is
 `test_public_scrub.py`'s.
 
+SPEC-580 (A10 to A14; ADR-599 D4) amends the README's half: the hero is one line, a link to a
+listed gif whose image is the brand source's light poster, pinned here by its sha256 and size, so
+every reader sees the still and the animation plays only for a reader who follows the link.
+`still_findings` holds the still; `readme_findings` holds the order; `animation_findings` holds
+every README image to a path that is not a gif.
+
 The readers are written here from the formats' own rules, with the standard library alone: PNG
 chunks by their length fields and CRCs, an icon file's directory and the PNG each entry holds, a
 GIF's blocks to its trailer, an SVG's element and a JSON document. Each refusal is planted over a
@@ -37,8 +43,14 @@ ICON_SETTING = "ASSETCATALOG_COMPILER_APPICON_NAME"
 ICON_NAME = "AppIcon"
 TITLE = "# DeckStreak"
 HERO_ALT = "DeckStreak"
+# SPEC-580 R3: the hero's still, the brand source's light poster, pinned by its sha256 and size.
+STILL = "docs/assets/deckstreak-hero-poster-tide-light.png"
+STILL_SHA256 = "92114e135df1b8bafe1a283e7464222c4b81f6de7850558224482acd69334584"
+STILL_BYTES = 8377
+REDUCED_MOTION = "(prefers-reduced-motion: reduce)"
 # SPEC-579 R1: every file the brand source gives the tree, in the list's order (sorted by path).
 BRAND_PATHS = (
+    "docs/assets/deckstreak-hero-poster-tide-light.png",
     "docs/assets/deckstreak-hero-tide-light.gif",
     "ios/App/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png",
     "ios/App/Assets.xcassets/AppIcon.appiconset/AppIcon-dark-1024.png",
@@ -81,6 +93,14 @@ PNG_METADATA = (b"tEXt", b"zTXt", b"iTXt", b"tIME", b"eXIf")
 # The one GIF application extension a looping animation needs.
 GIF_LOOP = b"NETSCAPE2.0"
 IMAGE_LINE = re.compile(r"!\[([^\]]*)\]\(([^)\s]*)\)")
+# SPEC-580 R3: the hero, one line: a link to the animation whose one image is the still.
+HERO_LINE = re.compile(
+    r'<a href="([^"\s]*)"><img src="([^"\s]*)" width="960" height="360" alt="([^"]*)"></a>'
+)
+# SPEC-580 R3: the README's images, as a Markdown image, an `<img src>` or a `<source srcset>`.
+MARKDOWN_IMAGE = re.compile(r"!\[[^\]]*\]\(\s*<?([^)\s>]+)")
+IMG_SRC = re.compile(r"""(?i)<img\b[^>]*?\ssrc\s*=\s*["']?([^"'\s>]+)""")
+SOURCE_SRCSET = re.compile(r"""(?i)<source\b[^>]*?\ssrcset\s*=\s*["']([^"']*)["']""")
 TARGETS = re.compile(r"(?ms)^targets:\n(.*?)(?=^\S|\Z)")
 
 
@@ -293,29 +313,79 @@ def file_findings(root):
 
 
 def readme_findings(root):
-    """Every way the README's header differs from the title, a blank line, the hero from a listed
-    file, a blank line and the description paragraph, as "<reason>: README.md: <detail>"."""
-    lines = (Path(root) / README).read_text(encoding="utf-8").split("\n") + [""] * 5
+    """Every way the README's header differs from the title, a blank line, the hero line (a link
+    to a listed gif whose one image is a listed still), a blank line and the description
+    paragraph, as "<reason>: README.md: <detail>" (SPEC-579 R4 as SPEC-580 amends it; the still's
+    own checks are `still_findings`)."""
+    lines = (Path(root) / README).read_text(encoding="utf-8").split("\n") + [""] * 8
     findings = []
     if lines[0] != TITLE:
         findings.append(f"title-not-first: README.md: line 1 is {lines[0][:60]!r}")
-    image = IMAGE_LINE.fullmatch(lines[2])
-    if lines[1] or image is None or lines[3]:
+    hero = HERO_LINE.fullmatch(lines[2])
+    if (lines[1], hero is None, lines[3]) != ("", False, ""):
         findings.append(
-            f"hero-not-below-title: README.md: lines 2 to 4 are not a blank line, the hero and a"
-            f" blank line; line 3 is {lines[2][:60]!r}"
+            f"hero-not-below-title: README.md: lines 2 to 4 are not a blank line, the hero line"
+            f" and a blank line; line 3 is {lines[2][:60]!r}"
         )
     else:
-        alt, path = image.groups()
+        href, src, alt = hero.groups()
         if alt != HERO_ALT:
             findings.append(f"hero-alt: README.md: the hero's alt text is {alt!r}")
         files, _problem = read_list(root)
         gifs = {entry.get("path") for entry in files or [] if entry.get("kind") == "gif"}
-        if path not in gifs or not (Path(root) / path).is_file():
-            findings.append(f"hero-not-listed: README.md: {path} is not a listed gif in the tree")
+        if href not in gifs or not (Path(root) / href).is_file():
+            findings.append(f"hero-not-listed: README.md: {href} is not a listed gif in the tree")
+        stills = {entry.get("path") for entry in files or [] if entry.get("kind") == "png"}
+        if src not in stills or not (Path(root) / src).is_file():
+            findings.append(f"hero-not-listed: README.md: {src} is not a listed still in the tree")
     if not lines[4] or lines[4][0] in "#!<>":
         findings.append(f"paragraph-missing: README.md: line 5 is {lines[4][:60]!r}")
     return findings
+
+
+def still_findings(root, still=STILL, sha256=STILL_SHA256, size=STILL_BYTES):
+    """Every way the hero's still differs from SPEC-580 R3: the hero line's image, the list's
+    entry and the file, each held to the pin, as "<reason>: <file>: <detail>"."""
+    lines = (Path(root) / README).read_text(encoding="utf-8").split("\n") + [""] * 8
+    findings = []
+    hero = HERO_LINE.fullmatch(lines[2])
+    if hero is None:
+        findings.append(f"hero-no-still: README.md: line 3 is {lines[2][:60]!r}")
+    elif hero.group(2) != still:
+        findings.append(f"still-not-listed: README.md: the hero's image is {hero.group(2)!r}")
+    files, _problem = read_list(root)
+    entry = next((entry for entry in files or [] if entry.get("path") == still), None)
+    if entry is None:
+        findings.append(f"still-missing: {LIST.as_posix()}: no entry for {still}")
+    elif (entry.get("sha256"), entry.get("bytes"), entry.get("kind")) != (sha256, size, "png"):
+        findings.append(f"still-pin: {LIST.as_posix()}: the entry for {still} is not the pin")
+    path = Path(root) / still
+    if not path.is_file():
+        findings.append(f"still-missing: {still}: not in the tree")
+    elif hashlib.sha256(path.read_bytes()).hexdigest() != sha256:
+        findings.append(f"still-pin: {still}: the file's sha256 is not the pin")
+    return findings
+
+
+def animation_findings(root):
+    """(examined, findings): every image the README shows, as (line, target), by a Markdown image,
+    an `<img src>` or each `<source srcset>` candidate, and a finding for each target that names a
+    gif, which would play the animation on its own for every reader, as "hero-animates: README.md:
+    line <n> shows <target>" (SPEC-580 R3)."""
+    lines = (Path(root) / README).read_text(encoding="utf-8").split("\n")
+    shown = []
+    for number, line in enumerate(lines, 1):
+        targets = [m.group(1) for m in MARKDOWN_IMAGE.finditer(line)]
+        targets += [m.group(1) for m in IMG_SRC.finditer(line)]
+        for srcset in SOURCE_SRCSET.finditer(line):
+            targets += [c.split()[0] for c in srcset.group(1).split(",") if c.split()]
+        shown += [(number, path) for path in targets]
+    findings = [
+        f"hero-animates: README.md: line {number} shows {path}"
+        for number, path in shown
+        if path.lower().endswith(".gif")
+    ]
+    return shown, findings
 
 
 def app_target(root):
@@ -414,6 +484,7 @@ def planted_files():
     contents = json.dumps({"images": ICON_IMAGES, "info": {"author": "xcode", "version": 1}})
     return {
         "docs/assets/hero.gif": (planted_gif(), "gif", [[1, 1]]),
+        PLANTED_STILL: (square, "png", [[2, 2]]),
         (ICON_SET / "AppIcon-1024.png").as_posix(): (square, "png", [[2, 2]]),
         (ICON_SET / "AppIcon-dark-1024.png").as_posix(): (square, "png", [[2, 2]]),
         (ICON_SET / "AppIcon-tinted-1024.png").as_posix(): (square, "png", [[2, 2]]),
@@ -440,7 +511,29 @@ def write_list(root, files):
     (root / LIST).write_text(json.dumps({"files": entries}, indent=2) + "\n", encoding="utf-8")
 
 
-PLANTED_README = "# DeckStreak\n\n![DeckStreak](docs/assets/hero.gif)\n\nA planted paragraph.\n"
+PLANTED_STILL = "docs/assets/still.png"
+# SPEC-580 R3: the planted hero line, a link to the planted gif whose image is the planted still.
+PLANTED_HERO = (
+    f'<a href="docs/assets/hero.gif"><img src="{PLANTED_STILL}" width="960" height="360"'
+    ' alt="DeckStreak"></a>'
+)
+# SPEC-580 A12: the earlier picture form, a reduced-motion source of the still and an image of the
+# gif, which plays the animation for every reader who has not set that preference.
+PLANTED_PICTURE = "\n".join(
+    [
+        "<picture>",
+        f'  <source media="{REDUCED_MOTION}" srcset="{PLANTED_STILL}">',
+        '  <img src="docs/assets/hero.gif" width="960" height="360" alt="DeckStreak">',
+        "</picture>",
+    ]
+)
+PLANTED_README = "# DeckStreak\n\n" + PLANTED_HERO + "\n\nA planted paragraph.\n"
+# SPEC-580 A12 and A13: the planted still's pin, from the bytes `planted_files` gives it.
+PLANTED_PIN = (
+    PLANTED_STILL,
+    hashlib.sha256(planted_png(2, 2)).hexdigest(),
+    len(planted_png(2, 2)),
+)
 PLANTED_SPEC = """targets:
   DeckStreak:
     type: application
@@ -545,7 +638,7 @@ class TheReadmeHeaderShowsTheHero(unittest.TestCase):
             root = plant(tmp)
             self.assertEqual(readme_findings(root), [], "the planted README is the control")
             (root / README).write_text(
-                "![DeckStreak](docs/assets/hero.gif)\n\n# DeckStreak\n\nA planted paragraph.\n",
+                PLANTED_HERO + "\n\n# DeckStreak\n\nA planted paragraph.\n",
                 encoding="utf-8",
             )
             self.assertEqual(
@@ -569,6 +662,83 @@ class TheReadmeHeaderShowsTheHero(unittest.TestCase):
                 text = PLANTED_README.replace("docs/assets/hero.gif", path)
                 (root / README).write_text(text, encoding="utf-8")
                 self.assertEqual(reasons(readme_findings(root)), [("hero-not-listed", "README.md")])
+
+    def test_a_hero_that_shows_the_animation_is_refused(self):
+        # A12 (SPEC-580 R3): the gif as a bare image, as an `<img>` with no link, as the earlier
+        # picture form's image, and as the hero line's image; each is refused by name.
+        def found(root):
+            animated = animation_findings(root)[1]
+            return readme_findings(root) + still_findings(root, *PLANTED_PIN) + animated
+
+        unlinked = '<img src="docs/assets/hero.gif" width="960" height="360" alt="DeckStreak">'
+        swapped = PLANTED_HERO.replace(f'src="{PLANTED_STILL}"', 'src="docs/assets/hero.gif"')
+        moved = [
+            ("hero-not-below-title", "README.md"),
+            ("hero-no-still", "README.md"),
+            ("hero-animates", "README.md"),
+        ]
+        shown = [
+            ("hero-not-listed", "README.md"),
+            ("still-not-listed", "README.md"),
+            ("hero-animates", "README.md"),
+        ]
+        planted = {
+            "a bare image": ("![DeckStreak](docs/assets/hero.gif)", moved),
+            "an unlinked image": (unlinked, moved),
+            "the earlier picture form": (PLANTED_PICTURE, moved),
+            "the hero line's image swapped to the gif": (swapped, shown),
+        }
+        for name, (hero, want) in examined("planted heroes", list(planted.items())):
+            with self.subTest(name), tempfile.TemporaryDirectory() as tmp:
+                root = plant(tmp)
+                self.assertEqual(found(root), [], "the planted README is the control")
+                text = PLANTED_README.replace(PLANTED_HERO, hero)
+                self.assertNotEqual(text, PLANTED_README)
+                (root / README).write_text(text, encoding="utf-8")
+                self.assertEqual(reasons(found(root)), want)
+
+    def test_no_readme_image_shows_the_animation(self):
+        # A14 (SPEC-580 R3): no image the README shows names a gif, so nothing in it moves on its
+        # own; the check examined at least one image.
+        shown, findings = animation_findings(REPO)
+        examined("README images", shown)
+        self.assertEqual(findings, [])
+
+
+class TheStillIsTheBrandSourcesPoster(unittest.TestCase):
+    def test_the_still_is_listed_by_its_pinned_sha256(self):
+        # A11 (SPEC-580 R3): the still is listed with the brand source's pin, present with its
+        # bytes, and shown as the hero line's image.
+        files, _problem = read_list(REPO)
+        listed = [entry for entry in files or [] if entry.get("path") == STILL]
+        entries = examined("still entries", listed)
+        got = [(e["sha256"], e["bytes"], e["kind"], e["pixels"]) for e in entries]
+        self.assertEqual(got, [(STILL_SHA256, STILL_BYTES, "png", [[960, 360]])])
+        self.assertEqual(still_findings(REPO), [])
+
+    def test_a_missing_or_altered_still_is_refused(self):
+        # A13 (SPEC-580 R3): the still deleted; one byte of it changed; the list's entry
+        # rewritten for other bytes.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = plant(tmp)
+            control = still_findings(root, *PLANTED_PIN)
+            self.assertEqual(control, [], "the planted set is the control")
+            (root / PLANTED_STILL).unlink()
+            found = reasons(still_findings(root, *PLANTED_PIN))
+            self.assertEqual(found, [("still-missing", PLANTED_STILL)])
+        with tempfile.TemporaryDirectory() as tmp:
+            root = plant(tmp)
+            data = bytearray((root / PLANTED_STILL).read_bytes())
+            data[-1] ^= 1
+            (root / PLANTED_STILL).write_bytes(bytes(data))
+            found = reasons(still_findings(root, *PLANTED_PIN))
+            self.assertEqual(found, [("still-pin", PLANTED_STILL)])
+        with tempfile.TemporaryDirectory() as tmp:
+            files = planted_files()
+            files[PLANTED_STILL] = (planted_png(3, 3), "png", [[3, 3]])
+            root = plant(tmp, files)
+            found = reasons(still_findings(root, *PLANTED_PIN))
+            self.assertEqual(found, [("still-pin", LIST.as_posix()), ("still-pin", PLANTED_STILL)])
 
 
 class TheAppCarriesItsIconSet(unittest.TestCase):

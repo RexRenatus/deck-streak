@@ -844,5 +844,164 @@ def a_record(mutant, anchor, file=SCRIPT, **more):
     }
 
 
+class TheScriptsClassNamesTheRowsItLeavesToTheLegReport(unittest.TestCase):
+    """SPEC-625: a KILLED row that no class credits, one on a changed line of a path no judged
+    class owns or one that covers no changed line, is named by the scripts class alone, and no
+    class adds it to its examined count."""
+
+    GUARD_ROW = ["S00081-GUARD", SCRIPT, "return x + 2", "return x + 3", REACHED, "adds two"]
+    GENERATOR_ROW = ["S00082-GEN", GENERATOR, "return n * 3", "return n * 4", REACHED, "triples"]
+    MAP_ROW = [
+        "S00083-MAP",
+        "scripts/mutation-python.json",
+        '"scripts/guard.py": {',
+        '"scripts/guard.pyc": {',
+        REACHED,
+        "the map names the guard",
+    ]
+    UNCHANGED_ROW = ["S00084-UNCHANGED", SCRIPT, "def guard(x):", "def guard(y):", REACHED, "named"]
+    RUST_ROW = [
+        "S00085-DOUBLE",
+        "fix",
+        "src/lib.rs",
+        "/// Doubles, its input times two.",
+        "/// Doubles, its input times three.",
+        "double::two_doubles_to_four",
+        "doubles",
+    ]
+    SUM_ROW = ["S00086-SUM", SCRIPT, "x + 2", "x - 2", REACHED, "sums"]
+    MAP_HEAD = json.dumps(MAP, indent=2)
+    # The fixture's base library with its first doc comment reworded: a Rust row's changed line
+    # that no cargo-mutants listing needs, since the rust class has no changed code line.
+    RUST_HEAD = (
+        "/// Doubles, its input times two.\n"
+        "pub fn double(x: i64) -> i64 {\n"
+        "    x * 2\n"
+        "}\n"
+        "\n"
+        "/// The hour bound.\n"
+        "pub const LAST_HOUR: u8 = 23;\n"
+    )
+
+    def rowed(self, rows, verdicts, changes):
+        """The plan of a head making `changes`, a Python report with no mutant, and a rows report
+        giving each row id its verdict."""
+        fixture = Fixture(self, files=dict(FILES), rows=rows)
+        fixture.head(changes)
+        fixture.plan()
+        shard_the_plan(fixture, [])
+        write_shard(fixture.out / "reports", 0, report_of([]))
+        proved = fixture.report(
+            "rows.json",
+            [
+                {"id": ident, "verdict": verdict, "reason": "its killer passed"}
+                for ident, verdict in verdicts.items()
+            ],
+        )
+        return fixture, proved
+
+    def left_lines(self, done):
+        return [line for line in done.stdout.splitlines() if "left to the leg report" in line]
+
+    def test_a_killed_row_on_a_changed_map_line_is_named_left_to_the_leg_report(self):
+        guard, mapped = self.GUARD_ROW, self.MAP_ROW
+        fixture, proved = self.rowed(
+            [("SCRIPT_MUTATIONS", guard), ("SCRIPT_MUTATIONS", mapped)],
+            {guard[0]: "KILLED", mapped[0]: "KILLED"},
+            {SCRIPT: SCRIPT_HEAD, "scripts/mutation-python.json": self.MAP_HEAD},
+        )
+        done = judged(fixture, "scripts", fixture.out / "reports", "--rows", str(proved))
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertIn("mutation: scripts: examined 1: generated 0, rows 1", done.stdout)
+        self.assertEqual(
+            self.left_lines(done),
+            [
+                "mutation: scripts: rows left to the leg report: 1 of 2 selected",
+                f"mutation: scripts: row left to the leg report: {mapped[0]}: its changed line is "
+                "in scripts/mutation-python.json",
+            ],
+        )
+        self.assertEqual([line for line in self.left_lines(done) if guard[0] in line], [])
+
+    def test_only_the_scripts_class_names_and_only_rows_no_class_credits(self):
+        rows = [
+            ("SCRIPT_MUTATIONS", self.GUARD_ROW),
+            ("SCRIPT_MUTATIONS", self.GENERATOR_ROW),
+            ("SCRIPT_MUTATIONS", self.MAP_ROW),
+            ("SCRIPT_MUTATIONS", self.UNCHANGED_ROW),
+            ("MUTATIONS", self.RUST_ROW),
+        ]
+        fixture, proved = self.rowed(
+            rows,
+            {row[0]: "KILLED" for _, row in rows},
+            {
+                SCRIPT: SCRIPT_HEAD,
+                GENERATOR: GENERATOR_HEAD,
+                "scripts/mutation-python.json": self.MAP_HEAD,
+                "crates/fix/src/lib.rs": self.RUST_HEAD,
+            },
+        )
+        reports = fixture.out / "reports"
+        scripts = judged(fixture, "scripts", reports, "--rows", str(proved))
+        self.assertEqual(scripts.returncode, 0, scripts.stdout + scripts.stderr)
+        self.assertIn("mutation: scripts: examined 1: generated 0, rows 1", scripts.stdout)
+        self.assertEqual(
+            self.left_lines(scripts),
+            [
+                "mutation: scripts: rows left to the leg report: 2 of 5 selected",
+                f"mutation: scripts: row left to the leg report: {self.MAP_ROW[0]}: its changed "
+                "line is in scripts/mutation-python.json",
+                f"mutation: scripts: row left to the leg report: {self.UNCHANGED_ROW[0]}: it "
+                "covers no changed line",
+            ],
+        )
+        oracle = judged(fixture, "oracle", reports, "--rows", str(proved))
+        self.assertIn("mutation: oracle: examined 1: generated 0, rows 1", oracle.stdout)
+        self.assertEqual(self.left_lines(oracle), [])
+        rust = fixture.judge("rust", "--rows", str(proved))
+        self.assertIn("mutation: rust: ", rust.stdout)
+        self.assertEqual(self.left_lines(rust), [])
+
+    def test_no_left_line_prints_when_every_selected_row_is_credited(self):
+        guard, summed = self.GUARD_ROW, self.SUM_ROW
+        fixture, proved = self.rowed(
+            [("SCRIPT_MUTATIONS", guard), ("SCRIPT_MUTATIONS", summed)],
+            {guard[0]: "KILLED", summed[0]: "KILLED"},
+            {SCRIPT: SCRIPT_HEAD},
+        )
+        done = judged(fixture, "scripts", fixture.out / "reports", "--rows", str(proved))
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertIn("mutation: scripts: examined 2: generated 0, rows 2", done.stdout)
+        self.assertEqual(self.left_lines(done), [])
+
+    def test_a_row_the_leg_did_not_kill_fails_and_is_never_named_left(self):
+        guard, mapped = self.GUARD_ROW, self.MAP_ROW
+        fixture, proved = self.rowed(
+            [("SCRIPT_MUTATIONS", guard), ("SCRIPT_MUTATIONS", mapped)],
+            {guard[0]: "KILLED", mapped[0]: "SURVIVED"},
+            {SCRIPT: SCRIPT_HEAD, "scripts/mutation-python.json": self.MAP_HEAD},
+        )
+        done = judged(fixture, "scripts", fixture.out / "reports", "--rows", str(proved))
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertIn(f"mutation: scripts: {mapped[0]}: SURVIVED: its killer passed", done.stdout)
+        self.assertEqual(self.left_lines(done), [])
+
+    def test_a_left_row_adds_nothing_to_the_examined_count(self):
+        mapped = self.MAP_ROW
+        fixture, proved = self.rowed(
+            [("SCRIPT_MUTATIONS", mapped)],
+            {mapped[0]: "KILLED"},
+            {SCRIPT: SCRIPT_HEAD, "scripts/mutation-python.json": self.MAP_HEAD},
+        )
+        done = judged(fixture, "scripts", fixture.out / "reports", "--rows", str(proved))
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertIn(
+            "mutation: scripts: VOID the scripts class applies and nothing was examined",
+            done.stdout,
+        )
+        self.assertRegex(done.stdout, r"(?m)^examined 0$")
+        self.assertIn("mutation: scripts: examined 0: generated 0, rows 0", done.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -17,10 +17,12 @@ struct SyncView: View {
             if let unsynced = model.unsynced {
                 Text("Not yet synced: \(unsynced.reviews) reviews")
                     .accessibilityIdentifier("sync-unsynced")
+                    .foregroundStyle(Color.tideInk)
             }
             if let loss = model.counts?.download {
                 Text("Download loses \(loss.reviews) reviews, \(loss.cards) cards, \(loss.notes) notes")
                     .accessibilityIdentifier("sync-download-loses")
+                    .foregroundStyle(Color.tideInk)
                 Button("Download") {
                     Task { await model.download() }
                 }
@@ -32,6 +34,9 @@ struct SyncView: View {
                 .accessibilityIdentifier("sync-cancel")
             }
             Text(model.message).accessibilityIdentifier("sync-message")
+                .foregroundStyle(Color.tideMuted)
         }
+        .listRowBackground(Color.tideCard)
+        .listRowSeparatorTint(Color.tideBorder)
     }
 }

@@ -16,9 +16,9 @@ describe('the Mini App shell', () => {
     expect(locales).toEqual(['en', 'zh-Hans', 'zh-Hant', 'ja', 'ko', 'fr', 'es']);
   });
 
-  it('has a tagline in every locale that names Anki', () => {
+  it('has a tagline in every locale that names no Anki and no Telegram', () => {
     for (const locale of locales) {
-      expect(m.tagline({}, { locale })).toContain('Anki');
+      expect(m.tagline({}, { locale })).toMatch(/^(?![\s\S]*(?:Anki|Telegram))[\s\S]+$/);
     }
   });
 });

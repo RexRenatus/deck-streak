@@ -181,3 +181,15 @@ A19: python3 -m unittest discover -s scripts/tests -p test_public_scrub.py -k te
   unsigned archive) on this pull request.
 - **A secret scanner reading a sha256 as a key.** The build's gitleaks range scan reads the list; a
   finding is a STOP to report, never a widened rule.
+
+## 7. Amendment by SPEC-580: the hero becomes a still linked to the animation
+
+R4 above is amended by SPEC-580 (ADR-599 D4); its text is kept as it was. `README.md`'s first line
+stays `# DeckStreak` and a blank line follows it. Its hero is then one line: an `<a>` element whose
+`href` is `docs/assets/deckstreak-hero-tide-light.gif`, holding one `<img>` whose `src` is
+`docs/assets/deckstreak-hero-poster-tide-light.png` with `width="960"`, `height="360"` and
+`alt="DeckStreak"`; a blank line and the opening paragraph follow. Every reader sees the still, and
+the animation plays only for a reader who follows the link. The still is a
+brand file under R1 and R2: it is listed in `scripts/brand-files.json` and annotated in
+`REUSE.toml` like every other. Its README criteria keep their test names and read the hero line;
+row S57904 anchors on the hero's `<a href>`.

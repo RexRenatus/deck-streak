@@ -18,7 +18,9 @@ struct CardFaceView: View {
         ZStack {
             card.map { CardHost(card: $0).id(ObjectIdentifier($0)) }
             Text(refusal).font(.footnote).padding()
+                .foregroundStyle(Color.tideInk)
         }
+        .background(Color.tideBackground)
         .task(id: document) {
             do {
                 let made = try await CardWebViewFactory.makeCardWebView(html: document)

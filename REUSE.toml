@@ -24,6 +24,7 @@ SPDX-License-Identifier = "AGPL-3.0-or-later"
 
 [[annotations]]
 path = [
+  "docs/assets/deckstreak-hero-poster-tide-light.png",
   "docs/assets/deckstreak-hero-tide-light.gif",
   "ios/App/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png",
   "ios/App/Assets.xcassets/AppIcon.appiconset/AppIcon-dark-1024.png",

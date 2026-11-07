@@ -1,0 +1,67 @@
+{
+  "packages": [
+    {
+      "name": "app",
+      "manifest_path": "/w/Cargo.toml",
+      "dependencies": [{"name": "core", "kind": null, "path": "/w/crates/core"}],
+      "targets": [
+        {"name": "app", "kind": ["lib"], "src_path": "/w/src/lib.rs"},
+        {"name": "startup", "kind": ["bench"], "src_path": "/w/benches/startup.rs"}
+      ]
+    },
+    {
+      "name": "core",
+      "manifest_path": "/w/crates/core/Cargo.toml",
+      "dependencies": [
+        {"name": "fsrs", "kind": null, "path": "/w/crates/fsrs"},
+        {"name": "serde", "kind": null}
+      ],
+      "targets": [{"name": "core", "kind": ["lib"], "src_path": "/w/crates/core/src/lib.rs"}]
+    },
+    {
+      "name": "fsrs",
+      "manifest_path": "/w/crates/fsrs/Cargo.toml",
+      "dependencies": [{"name": "helper", "kind": "dev", "path": "/w/crates/helper"}],
+      "targets": [{"name": "fsrs", "kind": ["lib"], "src_path": "/w/crates/fsrs/src/lib.rs"}]
+    },
+    {
+      "name": "helper",
+      "manifest_path": "/w/crates/helper/Cargo.toml",
+      "dependencies": [],
+      "targets": [{"name": "helper", "kind": ["lib"], "src_path": "/w/crates/helper/src/lib.rs"}]
+    },
+    {
+      "name": "ffi",
+      "manifest_path": "/w/crates/ffi/Cargo.toml",
+      "dependencies": [
+        {"name": "core", "kind": null, "path": "/w/crates/core"},
+        {"name": "fsrs", "kind": null, "path": "/w/crates/fsrs"}
+      ],
+      "targets": [
+        {"name": "ffi", "kind": ["lib"], "src_path": "/w/crates/ffi/src/lib.rs"},
+        {"name": "grading", "kind": ["bench"], "src_path": "/w/crates/ffi/benches/grading.rs"}
+      ]
+    },
+    {
+      "name": "ffi-inner",
+      "manifest_path": "/w/crates/ffi/inner/Cargo.toml",
+      "dependencies": [],
+      "targets": [{"name": "ffi-inner", "kind": ["lib"], "src_path": "/w/crates/ffi/inner/src/lib.rs"}]
+    },
+    {
+      "name": "bot",
+      "manifest_path": "/w/crates/bot/Cargo.toml",
+      "dependencies": [{"name": "core", "kind": null, "path": "/w/crates/core"}],
+      "targets": [{"name": "bot", "kind": ["lib"], "src_path": "/w/crates/bot/src/lib.rs"}]
+    },
+    {
+      "name": "serde",
+      "manifest_path": "/registry/serde-1.0.0/Cargo.toml",
+      "dependencies": [],
+      "targets": [{"name": "serde", "kind": ["lib"], "src_path": "/registry/serde-1.0.0/src/lib.rs"}]
+    }
+  ],
+  "workspace_members": [],
+  "workspace_root": "/w",
+  "version": 1
+}
