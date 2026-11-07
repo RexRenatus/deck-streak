@@ -344,3 +344,7 @@ row; a stale row; a row whose ADR lacks its path; an unknown key in a row; a row
 path twice; and an R8 finding of another class on an `as_found` path, which stays a finding, on a
 vectors test (a path no entry declares) and on a vectors file (a file two entries declare, whose
 row is then also stale).
+
+R18 holds again at the dev that this pull request merges when it is checked: the lists gain the
+rows that dev adds over the rebuild's cut, each citing ADR-445 and named in the last part of
+ADR-445's appendix, with no product change and no test changed.

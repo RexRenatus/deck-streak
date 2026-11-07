@@ -337,6 +337,11 @@ Chosen against:
 - Leaving the four findings so the check lands red: lost, for D5's own reason, since a check red on
   arrival blocks every pull request until a cure that is not this delivery's lands.
 
+The same listing holds for the dev that this pull request merges when it is checked: the rows
+that dev adds over the rebuild's cut are listed as found, each citing ADR-445 and named by its
+token in the last part of the appendix, and no product file changes. They are D5's listing at
+that dev, as the rebuild's rows are at its cut, not rows added inside D6's review window.
+
 ## Decision Outcome
 
 Chosen options: D1 to D9 as each "Chosen:" bullet states, because together they make the crate
@@ -480,3 +485,8 @@ Every vectors finding listed as found, each an `as_found` row:
 - `crates/media/tests/formal_vectors_bind.rs`: its file name drops its crate's name.
 - `crates/media/tests/formal_vectors_gc.rs`: its file name drops its crate's name.
 - `formal/vectors/companion-frames.jsonl`: a codec frame fixture no Lean entry declares.
+
+The rows added for the dev that this pull request merges when it is checked, over the rebuild's cut:
+
+`lean/AgentPinGroups`
+`lean/PathGate`
