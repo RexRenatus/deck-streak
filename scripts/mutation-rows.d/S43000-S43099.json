@@ -488,6 +488,70 @@
         "while False:",
         "An option before the subcommand is skipped (SPEC-430 R2, A2)",
         "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_refuses_each_planted_shape"
+      ],
+      [
+        "S43061-A-CODSPEED-BUILD-BUILDS-ANOTHER-PROFILE",
+        "scripts/tests/test_ci_workflows.py",
+        "if subcommand == \"codspeed\" and list(words[:1]) == [\"build\"]:",
+        "if subcommand == \"codspeed\" and False:",
+        "A codspeed build builds another profile (SPEC-430 R15, A11)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_a_codspeed_build_builds_another_profile"
+      ],
+      [
+        "S43062-ONLY-A-CODSPEED-BUILD-BUILDS-ANOTHER-PROFILE",
+        "scripts/tests/test_ci_workflows.py",
+        "if subcommand == \"codspeed\" and list(words[:1]) == [\"build\"]:",
+        "if subcommand == \"codspeed\":",
+        "Only a codspeed build, of every codspeed subcommand, builds another profile (SPEC-430 R15, A11)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_a_codspeed_build_builds_another_profile"
+      ],
+      [
+        "S43063-A-DISCOVERY-RUN-IS-READ",
+        "scripts/tests/test_ci_workflows.py",
+        "SHAPE_DISCOVERY = re.compile(r\"-m[ \\t]+unittest[ \\t]+discover\\b\")",
+        "SHAPE_DISCOVERY = re.compile(r\"-m[ \\t]+unittest[ \\t]+discovered\\b\")",
+        "A test discovery run is read as the gate python stage (SPEC-430 R14, A10)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_follows_test_discovery_to_the_python_stage"
+      ],
+      [
+        "S43064-A-DISCOVERY-RUN-READS-THE-PYTHON-STAGE",
+        "scripts/tests/test_ci_workflows.py",
+        "discovery = \"python\"",
+        "discovery = \"clippy\"",
+        "A discovery run reads the stage named python (SPEC-430 R14, A10)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_cargo_census_follows_test_discovery_to_the_python_stage"
+      ],
+      [
+        "S43065-THE-RELEASE-KEY-HAS-ITS-OWN-RULE",
+        "scripts/tests/test_ci_workflows.py",
+        "if (cache, key) == (\"Rust\", SHAPE_RELEASE_KEY):",
+        "if (cache, key) == (\"Rust\", None):",
+        "The release profile key is judged by its own rule (SPEC-430 R16, A12)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_release_profile_key_serves_a_job_that_builds_no_cache_profile"
+      ],
+      [
+        "S43066-THE-RELEASE-FALLBACK-IS-ITS-PREFIX",
+        "scripts/tests/test_ci_workflows.py",
+        "if line != SHAPE_RELEASE_FALLBACK:",
+        "if False:",
+        "A release key fallback is the release key prefix (SPEC-430 R16, A12)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_release_profile_key_serves_a_job_that_builds_no_cache_profile"
+      ],
+      [
+        "S43067-A-CACHE-FREE-JOB-MAY-RESTORE-THE-RELEASE-KEY",
+        "scripts/tests/test_ci_workflows.py",
+        "if str((step.get(\"with\") or {}).get(\"key\", \"\")) != SHAPE_RELEASE_KEY",
+        "if True",
+        "A cache-free job may restore the release profile key (SPEC-430 R16, A12)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_release_profile_key_serves_a_job_that_builds_no_cache_profile"
+      ],
+      [
+        "S43068-A-RUST-SAVE-MAY-KEY-ON-A-RELEASE-RESTORE",
+        "scripts/tests/test_ci_workflows.py",
+        "if keyed == SHAPE_RELEASE_KEY:",
+        "if False:",
+        "A Rust save may key on a restore of the release profile key (SPEC-430 R16, A12)",
+        "test_ci_workflows.TheCachesHoldTheirShape.test_the_release_profile_key_serves_a_job_that_builds_no_cache_profile"
       ]
     ]
   }

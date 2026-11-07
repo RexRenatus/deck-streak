@@ -3568,6 +3568,9 @@ SHAPE_KEY = (
     "rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}"
 )
 SHAPE_RUST_FALLBACK = "rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-"
+# The release profile's own Rust key and its one fallback, beside the shared key (R16).
+SHAPE_RELEASE_KEY = "rust-release-" + SHAPE_KEY.removeprefix("rust-")
+SHAPE_RELEASE_FALLBACK = "rust-release-" + SHAPE_RUST_FALLBACK.removeprefix("rust-")
 # The pnpm store's key over the lockfile, and its fallback (R7).
 SHAPE_PNPM_KEY = "pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}"
 SHAPE_PNPM_FALLBACK = "pnpm-${{ runner.os }}-"
@@ -3591,6 +3594,7 @@ SHAPE_SHELL_CALL = re.compile(
 SHAPE_PYTHON_CALL = re.compile(
     r"\bpython3[ \t]+(scripts/[^\s;&|)`'\"]+\.py)(?:[ \t]+([a-z][a-z0-9-]*)(?=[\s;&|)`]|$))?"
 )
+SHAPE_DISCOVERY = re.compile(r"-m[ \t]+unittest[ \t]+discover\b")  # test discovery (R14)
 # The names through which a run can reach a name no walk follows, so a script naming one is read
 # whole (R13). Strings, never called.
 SHAPE_RUN_TIME_LOOKUPS = frozenset(
@@ -3629,13 +3633,16 @@ def shape_cargo(text):
 def shape_kind(subcommand, words):
     """What one cargo call builds (SPEC-430 R3): `nothing`, `other` (another profile or target,
     which the shared entry does not hold) or `cache` (the cache's profile). A subcommand no rule
-    names builds the cache's profile, so a new one fails closed."""
+    names builds the cache's profile, so a new one fails closed; a bench build, `codspeed build`,
+    builds another profile (R15)."""
     if subcommand in ("fmt", "fetch", "deny", "clean", "metadata"):
         return "nothing"
     if subcommand == "mutants" and "--list" in words:
         return "nothing"
     if subcommand == "nextest" and list(words[:1]) == ["list"]:
         return "nothing"
+    if subcommand == "codspeed" and list(words[:1]) == ["build"]:
+        return "other"
     other = subcommand == "install"
     for at, flag in enumerate(words):
         profile = words[at + 1] if at + 1 < len(words) else ""
@@ -3790,7 +3797,8 @@ def shape_calls(script, root, where, problems, reads):
     check.sh stage's, from the stage's body, every stage when it names none, a stage that calls
     `need_cargo` and shows no cargo command counting as one build; each called shell script's;
     and each called Python script's argument lists, along the subcommand the call names. One
-    script deep. Each Python call read is appended to `reads`."""
+    script deep. Each Python call read is appended to `reads`. A test discovery run reads the
+    `python` stage's body, as a call of that stage does (R14)."""
     text = shape_bare(script)
     calls = [shape_kind(sub, words) for sub, words in shape_cargo(text)]
     for gate in GATE_CALL.finditer(text):
@@ -3806,6 +3814,19 @@ def shape_calls(script, root, where, problems, reads):
             if not inner and re.search(r"\bneed_cargo\b", body):
                 inner = ["cache"]
             calls += inner
+    for _ in SHAPE_DISCOVERY.finditer(text):
+        discovery = "python"
+        suites = shape_script(root, "scripts/check.sh", where, problems)
+        if suites is None:
+            continue
+        discovered = shape_stage_body(suites, discovery)
+        if discovered is None:
+            problems.append(f"{where}: check.sh has no stage {discovery}")
+            continue
+        found = [shape_kind(sub, words) for sub, words in shape_cargo(shape_bare(discovered))]
+        if not found and re.search(r"\bneed_cargo\b", discovered):
+            found = ["cache"]
+        calls += found
     for shell in SHAPE_SHELL_CALL.finditer(text):
         name = shell.group(1)
         called = None if name == "scripts/check.sh" else shape_script(root, name, where, problems)
@@ -3919,7 +3940,8 @@ def shape_cache_of(step, earlier):
 
 def shape_key_problems(where, step, earlier):
     """Whether a cache step's key hashes its inputs (SPEC-430 R7): the template its paths choose,
-    exactly, and a fallback that keeps what it must; a cache no template knows is a problem."""
+    exactly, and a fallback that keeps what it must; a cache no template knows is a problem. The
+    release profile's own key keeps the release fallback (R16)."""
     key = shape_resolve(step, earlier)
     fallbacks = lines_of((step.get("with") or {}).get("restore-keys"))
     cache = shape_cache_of(step, earlier)
@@ -3927,6 +3949,13 @@ def shape_key_problems(where, step, earlier):
         named = (step.get("with") or {}).get("key")
         return [f"{where}: keys on {named}, which no earlier restore of its paths sets"]
     problems = []
+    if (cache, key) == ("Rust", SHAPE_RELEASE_KEY):
+        for line in fallbacks:
+            if line != SHAPE_RELEASE_FALLBACK:
+                problems.append(
+                    f"{where}: the release Rust fallback {line} is not the release key's prefix"
+                )
+        return problems
     if cache == "Rust":
         if key != SHAPE_KEY:
             problems.append(f"{where}: the Rust key {key} is not the shared key")
@@ -4008,7 +4037,9 @@ def shape_cargo_census(directory, root, reads):
     """Every job of every workflow in `directory` that runs cargo, with its class, and every way a
     job breaks its class (SPEC-430 R2 to R5, R13): (problems, [(workflow, job, class)]). The
     scripts a step calls are read from the tree at `root`; each Python call read is appended to
-    `reads` as (where, script, subcommand, scope, dropped lines), for A1's print."""
+    `reads` as (where, script, subcommand, scope, dropped lines), for A1's print. A discovery run
+    and a bench build are read by R14 and R15, and a cache-free job may restore the release
+    profile's own key (R16)."""
     workflows = {
         path.name: read_workflow(workflow_file_text(path)) for path in workflow_files(directory)
     }
@@ -4042,6 +4073,12 @@ def shape_cargo_census(directory, root, reads):
                 for at, step in enumerate(steps)
                 if action(step) == "actions/cache/restore" and paths(step) == RUST_CACHE
             ]
+            if cls == "cache-free":
+                restores = [
+                    (at, step)
+                    for at, step in restores
+                    if str((step.get("with") or {}).get("key", "")) != SHAPE_RELEASE_KEY
+                ]
             if cls == "shared":
                 problems += shape_shared_problems(where, steps, restores, calls)
             elif cls == "cache-free":
@@ -4069,7 +4106,8 @@ def shape_writer_census(directory):
     where it must not (SPEC-430 R6): (problems, [(where, action, Rust save)]). Each workflow's
     writers are judged by the module's own save scenarios, and a Rust save keys on an earlier
     restore of the shared key in its job; an action that names a cache and that no rule describes
-    is a problem by name."""
+    is a problem by name. A Rust save may key on a restore of the release profile's own key
+    (R16)."""
     problems, population = [], []
     for path in workflow_files(directory):
         workflow = read_workflow(workflow_file_text(path))
@@ -4095,6 +4133,8 @@ def shape_writer_census(directory):
                 rust = uses == "actions/cache/save" and paths(step) == RUST_CACHE
                 key = str((step.get("with") or {}).get("key", ""))
                 keyed = SHAPE_PRIMARY_KEY.fullmatch(key) and shape_resolve(step, steps[:at])
+                if keyed == SHAPE_RELEASE_KEY:
+                    keyed = SHAPE_KEY
                 if rust and keyed != SHAPE_KEY:
                     problems.append(
                         f"{where}: a Rust save keys on {key}, not an earlier shared restore's"
