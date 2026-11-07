@@ -18,16 +18,10 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-# The modules that never share a run, each with its reason (SPEC-633 R3).
+# The modules that never share a run, each with its reason (SPEC-633 R3, SPEC-635 R1).
 SERIAL_MODULES = (
-    ("test_bin_kind_census.py", "spawns cargo"),
-    ("test_check_gate.py", "spawns cargo"),
-    ("test_ci_workflows.py", "unmeasured on the box"),
     ("test_deploy_*.py", "unmeasured on the box"),
-    ("test_dispatch_shards.py", "unmeasured on the box"),
     ("test_engine_pin.py", "spawns cargo"),
-    ("test_fork_lock_guard.py", "spawns cargo"),
-    ("test_mutation_rows.py", "spawns cargo"),
 )
 RAN = re.compile(r"^Ran (\d+) tests?\b", re.M)
 

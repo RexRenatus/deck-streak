@@ -14,14 +14,8 @@ BARRIERS = REPO / "scripts" / "tests" / "fixtures" / "python_stage"
 # Every serial tail entry with the reason the runner gives it; the deploy pattern is planted as one
 # module that matches it.
 TAIL = (
-    ("test_bin_kind_census.py", "spawns cargo"),
-    ("test_check_gate.py", "spawns cargo"),
-    ("test_ci_workflows.py", "unmeasured on the box"),
     ("test_deploy_planted.py", "unmeasured on the box"),
-    ("test_dispatch_shards.py", "unmeasured on the box"),
     ("test_engine_pin.py", "spawns cargo"),
-    ("test_fork_lock_guard.py", "spawns cargo"),
-    ("test_mutation_rows.py", "spawns cargo"),
 )
 # A module that ends its process while it is imported, so it prints no Ran line.
 QUIET = "import os\n\nos._exit(0)\n"
@@ -99,14 +93,14 @@ class TheVerdictLine(unittest.TestCase):
                         "one": {"test_b.py": planted("b", 2), "test_a.py": planted("a")},
                         "two": {
                             "test_d.py": planted("d", red=True),
-                            "test_ci_workflows.py": planted("tail"),
+                            "test_engine_pin.py": planted("tail"),
                         },
                     },
                     ["one", "two"],
                     "python: one ran 3 test(s), exit 0; two ran 3 test(s), exit 1",
                     1,
-                    ["a 0", "b 0", "b 1", "tail 0", "d 0"],
-                    ["serial: two/test_ci_workflows.py (unmeasured on the box)"],
+                    ["a 0", "b 0", "b 1", "d 0", "tail 0"],
+                    ["serial: two/test_engine_pin.py (spawns cargo)"],
                 ),
                 (
                     {"one": {"test_a.py": planted("a")}, "three": {}},
@@ -151,6 +145,40 @@ class TheVerdictLine(unittest.TestCase):
                 self.assertEqual(done.returncode, code, done.stdout)
                 self.assertEqual([line for line in lines if line in marks], order)
                 self.assertEqual([line for line in lines if line.startswith("serial: ")], tail)
+
+
+class TheSixModulesRunInThePool(unittest.TestCase):
+    def test_only_the_two_kept_entries_run_in_the_tail(self):
+        """SPEC-635 A1: a suite planted with the six modules that left the serial tail, the two
+        kept entries and one pooled module runs every module and prints each one's mark, and its
+        serial lines name the two kept entries alone, in name order."""
+        moved = (
+            "test_bin_kind_census.py",
+            "test_check_gate.py",
+            "test_ci_workflows.py",
+            "test_dispatch_shards.py",
+            "test_fork_lock_guard.py",
+            "test_mutation_rows.py",
+        )
+        names = examined(
+            "planted modules",
+            sorted([*moved, "test_deploy_planted.py", "test_engine_pin.py", "test_pooled.py"]),
+        )
+        tree = {"one": {name: planted(name.removesuffix(".py")) for name in names}}
+        marks = [f"{name.removesuffix('.py')} 0" for name in names]
+        with tempfile.TemporaryDirectory() as scratch:
+            done = run_stage(Path(scratch), tree, ["one"])
+        lines = done.stdout.splitlines()
+        self.assertEqual(lines[-1], "python: one ran 9 test(s), exit 0")
+        self.assertEqual(done.returncode, 0, done.stdout)
+        self.assertEqual([line for line in lines if line in marks], marks)
+        self.assertEqual(
+            [line for line in lines if line.startswith("serial: ")],
+            [
+                "serial: one/test_deploy_planted.py (unmeasured on the box)",
+                "serial: one/test_engine_pin.py (spawns cargo)",
+            ],
+        )
 
 
 class TheModulesWriteNoBytecode(unittest.TestCase):
