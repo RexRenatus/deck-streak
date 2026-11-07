@@ -188,9 +188,13 @@ impl<'a> Budget<'a> {
     }
 
     /// Whether the sound tag that wrote `written` is shown as a video rather than played
-    /// (SPEC-410 R3, R7): only for a reader that asks, and only for an extension in
-    /// [`VIDEO_TYPES`]. Both must hold; either alone leaves the tag a sound, as before.
+    /// (SPEC-410 R3, R7; SPEC-464 R1): only for a reader that asks, and only when the name `admit`
+    /// reads, `written` decoded by [`decoded_name`], has an extension in [`VIDEO_TYPES`]. Both must
+    /// hold; either alone leaves the tag a sound, as before. A name that does not decode is bound
+    /// to the empty name, which has no type, so it stays a sound and `admit` refuses it there.
     pub(crate) fn shows_video(&self, written: &str) -> bool {
+        let decoded = decoded_name(written);
+        let written = decoded.as_deref().unwrap_or_default();
         self.reader.shows_video() && media_type(written, &VIDEO_TYPES).is_some()
     }
 
