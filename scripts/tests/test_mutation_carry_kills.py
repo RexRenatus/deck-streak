@@ -1889,7 +1889,7 @@ class ClassDigests(Base):
 
 
 HEADER = "diff --git a/x b/x\n"
-ADDED_ID = hashlib.sha1(b"blob 4\0new\n").hexdigest()[:7]
+ADDED_ID = hashlib.sha1(b"blob 4\0new\n", usedforsecurity=False).hexdigest()[:7]
 ADDED = f"{HEADER}new file mode 100644\nindex 0000000..{ADDED_ID}\n@@ -0,0 +1 @@\n+new\n"
 
 

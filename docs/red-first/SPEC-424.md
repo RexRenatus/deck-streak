@@ -75,3 +75,5 @@ and an address with no scheme raises the request class's own error, not the refu
 fails by assertion. A15 is not red: it holds the http and https opens that the cure keeps, which
 the helper makes before the cure as after it. At the first push the gate's ruff arm reads every
 site section 10 lists, by file and code, and fails the stage with both arms' counts and exits.
+
+This commit changes three test files only for the lint cures (the keyword, cwd= and the blob helper), and no assertion.

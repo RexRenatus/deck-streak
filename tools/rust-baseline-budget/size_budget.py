@@ -43,8 +43,26 @@ if not whole:
 tot = [b + t for _, b, t in whole]
 top = max(whole, key=lambda r: r[1] + r[2])
 budget = math.ceil(max(tot) * MARGIN)
-print("examined %d shards: whole %d, baseline Timeout %d, other %d" % (n, len(whole), len(void), len(other)))
-print("whole baselines (Build + Test) s: max %.1f (%s: build %.1f, test %.1f), median %.1f, min %.1f" % (max(tot), top[0], top[1], top[2], statistics.median(tot), min(tot)))
-print("whole Test phase s: max %.1f, median %.1f; whole Build phase s: max %.1f" % (max(t for _, _, t in whole), statistics.median(t for _, _, t in whole), max(b for _, b, _ in whole)))
-print("Timeout baselines: Test phase min %.1f max %.1f (the 2300 s --timeout cut them), Build max %.1f" % (min(t for _, _, t in void), max(t for _, _, t in void), max(b for _, b, _ in void)) if void else "Timeout baselines: 0")
+print(
+    "examined %d shards: whole %d, baseline Timeout %d, other %d"
+    % (n, len(whole), len(void), len(other))
+)
+print(
+    "whole baselines (Build + Test) s: max %.1f (%s: build %.1f, test %.1f), median %.1f, min %.1f"
+    % (max(tot), top[0], top[1], top[2], statistics.median(tot), min(tot))
+)
+print(
+    "whole Test phase s: max %.1f, median %.1f; whole Build phase s: max %.1f"
+    % (
+        max(t for _, _, t in whole),
+        statistics.median(t for _, _, t in whole),
+        max(b for _, b, _ in whole),
+    )
+)
+print(
+    "Timeout baselines: Test phase min %.1f max %.1f (the 2300 s --timeout cut them), Build max %.1f"
+    % (min(t for _, _, t in void), max(t for _, _, t in void), max(b for _, b, _ in void))
+    if void
+    else "Timeout baselines: 0"
+)
 print("BUDGET %d s = ceil(%.3f x %.1f)" % (budget, max(tot), MARGIN))
