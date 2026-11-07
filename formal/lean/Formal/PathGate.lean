@@ -1,8 +1,9 @@
--- @phx covers scripts/path_gate.py anchor=prefix_of digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers scripts/path_gate.py anchor=reads_entry digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers scripts/path_gate.py anchor=reads digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers scripts/path_gate.py anchor=decide digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
--- @phx covers scripts/path_gate.py anchor=admit digest=sha256:0000000000000000000000000000000000000000000000000000000000000000
+-- @phx covers scripts/path_gate.py anchor=prefix_of digest=sha256:58281b6efc2ecb1f9448dc523686843fc4776b7fe95c683f8767965da2e243a8
+-- @phx covers scripts/path_gate.py anchor=reads_entry digest=sha256:89a864aee79474cc2989af112e65b2a7ec36512e704828b5a18c9f33521017c2
+-- @phx covers scripts/path_gate.py anchor=reads digest=sha256:b2fe8c70f4a0ece74120b55f46c135f7a33de678a101a8f08105f3643908ea55
+-- @phx covers scripts/path_gate.py anchor=decide digest=sha256:1d3601f0211b4dbd4c086dea7823c35cb6e81e0cbb5ad6c04501f81f05f95840
+-- @phx covers scripts/path_gate.py anchor=admit digest=sha256:5dfbb564740288ea8eea5cd4648ebf06c7311a0d44bbfaa688bbc4182c653192
+-- @phx cites #1261
 -- @phx vectors formal/vectors/path-gate.jsonl
 -- @phx theorem the_gate_skips_exactly_the_changes_no_read_reaches ramp=report
 -- @phx witness the_base_runs_a_job_on_a_change_it_never_reads kills=the_gate_skips_exactly_the_changes_no_read_reaches
