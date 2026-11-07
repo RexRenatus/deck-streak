@@ -1,0 +1,42 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S46901-THE-VERDICT-PINS-CHECK-REMOVES-ONE-BYTE-ORDER-MARK",
+        "agent",
+        "tests/verdict.rs",
+        "source.strip_prefix('\\u{feff}').unwrap_or(source)",
+        "source",
+        "verdict::the_verdict_pins_shebang_check_answers_every_vector_of_its_lean_port",
+        "the verdict pin removes one byte order mark before its shebang check; reading the mark, a source of a byte order mark then #! is lexed, not refused (SPEC-469 A2; the code form of R2's witness)"
+      ],
+      [
+        "S46902-THE-WORD-COUNT-SKIPS-EVERY-DOC-ATTRIBUTE-GROUP",
+        "agent",
+        "tests/runs.rs",
+        "TokenTree::Group(group) if !is_doc_attribute(&tokens[..at], group) => {",
+        "TokenTree::Group(group) if !is_doc_attribute(&tokens[..at], group) || true => {",
+        "runs::the_prune_pin_answers_every_vector_of_its_lean_port",
+        "the word count skips the doc attribute groups the run count skips; reading them, the two counts part on a doc group holding a call (SPEC-469 A1; the code form of R3's witness)"
+      ],
+      [
+        "S46903-THE-VERDICT-PIN-READS-AN-INNER-ATTRIBUTE",
+        "agent",
+        "tests/verdict.rs",
+        " && !text.starts_with(\"#![\")",
+        "",
+        "verdict::the_verdict_pins_shebang_check_answers_every_vector_of_its_lean_port",
+        "the verdict pin reads a source that opens with an inner attribute; refusing #![ too, every such source would be refused as a shebang (SPEC-469 A2)"
+      ],
+      [
+        "S46904-A-CALL-OPENING-A-GROUP-IS-A-RUN",
+        "agent",
+        "tests/runs.rs",
+        "before.len() >= 5",
+        "before.len() > 5",
+        "runs::the_prune_pin_answers_every_vector_of_its_lean_port",
+        "a call whose five tokens open a group is a run; with a strict bound the run count misses it and its word is still counted (SPEC-469 A1)"
+      ]
+    ]
+  }
+}

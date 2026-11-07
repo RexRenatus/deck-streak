@@ -1,6 +1,6 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-  "tagline": "Transformez vos révisions Anki quotidiennes en une série que vous aurez envie de prolonger.",
+  "tagline": "Transformez vos révisions quotidiennes en une série que vous aurez envie de prolonger.",
   "score_title": "Score du jour",
   "score_pillars": "Les cinq piliers du score",
   "pillar_consistency": "Régularité",

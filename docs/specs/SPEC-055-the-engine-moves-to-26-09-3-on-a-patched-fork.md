@@ -142,6 +142,7 @@ R11. The engine's record follows the pin. SPEC-022's A1 check (`test_engine_spik
 | A21 | SPEC-022's A15: the recording server sees no upload and no local change in any scenario | `sync` test |
 | A22 | SPEC-022's A16: a second scheduled sync in one study day is refused | `sync` test |
 | A23 | SPEC-022's A17: an owner trigger within five minutes of a success returns it without syncing | `sync` test |
+| A25 | no unmaintained crate this SPEC's amendments retire is a package of `Cargo.lock`; a planted lock holding each reads one finding per crate, and a clean planted lock none | `test_engine_pin.py` `the_retired_unmaintained_crates_are_absent_from_the_lockfile` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_engine_pin.py -k the_engine_is_patched_by_rev_to_a_commit_of_the_fork
@@ -167,6 +168,7 @@ A20: cargo test -p deck-streak-ingest --test settings -- --exact a_missing_sync_
 A21: cargo test -p deck-streak-ingest --test sync -- --exact a_sync_run_sends_no_upload_and_no_local_change
 A22: cargo test -p deck-streak-ingest --test sync -- --exact a_second_scheduled_sync_in_one_study_day_is_refused
 A23: cargo test -p deck-streak-ingest --test sync -- --exact an_owner_trigger_within_five_minutes_of_a_success_returns_it_without_syncing
+A25: python3 -m unittest discover -s scripts/tests -p test_engine_pin.py -k the_retired_unmaintained_crates_are_absent_from_the_lockfile
 ```
 
 A1, A2, A3 and A5 are new, in `scripts/tests/test_engine_pin.py`. A1 reads the manifest, the
@@ -342,3 +344,96 @@ Each read on 2026-09-28.
 - cargo-deny's sources, advisory and licence checks:
   https://embarkstudios.github.io/cargo-deny/checks/sources/cfg.html (Context7
   `/websites/embarkstudios_github_io_cargo-deny`).
+
+## 9. Amendment: the paste and basic-toml exceptions leave deny.toml (#1001)
+
+### Problem
+
+`deny.toml` carried eight `[advisories]` ignore entries, each an unmaintained notice with no patched
+release. Six reach the workspace only through the engine (#256). The other two come through crates
+this repository does not own: RUSTSEC-2024-0436 (`paste`) and RUSTSEC-2026-0374 (`basic-toml`). An
+exception is not a fix. The lockfile census (tomllib over `Cargo.lock`, 656 packages): `paste`
+1.0.15 is named by `frankenstein` 0.52.1, the bot's Bot API client (ADR-026), and by
+`uniffi_bindgen` 0.29.1, the bindings generator (ADR-345), which declares it and uses it in no
+source file; `basic-toml` 0.1.10 is named by `rinja_derive` 0.3.5, which `uniffi_bindgen` reaches
+through `rinja`. Neither brings in a package that nothing else names, so these two are all the lock
+loses. No release of a parent drops its crate in a form this workspace can take: `frankenstein`'s
+default branch still names `paste`, `uniffi` is pinned at `=0.29.1` (ADR-345), and askama replaced
+`basic-toml` with `toml` on its main branch with no release yet.
+
+### Requirements
+
+R12. `deny.toml` holds no ignore entry for RUSTSEC-2024-0436 or RUSTSEC-2026-0374, and keeps the
+    other six, each one `cargo deny` still encounters (A3).
+R13. `paste` and `basic-toml` leave the lockfile by the routes of the table below (A25). No other
+    package leaves it or enters it, except that `uniffi_internal_macros`, which `uniffi_meta` names
+    by path, comes from the uniffi fork at 0.29.1, the version the 0.29.1 release names, in place
+    of the registry's 0.29.5; the lock's diff is read at review.
+R14. Each fork is pinned by `rev`, kept fetchable by a named branch and named in `allow-git`, whose
+    exact list in `scripts/tests/test_engine_pin.py` grows by the three sources (A1), and each
+    entry goes when a release of its parent that this workspace can take drops the crate (ADR-657).
+    `uniffi` stays at `=0.29.1` (ADR-345).
+
+| crate | advisory | parent | route | where the fix lands |
+|---|---|---|---|---|
+| `paste` (first parent) | RUSTSEC-2024-0436 | `frankenstein` 0.52.1 | a fork at the release takes `pastey` 0.2.3, already in the lock, at its ten `paste!` calls | RexRenatus/frankenstein, then `[patch.crates-io]` |
+| `paste` (second parent) | RUSTSEC-2024-0436 | `uniffi_bindgen` 0.29.1 | a fork at the release drops the declared and unused dependency, as upstream did after it | RexRenatus/uniffi-rs, then `[patch.crates-io]` for its seven crates |
+| `basic-toml` | RUSTSEC-2026-0374 | `rinja_derive` 0.3.5 | a fork at the release parses the config with `toml` 0.5, already in the lock, at its one call | RexRenatus/askama, then `[patch.crates-io]` for `rinja`, `rinja_derive` and `rinja_parser` |
+
+`paste` is cured only when both of its parents' rows land.
+
+### Criteria
+
+A25 is new, in `scripts/tests/test_engine_pin.py`. It reads the lockfile's packages and refuses each
+crate this SPEC's amendments retire, at any version and from any source; a planted lock holding each
+crate reads one finding apiece and stays red after the cure, and a clean planted lock reads none.
+A1's exact `allow-git` list grows by the three forks, each with a planted `deny.toml` that leaves it
+out. A3 is unchanged: six exceptions remain, each one encountered, and each of the eight allowed
+sources is in the graph.
+
+### Red first
+
+Each notice is red first: `cargo deny --locked check advisories`, with its ignore entry removed,
+fails naming it before its route lands, and passes after, with the other six entries applied. A25 is
+red over the lockfile before the first fork lands, and green once the last one does. The record is
+`docs/red-first/SPEC-055.md`, which takes the reds in the commit that removes the two entries.
+
+### Manifest
+
+| file | change |
+|---|---|
+| `deny.toml` | changed: the two ignore entries and their comment leave; `allow-git` names the three forks, and the `[sources]` comment counts them |
+| `Cargo.toml` | changed: `[patch.crates-io]` takes the three forks by `rev`, each under an ADR-657 comment |
+| `Cargo.lock` | changed by cargo: `paste` and `basic-toml` leave; the patched crates come from their forks |
+| `scripts/tests/test_engine_pin.py` | changed: A25 added; A1's exact `allow-git` list grows by three, each with a planted `deny.toml` |
+| `docs/specs/SPEC-055-the-engine-moves-to-26-09-3-on-a-patched-fork.md` | changed: this section, and A25's row and fence line |
+| `docs/red-first/SPEC-055.md` | changed: A25's red and green, and each notice's |
+| `docs/decisions/ADR-657-three-parent-crates-come-from-forks-until-their-releases-drop-paste-and-basic-toml.md` | added |
+| `changelog.d/fix-deps-unmaintained-paste-basic-toml.md` | added |
+
+### What this does not do
+
+- It keeps the six engine notices, RUSTSEC-2025-0075, 0080, 0081, 0094, 0098 and 0134, until the
+  engine's pin moves off them (#256, #248 to #253).
+- It writes no `unmaintained` key; cargo-deny's default scope applies until those six leave (#256).
+- It keeps the bot surface and its daemon wiring, so `frankenstein` keeps its fork until they are
+  retired (#1046).
+- It does not upgrade `uniffi`; ADR-345 pins it (#1001).
+
+### Risks
+
+- `toml` 0.5 is an old line; it is already in the lock through the bindings generator, and the fork
+  entry goes when a `rinja` or askama release the generator takes drops `basic-toml`.
+- `uniffi_internal_macros` moves from 0.29.5 to 0.29.1, the release's own pairing; the XCFramework
+  workflow's bindings, modulemap and consumer checks measure the generated code on every run.
+- A fork branch that stops being fetchable breaks a fresh build; `allow-git` names each fork, and A3
+  refuses an allowed source that no crate comes from.
+- Open pull requests that change `Cargo.lock` conflict with this one textually; the later lander
+  regenerates the lock with cargo, never by a text merge.
+
+### Links
+
+#1001, #326, https://github.com/mozilla/uniffi-rs/pull/2485,
+https://github.com/askama-rs/askama/pull/771 and https://github.com/askama-rs/askama/issues/794.
+The upstream pull requests this fix owes are linked here when opened.
+Opened: https://github.com/askama-rs/askama/pull/796 (`basic-toml`) and https://github.com/ayrat555/frankenstein/pull/342 (`paste`).

@@ -1,6 +1,6 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-  "tagline": "Convierte tus repasos diarios de Anki en una racha que vale la pena mantener.",
+  "tagline": "Convierte tus repasos diarios en una racha que vale la pena mantener.",
   "score_title": "Puntuación de hoy",
   "score_pillars": "Los cinco pilares de la puntuación",
   "pillar_consistency": "Constancia",

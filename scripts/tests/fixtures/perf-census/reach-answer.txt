@@ -1,0 +1,21 @@
+--------------------------------------------------------------------------------
+Profile data file 'callgrind.out.grading' (creator: callgrind-3.22.0)
+--------------------------------------------------------------------------------
+Events recorded:  Ir
+Events shown:     Ir
+Event sort order: Ir
+Thresholds:       100
+Auto-annotation:  off
+
+--------------------------------------------------------------------------------
+Ir
+--------------------------------------------------------------------------------
+500,000 (100.0%)  PROGRAM TOTALS
+
+--------------------------------------------------------------------------------
+Ir                 file:function
+--------------------------------------------------------------------------------
+300,000 (60.00%)  /build/deck-streak/crates/engine-core/src/answer.rs:deck_streak_engine_core::answer::shown_states::h1111111111111111
+199,999 (40.00%)  ./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S:__memcpy_avx_unaligned_erms [/usr/lib/x86_64-linux-gnu/libc.so.6]
+      1 ( 0.00%)  /build/deck-streak/crates/engine-core/src/answer.rs:deck_streak_engine_core::answer::Grade::pick::h5555555555555555
+      0           /build/deck-streak/crates/engine-core/src/answer.rs:deck_streak_engine_core::answer::answer_request::h9999999999999999

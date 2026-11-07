@@ -10,6 +10,7 @@
     "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,
+    "noFallthroughCasesInSwitch": true,
     "moduleResolution": "bundler"
   },
   // svelte-check reads this project, which covers src, tests and the app's configuration; the card
@@ -26,6 +27,11 @@
     "vite.card.config.ts",
     "playwright.card.config.ts",
     "policy-header.ts",
+    // The engine suite, its harness page and its two configurations (SPEC-628).
+    "tests-engine/**/*.ts",
+    "engine-harness/**/*.ts",
+    "vite.engine.config.ts",
+    "playwright.engine.config.ts",
     "tests-study/**/*.ts",
     "vite.study.config.ts",
     "playwright.study.config.ts",

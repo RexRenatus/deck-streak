@@ -1,6 +1,6 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-  "tagline": "把每天的Anki複習變成值得堅持的連續紀錄。",
+  "tagline": "把每天的複習變成值得堅持的連續紀錄。",
   "score_title": "今日得分",
   "score_pillars": "得分的五大支柱",
   "pillar_consistency": "堅持度",

@@ -16,6 +16,7 @@ struct ReviewChrome: View {
                 Text(model.deck.name)
                     .font(.headline)
                     .accessibilityIdentifier("detail")
+                    .foregroundStyle(Color.tideInk)
                 Spacer()
                 Button {
                     Task { await model.perform(.replay) }
@@ -57,8 +58,11 @@ struct ReviewChrome: View {
             .labelStyle(.iconOnly)
             HStack(spacing: 16) {
                 Text("\(model.counts.new) new").accessibilityIdentifier("count-new")
+                    .foregroundStyle(Color.tideInk)
                 Text("\(model.counts.learning) learning").accessibilityIdentifier("count-learning")
+                    .foregroundStyle(Color.tideInk)
                 Text("\(model.counts.review) to review").accessibilityIdentifier("count-review")
+                    .foregroundStyle(Color.tideInk)
                 Spacer()
                 // Its title is its VoiceOver label, though it shows its icon alone (SPEC-507 R16).
                 Button {
@@ -75,16 +79,20 @@ struct ReviewChrome: View {
             if !model.face.omitted.isEmpty {
                 Text("Media files not shown: \(model.face.omitted.count)")
                     .font(.footnote)
+                    .foregroundStyle(Color.tideMuted)
             }
             ForEach(Array(model.notes.enumerated()), id: \.offset) { _, note in
                 Text(note).font(.footnote)
+                    .foregroundStyle(Color.tideMuted)
             }
             ForEach(Array(model.undo.said.enumerated()), id: \.offset) { _, said in
                 Text(verbatim: said).font(.footnote).accessibilityIdentifier("undo-said")
+                    .foregroundStyle(Color.tideMuted)
             }
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
+        .tint(Color.tideAccent)
         // Closed by its Close button or by a swipe, the sheet starts the answer clock again.
         .sheet(
             isPresented: Bindable(model.health).showing,
