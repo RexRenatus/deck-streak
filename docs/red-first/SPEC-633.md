@@ -11,6 +11,8 @@ A1: red at 6ac0863d: scripts/tests/test_python_stage.py:82: AssertionError: List
 A1: green at f4500f50
 A3: red at 866fe1b5: scripts/tests/test_check_gate.py:236: AssertionError: 'Ran 2 tests' not found in "python3: can't open file (box run)
 A3: green at 0f78e662
+A4: red at 300d6919: scripts/tests/test_python_stage.py:183: AssertionError: Lists differ: ['sibling.cpython-312.pyc', 'test_imports.cpython-312.pyc'] != [] (box run)
+A4: green at b9aeac5f
 ```
 
 A1 was committed with a module runner that keeps every input and runs each module one after
@@ -25,3 +27,15 @@ record.
 A4 was committed alone with its test, against the runner whose module processes inherit the stage's
 environment as it is, so a planted module that imports a planted sibling leaves bytecode under its
 suite and the A4 test fails on the bytecode it finds.
+
+300d6919 is the one commit that changes a test file between A4's red and its green: it adds the
+A4 test, which read red on a local run because the planted suite held bytecode. b9aeac5f changes
+only the runner, which starts each module process with bytecode writes off, and the A4 test read
+green. The same cure ends the test_deploy_templates red of job 128188919143. 99f3b257 moves
+`test_memory_scope.py` from `SERIAL_MODULES` into the pool and, beside it, drops the same entry
+from `TAIL` in `scripts/tests/test_python_stage.py`, the tail that the A2 test plants, and
+derives the verdict of A2's fifth planted case from `len(TAIL) + 1` in place of its literal
+count; `test_python_stage.py` read Ran 3, OK on a local run at that commit. No test, planted
+case or assertion goes. 1f0168de cures the test_coverage_report red of job 128188919143: the
+stage keeps the suite list that the python lane test reads. The A4 test method's source, read
+by `ast`, is byte-equal at b9aeac5f and at the tip.
