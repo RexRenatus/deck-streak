@@ -52,3 +52,22 @@ real tree, with these causes:
   `crates/ffi/src/engine.rs` reads the clock twice where its row counts one.
 
 A3 and A10 read green there, since each judges the admission of the existing rows only.
+
+The as-found code and the three re-cut lists were committed next (d672785a): it changed the census code of scripts/tests/test_formal_parity.py and no test method, fixture or planted defect.
+The rows that dev adds over the rebuild's cut were listed next (2e355c1f), over the tree the pull request merges; no test or census code changed.
+
+A1: red at dfb89b3f (the base population at the rebuild's cut)
+A1: green at d672785a
+A2: red at dfb89b3f (the base population at the rebuild's cut)
+A2: green at d672785a
+A4: red at dfb89b3f (the base population at the rebuild's cut)
+A4: green at 2e355c1f
+A5: red at dfb89b3f (the base population at the rebuild's cut)
+A5: green at d672785a
+A6 to A9: red at dfb89b3f (the base population at the rebuild's cut)
+A6 to A9: green at d672785a
+
+```red-first
+A11: red at dfb89b3f: AssertionError: Lists differ: ['crates/companion/tests/formal_vectors_de[447 chars]res'] != [] First list contains 4 additional elements.
+A11: green at d672785a
+```
