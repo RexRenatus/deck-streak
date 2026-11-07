@@ -129,6 +129,12 @@
       "test_deploy_templates"
     ]
   },
+  "scripts/python_stage.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_python_stage"
+    ]
+  },
   "scripts/release_gates.py": {
     "dir": "scripts/tests",
     "modules": [
