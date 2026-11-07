@@ -13,7 +13,7 @@ export type Layer = 'W1' | 'W2' | 'W3' | 'W4';
 
 /** Where a planted card's markup points: the listeners' addresses, from the test. */
 export interface Listener {
-  /** The HTTP listener's origin, counting requests by path. */
+  /** The HTTP listener's origin, counting requests by path: the harness's sentinel names it, and no planted card does (SPEC-641). */
   http: string;
   /** The TCP listener's origin, counting every connection and each request by its path (SPEC-461). */
   tcp: string;
@@ -72,9 +72,9 @@ const COVER = '.cover { position: fixed; inset: 0; display: block; margin: 0; }'
 
 const none = (): string => '';
 
-/** A card that loads from the HTTP listener under its own path, with no click. */
-function loads(id: string, alone: Layer | null, html: (http: string) => string, css: (http: string) => string = none): PlantedCard {
-  return { id, alone, click: false, html: (l) => html(`${l.http}/${id}`), css: (l) => css(`${l.http}/${id}`), paths: ['tcp', `/${id}/`] };
+/** A card that loads from the TCP listener under its own path, with no click (SPEC-641). */
+function loads(id: string, alone: Layer | null, html: (tcp: string) => string, css: (tcp: string) => string = none): PlantedCard {
+  return { id, alone, click: false, html: (l) => html(`${l.tcp}/${id}`), css: (l) => css(`${l.tcp}/${id}`), paths: ['tcp', `/${id}/`] };
 }
 
 /** A card whose full-frame link or button acts when clicked, toward the TCP listener (SPEC-461). */
