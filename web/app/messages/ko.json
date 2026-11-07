@@ -1,6 +1,6 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-  "tagline": "매일의 Anki 복습을 이어 가고 싶은 연속 기록으로 만드세요.",
+  "tagline": "매일의 복습을 이어 가고 싶은 연속 기록으로 만드세요.",
   "score_title": "오늘의 점수",
   "score_pillars": "점수를 이루는 다섯 가지 기둥",
   "pillar_consistency": "꾸준함",

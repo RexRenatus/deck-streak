@@ -76,3 +76,16 @@ not a criterion: none is red first, and none takes a red or green line. So the c
 14ae9e5f change tests and the miniapp equivalence register as well as documents, and 303fcefe
 refilled the miniapp campaign row of SPEC-057 from its battery pair, runs 41851868090 and
 41857399766.
+
+```red-first
+A10: red at dae3deed: AssertionError: 14 problem(s): ios/App/Sources/AccountView.swift: names none of the six Tide members; ios/App/Sources/AnswerBar.swift: passes .bar, a system style or colour; ios/App/Sources/AnswerBar.
+A10: green at 07277f4e
+A11: not red: the base holds no colour scheme override, and the census guards the system appearance rule of ADR-616 D2
+A12: red at dae3deed: AssertionError: 1 problem(s): ios/App/Sources/TideColours.swift: names no Color( for the catalog set(s) TideAccent, TideBackground, TideBorder, TideCard, TideInk, TideMuted
+A12: green at 07277f4e
+```
+
+The native criteria were committed with the views unchanged (dae3deed), and read red by name in
+the pull request own run. The colour extension and the views changed in 07277f4e, with the tests
+unchanged, and the run at this delivery head reads them green. The commit after 07277f4e changes
+only documents.

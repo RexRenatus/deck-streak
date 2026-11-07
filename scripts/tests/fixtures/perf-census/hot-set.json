@@ -1,0 +1,45 @@
+{
+  "schema": "deckstreak.perf-hot-set.v1",
+  "share": 90.0,
+  "workload": {
+    "path": "perf/workload.json",
+    "sha256": "0123456789012345678901234567890123456789012345678901234567890123"
+  },
+  "derived_at": "0000000000000000000000000000000000000000",
+  "release": "v0.3.0",
+  "toolchain": "1.99.1",
+  "valgrind": "3.22.0",
+  "total_ir": 1000000,
+  "members": [
+    {
+      "fn": "deck_streak_engine_core::scheduler::day_queue",
+      "file": "crates/engine-core/src/scheduler.rs",
+      "self_ir": 400000,
+      "share": 40.0
+    },
+    {
+      "fn": "deck_streak_engine_core::answer::shown_states",
+      "file": "crates/engine-core/src/answer.rs",
+      "self_ir": 250000,
+      "share": 25.0
+    },
+    {
+      "fn": "__memcpy_avx_unaligned_erms",
+      "file": "./string/../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S",
+      "self_ir": 150000,
+      "share": 15.0
+    },
+    {
+      "fn": "<deck_streak_fsrs7::replay::Replay as core::iter::traits::iterator::Iterator>::next",
+      "file": "crates/fsrs7/src/replay.rs",
+      "self_ir": 75000,
+      "share": 7.5
+    },
+    {
+      "fn": "core::slice::sort::stable::driftsort_main",
+      "file": "/rustc/library/core/src/slice/sort/stable/mod.rs",
+      "self_ir": 40000,
+      "share": 4.0
+    }
+  ]
+}

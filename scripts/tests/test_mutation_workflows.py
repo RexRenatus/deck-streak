@@ -199,6 +199,16 @@ def configured(root, cargo='test_tool = "nextest"\n', stryker=None):
     return root
 
 
+def verdict_constant():
+    """The verdict's `WHOLE_EXITS`, the exits read from its text and never imported (SPEC-458 R7)."""
+    found = re.search(
+        r"(?m)^WHOLE_EXITS = frozenset\(\{([0-9, ]+)\}\)$", VERDICT.read_text(encoding="utf-8")
+    )
+    if found is None:
+        raise AssertionError("scripts/mutation-verdict.py sets no WHOLE_EXITS")
+    return frozenset(int(code) for code in found.group(1).split(","))
+
+
 class NoExclusionHidesAMutant(unittest.TestCase):
     """SPEC-057 A8 (R11): SPEC-039's A20, which held an exclusion to its reason, is retired by it."""
 
@@ -812,6 +822,300 @@ class TheShardsAreThePlans(unittest.TestCase):
         self.assertRegex(verdict, r"(?m)^    if: \$\{\{ always\(\) \}\}$")
         self.assertRegex(verdict, r"(?m)^\s+pattern: mutation-rust-shard-\*$")
         self.assertRegex(verdict, r"judge [^\n]*--class rust [^\n]*--shard-reports ")
+
+
+#: SPEC-458 R6: the line that ends the Rust leg's cargo-mutants step. After the exit is recorded,
+#: an exit that leaves the verdict a whole report passes, and any other fails the leg with it.
+COLOUR_LINE = re.compile(
+    r'case "\$rc" in ([0-9|]+)\) ;; \*\) echo "mutation-rust: shard \$SHARD left no whole report '
+    r'\(cargo-mutants exited \$rc\); the verdict reads it VOID"; (.+?) ;; esac'
+)
+RECORDS_THE_EXIT = 'echo "$rc" > "$out/cargo-mutants.exit"'
+FAILS_THE_LEG = 'exit "$rc"'
+
+
+def script_lines(step):
+    """A step's lines, stripped, without comments and blank lines."""
+    return [
+        line.strip()
+        for line in step.splitlines()
+        if line.strip() and not line.strip().startswith("#")
+    ]
+
+
+def colour_exits(step):
+    """The exits the step's last colour line passes, sorted, or None when it has no such line."""
+    found = [COLOUR_LINE.fullmatch(line) for line in script_lines(step)]
+    found = [each for each in found if each]
+    return sorted(int(code) for code in found[-1].group(1).split("|") if code) if found else None
+
+
+def colour_refusals(step, whole):
+    """Why the Rust leg's cargo-mutants `step` does not end on R6's line passing exactly the exits
+    `whole`; [] when it does."""
+    lines = script_lines(step)
+    at = [n for n, line in enumerate(lines) if line.startswith('case "$rc" in ')]
+    if not at:
+        return ["mutation-rust: the cargo-mutants step ends on no colour line"]
+    line = lines[at[-1]]
+    found = COLOUR_LINE.fullmatch(line)
+    if found is None:
+        return [f"mutation-rust: the colour line is not R6's line: {line}"]
+    out = []
+    recorded = [n for n, each in enumerate(lines) if each == RECORDS_THE_EXIT]
+    if not recorded:
+        out.append("mutation-rust: the cargo-mutants step records no exit")
+    elif at[-1] < recorded[-1]:
+        out.append("mutation-rust: the colour line comes before the line that records the exit")
+    elif at[-1] != len(lines) - 1:
+        out.append("mutation-rust: the colour line is not the step's last line")
+    passed = colour_exits(step)
+    if passed != sorted(whole):
+        out.append(
+            f"mutation-rust: the colour line passes exits {passed}, not the whole exits "
+            f"{sorted(whole)}"
+        )
+    if found.group(2) != FAILS_THE_LEG:
+        out.append(
+            f"mutation-rust: the colour line's other arm ends `{found.group(2)}`, "
+            f"not `{FAILS_THE_LEG}`"
+        )
+    return out
+
+
+#: A copy of the Rust leg's cargo-mutants step, its script's tail planted by each shape (A5).
+PLANTED_RUST_STEP = (
+    "      - name: cargo-mutants, one shard of the diff, in place\n"
+    "        if: ${{ needs.mutation-plan.outputs.rust == 'true' }}\n"
+    "        env:\n"
+    "          SHARD: ${{ matrix.shard }}\n"
+    "        run: |\n"
+    '          out="$RUNNER_TEMP/shards/mutation-rust-shard-$SHARD"\n'
+    "          rc=0\n"
+    '          cargo mutants --in-place --in-diff d --output "$out" || rc=$?\n'
+)
+PLANTED_COLOUR = (
+    'case "$rc" in 0|2|3) ;; *) echo "mutation-rust: shard $SHARD left no whole report '
+    '(cargo-mutants exited $rc); the verdict reads it VOID"; exit "$rc" ;; esac'
+)
+PLANTED_ECHO = 'echo "cargo-mutants exited $rc"'
+
+
+def planted_rust_step(*tail):
+    return PLANTED_RUST_STEP + "".join(f"          {line}\n" for line in tail)
+
+
+class TheMutantLegReadsRedWithNoWholeReport(unittest.TestCase):
+    """SPEC-458 A4 and A5 (R6, R7): the Rust leg fails its job, after its report is kept, on every
+    exit that leaves the verdict no whole report (#827)."""
+
+    def test_the_rust_leg_fails_its_job_on_every_exit_outside_the_whole_exits(self):
+        rust = steps(jobs(workflow(CI)).get("mutation-rust", ""))
+        at = [n for n, step in enumerate(rust) if "cargo mutants" in step and "--in-diff" in step]
+        self.assertEqual(len(at), 1, "mutation-rust's cargo-mutants steps")
+        whole = verdict_constant()
+        self.assertEqual([], colour_refusals(rust[at[0]], whole))
+        self.assertEqual(sorted(whole), colour_exits(rust[at[0]]))
+        upload = rust[at[0] + 1] if at[0] + 1 < len(rust) else ""
+        self.assertIn(
+            "actions/upload-artifact@", upload, "no upload follows the cargo-mutants step"
+        )
+        self.assertRegex(upload, r"(?m)^        if: \$\{\{ always\(\) \}\}$")
+
+    def test_the_colour_reader_refuses_each_planted_shape(self):
+        whole = frozenset({0, 2, 3})
+        planted_shapes = [
+            ("the fixed shape", (RECORDS_THE_EXIT, PLANTED_ECHO, PLANTED_COLOUR), []),
+            (
+                "no line",
+                (RECORDS_THE_EXIT, PLANTED_ECHO),
+                ["mutation-rust: the cargo-mutants step ends on no colour line"],
+            ),
+            (
+                "an exit 4 added",
+                (RECORDS_THE_EXIT, PLANTED_ECHO, PLANTED_COLOUR.replace("0|2|3)", "0|2|3|4)")),
+                [
+                    "mutation-rust: the colour line passes exits [0, 2, 3, 4], not the whole exits [0, 2, 3]"
+                ],
+            ),
+            (
+                "an exit 2 dropped",
+                (RECORDS_THE_EXIT, PLANTED_ECHO, PLANTED_COLOUR.replace("0|2|3)", "0|3)")),
+                [
+                    "mutation-rust: the colour line passes exits [0, 3], not the whole exits [0, 2, 3]"
+                ],
+            ),
+            (
+                "an arm ending true",
+                (
+                    RECORDS_THE_EXIT,
+                    PLANTED_ECHO,
+                    PLANTED_COLOUR.replace('exit "$rc" ;; esac', "true ;; esac"),
+                ),
+                ['mutation-rust: the colour line\'s other arm ends `true`, not `exit "$rc"`'],
+            ),
+            (
+                "the line before the exit is recorded",
+                (PLANTED_COLOUR, RECORDS_THE_EXIT, PLANTED_ECHO),
+                ["mutation-rust: the colour line comes before the line that records the exit"],
+            ),
+        ]
+        for name, tail, expected in examined("planted colour shapes", planted_shapes):
+            with self.subTest(shape=name):
+                self.assertEqual(expected, colour_refusals(planted_rust_step(*tail), whole))
+
+
+#: SPEC-458 R17: the `if:` of the Rust leg's last step, which fails a leg whose own baseline is not
+#: green (ADR-509's step records it as `green`), after the leg's report is kept.
+BASELINE_COLOUR_IF = (
+    "${{ needs.mutation-plan.outputs.rust == 'true' && steps.baseline.outputs.green != 'true' }}"
+)
+
+
+def baseline_colour_refusals(rust_steps):
+    """Why `mutation-rust`'s steps do not end on R17's step, which fails a leg whose own baseline
+    is not green, after the upload under `always()`; [] when they do."""
+    out = []
+    recorders = [
+        step
+        for step in rust_steps
+        if "id: baseline" in script_lines(step)
+        and any('echo "green=true" >> "$GITHUB_OUTPUT"' in line for line in script_lines(step))
+    ]
+    if len(recorders) != 1:
+        out.append(
+            f"mutation-rust: {len(recorders)} steps record a green baseline under "
+            "`id: baseline`, not one"
+        )
+    last = rust_steps[-1] if rust_steps else ""
+    if BASELINE_COLOUR_IF not in re.findall(r"(?m)^        if: (.*)$", last):
+        out.append("mutation-rust: the last step's `if:` is not R17's")
+    lines = script_lines(last)
+    end = lines[-1] if lines else ""
+    if end != "exit 1":
+        out.append(f"mutation-rust: the last step ends `{end}`, not `exit 1`")
+    if any("||" in line or "set +e" in line or "continue-on-error" in line for line in lines):
+        out.append(
+            "mutation-rust: the last step swallows a failure (`||`, `set +e` or "
+            "`continue-on-error`)"
+        )
+    before = rust_steps[-2] if len(rust_steps) > 1 else ""
+    if "actions/upload-artifact@" not in before or not re.search(
+        r"(?m)^        if: \$\{\{ always\(\) \}\}$", before
+    ):
+        out.append("mutation-rust: the step before the last is not an upload under `always()`")
+    return out
+
+
+class TheLegReadsRedWhenItsBaselineIsNotGreen(unittest.TestCase):
+    """SPEC-458 A13 and A14 (R17): a Rust leg whose own baseline is not green fails its job, after
+    its report is kept, so its colour agrees with the verdict, which reads it VOID (#827)."""
+
+    def test_a_leg_whose_baseline_is_not_green_fails_its_job_after_its_report_is_kept(self):
+        rust = steps(jobs(workflow(CI)).get("mutation-rust", ""))
+        self.assertGreater(len(rust), 0, "mutation-rust's steps examined")
+        self.assertEqual([], baseline_colour_refusals(rust))
+
+    def test_the_baseline_colour_reader_refuses_each_planted_shape(self):
+        baseline = (
+            "      - name: this leg's unmutated baseline\n"
+            "        id: baseline\n"
+            "        if: ${{ needs.mutation-plan.outputs.rust == 'true' }}\n"
+            "        run: |\n"
+            "          rc=0\n"
+            "          bash scripts/mutation-baseline.sh || rc=$?\n"
+            '          if [ "$rc" -eq 0 ]; then echo "green=true" >> "$GITHUB_OUTPUT"; fi\n'
+        )
+        mutants = (
+            "      - name: cargo-mutants, one shard of the diff, in place\n"
+            "        if: ${{ needs.mutation-plan.outputs.rust == 'true' && "
+            "steps.baseline.outputs.green == 'true' }}\n"
+            "        run: |\n"
+            "          rc=0\n"
+            "          cargo mutants --in-place --baseline=skip || rc=$?\n"
+        )
+        upload = (
+            "      - name: keep the shard's report\n"
+            "        if: ${{ always() }}\n"
+            "        uses: actions/upload-artifact@v7\n"
+            "        with:\n"
+            "          name: mutation-rust-shard-${{ matrix.shard }}\n"
+        )
+        colour = (
+            "      - name: a leg whose own baseline is not green fails its job\n"
+            "        if: ${{ needs.mutation-plan.outputs.rust == 'true' && "
+            "steps.baseline.outputs.green != 'true' }}\n"
+            "        run: |\n"
+            '          echo "mutation-rust: shard $SHARD left no whole report"\n'
+            "          exit 1\n"
+        )
+        not_r17 = "mutation-rust: the last step's `if:` is not R17's"
+        ends_upload = (
+            "mutation-rust: the last step ends `name: mutation-rust-shard-${{ matrix.shard }}`, "
+            "not `exit 1`"
+        )
+        no_upload = "mutation-rust: the step before the last is not an upload under `always()`"
+        swallows = (
+            "mutation-rust: the last step swallows a failure (`||`, `set +e` or "
+            "`continue-on-error`)"
+        )
+        planted_shapes = [
+            ("the fixed shape", (baseline, mutants, upload, colour), []),
+            ("no colour step", (baseline, mutants, upload), [not_r17, ends_upload, no_upload]),
+            (
+                "the colour step before the upload",
+                (baseline, mutants, colour, upload),
+                [not_r17, ends_upload, no_upload],
+            ),
+            (
+                "a green-baseline if",
+                (baseline, mutants, upload, colour.replace("green != 'true'", "green == 'true'")),
+                [not_r17],
+            ),
+            (
+                "the Rust condition dropped",
+                (
+                    baseline,
+                    mutants,
+                    upload,
+                    colour.replace("needs.mutation-plan.outputs.rust == 'true' && ", ""),
+                ),
+                [not_r17],
+            ),
+            (
+                "its last line exit 0",
+                (baseline, mutants, upload, colour.replace("exit 1\n", "exit 0\n")),
+                ["mutation-rust: the last step ends `exit 0`, not `exit 1`"],
+            ),
+            (
+                "its last line exit 1 or true",
+                (baseline, mutants, upload, colour.replace("exit 1\n", "exit 1 || true\n")),
+                ["mutation-rust: the last step ends `exit 1 || true`, not `exit 1`", swallows],
+            ),
+            (
+                "a continue-on-error line",
+                (
+                    baseline,
+                    mutants,
+                    upload,
+                    colour.replace(
+                        "        run: |\n", "        continue-on-error: true\n        run: |\n"
+                    ),
+                ),
+                [swallows],
+            ),
+            (
+                "no id: baseline step",
+                (baseline.replace("        id: baseline\n", ""), mutants, upload, colour),
+                ["mutation-rust: 0 steps record a green baseline under `id: baseline`, not one"],
+            ),
+        ]
+        judged = 0
+        for name, blocks, expected in examined("planted baseline colour shapes", planted_shapes):
+            with self.subTest(shape=name):
+                self.assertEqual(expected, baseline_colour_refusals(steps("".join(blocks))))
+            judged += 1
+        self.assertEqual(len(planted_shapes), judged)
 
 
 #: The rows legs' axis: the plan deals the rows into at most `ROWS_MAX_LEGS` legs (SPEC-417 R9).

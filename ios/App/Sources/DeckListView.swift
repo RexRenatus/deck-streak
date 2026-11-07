@@ -23,6 +23,9 @@ struct ShellView: View {
                 }
             } else {
                 Text("Choose a deck").accessibilityIdentifier("detail")
+                    .foregroundStyle(Color.tideMuted)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.tideBackground)
             }
         }
         .navigationSplitViewStyle(.balanced)
@@ -49,13 +52,19 @@ struct DeckListView: View {
         Group {
             if let refusal = model.refusal {
                 Text(refusal).accessibilityIdentifier("refusal")
+                    .foregroundStyle(Color.tideInk)
             } else {
                 List(model.decks, id: \.self, selection: $model.chosenDeck) { deck in
                     Text(deck.name).accessibilityIdentifier("deck-row-\(deck.name)")
+                        .listRowSeparatorTint(Color.tideBorder)
                 }
                 .accessibilityIdentifier("deck-list")
+                .scrollContentBackground(.hidden)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.tideBackground)
+        .tint(Color.tideAccent)
         .navigationTitle("Decks")
         .toolbar {
             Button("Account") { model.showingAccount = true }
