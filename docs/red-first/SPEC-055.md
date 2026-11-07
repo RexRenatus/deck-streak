@@ -80,3 +80,27 @@ sqlx`; green at 37551ff3. The askama fork: red the same way: `allow-git is [...]
 fork, rust-url, fsrs-rs, web-push-native, sqlx and uniffi-rs`; green at ced88ca4. The frankenstein
 fork: red the same way: `allow-git is [...], not exactly the fork, rust-url, fsrs-rs,
 web-push-native, sqlx, uniffi-rs and askama`; green at 2efb88df.
+
+## §10: the engine's six notices
+
+The test commit adds A24, widens A25 and tightens A3, with `deny.toml`, `Cargo.toml` and
+`Cargo.lock` as 74ad834d holds them, so A24's red above was taken at that commit: its seven planted
+defects read one finding apiece and the clean plant none, and the base's file reads seven findings,
+one per ignore entry and one for the absent `unmaintained` key. The next commit removes the six
+ignore entries from `deny.toml` and writes `unmaintained = "all"`, with the lock unchanged. Each
+notice is red over 74ad834d's lock: with the six entries removed, `cargo deny --locked check
+advisories` (cargo-deny 0.20.2) fails with exactly these six errors and no other.
+
+- RUSTSEC-2025-0075: red at 74ad834d: error[unmaintained]: `unic-char-range` is unmaintained (unic-char-range 0.9.0)
+- RUSTSEC-2025-0080: red at 74ad834d: error[unmaintained]: `unic-common` is unmaintained (unic-common 0.9.0)
+- RUSTSEC-2025-0081: red at 74ad834d: error[unmaintained]: `unic-char-property` is unmaintained (unic-char-property 0.9.0)
+- RUSTSEC-2025-0094: red at 74ad834d: error[unmaintained]: `unic-ucd-category` is unmaintained (unic-ucd-category 0.9.0)
+- RUSTSEC-2025-0098: red at 74ad834d: error[unmaintained]: `unic-ucd-version` is unmaintained (unic-ucd-version 0.9.0)
+- RUSTSEC-2025-0134: red at 74ad834d: error[unmaintained]: rustls-pemfile is unmaintained (rustls-pemfile 2.2.0)
+
+A3 and A25 already have their fence lines, so their new reds are recorded here. A3's new form, run
+at the test commit over 74ad834d's `deny.toml`, fails at its first new assertion, which reads
+the six ids: `AssertionError: Lists differ: ['RUSTSEC-2025-0075', 'RUSTSEC-2025-0080',[79 chars]134']
+!= [] : deny.toml ignores an advisory: an exception is not a fix`. A25, run at the test commit
+over 74ad834d's lock, fails naming the six crates: `AssertionError: Lists differ:
+['unic-char-range (RUSTSEC-2025-0075) is a[350 chars]ock'] != []`.
