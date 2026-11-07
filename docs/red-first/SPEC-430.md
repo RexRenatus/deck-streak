@@ -119,3 +119,6 @@ A10: red at 7bea03db723e9970373ff576789759b120d79c53: AssertionError: Lists diff
 A11: red at 7bea03db723e9970373ff576789759b120d79c53: AssertionError: Lists differ: ['bench.yaml:benched: restores the shared Rust key 0 times,[365 chars]nce'] != ['bench.yaml:bench-keyed: a cache-free job restores the Rus[260 chars]nce']
 A12: red at 7bea03db723e9970373ff576789759b120d79c53: AssertionError: Lists differ: ['released.yaml:release: a cache-free job restores the Ru[439 chars]nce'] != ['released.yaml:shared: restores the shared Rust key 0 ti[81 chars]nce']
 The merge of current dev at 037933d02588f04e6ba485f9f630327fcc6a8eb2 brought a coverage job that runs the gate Python suites by test discovery and a release job with a release-profile key of its own, so A1, A3 and A5 read red at 7bea03db723e9970373ff576789759b120d79c53 in the same run, A1 naming only the coverage job and A3 and A5 only the release job; their tests are unchanged.
+A10: green at 1c3998d0d63e1dfb1df339b2a11d64dba1028799
+A11: green at 1c3998d0d63e1dfb1df339b2a11d64dba1028799
+A12: green at 1c3998d0d63e1dfb1df339b2a11d64dba1028799
