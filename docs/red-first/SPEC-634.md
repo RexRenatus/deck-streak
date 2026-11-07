@@ -16,9 +16,12 @@ failure an assertion, no error).
 
 ```red-first
 A1: red at 0fa1dbe: AssertionError: {'map[240 chars] 'decision': 'run', 'admit': {'refused': ['rust'], 'rest': []}} != {'map[240 chars] 'decision': 'skip', 'admit': {'refused': [], 'rest': []}} (test_every_vector_is_the_gates_decision, case event-pr-into-dev), and so in 15 of the 78 vectors, each a vector whose decision is skip: event-pr-into-dev, rust-outside, rust-outside-many, engine-outside, release-outside, rename-outside, release-exact-beside-toolsx, release-exact-beside-subpath, rust-exact-beside-longer-name, rust-prefix-beside-toolsx, rust-prefix-bare-name, engine-always-prefix-beside-cratesx, engine-always-prefix-bare-name, bare-map-no-reads and witness-map-outside
+A1: green at 4e3763e
 A2: red at 0fa1dbe: AssertionError: 0 != 1 : the script does not hold 'if changed is None:\n        return "run"' once (test_none_treated_as_an_empty_list), and so for the event test's two plants (test_a_push_treated_as_a_pull_request and test_a_push_treated_as_a_pull_request_with_no_base_test); and AssertionError: Lists differ: ['admit', 'decision'] != [] at the script itself, for each of the seven named vectors of the two prefix plants (test_the_prefix_test_without_its_endswith and test_the_prefix_test_without_its_slash); 10 failures in 5 of the 8 tests
+A2: green at 4e3763e
 A3: not red: the five covers were stamped at 0fa1dbeb from the formal checker's reading of the five spans, so the test's span digest agrees with each stamp there (examined 5 covers lines, OK at 0fa1dbeb); it is the control that the test reads a span as the checker does, and it guards the cover that the decision moves
 A4: red at 0fa1dbe: AssertionError: Lists differ: ['O1a[56 chars] 'O10', 'O11', 'O12', 'O13', 'O14', 'O15', 'O16', 'O17'] != ['O1a[56 chars] 'O10', 'O11', 'O12', 'O13', 'O14', 'O15', 'O16', 'O17', 'O18'] (test_the_rows_hold_o1_to_o17_and_the_planned_entries); Refusal(arm='entry-without-row', where='lean/PathGate', why="the tree's entry has no row") (test_the_ledger_exists_in_schema_v1); and the dispositions differ, the tree's lean/PathGate holding no row (test_every_existing_entry_has_its_disposition_row)
+A4: green at cb6dcd7
 ```
 
 ## What each pair disclosed
@@ -33,3 +36,13 @@ A4: red at 0fa1dbe: AssertionError: Lists differ: ['O1a[56 chars] 'O10', 'O11', 
   0fa1dbeb, so the decision's commit must stamp its cover again with the digest the test computes.
 - **The three A4 failures** each read the ledger before its O18 row: the expected ids and statuses,
   the ledger checker's own refusal of an entry with no row, and the dispositions.
+- **The greens.** 4e3763e gives `decide` its body, as section 2 R4 states it, and stamps its cover
+  again with the digest the test computes; the other four covers, the reader and the vectors are
+  unchanged. A1, A2 and A3 read `Ran 10 tests`, `OK` there. cb6dcd7 adds O18 and its
+  `lean/PathGate` row to the ledger and maps the script in `scripts/mutation-python.json`; A4
+  reads `Ran 9 tests`, `OK` there. No test file changed after the commit that adds this record.
+  After 4e3763e only the ledger, the mutation map, this record and the SPEC change, and A1 to A3
+  read none of them; after cb6dcd7 only this record and the SPEC change.
+- **The green populations:** `examined 78 Lean vectors`, `examined 5 map texts the reader must
+  refuse`, `examined 5 covers lines`, and the named vectors of the six controls' eight plants, 3, 3,
+  4, 5, 1, 1, 2 and 3 in section 2a's order.

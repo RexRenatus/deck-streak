@@ -3,8 +3,8 @@
 Path:
 `docs/specs/SPEC-634-a-gated-rust-job-is-skipped-only-when-the-change-touches-nothing-it-reads.md`.
 
-- **Issue:** none filed. This delivery is the proof half of the path gates: a later delivery calls
-  its decisions from `ci.yml`, and nothing calls them before that.
+- **Issue:** #1261 is this delivery's issue. This delivery is the proof half of the path gates:
+  a later delivery calls its decisions from `ci.yml`, and nothing calls them before that.
 - **Context(s):** one new script, `scripts/path_gate.py`, with its test; one new Lean entry under
   `formal/lean/` with its vectors writer and vectors; and the formal ledger
   (`formal/obligations.json` and its test). No workflow, crate, web, deploy or iOS change.
