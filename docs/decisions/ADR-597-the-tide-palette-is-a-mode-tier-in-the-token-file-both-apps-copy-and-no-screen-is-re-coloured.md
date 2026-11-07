@@ -112,6 +112,12 @@ this delivery.
 - Setting the colour sets as the target's global accent colour: rejected because it re-tints every control, which is applying the palette to screens
 - Float components such as `0.957`: rejected because a float may round to a neighbouring byte; the hex form is the byte
 
+## D4, the web icons and the README header: ADR-598's decision, not this record's
+
+This record and ADR-598 come from one design and number their decisions in one series, D1 to D8.
+D4, the web icons and the README header, is the logo's alone and is ADR-598's D4. This record
+makes no decision under D4; its D1 to D3 and D5 to D8 keep the series' numbers.
+
 ## D5, the copy route and production or test: what it was chosen against
 
 The six values are entered once, into `tokens.json`, by the builder from the brand source's
@@ -178,6 +184,10 @@ its proof; D1 and D8 bound it.
 
 SPEC-578's acceptance criteria A1 to A7, its red-first record, its rows S57801 to S57803, and
 StrykerJS's report over `build-tokens.ts`.
+
+SPEC-578 holds nine acceptance criteria, and this Confirmation reads all nine, A1 to A9. Those
+named above stop two short: A8, a planted complete set that reads green (the census's control),
+and A9, the Telegram mapping and its contrast proof, unchanged and read by SPEC-028's own tests.
 
 ## What would make this wrong
 
