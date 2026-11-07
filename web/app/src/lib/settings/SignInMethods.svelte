@@ -18,6 +18,7 @@
    * confirm step that is an alert dialog named by its question; Keep and Escape give it back to
    * that row's Remove; a removal lands it on the Remove that took the row's place, else the one
    * before it, else the list. Each Remove is named for its passkey's place and day.
+   * A list that cannot be read again after a removal gives the focus to the alert in its place (SPEC-642).
    */
   let listed = $state<Answer<Method[]>>();
   let confirming = $state<number | null>(null);
@@ -28,6 +29,8 @@
   let keeper = $state<HTMLButtonElement>();
   /** The list, which takes the focus from script only, when no passkey is left. */
   let listing = $state<HTMLUListElement>();
+  /** The alert in the list's place when the list cannot be read, which takes the focus from script only, after a removal. */
+  let failure = $state<HTMLParagraphElement>();
   /** Each passkey row's Remove, by the passkey's id; empty while that row's step is open. */
   const removers: Record<number, HTMLButtonElement | null> = {};
 
@@ -105,6 +108,7 @@
    * Removes the passkey `id`, once, which the rows show at `index` among the passkeys; a passkey
    * already gone is read away with the list. A refusal gives the focus back to its Remove; a
    * list read again lands it by `land`.
+   * A list that cannot be read again gives the focus to the alert in the list's place.
    */
   async function removeNow(id: number, index: number): Promise<void> {
     working = true;
@@ -120,6 +124,7 @@
       const again = await list();
       await tick();
       if (again.kind === 'ok') land(again.value, index);
+      else failure!.focus();
     }
   }
 </script>
@@ -129,9 +134,9 @@
 {#if listed === undefined}
   <p class="mt-6" role="status">{m.loading()}</p>
 {:else if listed.kind === 'reopen'}
-  <p class="mt-6" role="alert">{m.reopen_from_telegram()}</p>
+  <p bind:this={failure} class="mt-6" role="alert" tabindex="-1">{m.reopen_from_telegram()}</p>
 {:else if listed.kind === 'unavailable'}
-  <p class="mt-6" role="alert">{m.server_unavailable()}</p>
+  <p bind:this={failure} class="mt-6" role="alert" tabindex="-1">{m.server_unavailable()}</p>
 {:else}
   <ul
     bind:this={listing}
