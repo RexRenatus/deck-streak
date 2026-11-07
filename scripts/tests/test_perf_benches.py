@@ -167,10 +167,6 @@ class TheBenchesAreInTheTree(unittest.TestCase):
         examined("web bench files outside the source root", web_bench_files())
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 # A31: each web bench's own bound. Its two measured CI times in ms, each keyed by its job id.
 WEB_BENCH_TIMES = {
     "frame-document::frameDocument": {
@@ -267,3 +263,7 @@ class TheScriptRunReachesEveryClass(unittest.TestCase):
         after = [name for at, name in classes if at > guards[0]]
         self.assertEqual(after, [], "a class follows the main guard, so a script run skips it")
         self.assertEqual(guards, [len(body) - 1], "the main guard is not the last statement")
+
+
+if __name__ == "__main__":
+    unittest.main()
