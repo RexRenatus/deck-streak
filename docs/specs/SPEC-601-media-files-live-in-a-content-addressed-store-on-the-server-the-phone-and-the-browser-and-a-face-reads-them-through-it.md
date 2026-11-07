@@ -127,7 +127,7 @@ plants a source line naming the engine's rewrite and reads it red, so its count 
 | `crates/collection/src/sql.rs` | collection | changed: the media statements, each registered |
 | `crates/collection/src/data_rights.rs` | collection | changed: the three tables declared, erased and exported |
 | `crates/collection/tests/schema.rs` | collection | changed: the three tables and their planted rows |
-| `crates/collection/tests/support/mod.rs` | collection | changed: helpers the new tests call |
+| `crates/collection/tests/support/mod.rs` | collection | unchanged: the new tests call no new helper |
 | `privacy.json` | privacy | changed: the `collection-media` entry |
 | `PRIVACY.md` | privacy | changed: the `collection-media` row |
 | `crates/media/src/lib.rs` | media | changed: the rewrite module and its re-export |
@@ -141,7 +141,7 @@ plants a source line naming the engine's rewrite and reads it red, so its count 
 | `formal/obligations.json` | formal | changed: K-put's `at` |
 | `Cargo.lock` | lock | changed: four dependency lists only |
 | `docs/CONTEXT-MAP.md` | docs | changed: four dependency lines, the sentences they amend, three table rows |
-| `docs/LEXICON.md` | docs | changed only when the context map's register test requires it |
+| `docs/LEXICON.md` | docs | unchanged: the context map's register test holds the register, never the lexicon |
 | `docs/schematics/context-map.md` | docs | changed: five arrows, the collection's layer, the base, two paragraphs |
 | `crates/engine-core/tests/graph.rs` | engine-core | changed: three expected dependency values |
 | `.github/workflows/apple-on-change.yml` | ci | changed: two path-filter lines |
