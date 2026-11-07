@@ -81,3 +81,48 @@ On the same tree: the collection store's `data_rights` (6 tests), `statement_cen
 engine core's `review_templates` (1) and `graph` (4), and the adapter's `face` (6). The Python censuses of the context
 map register, the context map schematic, the formal obligations, the privacy policy and the TestFlight workflows read
 OK.
+
+## The red and green lines
+
+```red-first
+A1: red at 817b416c: crates/collection/tests/schema.rs:504: assertion `left == right` failed: the tables
+A1: green at 90fb1aec
+A2: red at 817b416c: crates/collection/tests/media_store.rs:93: a put places its file
+A2: green at 90fb1aec
+A3: red at 817b416c: crates/collection/tests/media_store.rs:122: assertion failed: matches!(outcome, Err(MediaError::Blob(BlobError::Mismatch)))
+A3: green at 90fb1aec
+A4: red at 817b416c: crates/collection/tests/media_store.rs:144: assertion `left == right` failed
+A4: green at 90fb1aec
+A5: red at 817b416c: crates/engine-core/tests/face.rs:385: assertion `left == right` failed: Question: the image's src is the data: URL of the file's bytes
+A5: green at 90fb1aec
+A6: red at 817b416c: crates/ffi/tests/store_media.rs:43: assertion `left == right` failed
+A6: green at 90fb1aec
+A7: red at 817b416c: crates/web-engine/tests/handed.rs:14: assertion `left == right` failed
+A7: green at 90fb1aec
+A8: red at 817b416c: crates/collection/tests/media_store.rs:213: assertion `left == right` failed
+A8: green at 90fb1aec
+A9: red at 817b416c: crates/media/tests/rewrite.rs:52: assertion `left == right` failed: the cases whose visited names differ from the engine's
+A9: green at 90fb1aec
+```
+
+## The greens
+
+Each green line names the first commit whose tree reads its criterion's tests green, measured by `cargo test
+--locked --offline` one test target at a time: the collection store's `schema`, `media_store`, `data_rights`,
+`statement_census` and `opener`, the engine core's `face`, `media_refs_census`, `review_templates` and `graph`, the
+media core's `rewrite`, the adapter's `store_media` and `face`, and the web core's `handed`. A9's rewrite test reads
+0 divergences over the golden's 854 cases. A8's two harnesses stay VOID at 90fb1aec, because the verifier is not
+installed, so its green line is its two tests, the layout test and the text hold; the ledger's `K-put` gains its `at`
+and stays `planned`.
+
+Between the reds and the greens, one test-only commit, 468654c5, keeps each test's predicate: two assertions in the
+web core's handed tests take the lint's suggested form and its module comment names its criterion in words, one doc
+comment in the media rewrite tests quotes a name in backticks, ten line citations in the stride schematic move down
+one line, one mutation row's anchor follows the context map's new header commit, and the kernel's allow-list census
+counts the six new source files. So the tests of the seventh and ninth criteria changed once between their red and
+their green, each keeping its predicate; no other test file of these criteria changed between a red and its green.
+
+Two side reds at 817b416c are not criteria of this record and carry no green line: the kernel's `allow_list_arms`
+test `every_arm_site_on_the_tree_is_listed_with_its_reason`, the source-count pin, cured in 468654c5; and the
+progression crate's `xp_census` test `only_progression_writes_xp_settlement_and_only_coordination_settles`, whose
+cure a later commit owes.
