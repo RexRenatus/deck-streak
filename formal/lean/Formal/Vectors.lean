@@ -14,6 +14,7 @@ import Formal.MediaBindVectors
 import Formal.MediaGcVectors
 import Formal.NextMilestoneVectors
 import Formal.OpenLapseVectors
+import Formal.PathGateVectors
 import Formal.RecordClassBindingVectors
 import Formal.ReleaseCarryVectors
 import Formal.ReleaseGatesVectors
@@ -61,6 +62,7 @@ def main (args : List String) : IO UInt32 := do
   | ["MediaGc"] => Formal.MediaGcVectors.run
   | ["NextMilestone"] => Formal.NextMilestoneVectors.run
   | ["OpenLapse"] => Formal.OpenLapseVectors.run
+  | ["PathGate"] => Formal.PathGateVectors.run
   | ["RecordClassBinding"] => Formal.RecordClassBindingVectors.run
   | ["ReleaseCarry"] => Formal.ReleaseCarryVectors.run
   | ["ReleaseGates"] => Formal.ReleaseGatesVectors.run
