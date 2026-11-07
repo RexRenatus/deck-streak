@@ -307,3 +307,35 @@ The files this amendment adds to the manifest of section 4, each with its change
 - `scripts/tests/test_mutation_carry_kills.py`: changed: R13's keyword in `ADDED_ID`, and A14 and
   A15
 - `tools/rust-baseline-budget/size_budget.py`: changed: R13's formatter rewrap of its print calls
+
+R15. **The merges keep the five excludes of `ruff.toml`.** The first merge kept the five paths
+    that `dev`'s `ruff.toml` excludes: the first parity oracle's generator and registry
+    (SPEC-029), and the second oracle's driver, corpus and registry (SPEC-498), each pinned by its
+    goldens. The second merge, of current `dev`, brings into `ruff.toml` only `dev`'s
+    `target-version` line and changes no exclude. The lint table's test holds all five, in the
+    order `ruff.toml` lists them. This delivery adds no exclude.
+
+R16. **The census of what test modules open lists the two new opener stand-ins.** A14 and A15
+    each patch the carry module's URL opener with a stand-in, and the census register in
+    `scripts/tests/test_ci_workflows.py` lists both, by qualified name and the patch's text,
+    beside the one it listed before. Neither stand-in opens a URL, imports anything or reaches a
+    workflow file. The lint table's test, `scripts/tests/test_ruff_gate.py`, takes the five
+    excludes of R15. These are the two test files the second merge's cures change: no assertion
+    line changes, and the lint table's expected excludes follow `ruff.toml`.
+
+**Computed roots after the second merge.** Current `dev` adds three computed repository roots:
+`scripts/locale_census.py:50` and `scripts/perf-plan.py:38`, each `parents[1]` from `scripts/`,
+and `scripts/tests/test_locale_census.py:25`, `parents[2]` from `scripts/tests/`. Each resolves
+to the repository root; the guard of R9 proves all three, and `LISTED_ROOTS` stays empty.
+
+R17. **The python stage keeps the pooled module runner of `dev`.** The second merge meets the
+    runner of SPEC-633: the python stage runs every suite through `scripts/python_stage.py`,
+    prints every runner line but its last, runs ruff after every suite whatever they found, and
+    joins the ruff fields to the runner's last line, so the stage's last line keeps the shape R7
+    states. SPEC-633's R4 (the runner's last line is the stage's verdict line) and R6 (the stage
+    keeps `need_python && need_cargo`, its comments and its suite loop, and calls the runner with
+    the suites it collected) each stay true in substance: the runner, its arguments and its
+    verdict line are kept, the stage captures the runner's output and joins the ruff fields to
+    that verdict line, and the only lines the stage gains beyond those of R6 are this SPEC's ruff
+    lines, which this section states, editing no line of SPEC-633. SPEC-038 keeps the newer
+    amendment of `dev`, with its section 19 after it.

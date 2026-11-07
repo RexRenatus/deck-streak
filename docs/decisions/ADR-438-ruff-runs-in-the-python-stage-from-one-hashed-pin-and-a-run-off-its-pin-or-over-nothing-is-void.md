@@ -320,6 +320,35 @@ Chosen against:
   `file:` addresses too, and it hides the call from the rule instead of limiting what it opens.
 - Opening `https` alone: rejected because the tests' local forge answers over http.
 
+### D11. The merges keep the pinned excludes and the pooled runner, and the census lists the new opener stand-ins
+
+A second merge brings current `dev` into this delivery's branch (SPEC-424 R15 to R17). What D3
+and D10 decided holds: every site is cured in the delivery, and the rule set is not changed to
+admit one.
+
+The python stage keeps the pooled module runner of `dev`, `scripts/python_stage.py` (SPEC-633),
+runs ruff after it and joins the ruff fields to the runner's last line, so the stage still ends on
+one summary line of the shape SPEC-424 R7 states.
+
+`dev`'s own change excludes the second parity oracle's three files, its driver, corpus and
+registry (SPEC-498), on the ground the first oracle's two stand on: their goldens pin their bytes.
+The lint table's test follows the merged `ruff.toml`.
+
+The census of what test modules open names each new stand-in for the carry module's URL opener as
+it names the existing one, by qualified name and the patch's text. D7's kill criteria are
+unchanged.
+
+Chosen against:
+
+- Running the suites inline again beside the runner: rejected because it would undo `dev`'s own
+  change.
+- A second last line for ruff: rejected because the stage's summary takes one last line.
+- Linting and formatting the second oracle's three files: rejected because it would change bytes
+  their goldens pin.
+- Dropping the excludes from the lint table's check: rejected because that is a weakening.
+- A shared helper that hides the opener patch from the census: rejected because the census would
+  then miss the call it counts.
+
 ## Decision Outcome
 
 ruff runs in `stage_python` from one hashed pin, over five named roots, with the settled set.
