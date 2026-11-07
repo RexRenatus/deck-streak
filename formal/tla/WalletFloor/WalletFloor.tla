@@ -14,7 +14,7 @@
 \* @phx property OneMovementPerKey ramp=report
 \* @phx property DepositOnceEver ramp=report
 \* @phx property SettledMintNeverFalls ramp=report
-\* @phx property RefundWritesItsOwnMovement ramp=report
+\* @phx property RefundWritesItsOwnMovement ramp=block
 \* @phx witness witness/a-floor-read-outside-the-write.cfg kills=FloorHolds
 \* @phx witness witness/a-once-ever-guard-read-on-its-own-day.cfg kills=DepositOnceEver
 \* @phx witness witness/a-ledger-with-no-unique-key.cfg kills=OneMovementPerKey
