@@ -152,6 +152,7 @@ its cover and the ledger.
 | `docs/red-first/SPEC-634.md` | 2 | new: the red of A1 at the stand-in, and its green |
 | `scripts/path_gate.py` | 1, 2 | new: the map's reader and the five functions, with a stand-in decision; part 2 gives the decision its body |
 | `scripts/tests/test_path_gate.py` | 2 | new: A1 to A3 |
+| `scripts/tests/test_ci_workflows.py` | 2 | the dynamic import census lists the vectors test's loader |
 | `formal/lean/Formal/PathGate.lean` | 1, 2 | new: the entry (section 8); part 2 stamps the decision's cover again |
 | `formal/lean/Formal/PathGateVectors.lean` | 1 | new: its vectors writer |
 | `formal/lean/Formal/Vectors.lean` | 1 | one import and one arm |
