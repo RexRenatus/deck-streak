@@ -1,0 +1,78 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S64500-A-PLAN-THAT-IS-NOT-AN-OBJECT-IS-REFUSED",
+        "scripts/mutation_rows.py",
+        "    if not isinstance(plan, dict):\n",
+        "    if False:\n",
+        "a rows plan that is not a JSON object is refused by name on stderr, exit 2, never a traceback at its first read (SPEC-645 R1)",
+        "test_mutation_rows.TheRowsPlanRefusesAWrongShape.test_a_plan_that_is_an_array_is_refused_naming_the_shape"
+      ],
+      [
+        "S64501-A-ROWS-VALUE-THAT-IS-NOT-AN-ARRAY-IS-REFUSED",
+        "scripts/mutation_rows.py",
+        "    if not isinstance(planned, list):\n",
+        "    if False:\n",
+        "a plan whose rows value is not an array is refused by name, where a number crashed the selection and an object gave its keys as row ids (SPEC-645 R2)",
+        "test_mutation_rows.TheRowsPlanRefusesAWrongShape.test_a_rows_value_that_is_not_an_array_is_refused_naming_the_shape"
+      ],
+      [
+        "S64502-A-ROW-ID-THAT-IS-NOT-A-STRING-IS-REFUSED",
+        "scripts/mutation_rows.py",
+        "        if not isinstance(identifier, str):\n",
+        "        if False:\n",
+        "a plan entry that is not a string is refused at its index, never joined into a refusal that crashes (SPEC-645 R3)",
+        "test_mutation_rows.TheRowsPlanRefusesAWrongShape.test_a_row_id_that_is_not_a_string_is_refused_naming_its_place"
+      ],
+      [
+        "S64503-THE-SELECTION-READS-THE-PLAN-THROUGH-ITS-CHECK",
+        "scripts/mutation_rows.py",
+        "        wanted += plan_rows(args.rows_from, plan)\n",
+        "        wanted += plan.get(\"rows\", [])\n",
+        "the selection reads the plan through its shape check, so no wrong shape reaches a get that crashes (SPEC-645 R1)",
+        "test_mutation_rows.TheRowsPlanRefusesAWrongShape.test_a_plan_that_is_an_array_is_refused_naming_the_shape"
+      ],
+      [
+        "S64504-A-PLAN-SELECTS-THE-IDS-OF-ITS-ROWS-KEY",
+        "scripts/mutation_rows.py",
+        "    planned = plan.get(\"rows\", [])\n",
+        "    planned = plan.get(\"\", [])\n",
+        "a well-formed plan selects the ids its rows key holds, not the empty list another key gives (SPEC-645 R5)",
+        "test_mutation_rows.TheRowsPlanRefusesAWrongShape.test_a_well_formed_plan_still_selects_its_rows"
+      ],
+      [
+        "S64505-THE-READER-RETURNS-THE-PLANS-ROW-IDS",
+        "scripts/mutation_rows.py",
+        "    return planned\n",
+        "    return None\n",
+        "the reader returns the row ids of the plan, which the selection adds to its own (SPEC-645 R5)",
+        "test_mutation_rows.TheRowsPlanRefusesAWrongShape.test_a_well_formed_plan_still_selects_its_rows"
+      ],
+      [
+        "S64506-PROVE-REFUSES-A-WRONG-PLAN-WITH-EXIT-2",
+        "scripts/mutation_rows.py",
+        "        except PlanRefused as refusal:\n            print(f\"mutation_rows: REFUSED: {refusal}\", file=sys.stderr)\n            return EXIT_REFUSED\n    if args.verb == \"legs\":\n",
+        "        except PlanRefused as refusal:\n            print(f\"mutation_rows: REFUSED: {refusal}\", file=sys.stderr)\n            return EXIT_OK\n    if args.verb == \"legs\":\n",
+        "prove refuses a plan of the wrong shape with exit 2, the status of every refusal, never a success (SPEC-645 R4)",
+        "test_mutation_rows.TheRowsPlanRefusesAWrongShape.test_a_plan_that_is_an_array_is_refused_naming_the_shape"
+      ],
+      [
+        "S64507-LEGS-REFUSES-A-WRONG-PLAN-WITH-EXIT-2",
+        "scripts/mutation_rows.py",
+        "            return legs(root, args)\n        except PlanRefused as refusal:\n            print(f\"mutation_rows: REFUSED: {refusal}\", file=sys.stderr)\n            return EXIT_REFUSED\n",
+        "            return legs(root, args)\n        except PlanRefused as refusal:\n            print(f\"mutation_rows: REFUSED: {refusal}\", file=sys.stderr)\n            return EXIT_OK\n",
+        "legs refuses a plan of the wrong shape with exit 2, the status of every refusal, never a success (SPEC-645 R4)",
+        "test_mutation_rows.TheRowsPlanRefusesAWrongShape.test_a_plan_that_is_an_array_is_refused_naming_the_shape"
+      ],
+      [
+        "S64508-MERGE-REFUSES-A-WRONG-PLAN-WITH-EXIT-2",
+        "scripts/mutation_rows.py",
+        "            return merge(root, args)\n        except PlanRefused as refusal:\n            print(f\"mutation_rows: REFUSED: {refusal}\", file=sys.stderr)\n            return EXIT_REFUSED\n",
+        "            return merge(root, args)\n        except PlanRefused as refusal:\n            print(f\"mutation_rows: REFUSED: {refusal}\", file=sys.stderr)\n            return EXIT_OK\n",
+        "merge refuses a plan of the wrong shape with exit 2, the status of every refusal, never a success (SPEC-645 R4)",
+        "test_mutation_rows.TheRowsPlanRefusesAWrongShape.test_a_plan_that_is_an_array_is_refused_naming_the_shape"
+      ]
+    ]
+  }
+}
