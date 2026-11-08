@@ -13,6 +13,8 @@ A3: red at 866fe1b5: scripts/tests/test_check_gate.py:236: AssertionError: 'Ran 
 A3: green at 0f78e662
 A4: red at 300d6919: scripts/tests/test_python_stage.py:183: AssertionError: Lists differ: ['sibling.cpython-312.pyc', 'test_imports.cpython-312.pyc'] != [] (box run)
 A4: green at b9aeac5f
+A5: red at 3c68e5b7: scripts/tests/test_python_stage.py:257: AssertionError: examined 0 module lines: the population is empty, so nothing was judged (box run)
+A5: green at 11d87d72
 ```
 
 A1 was committed with a module runner that keeps every input and runs each module one after
@@ -39,3 +41,8 @@ count; `test_python_stage.py` read Ran 3, OK on a local run at that commit. No t
 case or assertion goes. 1f0168de cures the test_coverage_report red of job 128188919143: the
 stage keeps the suite list that the python lane test reads. The A4 test method's source, read
 by `ast`, is byte-equal at b9aeac5f and at the tip.
+
+A5 was committed with its test alone, against the runner that prints no module line, so the A5
+test read red on a local run: the stage printed no `module:` line. The commit after it changes
+only the runner, which prints each module's line after that module's output, and this record,
+and the A5 test read green on that tree. The commit after that changes only this record.

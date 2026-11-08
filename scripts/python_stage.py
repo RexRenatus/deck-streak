@@ -5,9 +5,11 @@
 Runs each `test_*.py` module of each suite as `python3 -m unittest discover -s <suite> -p
 <module>`, each in a process of its own, at most PYTHON_STAGE_JOBS at once (by default the CPU
 count; 1 runs them one after another), then the modules of SERIAL_MODULES one by one. It prints
-each module's output in module-name order, then the stage's last line, `python: <suite> ran N
-test(s), exit c; ...`. A suite that ran no test, or one whose module exited non-zero, fails the
-stage (SPEC-054 R7). `python3` is the one on PATH, so a stand-in there answers every module run.
+each module's output in module-name order, each followed by its own line `module: <suite>/<name>
+ran N test(s), OK` (`FAILED (exit c)` for a module that exits c, not 0), then the stage's last
+line, `python: <suite> ran N test(s), exit c; ...`. A suite that ran no test, or one whose module
+exited non-zero, fails the stage (SPEC-054 R7). `python3` is the one on PATH, so a stand-in there
+answers every module run.
 """
 
 import fnmatch
@@ -64,6 +66,8 @@ def main(suites):
             if module[0] == suite:
                 output, returned, count = results[module]
                 sys.stdout.write(output)
+                outcome = f"FAILED (exit {returned})" if returned else "OK"
+                print(f"module: {module[0]}/{module[1]} ran {count} test(s), {outcome}")
                 ran += count
                 code = code or returned
         failed = failed or code != 0 or ran == 0

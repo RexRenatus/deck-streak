@@ -14,7 +14,7 @@ flowchart TD
     named --> tail["the tail, one module at a time, after the pool"]
     proc --> held["each module's output, its exit and its last Ran N, held until it ends"]
     tail --> held
-    held --> print["each module's output, suite by suite in argument order, modules in name order"]
+    held --> print["each module's output, then its line module: suite/module ran N test(s), OK or FAILED (exit c), suite by suite in argument order, modules in name order"]
     print --> sum["per suite: N the sum of its modules' Ran counts, c its first non-zero exit"]
     sum --> verdict["last line: python: suite ran N test(s), exit c; ..."]
     verdict --> exit{"any suite with exit c not 0, or N of 0"}
