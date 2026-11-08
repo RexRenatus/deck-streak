@@ -29,7 +29,7 @@ Every figure below was read at `36efa139` by the command beside it; `...` stands
   `web/app/messages/en.json:11` and `:12`. Nothing focuses it: `... | grep -n -E
   'role="alert"|focus\('` prints the focus calls at lines 35, 79, 90, 91 and 118, none of them on
   an alert, and `... | grep -c -E 'bind:this=\{failure\}|failure!'` prints 0.
-- So the focused button, the confirm step's Keep, leaves the page with the list and the focus falls
+- So the focused button leaves the page with the list and the focus falls
   to the document's body. The unit suite pins exactly that:
   `git show 36efa139:web/app/src/routes/sign-in-methods.test.ts | grep -n -F 'toBe(document.body)'`
   prints line 543, inside SPEC-463's mutation-coverage test at `:523`, "a removal whose list cannot
@@ -88,7 +88,7 @@ No `.rs`, `.swift`, workflow, catalog, edge or content-security file changes, an
 
 ## 5. What this does NOT cover
 
-- A person's check of the focus and of what a screen reader says when the alert takes it, by keyboard and by a screen reader on a phone and on a computer: the pull request's test plan names it as a manual step, #945.
+- A person's check of the focus and of what a screen reader says when the alert takes it, by keyboard and by a screen reader on a phone and on a computer: a manual step, #945.
 - A browser audit of the passkey list: #946.
 - The settings screen that will embed the list: #57.
 - The list's first read: its alert keeps the focus where it was, by R3, and nothing about that read changes, #945.

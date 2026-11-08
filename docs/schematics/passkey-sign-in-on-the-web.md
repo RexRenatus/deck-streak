@@ -503,7 +503,7 @@ Each path, at the base and with SPEC-642 (the cure):
 
 | step | at the base | with SPEC-642 | decided by |
 |---|---|---|---|
-| the re-read after a removal answers `reopen` or `unavailable` | `removeNow` reads the list again and places the focus only on `ok` (`:120-122`); the alert renders in the list's place (`:131-134`) and nothing focuses it, so the focused Keep leaves the page and the focus falls to the document's body | the alert, focusable from script only (`tabindex="-1"`, as the list is at `:138`), takes the focus once the render `removeNow` already awaits is done; its role and its wording are unchanged | A1 |
+| the re-read after a removal answers `reopen` or `unavailable` | `removeNow` reads the list again and places the focus only on `ok` (`:120-122`); the alert renders in the list's place (`:131-134`) and nothing focuses it, so the focused button leaves the page and the focus falls to the document's body | the alert, focusable from script only (`tabindex="-1"`, as the list is at `:138`), takes the focus once the render `removeNow` already awaits is done; its role and its wording are unchanged | A1 |
 | the screen's first read answers `reopen` or `unavailable` | the same alert renders in the list's place (`:131-134`) and no focus moves | unchanged: the alert shows, and an element focused before the screen renders keeps the focus | A2 |
 
 The alert stays the announcement on both paths, and no live region or wording is added; the focus
