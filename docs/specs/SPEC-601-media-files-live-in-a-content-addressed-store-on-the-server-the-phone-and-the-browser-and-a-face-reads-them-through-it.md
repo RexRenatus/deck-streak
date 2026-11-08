@@ -151,6 +151,8 @@ plants a source line naming the engine's rewrite and reads it red, so its count 
 | `crates/kernel/tests/allow_list_arms.rs` | kernel | changed: the census pin counts the six new source files |
 | `docs/schematics/the-app-campaigns-surfaces-each-carry-a-stride-table-whose-every-control-cites-a-line-that-holds.md` | docs | changed: the line citations below the two workflow path-filter inserts move down one line |
 | `scripts/mutation-rows.d/S39400-S39499.json` | mutation | changed: one row anchor names the new base commit of the context map schematic |
+| `crates/coordination/tests/relight_order.rs` | coordination | changed: the static census writes out the media store's staging-name sequence |
+| `crates/ingest/tests/skip_census.rs` | ingest | changed: the engine port list drops the media module, so its planted copy is refused |
 
 ## 5. What this does NOT cover
 
