@@ -1,0 +1,118 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S63901-THE-MATRIX-COMPARES-EVERY-PHONE-PROJECT",
+        "scripts/tests/test_web_verify.py",
+        "    for name, size, scheme, scale in sorted(MATRIX - projects):",
+        "    for name, size, scheme, scale in sorted(MATRIX - MATRIX):",
+        "the matrix check compares the config's phone projects with the six R1 names; without it a config missing a phone project is not refused (SPEC-639 R1, A1)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_missing_phone_project_is_refused"
+      ],
+      [
+        "S63902-EVERY-ROUTE-NEEDS-EACH-OF-ITS-STATES",
+        "scripts/tests/test_web_verify.py",
+        "            if state not in table.get(route, []):",
+        "            if state not in table.get(route, [state]):",
+        "the state check needs each of a route's states in the table; without it a route with no state is not refused (SPEC-639 R2, A2)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_route_with_no_state_is_refused"
+      ],
+      [
+        "S63903-AN-ACCOUNT-SIZED-NUMBER-IS-NOT-SYNTHETIC",
+        "scripts/tests/test_web_verify.py",
+        "ACCOUNT = re.compile(r\"(?<![\\w.])\\d{7,}(?![\\w.])\")",
+        "ACCOUNT = re.compile(r\"(?<![\\w.])\\d{8,}(?![\\w.])\")",
+        "the synthetic-value pattern refuses a number of seven or more digits; without it a planted seven-digit account-sized value is not refused (SPEC-639 R2, A3)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_real_looking_fixture_value_is_refused"
+      ],
+      [
+        "S63904-TARGET-SIZE-IS-ON-BY-NAME",
+        "scripts/tests/test_web_verify.py",
+        "    if not TARGET_SIZE_ON.search(text):",
+        "    if TARGET_SIZE_ON is None:",
+        "the audit check needs target-size turned on by name; without it a planted audit with the option removed is not refused (SPEC-639 R3, A5)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_audit_without_target_size_is_refused"
+      ],
+      [
+        "S63905-EVERY-BASELINE-IS-ON-DISK",
+        "scripts/tests/test_web_verify.py",
+        "    return [f\"baseline: missing {name}\" for name in wanted if not (root / SHOTS / name).is_file()]",
+        "    return [f\"baseline: missing {name}\" for name in wanted if not (root / SHOTS).is_dir()]",
+        "the baseline check looks for each route, state and project image by name; without it a tree missing one baseline is not refused (SPEC-639 R4, A10)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_missing_baseline_is_refused"
+      ],
+      [
+        "S63906-AN-EXCEPTION-ENTRY-NAMES-EVERY-FIELD",
+        "scripts/tests/test_web_verify.py",
+        "            if not fields.get(field):",
+        "            if field not in fields:",
+        "the exception check needs each entry's rule, route, reason and issue to be non-empty; without it an entry with an empty field is not refused (SPEC-639 R5, A11)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_bare_disable_is_refused"
+      ],
+      [
+        "S63907-THE-SCREENSHOT-THRESHOLD-IS-ZERO",
+        "scripts/tests/test_web_verify.py",
+        "    if not re.search(r\"\\bthreshold:\" + ZERO, options, re.M):",
+        "    if not re.search(r\"\\bthreshold:\", options, re.M):",
+        "the margin check needs the screenshot threshold to be 0; without it a planted config with a threshold of 0.2 alone is not refused (SPEC-639 R4, A13)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_screenshot_margin_is_refused"
+      ],
+      [
+        "S63908-THE-SCREENSHOT-PIXEL-COUNT-IS-ZERO",
+        "scripts/tests/test_web_verify.py",
+        "    if not re.search(r\"\\bmaxDiffPixels:\" + ZERO, options, re.M):",
+        "    if not re.search(r\"\\bmaxDiffPixels:\", options, re.M):",
+        "the margin check needs maxDiffPixels to be 0; without it a planted config allowing 10 pixels alone is not refused (SPEC-639 R4, A13)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_screenshot_margin_is_refused"
+      ],
+      [
+        "S63909-NO-SCREENSHOT-RATIO-IS-SET",
+        "scripts/tests/test_web_verify.py",
+        "    if any(\"maxDiffPixelRatio\" in part for part in [text] + spec_texts):",
+        "    if any(\"maxDiffPixelRatio\" in part for part in spec_texts):",
+        "the margin check refuses a maxDiffPixelRatio in the config; without it a planted config setting a ratio alone is not refused (SPEC-639 R4, A13)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_screenshot_margin_is_refused"
+      ],
+      [
+        "S63910-THE-AUDIT-REQUIRES-WCAG2A",
+        "scripts/tests/test_web_verify.py",
+        "        if f\"'{tag}'\" not in text:",
+        "        if f\"'{tag}'\" not in text and tag != \"wcag2a\":",
+        "the audit check requires the tag wcag2a; without it a planted audit missing wcag2a alone is not refused (SPEC-639 R3, A5)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_audit_missing_a_wcag_tag_is_refused"
+      ],
+      [
+        "S63911-THE-AUDIT-REQUIRES-WCAG2AA",
+        "scripts/tests/test_web_verify.py",
+        "        if f\"'{tag}'\" not in text:",
+        "        if f\"'{tag}'\" not in text and tag != \"wcag2aa\":",
+        "the audit check requires the tag wcag2aa; without it a planted audit missing wcag2aa alone is not refused (SPEC-639 R3, A5)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_audit_missing_a_wcag_tag_is_refused"
+      ],
+      [
+        "S63912-THE-AUDIT-REQUIRES-WCAG21A",
+        "scripts/tests/test_web_verify.py",
+        "        if f\"'{tag}'\" not in text:",
+        "        if f\"'{tag}'\" not in text and tag != \"wcag21a\":",
+        "the audit check requires the tag wcag21a; without it a planted audit missing wcag21a alone is not refused (SPEC-639 R3, A5)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_audit_missing_a_wcag_tag_is_refused"
+      ],
+      [
+        "S63913-THE-AUDIT-REQUIRES-WCAG21AA",
+        "scripts/tests/test_web_verify.py",
+        "        if f\"'{tag}'\" not in text:",
+        "        if f\"'{tag}'\" not in text and tag != \"wcag21aa\":",
+        "the audit check requires the tag wcag21aa; without it a planted audit missing wcag21aa alone is not refused (SPEC-639 R3, A5)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_audit_missing_a_wcag_tag_is_refused"
+      ],
+      [
+        "S63914-THE-AUDIT-REQUIRES-WCAG22AA",
+        "scripts/tests/test_web_verify.py",
+        "        if f\"'{tag}'\" not in text:",
+        "        if f\"'{tag}'\" not in text and tag != \"wcag22aa\":",
+        "the audit check requires the tag wcag22aa; without it a planted audit missing wcag22aa alone is not refused (SPEC-639 R3, A5)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_audit_missing_a_wcag_tag_is_refused"
+      ]
+    ]
+  }
+}
