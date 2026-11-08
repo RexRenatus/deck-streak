@@ -1,0 +1,30 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S64600-A-HEADER-TABLE-THAT-IS-NOT-AN-ARRAY-IS-REFUSED",
+        "scripts/mutation_rows.py",
+        "        if not isinstance(header_rows, list):\n",
+        "        if False:\n",
+        "a header table that is not an array is refused by name, exit 2, where a number crashed the reader and an object read as an empty table (SPEC-646 R1)",
+        "test_mutation_rows.ThePopulationReaderRefusesAMisshapenTableOrRow.test_a_header_table_that_is_not_an_array_is_refused_naming_it"
+      ],
+      [
+        "S64601-A-ROW-THAT-IS-NOT-AN-ARRAY-IS-REFUSED",
+        "scripts/mutation_rows.py",
+        "        if not isinstance(cells, list):\n",
+        "        if False:\n",
+        "a row that is not an array is refused at its index, in the header or a band file, where a number crashed the arity check (SPEC-646 R2)",
+        "test_mutation_rows.ThePopulationReaderRefusesAMisshapenTableOrRow.test_a_row_that_is_not_an_array_is_refused_naming_its_place"
+      ],
+      [
+        "S64602-A-CELL-THAT-IS-NOT-A-STRING-IS-REFUSED",
+        "scripts/mutation_rows.py",
+        "        if not all(isinstance(cell, str) for cell in cells):\n",
+        "        if False:\n",
+        "a row holding a cell that is not a string is refused at its index, where a null target crashed the reader and a number was read as a find (SPEC-646 R3)",
+        "test_mutation_rows.ThePopulationReaderRefusesAMisshapenTableOrRow.test_a_row_holding_a_cell_that_is_not_a_string_is_refused_naming_its_place"
+      ]
+    ]
+  }
+}

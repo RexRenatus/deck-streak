@@ -431,6 +431,88 @@ class TheCensusRefusesARowThatCanProveNothing(unittest.TestCase):
         self.assertIn("the row id S00041-FIRST is held twice", held.stdout)
 
 
+# --------------------------------------------------------------------------- SPEC-646
+
+POPULATION_HEADER = "scripts/mutation-rows.json"
+POPULATION_BAND = "scripts/mutation-rows.d/S00000-S00099.json"
+#: A well-formed row set before each wrong one, so that every refusal names the wrong row's place.
+WELL_SHAPED = script_row(
+    "S00080-SHAPED", "x * 2", "x * 3", "test_fixmod.Double.test_two_doubles_to_four"
+)
+#: Where a row is planted: the header's table, or the band file's.
+PLACES = {"header": POPULATION_HEADER, "band": POPULATION_BAND}
+
+
+class ThePopulationReaderRefusesAMisshapenTableOrRow(unittest.TestCase):
+    """SPEC-646 A1 to A4 (R1 to R4): a header table that is not an array, a row that is not an
+    array and a row holding a cell that is not a string are each refused by the sentence naming
+    the file, the place and the shape it needed, exit 2, with no traceback, by `count` as a
+    process and by the reader in this process. A well-formed population reads as it did, and the
+    refusals the reader made before of a band file's table and of a row with no id stand."""
+
+    def planted(self, place, rows):
+        """A fixture whose `SCRIPT_MUTATIONS` table in the header or in the band file holds
+        `rows`, written over the committed fixture."""
+        fixture = Fixture(self)
+        if place == "header":
+            header = json.loads(json.dumps(HEADER))
+            header["tables"]["SCRIPT_MUTATIONS"] = rows
+            fixture.write(POPULATION_HEADER, json.dumps(header, indent=2) + "\n")
+        else:
+            tables = {"MUTATIONS": [], "CARGO_KILLED_SCRIPT_MUTATIONS": []}
+            tables["SCRIPT_MUTATIONS"] = rows
+            fixture.write(POPULATION_BAND, json.dumps({"tables": tables}) + "\n")
+        return fixture
+
+    def assert_refused(self, fixture, sentence):
+        done = fixture.run("count")
+        self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+        self.assertIn(f"mutation_rows: REFUSED: {sentence}", done.stderr.splitlines())
+        self.assertNotIn("Traceback", done.stderr)
+        runner = load_runner()
+        with self.assertRaises(runner.PopulationRefused) as refused:
+            runner.rows_of(runner.load_tree(fixture.root))
+        self.assertEqual(str(refused.exception), sentence)
+
+    def test_a_header_table_that_is_not_an_array_is_refused_naming_it(self):
+        sentence = f"{POPULATION_HEADER}: SCRIPT_MUTATIONS is not an array of rows"
+        for value in examined("planted header tables", [1, {}, "rows", None]):
+            with self.subTest(value=value):
+                self.assert_refused(self.planted("header", value), sentence)
+
+    def test_a_row_that_is_not_an_array_is_refused_naming_its_place(self):
+        planted = [(place, value) for place in PLACES for value in (1, "S00081-ROW", {})]
+        for place, value in examined("planted rows", planted):
+            with self.subTest(place=place, value=value):
+                sentence = f"{PLACES[place]}: SCRIPT_MUTATIONS[1] is not an array of cells"
+                self.assert_refused(self.planted(place, [WELL_SHAPED, value]), sentence)
+
+    def test_a_row_holding_a_cell_that_is_not_a_string_is_refused_naming_its_place(self):
+        wrong = {0: 7, 1: None, 2: 5}
+        planted = [(place, cell) for place in PLACES for cell in sorted(wrong)]
+        for place, cell in examined("planted cells", planted):
+            with self.subTest(place=place, cell=cell):
+                row = ["S00082-CELL", *WELL_SHAPED[1:]]
+                row[cell] = wrong[cell]
+                sentence = f"{PLACES[place]}: SCRIPT_MUTATIONS[1] holds a cell that is not a string"
+                self.assert_refused(self.planted(place, [WELL_SHAPED, row]), sentence)
+
+    def test_a_well_formed_population_reads_as_before_beside_the_refusals_it_kept(self):
+        fixture = Fixture(self, [("SCRIPT_MUTATIONS", WELL_SHAPED)])
+        done = fixture.run("count")
+        self.assertEqual((done.returncode, done.stdout), (0, "1\n"), done.stderr)
+        runner = load_runner()
+        rows = runner.rows_of(runner.load_tree(fixture.root))
+        self.assertEqual([row.id for row in rows], ["S00080-SHAPED"])
+        kept = [
+            ({}, f"{POPULATION_BAND}: SCRIPT_MUTATIONS is not an array of rows"),
+            ([WELL_SHAPED, []], f"{POPULATION_BAND}: a SCRIPT_MUTATIONS row has no id"),
+        ]
+        for planted_rows, sentence in examined("kept refusals", kept):
+            with self.subTest(sentence=sentence):
+                self.assert_refused(self.planted("band", planted_rows), sentence)
+
+
 class TheRunnerProvesEverySelectedRow(unittest.TestCase):
     def test_every_row_its_selectors_name_is_proved_once(self):
         killer = "test_fixmod.Double.test_two_doubles_to_four"
