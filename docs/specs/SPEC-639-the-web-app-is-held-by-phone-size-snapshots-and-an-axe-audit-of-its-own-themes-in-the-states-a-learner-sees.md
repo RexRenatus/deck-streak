@@ -90,6 +90,7 @@ A14: python3 -m unittest discover -s scripts/tests -p test_public_scrub.py -k te
 | `scripts/mutation-rows.d/S63900-S63999.json` | scripts | added: the rows |
 | `scripts/public-scrub.py` | scripts | changed: R9, the screenshot baselines' admission and its text-chunk check |
 | `scripts/tests/test_public_scrub.py` | scripts | changed: R9's planted cases |
+| `scripts/tests/test_ci_workflows.py` | scripts | changed: the census lists the three zlib calls of R9's planted cases |
 | `docs/specs/SPEC-639-the-web-app-is-held-by-phone-size-snapshots-and-an-axe-audit-of-its-own-themes-in-the-states-a-learner-sees.md` | docs | added |
 | `docs/decisions/ADR-662-the-web-apps-verification-uses-screenshot-baselines-rendered-in-ci-and-axe-over-its-own-themes-at-phone-sizes.md` | docs | added |
 | `docs/schematics/web-verify.md` | docs | added |
