@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT window_ends_at FROM xp_tokens WHERE consumed = 0 AND activated_at > 0 AND window_ends_at > ?1 ORDER BY id DESC LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "window_ends_at",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "xp_tokens",
+            "name": "window_ends_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "de9b199ef14e6f9fec2ac7cbf7c2c1d2d6a56eeee8d8460b561e765708d62f0b"
+}
