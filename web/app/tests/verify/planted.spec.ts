@@ -13,11 +13,11 @@ import { expect, open, schemeOf, test, tideFindings } from './fixtures';
 import { STATES } from './states';
 
 const PLANTED = {
-  lowContrastInk: '#1a1a1a',
+  lowContrastInk: '#b0b0b0',
   lowContrastPaper: '#ffffff',
-  smallTargetSize: 24,
-  smallTargetGap: 24,
-  hostPaletteEntries: 0
+  smallTargetSize: 16,
+  smallTargetGap: 2,
+  hostPaletteEntries: Infinity
 };
 
 // axe-core's tags for WCAG 2.0, 2.1 and 2.2 at levels A and AA, as the theme audit runs them.
