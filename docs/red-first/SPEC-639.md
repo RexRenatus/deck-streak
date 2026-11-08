@@ -1,6 +1,6 @@
 # Red-first record: SPEC-639
 
-SPEC-639 (A1 to A13). The tree check came first, `scripts/tests/test_web_verify.py` alone at
+SPEC-639 (A1 to A14). The tree check came first, `scripts/tests/test_web_verify.py` alone at
 ec249674, over the base tree, which held no phone project, no state table, no theme audit, no
 exceptions table, no baseline and no screenshot expectation. Its seven real cases read red by their
 own population assertions, each `examined 0`, in a local run of `python3 -m unittest test_web_verify
@@ -105,3 +105,6 @@ ed16cfdbf192581a2980cc3a6bd5cee6b89463d7, whose hygiene job (job 128677485838) r
 names it:
 `git -C /tmp/ds-worktrees/web-verify-639 diff --quiet 24aaafd37bb17fd728e50a9bcdc93e4030b9afaf HEAD -- scripts/public-scrub.py scripts/tests/test_public_scrub.py`
 exits 0, so the run at this delivery's head runs the scrub and its test as they stand there.
+
+894bae5f re-renders eleven `/remote` baselines under `web/app/tests/verify/__screenshots__`. It
+holds images only and changes no test code or assertion between A14's red and its green.
