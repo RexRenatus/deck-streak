@@ -462,9 +462,9 @@ class PlantedTreesAreRefused(unittest.TestCase):
         self.assertEqual(
             found, ["synthetic: fixtures.ts holds an email-shaped value learner@example.org"]
         )
-        account = STATES_TEXT.replace("reviews: 12", "reviews: 12, user_id: 412345678")
+        account = STATES_TEXT.replace("reviews: 12", "reviews: 12, serial: 7654321")
         found = self.findings(synthetic_findings, states=account)
-        self.assertEqual(found, ["synthetic: states.ts holds an account-sized number 412345678"])
+        self.assertEqual(found, ["synthetic: states.ts holds an account-sized number 7654321"])
 
     def test_a_planted_audit_without_target_size_is_refused(self):
         off = AUDIT_TEXT.replace(
