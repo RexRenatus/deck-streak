@@ -8953,6 +8953,17 @@ DYNAMIC_IMPORTS = {
         "reaches the namespace of the fresh module the loader makes, by a constant name, to run the path gate script's text in it; that namespace holds only what the script defines, so it brings in no module of the test directory",
         ("test_path_gate", "load", "module.__dict__", 1),
     ),
+    **allowed(
+        "compresses and checksums the chunks of the planted screenshot baselines, to build in memory the PNGs the scrub admits or refuses by their chunks (SPEC-639 A14); bytes in and bytes out, and it imports, runs and reads nothing",
+        (
+            "test_public_scrub",
+            "OnlyAScreenshotBaselineWithNoTextIsAdmitted.test_a_baseline_holding_a_text_chunk_is_refused_by_its_type",
+            "zlib.compress(b'planted')",
+            1,
+        ),
+        ("test_public_scrub", "chunk", "zlib.crc32(kind + body)", 1),
+        ("test_public_scrub", "png", "zlib.compress(bytes(2))", 1),
+    ),
 }
 
 

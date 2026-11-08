@@ -264,7 +264,7 @@ def png_findings(data: bytes) -> list[str]:
     """Each text chunk a PNG holds, and `baseline-malformed` unless its chunks, each with its
     CRC, run whole to `IEND` with nothing after it."""
     found, at = [], len(PNG_SIGNATURE)
-    while at + 12 <= len(data):
+    while True:
         length = int.from_bytes(data[at : at + 4], "big")
         kind, end = data[at + 4 : at + 8], at + 12 + length
         crc = int.from_bytes(data[end - 4 : end], "big")
