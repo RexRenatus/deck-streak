@@ -19,7 +19,7 @@ const HOST_STYLE =
  * carried byte for byte. A NUL has no reference the parser keeps, so the read-back still refuses one.
  */
 function attribute(text: string): string {
-  return text.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('\r', '&#13;');
+  return text.replaceAll('&', '&amp;').replaceAll('"', '&quot;');
 }
 
 function parse(text: string): Document {
