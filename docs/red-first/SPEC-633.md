@@ -13,6 +13,7 @@ A3: red at 866fe1b5: scripts/tests/test_check_gate.py:236: AssertionError: 'Ran 
 A3: green at 0f78e662
 A4: red at 300d6919: scripts/tests/test_python_stage.py:183: AssertionError: Lists differ: ['sibling.cpython-312.pyc', 'test_imports.cpython-312.pyc'] != [] (box run)
 A4: green at b9aeac5f
+A5: red at 3c68e5b7: scripts/tests/test_python_stage.py:257: AssertionError: examined 0 module lines: the population is empty, so nothing was judged (box run)
 ```
 
 A1 was committed with a module runner that keeps every input and runs each module one after
