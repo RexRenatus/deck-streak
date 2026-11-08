@@ -42,6 +42,12 @@ The nine rows S64500 to S64508 were proved KILLED by id at 289cd87f, by
 
 ## The green at the head
 
-`git diff --quiet 00ae13f2 HEAD -- scripts/mutation_rows.py` exits 0, and
-`scripts/tests/test_mutation_rows.py` is unchanged since 61ca42e8, so the greens recorded at 00ae13f2
-hold at the head.
+`git diff --quiet 00ae13f2 HEAD -- scripts/mutation_rows.py` exits 0. After the greens,
+`scripts/tests/test_mutation_rows.py` changed once, in 2f6a2e8a: the row id case (A5) now binds
+its planted index to its sentence's lambda as a default argument, where the lambda read the loop
+variable when it was called. It was called in its own iteration, so it read the same index, and
+the module's syntax tree with that default removed equals its tree at 61ca42e8. That case still
+reads red against the runner of the base, by the line recorded above, and the six criteria's
+tests read green at 2f6a2e8a, so the greens recorded at 00ae13f2 hold at the head. The nine rows
+were proved KILLED again at 2f6a2e8a, by the same band prove run, whose summary line read
+`rows: examined 9: killed 9, survived 0, void 0`.
