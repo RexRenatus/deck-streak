@@ -559,6 +559,65 @@ describe('the planted card suite', () => {
     examined('unclosed projects arrays', plants);
   });
 
+  it('every planted card that loads points at the TCP listener, which counts every connection', () => {
+    // SPEC-641 R1, R2, A1; ADR-664 D1, D2: a loading card's markup and CSS name the TCP listener,
+    // which counts every connection with or without a request and reads each request's path, and
+    // never the HTTP listener, which the sentinel shares and which counts no connection; a card that
+    // requests a path there declares `tcp` and its own paths, and a card that only connects (a
+    // preconnect) declares `tcp` alone
+    type Card = (typeof PLANTED)[number];
+    const listener = { http: 'http://requests.invalid', tcp: 'http://connections.invalid', udp: 3 };
+    const named = (card: Card): string => card.html(listener) + card.css(listener);
+    const misaimed = (cards: readonly Card[]): string[] =>
+      cards
+        .filter((card) => {
+          const text = named(card);
+          if (text.includes(listener.http)) return true;
+          if (text.includes(`${listener.tcp}/`)) {
+            const [first, ...rest] = card.paths;
+            return first !== 'tcp' || rest.length === 0 || !rest.every((path) => path.startsWith(`/${card.id}/`));
+          }
+          if (text.includes(listener.tcp)) return JSON.stringify(card.paths) !== JSON.stringify(['tcp']);
+          return false;
+        })
+        .map((card) => card.id);
+    const loading = PLANTED.filter((card) => !card.click);
+    const aimed = loading.filter((card) => named(card).includes(listener.tcp));
+
+    // the behaviour first: no loading card names the HTTP listener, and each one aimed at the TCP
+    // listener declares `tcp` beside its own paths, or `tcp` alone when it only connects
+    expect(misaimed(loading), 'loading cards not aimed at the TCP listener').toEqual([]);
+
+    // the controls, each refused by name: a loading card aimed at the HTTP listener, as every loading
+    // card once was; one aimed at the TCP listener that declares its path and not `tcp`, whose control
+    // would never read the connection count above zero; and one that declares `tcp` alone while it
+    // requests a path, whose control would read a bare connection as the request
+    const old: Card = {
+      id: 'loads-from-requests',
+      alone: null,
+      click: false,
+      html: (l) => `<img alt="" src="${l.http}/loads-from-requests/1">`,
+      css: () => '',
+      paths: ['/loads-from-requests/']
+    };
+    const uncounted: Card = {
+      ...old,
+      id: 'loads-uncounted',
+      html: (l) => `<img alt="" src="${l.tcp}/loads-uncounted/1">`,
+      paths: ['/loads-uncounted/']
+    };
+    const bare: Card = {
+      ...old,
+      id: 'loads-bare',
+      html: (l) => `<img alt="" src="${l.tcp}/loads-bare/1">`,
+      paths: ['tcp']
+    };
+    expect(misaimed([old, uncounted, bare])).toEqual(['loads-from-requests', 'loads-uncounted', 'loads-bare']);
+
+    examined('planted cards that load', loading);
+    examined('loading cards aimed at the TCP listener', aimed);
+  });
+
   it('every planted card that acts on a click points at the TCP listener, which counts every connection', () => {
     // SPEC-461 R1, R4, A1; ADR-478 D1, D2, D7: a clicked card's link, form action or ping names the
     // TCP listener, which counts every connection with or without a request and reads each request's

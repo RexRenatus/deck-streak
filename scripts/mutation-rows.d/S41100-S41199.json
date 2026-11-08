@@ -1,0 +1,204 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S41100-2X-IS-DERIVED",
+        "progression",
+        "src/settle.rs",
+        "        || source\n            .strip_prefix(DOUBLE_XP_PREFIX)\n            .is_some_and(is_token_id)\n",
+        "        || (false && source.strip_prefix(DOUBLE_XP_PREFIX).is_some_and(is_token_id))\n",
+        "settle_token_source::a_double_xp_source_is_derived_only_with_a_positive_token_id",
+        "a token window's bonus source 2x:<id> is a derived one; without its arm the settle refuses the bonus (SPEC-411 R1, A1)"
+      ],
+      [
+        "S41101-2X-ID-POSITIVE",
+        "progression",
+        "src/settle.rs",
+        "        && !id.starts_with('0')\n",
+        "",
+        "settle_token_source::a_double_xp_source_is_derived_only_with_a_positive_token_id",
+        "a token id has one spelling: 2x:0 and a leading zero are not derived (SPEC-411 R1, A1)"
+      ],
+      [
+        "S41102-CHEST-STEP-TODAY-ONLY",
+        "coordination",
+        "src/recompute/chests.rs",
+        "    if !matches!(\n        day.evaluation,\n        Evaluation::Settle { .. } | Evaluation::Current\n    ) {\n",
+        "    if false {\n",
+        "chests_steps::the_chest_step_rolls_nothing_on_a_backfill_or_a_revisit",
+        "the chest step rolls on a settled or current day only; a backfill or a revisit rolls nothing (SPEC-411 R2, A3)"
+      ],
+      [
+        "S41103-SESSION-GAP-CLOSED",
+        "coordination",
+        "src/recompute/chests.rs",
+        "session.end.epoch_millis() + SESSION_GAP_MS <= facts.now.epoch_millis()",
+        "session.end.epoch_millis() + SESSION_GAP_MS < facts.now.epoch_millis()",
+        "chests_steps::a_session_still_open_earns_no_chest_until_its_gap_has_passed",
+        "a session that ended exactly the gap before now is closed and earns its chest (SPEC-411 R3, A4)"
+      ],
+      [
+        "S41104-SWEEP-CURRENT-ONLY",
+        "coordination",
+        "src/recompute/chests.rs",
+        "    if day.evaluation != Evaluation::Current {\n        return Ok(());\n    }\n    for swept",
+        "    for swept",
+        "chests_steps::the_sweep_pays_a_stale_chest_once_on_its_own_day",
+        "only the current day sweeps the stale chests (SPEC-411 R5, A5)"
+      ],
+      [
+        "S41105-SWEEP-PAYS-ON-THE-CHESTS-DAY",
+        "coordination",
+        "src/recompute/chests.rs",
+        "pay(write, payout, day.facts.now).await?;",
+        "pay(write, deck_streak_quests::chests::Payout { study_day: day.day, ..payout }, day.facts.now).await?;",
+        "chests_steps::the_sweep_pays_a_stale_chest_once_on_its_own_day",
+        "a swept chest's payout is granted on the chest's own study day, never the sweeping day (SPEC-411 R5, A5)"
+      ],
+      [
+        "S41106-OPEN-GRANTS-PAYOUT",
+        "coordination",
+        "src/chests.rs",
+        "            if let Some(payout) = payout {\n                pay(&mut write, payout, at).await?;\n            }\n",
+        "            let _ = payout;\n",
+        "chests_use_cases::opening_a_chest_pays_once_in_the_write_that_opens_it",
+        "an opened chest's payout is granted in the write that opens it (SPEC-411 R7, A8)"
+      ],
+      [
+        "S41107-PICK-FREEZE-IN-WRITE",
+        "coordination",
+        "src/chests.rs",
+        "            if choice == Choice::Freeze\n                && grant_freeze_on",
+        "            if false\n                && grant_freeze_on",
+        "chests_use_cases::an_epic_freeze_pick_grants_one_freeze_in_the_write_that_settles_it",
+        "a freeze pick writes its freeze in the write that settles the choice (SPEC-411 R8, R9, A9)"
+      ],
+      [
+        "S41108-PICK-CAP-FROM-ADMIT",
+        "coordination",
+        "src/chests.rs",
+        "    let capped = admission(&mut write, FreezeReason::Chest, today)\n        .await?\n        .is_err();\n",
+        "    let capped = admission(&mut write, FreezeReason::Chest, today)\n        .await?\n        .is_err()\n        && false;\n",
+        "chests_use_cases::a_freeze_pick_at_the_cap_becomes_a_token_and_grants_no_freeze",
+        "the cap a freeze pick meets is the streaks' own admission, read in the pick's write (SPEC-411 R8, A10)"
+      ],
+      [
+        "S41109-INVENTORY-WITHHOLDS-SEALED",
+        "coordination",
+        "src/chests.rs",
+        "    let sealed = matches!(stored.state, ChestState::Sealed | ChestState::Vaulted);",
+        "    let sealed = matches!(stored.state, ChestState::Sealed | ChestState::Vaulted) && false;",
+        "chests_use_cases::the_inventory_withholds_a_sealed_or_vaulted_chests_rarity",
+        "a sealed or vaulted chest's rarity and payout are not sent before it is opened (SPEC-411 R11, A11)"
+      ],
+      [
+        "S41110-TOKEN-BONUS-RAISE-ONLY-CLOSED",
+        "coordination",
+        "src/recompute/chests.rs",
+        "            closed: day.evaluation != Evaluation::Current,",
+        "            closed: false,",
+        "chests_steps::the_token_bonus_step_settles_the_window_and_a_revisit_never_lowers_it",
+        "a token bonus of any day but the current one is settled closed, so a revisit only raises it (SPEC-411 R6, A6)"
+      ],
+      [
+        "S41111-QUIET-OWNER-FIRST",
+        "notifications",
+        "src/router.rs",
+        "    Ok(in_quiet_hours(local_minute(now, offset), start, end))\n",
+        "    let _ = (start, end);\n    Ok(in_quiet_hours(local_minute(now, offset), quiet.start.minutes(), quiet.end.minutes()))\n",
+        "quiet_window::the_quiet_window_reads_the_owners_hours_before_the_policys",
+        "the owner's quiet hours are read before the policy's (SPEC-411 R12, A18)"
+      ],
+      [
+        "S41112-HOLDINGS-UNSPENT-ONLY",
+        "quests",
+        "src/tokens.rs",
+        "    let held = sqlx::query_scalar!(\n        r#\"SELECT COUNT(*) AS \"held!: i64\" FROM xp_tokens WHERE consumed = 0 AND activated_at = 0\"#\n    )\n",
+        "    let held = sqlx::query_scalar::<_, i64>(\"SELECT COUNT(*) FROM xp_tokens\")\n",
+        "tokens_window::the_holdings_count_unspent_tokens_and_name_the_open_window",
+        "the holdings count only the unspent tokens, never an activated or consumed one (SPEC-411 R11, A19)"
+      ],
+      [
+        "S41113-STEP-REGISTERED",
+        "daemon",
+        "src/wiring.rs",
+        "    fold.register(Phase::DaySteps, Box::new(chests))?;\n",
+        "    let _ = chests;\n",
+        "lib::wiring::tests::the_recompute_fold_registers_the_chest_steps_in_their_phases",
+        "the production fold registers the chest step in the day steps' phase; unregistered, no session earns a chest (SPEC-411 R14, A17)"
+      ],
+      [
+        "S41114-INVENTORY-OWNER-ONLY",
+        "api",
+        "src/chests_routes.rs",
+        "async fn inventory(_owner: OwnerSession, State(state): State<Chests>) -> Response {",
+        "async fn inventory(State(state): State<Chests>) -> Response {",
+        "chests_routes::the_chest_routes_answer_only_the_owner",
+        "GET /api/chests answers the owner's session only (SPEC-411 R13, A13)"
+      ],
+      [
+        "S41115-OPEN-OWNER-ONLY",
+        "api",
+        "src/chests_routes.rs",
+        "async fn open(\n    _owner: OwnerSession,\n",
+        "async fn open(\n",
+        "chests_routes::the_chest_routes_answer_only_the_owner",
+        "the open route answers the owner's session only (SPEC-411 R13, A13)"
+      ],
+      [
+        "S41116-PICK-OWNER-ONLY",
+        "api",
+        "src/chests_routes.rs",
+        "async fn pick(\n    _owner: OwnerSession,\n",
+        "async fn pick(\n",
+        "chests_routes::the_chest_routes_answer_only_the_owner",
+        "the pick route answers the owner's session only (SPEC-411 R13, A13)"
+      ],
+      [
+        "S41117-ACTIVATE-OWNER-ONLY",
+        "api",
+        "src/chests_routes.rs",
+        "async fn activate(\n    _owner: OwnerSession,\n",
+        "async fn activate(\n",
+        "chests_routes::the_chest_routes_answer_only_the_owner",
+        "the activate route answers the owner's session only (SPEC-411 R13, A13)"
+      ],
+      [
+        "S41118-OPEN-SAME-SITE-ONLY",
+        "api",
+        "src/chests_routes.rs",
+        "async fn open(\n    _owner: OwnerSession,\n    _change: StateChange,\n",
+        "async fn open(\n    _owner: OwnerSession,\n",
+        "chests_routes::a_cross_site_chest_post_is_refused_and_writes_nothing",
+        "the open route takes the same-origin state-change guard; a cross-site post writes nothing (SPEC-411 R13, A14)"
+      ],
+      [
+        "S41119-PICK-SAME-SITE-ONLY",
+        "api",
+        "src/chests_routes.rs",
+        "async fn pick(\n    _owner: OwnerSession,\n    _change: StateChange,\n",
+        "async fn pick(\n    _owner: OwnerSession,\n",
+        "chests_routes::a_cross_site_chest_post_is_refused_and_writes_nothing",
+        "the pick route takes the same-origin state-change guard; a cross-site post writes nothing (SPEC-411 R13, A14)"
+      ],
+      [
+        "S41120-ACTIVATE-SAME-SITE-ONLY",
+        "api",
+        "src/chests_routes.rs",
+        "async fn activate(\n    _owner: OwnerSession,\n    _change: StateChange,\n",
+        "async fn activate(\n    _owner: OwnerSession,\n",
+        "chests_routes::a_cross_site_chest_post_is_refused_and_writes_nothing",
+        "the activate route takes the same-origin state-change guard; a cross-site post writes nothing (SPEC-411 R13, A14)"
+      ],
+      [
+        "S41121-ACTIVATE-ALREADY-ACTIVE-409",
+        "api",
+        "src/chests_routes.rs",
+        "Ok(ActivateAnswer::AlreadyActive) => refused(StatusCode::CONFLICT, \"already_active\"),",
+        "Ok(ActivateAnswer::AlreadyActive) => refused(StatusCode::OK, \"already_active\"),",
+        "chests_routes::the_chest_routes_answer_each_outcome_by_its_status",
+        "an activation while a window is open answers 409 already_active (SPEC-411 R13, A16)"
+      ]
+    ]
+  }
+}

@@ -126,6 +126,12 @@ class KillerUnresolved(ValueError):
     """A killer that does not name exactly one test the tree holds."""
 
 
+class PlanRefused(ValueError):
+    """A `--rows-from` plan of a shape no plan has: its sentence names the file and the shape
+    the plan needed, and `dispatch` prints it as `mutation_rows: REFUSED: ...` on stderr
+    (SPEC-645 R1 to R4)."""
+
+
 # --------------------------------------------------------------------------- the reader
 
 
@@ -150,6 +156,17 @@ def _row_id(row: object) -> str | None:
     return None
 
 
+def _refuse_misshapen_rows(where: str, table: str, rows: list) -> None:
+    """Refuse the first row of `table` in `where` that is not an array of strings, by its index
+    from 0. Every reader of a row indexes it and reads each cell as text, so a row of another
+    shape would end there in a traceback (SPEC-646 R2, R3)."""
+    for index, cells in enumerate(rows):
+        if not isinstance(cells, list):
+            raise PopulationRefused(f"{where}: {table}[{index}] is not an array of cells")
+        if not all(isinstance(cell, str) for cell in cells):
+            raise PopulationRefused(f"{where}: {table}[{index}] holds a cell that is not a string")
+
+
 def assemble(monolith: object, fragments: list[tuple[str, object]]) -> object:
     """The population: the header's document with each fragment's rows appended, table by table,
     fragments in band order. Raises `PopulationRefused` naming the file for every refusal the
@@ -170,6 +187,10 @@ def assemble(monolith: object, fragments: list[tuple[str, object]]) -> object:
     for (earlier, first, _), (later, second, _) in zip(banded, banded[1:]):
         if later[0] <= earlier[1]:
             raise PopulationRefused(f"{FRAGMENTS}/{first} and {FRAGMENTS}/{second} overlap")
+    for table, header_rows in tables.items():
+        if not isinstance(header_rows, list):
+            raise PopulationRefused(f"{MONOLITH}: {table} is not an array of rows")
+        _refuse_misshapen_rows(MONOLITH, table, header_rows)
     held: dict[str, str] = {}
     merged = {name: list(rows) for name, rows in tables.items()}
     for rows in tables.values():
@@ -191,6 +212,7 @@ def assemble(monolith: object, fragments: list[tuple[str, object]]) -> object:
                 raise PopulationRefused(f"{where} holds the table {table}, which {MONOLITH} lacks")
             if not isinstance(rows, list):
                 raise PopulationRefused(f"{where}: {table} is not an array of rows")
+            _refuse_misshapen_rows(where, table, rows)
             for row in rows:
                 identifier = _row_id(row)
                 if identifier is None:
@@ -1191,6 +1213,28 @@ def prove_row(root: pathlib.Path, row: Row, scratch: pathlib.Path) -> dict:
             raise RestoreFailed(f"{row.target} was not restored byte for byte after {row.id}")
 
 
+def plan_rows(path: str, plan: object) -> list[str]:
+    """The row ids a `--rows-from` plan selects, from its parsed text (SPEC-645 R1 to R3).
+
+    The plan is an object, its `rows` (an absent key, no row) an array and each of its entries a
+    string; anything else is refused by the sentence naming the file and the shape it needed,
+    the first wrong entry by its index from 0, where the base's `plan.get` crashed with a
+    traceback or read an object's keys as row ids (#950).
+
+    Raises:
+        PlanRefused: The plan, its `rows` value or one of its entries is of another shape.
+    """
+    if not isinstance(plan, dict):
+        raise PlanRefused(f"{path} must hold a top-level object")
+    planned = plan.get("rows", [])
+    if not isinstance(planned, list):
+        raise PlanRefused(f"{path}: `rows` is not an array of row ids")
+    for index, identifier in enumerate(planned):
+        if not isinstance(identifier, str):
+            raise PlanRefused(f"{path}: rows[{index}] is not a string")
+    return planned
+
+
 def chosen(rows: list[Row], args: argparse.Namespace) -> list[Row]:
     """Every row the selectors name together, each once: `--all`, or a band's, each `--row` and a
     plan's `--rows-from`. No selector drops another's rows."""
@@ -1205,7 +1249,7 @@ def chosen(rows: list[Row], args: argparse.Namespace) -> list[Row]:
     wanted += list(args.row)
     if args.rows_from:
         plan = json.loads(pathlib.Path(args.rows_from).read_text(encoding="utf-8"))
-        wanted += plan.get("rows", [])
+        wanted += plan_rows(args.rows_from, plan)
     by_id = {row.id: row for row in rows}
     missing = [identifier for identifier in wanted if identifier not in by_id]
     if missing:
@@ -1577,14 +1621,25 @@ def dispatch(argv: list[str] | None = None) -> int:
         except ToolMissing as refusal:
             print(f"prove: REFUSED: {refusal}")
             return EXIT_REFUSED
+        except PlanRefused as refusal:
+            print(f"mutation_rows: REFUSED: {refusal}", file=sys.stderr)
+            return EXIT_REFUSED
     if args.verb == "legs":
         if not args.rows_from:
             parser.error("legs needs --rows-from")
-        return legs(root, args)
+        try:
+            return legs(root, args)
+        except PlanRefused as refusal:
+            print(f"mutation_rows: REFUSED: {refusal}", file=sys.stderr)
+            return EXIT_REFUSED
     if args.verb == "merge":
         if not (args.rows_from and args.legs is not None and args.source and args.report):
             parser.error("merge needs --rows-from, --legs, --from and --report")
-        return merge(root, args)
+        try:
+            return merge(root, args)
+        except PlanRefused as refusal:
+            print(f"mutation_rows: REFUSED: {refusal}", file=sys.stderr)
+            return EXIT_REFUSED
     if not args.base:
         parser.error("retired needs --base")
     try:

@@ -429,3 +429,78 @@ test('a backup is listed and exported', async ({ playwright, browserName, baseUR
     await context.close();
   }
 });
+
+// SPEC-638 A2 (R3, R4), ADR-661 D3: the web adapter hands the engine's refusal of a stale answer to
+// the page, and records nothing. Within one Worker a rating, an undo or a bury forgets the shown
+// card and a flag leaves its scheduling state as it was, so a sync is the one route the Worker client
+// offers by which the shown card changes under the states the Worker kept: a second browser answers
+// the same card and syncs, and the first browser's sync brings that answer in while it still shows
+// the card.
+test('a rating on a card a sync changed since it was shown is the engine refusal and records nothing', async ({
+  playwright,
+  browserName,
+  baseURL,
+  request
+}) => {
+  await answering(request, 'pass');
+  const { user, password } = account(browserName);
+  const context = await profile(playwright, browserName, baseURL);
+  try {
+    const page = await context.newPage();
+    await boot(page);
+    expect(await opened(page)).toEqual({ opened: { existed: false, notes: 0 }, seeded: 3 });
+    expect(await login(page, user, password)).toBe('held');
+    const { answer } = (await synced(page)) as { answer: { required: string } };
+    expect(['full-upload', 'full-sync']).toContain(answer.required);
+    await snapshotting(request, 'found');
+    expect((await chosen(page, 'upload')).confirmed).toEqual({ status: 'held', outcome: 'written' });
+    expect(await synced(page)).toEqual({ answer: { status: 'held', required: 'no-changes' }, status: 'held' });
+    // the page shows its first card, and the Worker keeps it with the states it was shown with
+    const card = await page.evaluate(async () => {
+      const client = window.harness.client!;
+      await client.next();
+      return String((await client.card()).card!.id);
+    });
+    expect(await reps(page, card)).toBe(0);
+    // a second browser downloads the same collection, answers the same card and syncs its answer
+    const second = await profile(playwright, browserName, baseURL);
+    try {
+      const other = await second.newPage();
+      await boot(other);
+      expect((await reviewed(other, 0)).opened).toEqual({ existed: false, notes: 0 });
+      expect(await login(other, user, password)).toBe('held');
+      expect(await synced(other)).toMatchObject({ answer: { required: 'full-download' } });
+      expect((await chosen(other, 'download')).confirmed).toEqual({ status: 'held', outcome: 'written' });
+      const shown = await other.evaluate(async () => {
+        const client = window.harness.client!;
+        await client.next();
+        return String((await client.card()).card!.id);
+      });
+      expect(shown).toBe(card);
+      expect(await other.evaluate((card) => window.harness.client!.rate(BigInt(card), 3, 1500), shown)).toBeNull();
+      expect(await synced(other)).toMatchObject({ answer: { status: 'held' }, status: 'held' });
+    } finally {
+      await second.close();
+    }
+    // the first browser's sync brings that answer in while the page still shows the card
+    expect(await synced(page)).toMatchObject({ answer: { status: 'held' }, status: 'held' });
+    expect(await reps(page, card)).toBe(1);
+    // a rating on the states the card was shown with is the engine's refusal, and records nothing
+    const refused = await page.evaluate(
+      (card) =>
+        window.harness.client!.rate(BigInt(card), 3, 1500).then(
+          () => null,
+          (error: unknown) => window.harness.refusal(error)
+        ),
+      card
+    );
+    expect(refused).toEqual({
+      code: 'engine-failed',
+      message: expect.stringMatching(/^the engine refused the answer \(\d+ bytes\)$/)
+    });
+    expect(await reps(page, card)).toBe(1);
+    expect(await page.evaluate(() => window.harness.violations)).toEqual([]);
+  } finally {
+    await context.close();
+  }
+});
