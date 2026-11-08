@@ -69,6 +69,8 @@ and that an unknown id is refused, which the base already did, against the new c
 `S64500` to `S64508`, pin the three checks, the reader's call, its `rows` key and its return, and
 each verb's exit status. The delivery is one push.
 
+- Chosen against: leaving the new checks to the Python mutation legs alone, with no hand-proved rows, because those legs judge only the mutants of one pull request's own diff, while a committed row is proved again by the rows leg of a later pull request that changes the runner, so a check or an exit status dropped later is still caught.
+
 ### D4. Formal not required
 
 The reader decides no verdict: it returns the plan's `rows` unchanged or refuses. ADR-482 D5's

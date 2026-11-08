@@ -48,13 +48,13 @@ an issue of its own; this SPEC is that issue's cure.
 ## 2. Requirements
 
 - **R1.** A `--rows-from` plan whose text is JSON but not an object (an array, a string, a
-  number, `true`, `false` or `null`) is refused with the sentence `<plan> must hold a top-level
-  object`, `<plan>` being the path as `--rows-from` gave it.
+  number, `true`, `false` or `null`) is refused with the sentence
+  `<plan> must hold a top-level object`, `<plan>` being the path as `--rows-from` gave it.
 - **R2.** A plan object whose `rows` key is present and not an array is refused with
   ``<plan>: `rows` is not an array of row ids``; an absent `rows` still selects no row from the
   plan.
-- **R3.** An entry of `rows` that is not a string is refused with `<plan>: rows[<i>] is not a
-  string`, `<i>` the first such entry's index from 0.
+- **R3.** An entry of `rows` that is not a string is refused with
+  `<plan>: rows[<i>] is not a string`, `<i>` the first such entry's index from 0.
 - **R4.** `prove`, `legs` and `merge` each print an R1 to R3 refusal as exactly one line
   `mutation_rows: REFUSED: <sentence>` on stderr, print nothing on stdout, exit 2 with no
   traceback, prove no row, and write no report (`merge`) and no step outputs (`legs`).
