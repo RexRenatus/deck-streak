@@ -3,7 +3,8 @@ reads every blob a push publishes, and refuses binaries and oversize files (SPEC
 It takes a file as its own subject, refuses a subject that does not exist or examines nothing,
 passes a systemd unit instance name, and composes its rules once (SPEC-054 A1 to A5, A7). Its
 public shapes are its own files, each family still found, and its loader still reads the private
-list's schema (SPEC-056 A9, A10)."""
+list's schema (SPEC-056 A9, A10). It admits a binary by path only as a screenshot baseline
+that is a PNG holding no text chunk (SPEC-639 A14)."""
 
 import hashlib
 import importlib.util
@@ -14,6 +15,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import zlib
 from pathlib import Path
 
 from _support import REPO, examined
@@ -873,6 +875,120 @@ class AListedBrandBinaryIsAdmitted(unittest.TestCase):
                 self.assertEqual(done.stderr, "", "a refusal, never a traceback")
                 reached += 1
         self.assertEqual(reached, len(planted))
+
+
+# SPEC-639's planted screenshot baselines: an admitted path, a PNG one folder outside the
+# baselines' folder, and the admitted name with its extension in upper case.
+BASELINE = (
+    "web/app/tests/verify/__screenshots__/phone-light/verify/snapshots.spec.ts/"
+    "today-first-linux.png"
+)
+OUTSIDE = "web/app/tests/verify/today-first-linux.png"
+UPPER = BASELINE.removesuffix(".png") + ".PNG"
+
+
+def chunk(kind, body=b""):
+    """One PNG chunk: its length, its type, its body, and the CRC of its type and body."""
+    return len(body).to_bytes(4, "big") + kind + body + zlib.crc32(kind + body).to_bytes(4, "big")
+
+
+def png(*chunks):
+    """A 1-by-1 grey PNG: the signature, its header, `chunks`, one data chunk and its end."""
+    header = chunk(b"IHDR", (1).to_bytes(4, "big") * 2 + bytes([8, 0, 0, 0, 0]))
+    pixels = chunk(b"IDAT", zlib.compress(bytes(2)))
+    return b"\x89PNG\r\n\x1a\n" + header + b"".join(chunks) + pixels + chunk(b"IEND")
+
+
+def baseline_repo(tmp, files):
+    """A committed repository holding a clean README and `files` (path to bytes), and no brand
+    list."""
+    root = new_repo(tmp)
+    (root / "README.md").write_text("a clean readme\n", encoding="utf-8")
+    for path, data in files.items():
+        (root / path).parent.mkdir(parents=True, exist_ok=True)
+        (root / path).write_bytes(data)
+    commit_all(root, "add the screenshot baselines")
+    return root
+
+
+def baseline_scrub(files, literals=()):
+    """The scrub's history run, which scans the tree too, over a committed repository of `files`,
+    with a private list of `literals` when any is given."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = baseline_repo(tmp, files)
+        extra = ["--deny-list", str(private_list(tmp, literals))] if literals else []
+        return run_scrub(root, "--history", *extra)
+
+
+class OnlyAScreenshotBaselineWithNoTextIsAdmitted(unittest.TestCase):
+    """SPEC-639 A14 (ADR-662): a binary is admitted by path only as a PNG under the screenshot
+    baselines' folder whose name ends in the lower-case `.png`, in the tree scan and in the
+    history scan; it is refused for each text chunk it holds and for a malformed chunk
+    sequence; it is still searched for every private literal; and every other binary is refused
+    as before."""
+
+    def assert_refused(self, done, path, rule):
+        """`done` exited 1 and names `path` under `rule` in the tree scan and the history scan."""
+        self.assertEqual(done.returncode, 1, done.stdout)
+        self.assertIn(f"public-scrub: {path}: {rule}", done.stdout.splitlines())
+        self.assertRegex(done.stdout, rf"history:{re.escape(path)}@[0-9a-f]{{9}}: {rule}")
+
+    def test_a_clean_screenshot_baseline_passes_the_tree_and_history_scans(self):
+        done = baseline_scrub({BASELINE: png()})
+        self.assertEqual(done.returncode, 0, done.stdout)
+        self.assertNotIn("binary", done.stdout)
+        self.assertNotIn("baseline-", done.stdout)
+        self.assertRegex(
+            done.stdout, r"examined 2 file\(s\) and 2 history blob\(s\) against .*; 0 finding"
+        )
+
+    def test_a_baseline_holding_a_text_chunk_is_refused_by_its_type(self):
+        planted = {
+            "tEXt": b"Comment\x00planted",
+            "iTXt": b"Comment\x00\x00\x00\x00\x00planted",
+            "zTXt": b"Comment\x00\x00" + zlib.compress(b"planted"),
+        }
+        reached = 0
+        for kind, body in examined("planted text chunks", list(planted.items())):
+            with self.subTest(kind):
+                done = baseline_scrub({BASELINE: png(chunk(kind.encode("ascii"), body))})
+                self.assert_refused(done, BASELINE, f"baseline-text-chunk {kind}")
+                self.assertNotIn("binary", done.stdout)
+                reached += 1
+        self.assertEqual(reached, len(planted))
+
+    def test_a_non_png_file_under_the_baselines_is_refused_as_binary(self):
+        self.assert_refused(baseline_scrub({BASELINE: BINARY}), BASELINE, "binary")
+
+    def test_a_png_one_folder_outside_the_baselines_is_refused_as_binary(self):
+        self.assert_refused(baseline_scrub({OUTSIDE: png()}), OUTSIDE, "binary")
+
+    def test_a_png_named_in_upper_case_is_refused_as_binary(self):
+        # The extension is matched in lower case only, so `.PNG` is another name and refused.
+        self.assert_refused(baseline_scrub({UPPER: png()}), UPPER, "binary")
+
+    def test_a_malformed_baseline_is_refused(self):
+        clean = png()
+        planted = {
+            "bytes after its end": clean + bytes(1),
+            "a chunk whose CRC is wrong": clean[:-1] + bytes([clean[-1] ^ 1]),
+            "no end chunk": clean[:-12],
+        }
+        reached = 0
+        for name, data in examined("planted malformed baselines", list(planted.items())):
+            with self.subTest(name):
+                done = baseline_scrub({BASELINE: data})
+                self.assert_refused(done, BASELINE, "baseline-malformed")
+                self.assertNotIn("binary", done.stdout)
+                reached += 1
+        self.assertEqual(reached, len(planted))
+
+    def test_a_private_literal_inside_a_baseline_is_still_found(self):
+        # The planted private chunk holds the word "compiled", which the private list names.
+        done = baseline_scrub({BASELINE: png(chunk(b"prVt", b"compiled"))}, ["compiled"])
+        self.assert_refused(done, BASELINE, "private literal #0")
+        self.assertNotIn("binary", done.stdout)
+        self.assertNotIn("baseline-", done.stdout)
 
 
 if __name__ == "__main__":

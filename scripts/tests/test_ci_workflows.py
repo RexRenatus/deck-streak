@@ -10844,6 +10844,17 @@ DYNAMIC_IMPORTS = {
         "an import of this repository's own script module by its constant name, `import swift_mutants`, after a sys.path insert of the constant scripts directory, for A6's calls of the verdict function (SPEC-397); it reads no workflow file",
         ("test_swift_mutants", "runner_module", "import swift_mutants", 1),
     ),
+    **allowed(
+        "compresses and checksums the chunks of the planted screenshot baselines, to build in memory the PNGs the scrub admits or refuses by their chunks (SPEC-639 A14); bytes in and bytes out, and it imports, runs and reads nothing",
+        (
+            "test_public_scrub",
+            "OnlyAScreenshotBaselineWithNoTextIsAdmitted.test_a_baseline_holding_a_text_chunk_is_refused_by_its_type",
+            "zlib.compress(b'planted')",
+            1,
+        ),
+        ("test_public_scrub", "chunk", "zlib.crc32(kind + body)", 1),
+        ("test_public_scrub", "png", "zlib.compress(bytes(2))", 1),
+    ),
 }
 
 
