@@ -1262,7 +1262,7 @@ jobs:
         run: echo "$GITHUB_WORKSPACE/codspeed-tool/bin" >> "$GITHUB_PATH"
       # The action's own instrument cache would save on a pull request too; it stays off, so only a
       # push saves a cache, as the header says.
-      - uses: CodSpeedHQ/action@78102a468f96d8e0ccb92d0ec49425753fc42062 # v5.6.0
+      - uses: CodSpeedHQ/action@61efe07e57e55bedeab750c434504de272a56e8c # v5.6.1
         if: ${{ needs.bench-rust-build.outputs.upload == 'true' }}
         with:
           mode: simulation
@@ -1349,7 +1349,7 @@ jobs:
         if: ${{ needs.bench-web-build.outputs.upload == 'true' }}
         run: tar -xf "$RUNNER_TEMP/bench-web.tar"
       # The action's own instrument cache stays off here too.
-      - uses: CodSpeedHQ/action@78102a468f96d8e0ccb92d0ec49425753fc42062 # v5.6.0
+      - uses: CodSpeedHQ/action@61efe07e57e55bedeab750c434504de272a56e8c # v5.6.1
         if: ${{ needs.bench-web-build.outputs.upload == 'true' }}
         with:
           mode: simulation
