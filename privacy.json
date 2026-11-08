@@ -506,6 +506,17 @@
       "retention": {"until": "account-deletion"},
       "export": true,
       "erase": "delete"
+    },
+    {
+      "id": "collection-media",
+      "data": "in the collection store, the media files the notes name, kept in the per-user blob folder under their SHA-256, and the names bound to them, each file's size, kind and state, and the pins that keep a file",
+      "source": "learner-input",
+      "stores": ["media_file.*", "media_name.*", "media_pin.*"],
+      "purpose": "showing each card's images, sounds and videos on every device the owner studies on",
+      "lawful_basis": "contract",
+      "retention": {"until": "account-deletion"},
+      "export": true,
+      "erase": "delete"
     }
   ],
   "sql": ["migrations/*.sql", "crates/collection/migrations/*.sql"],

@@ -9,6 +9,7 @@
 
 pub mod companion;
 pub mod files;
+pub mod handed;
 pub mod study;
 pub mod synthetic;
 

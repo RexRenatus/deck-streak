@@ -408,7 +408,7 @@
         {"kind": "kani", "harness": "K-sweep", "state": "planned", "at": "crates/media/src/kani_proofs.rs::k_sweep"},
         {"kind": "kani", "harness": "K-evictable", "state": "planned"},
         {"kind": "kani", "harness": "K-scan", "state": "planned", "at": "crates/media/src/kani_proofs.rs::k_scan"},
-        {"kind": "kani", "harness": "K-put", "state": "planned"}
+        {"kind": "kani", "harness": "K-put", "state": "planned", "at": "crates/collection/src/kani_proofs.rs::k_put"}
       ],
       "ties": [
         {"method": "vectors", "for": "lean/MediaBind", "test": "crates/media/tests/formal_vectors_bind.rs::step_and_release_step_answer_every_lean_vector"},

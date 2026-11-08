@@ -12,6 +12,8 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
+# ADR-621 D6: the media core's hash and blob path, under which the media store keeps each file.
+deck-streak-media.workspace = true
 # ADR-530 D1: the store's driver, with SQLite's own source bundled.
 rusqlite.workspace = true
 # ADR-530 D11: the data-rights port's export is JSON; the census reads privacy.json with it too.

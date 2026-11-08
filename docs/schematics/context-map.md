@@ -1,6 +1,6 @@
 # Schematic: the context map as components
 
-Kind: component. Read at DeckStreak `dev` e08ba4a9f6a906fccdce3c74be53364d74b3deec.
+Kind: component. Read at DeckStreak `dev` 74ad834dd5cc8f3e971878758daa709e1902f801.
 Its sources are the fence in `docs/CONTEXT-MAP.md` and every `crates/*/Cargo.toml`.
 
 The binding record is the fence in `docs/CONTEXT-MAP.md`; this diagram draws it by layer. Every
@@ -67,12 +67,14 @@ flowchart TB
   subgraph reading[the search, over the study day]
     search
   end
+  subgraph store[the collection store, over the media core]
+    collection
+  end
   subgraph foundations[no workspace dependency]
     study_day["study-day"]
     xp
     fsrs7
     companion
-    collection
     anki_format["anki-format"]
     media
     render
@@ -120,11 +122,15 @@ flowchart TB
   push --> kernel
 
   ffi --> engine_core
+  ffi --> collection
+  ffi --> media
 
   web_engine --> engine_core
   web_engine --> companion
+  web_engine --> media
 
   engine_core --> fsrs7
+  engine_core --> media
 
   coordination --> kernel
   coordination --> ingest
@@ -182,6 +188,8 @@ flowchart TB
   kernel --> study_day
   search --> study_day
 
+  collection --> media
+
   companion_slot --> companion
 ```
 
@@ -204,13 +212,16 @@ a layer of its own above the interface (SPEC-501, ADR-519), and the web engine d
 owner's companion frames in the Worker with the interface's own decision (SPEC-511, ADR-529 D4).
 No other crate reaches either yet.
 
-`collection` depends on no workspace crate, and `ingest` alone depends on it: its schema-18 adapter
-implements the collection's read port, and the store stays dormant until the cut-over (SPEC-512,
-ADR-530).
+`collection` depends on `media` alone, for the media store's hashes and names, so it sits in a layer
+of its own above the foundations (SPEC-601, ADR-621 D6). `ingest` depends on it, for its schema-18
+adapter implements the collection's read port, and `ffi` depends on it for the face reader over the
+media store it holds switched off; the store stays dormant until the cut-over (SPEC-512, ADR-530;
+SPEC-601, ADR-621 D7).
 
-`media` depends on no workspace crate (its one dependency is `sha2`), and no crate depends on it
-yet: the collection that implements its index and the renderer that reads names through its grammar
-are later deliveries (SPEC-513, ADR-531).
+`media` depends on no workspace crate (its one dependency is `sha2`) (SPEC-513, ADR-531). The
+collection depends on it for the media store's index, the engine core for the face rewrite over its
+one grammar, and `ffi` and `web-engine` for the readers they hold switched off (SPEC-601, ADR-621
+D6 to D8).
 
 `render` depends on no workspace crate, and no crate depends on it yet (SPEC-603, ADR-624).
 
