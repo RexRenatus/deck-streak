@@ -34,7 +34,7 @@
     "@types/node": "^24.19.2",
     "cn": "^0.5.1",
     "commonmark": "0.31.2",
-    "fake-indexeddb": "6.2.6",
+    "fake-indexeddb": "6.2.7",
     "jsdom": "^30.1.3",
     "mermaid": "12.2.0",
     "shadcn-svelte": "^1.7.1",
