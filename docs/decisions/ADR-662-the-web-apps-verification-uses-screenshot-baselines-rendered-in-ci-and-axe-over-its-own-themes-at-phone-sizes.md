@@ -1,0 +1,84 @@
+# ADR-662: the web app's verification uses the test runner's screenshot assertion over baselines rendered in CI, and axe over the app's own Tide themes at phone sizes in the states a learner sees
+
+- **Status:** accepted for SPEC-639 (one pull request into dev).
+- **File:** `docs/decisions/ADR-662-the-web-apps-verification-uses-screenshot-baselines-rendered-in-ci-and-axe-over-its-own-themes-at-phone-sizes.md`
+- **Decides:** SPEC-639. **Schematic:** `docs/schematics/web-verify.md`, new.
+
+## Context and Problem Statement
+
+Measured at dev `36efa139`:
+
+- `web/app/tests/a11y.spec.ts` runs axe over every route of `web/app/src/lib/routes.ts:10-34` (23 routes), in Telegram's two default palettes from `web/app/tests/telegram-palettes.ts:9-28`, served by a stand-in for Telegram's script (`a11y.spec.ts:23-30`, `:100-105`), one state per route (`a11y.spec.ts:338-361`), with the tags `wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa` (`a11y.spec.ts:21`, `:358`). Its config, `web/app/playwright.config.ts:3-10`, names no project and no viewport, so it runs at the runner's default desktop size. `web/app/tests/voice-picker-a11y.spec.ts:129-179` has the same shape for one screen.
+- `web/app/src/lib/a11y-coverage.test.ts:8-47` holds the audit's shape (its route table, its palette import), and SPEC-028 R10 and A4 state it (`docs/specs/SPEC-028-...md:76`, `:103`).
+- The app's own theme is Tide: the token file's modes tier (`web/app/src/lib/design/tokens.json:92-95`), light in `:root` and dark under `.dark`, painted outside Telegram (`tokens.json:46`). The mode is the system scheme by a `prefers-color-scheme` rule (`web/app/src/routes/layout.css:69`), or a stored `light` or `dark` applied after mount (`web/app/src/lib/settings/colour-mode.ts:1-11`, `:40-50`; ADR-616 D1). Inside Telegram the chat theme keeps painting every role (SPEC-593 R10). No audit runs on Tide.
+- The tree holds 0 `toHaveScreenshot` and 0 `toMatchSnapshot` calls.
+- The other Playwright configs (`playwright.card.config.ts:17-21`, `playwright.engine.config.ts:37-39`, `playwright.study.config.ts:19-22`) run desktop devices only and hold no audit.
+- `scripts/check.sh:163` runs `pnpm -r test:e2e`, which is `playwright test` over `playwright.config.ts` (`web/app/package.json:14`), in CI's `web` job (`.github/workflows/ci.yml:229-281`), whose bound is 30 minutes (`ci.yml:231`) and which installs Chromium's headless shell only (`ci.yml:263-271`). The web job ran 166 s (job 128523111560); its check step 147 s (job 128523111560).
+- The interface face is a bundled variable face (`tokens.json:158-160`); whether the CI runner rasterises it as another machine does is not measured.
+
+## Decision
+
+D1, the surfaces. The measured surfaces above are the whole web verification surface. The stand-in audit in Telegram's palettes (`a11y.spec.ts`, `voice-picker-a11y.spec.ts`) stays byte-unchanged as a kept check: it is the only audit of the colours a chat paints.
+
+D2, snapshots. The test runner's own screenshot assertion, `toHaveScreenshot`, in a new spec `web/app/tests/verify/snapshots.spec.ts`, over every route and every state of the synthetic state table `web/app/tests/verify/states.ts`, in four phone projects of `playwright.config.ts`: a 390 by 844 phone viewport with touch, in light and dark (`colorScheme`), each at the default text size and at an accessibility text size (the root font size at 200 percent, set by a test-side style before the first paint). The screenshot scale is CSS pixels, animations are disabled and the caret hidden (the runner's defaults), and the clock is fixed by the runner's clock API so no date or count moves. Baselines live in `web/app/tests/verify/__screenshots__/{projectName}/{testFilePath}/{arg}-{platform}{ext}` and are committed. CI's Linux web job renders every baseline that CI compares; no other machine writes one. Tolerance: none. The config's screenshot expectation sets `threshold: 0` and `maxDiffPixels: 0` and sets no `maxDiffPixelRatio`, so one changed pixel fails; a difference between two CI renders of one settled state is a cause to find (a value the state table does not fix), never a margin. Outside D9's render mode `updateSnapshots` is `none`, in CI and on every other machine, so a missing or changed baseline fails and nothing is accepted by itself; a baseline changes only in a commit of its own, `test(web): re-render the <screen> baselines`, holding the images the CI run rendered, reviewed in the pull request.
+
+D3, axe on the app's own themes. A new spec `web/app/tests/verify/a11y-themes.spec.ts` runs axe over every route and every state of `states.ts`, in six phone projects: the four of D2 and a 360 by 740 phone in light and dark at the default text size. The launch stand-in carries an empty theme, so no `--tg-theme-*` variable is set and every role falls back to Tide; before axe runs, the test asserts that the root's computed background is the Tide background of its scheme. axe runs with the kept audit's five tags, `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa` and `wcag22aa` (`a11y.spec.ts:21`), and the `target-size` rule turned on by name (axe ships it disabled), and the test asserts that `target-size` is among the rules that ran. No rule is disabled except through `web/app/tests/verify/exceptions.ts`, whose every entry names its rule, its route, its reason and its issue; the table starts empty.
+
+D4, coverage of later screens. A new route joins both gates from the day it exists: the specs iterate the route table, and a repository check refuses a route with no state in `states.ts`, a state with no baseline in each snapshot project, and a missing project of the matrix.
+
+D5, locales stay out of the matrix. The snapshots render the default locale only, because a round that changes every message would re-render every baseline; a later locale set joins as its own delivery.
+
+D6, production or test. Every change is test-side: `web/app/playwright.config.ts` gains projects (the existing default project is kept, named `chromium`, and ignores `tests/verify/`), and the new files sit under `web/app/tests/verify/` and `scripts/tests/`. Every screen's behaviour and look, the palette, the bot and the Mini App stay byte-unchanged; no kept check is loosened. The added time is a budget, not a measurement: at most 10 minutes in the web job against its 30-minute bound, measured on the delivery's first push by the web job's duration with its job id.
+
+D7, tests and rows. Every criterion of SPEC-639 but the kept check A12 is red before the change that makes it green. A1, A2, A3, A5, A10, A11 and A13 are red at the first commit, locally, by `scripts/tests/test_web_verify.py` over the tree (no phone project, no state table, no spec, no baseline) and over planted fixture trees. The planted refusals are red on the first push, read in CI by name as the lines below D7 name them, and a later commit plants the defects without changing an assertion. A4's red is A6's: the planted tests run axe as `a11y-themes.spec.ts` runs it, with the same tags and `target-size` on by name, at a phone size, so the violations they refuse are the failure A4's assertion reports. A8 and A9 are red on the first push as missing baselines, and green once the baselines the CI run rendered are committed. A12 is the kept check, unchanged and green throughout. The rows S63901-S63914 hold `test_web_verify.py`'s guards (S63907 to S63909 the zero margin, one per operand, and S63910 to S63914 the five tags, one per tag); the Playwright specs are test-only and hold no row. Three pushes: the gates, the render run of D9, and the baselines with the plant, because the snapshot and planted-page reds and the baselines exist only in CI. No formal model, by surface: the delivery changes no engine rule and no protocol.
+
+- A6: the planted pair is at full contrast and the planted target at full size, so each refusal test fails as unrefused, axe reporting no `color-contrast` and no `target-size` violation.
+- A7: the planted launch carries the empty theme, so the refusal test fails as unrefused, the Tide check finding nothing.
+
+D8, not in this round. A vision or rubric critique of each screen (#1286), Core Web Vitals (#1287) and token conformance (#1288) are each an item of its own, because each measures something these deterministic gates do not and each closes by its own condition; the critique stays advisory and never fails a build. The other locales stay out of the snapshot matrix (#1289), as D5 decides. New screens, the palette and any look (#1043), the loading and offline states (#1292) and what only a device can show (#1290) stay out too, each under its issue.
+
+D9, the first render. Under `updateSnapshots: 'none'` the test runner fails a missing baseline before it takes any image: the first push's web job (job 128590479548, 631 s) failed every snapshot test with "A snapshot doesn't exist", and its stage logs held no image. So the config has a render mode, on only when the CI web step sets `VERIFY_RENDER` to `1`, which one push of a pull request does and its next commit undoes, so the merged workflow never holds it. In that mode the snapshot path template points under the run's `CHECK_LOG_DIR` with the committed names (`baselines/{projectName}/{testFilePath}/{arg}-{platform}{ext}`), and `updateSnapshots` is `default`, which writes each missing baseline and fails the test that wrote it; the uploaded stage logs carry every image, and a commit of their own copies them by name into `__screenshots__/`. The planted page's image, written by the colour-change test in `phone-light`, must be among them, or the mode rendered nothing. Every other run, in CI or on any other machine, compares with `none`, and no run uses `missing`, which passes a test that writes its baseline. No comparison passes on a missing baseline in a run that counts: the render run fails every test that writes one, every other run fails a missing one, and the repository check of A10 refuses a tree without any one. Within the render run a later test of one file and project can read back an image an earlier test wrote (the clean planted page reads the planted image), so that run's greens are never counted. A later route's first baseline is rendered the same way.
+
+D10, the web stage's time. Nothing bounds the web stage but the web job's 30-minute bound (`ci.yml:231`): `scripts/check.sh` times each stage and sets no limit (`check.sh:211-223`), and the config sets no global limit. The first push's web stage took 600 s (job 128590479548) and ran every test it listed, none cut short or left unrun, so 600 s is its measured duration, and the web job's 631 s (job 128590479548) is inside D6's budget against 166 s before (job 128523111560). The render push and the comparing push add the images the first push never took, since a missing baseline under `none` takes none; each push's web job is measured against D6's budget with its job id, and a push over it stops for the maintainers. No bound and no budget is raised.
+
+## What it was chosen AGAINST
+
+- Surfaces, chosen: the measured tests, configs, themes and states above as the whole web surface, with the stand-in audit kept byte-unchanged, because it is the only audit of the colours a chat paints and the new gates reach what it misses.
+- Surfaces, the stand-in audit replaced by the new one: rejected because the colours a chat paints would then go unaudited.
+- Snapshots, chosen: the test runner's own screenshot assertion over CI-rendered baselines, because it needs no new dependency and compares on the platform that renders.
+- Snapshots, a hosted visual-review service: rejected because it adds a vendor, a secret and a network step to every pull request.
+- Snapshots, baselines rendered on a developer machine: rejected because a baseline rendered on one system and compared on another differs by font rendering.
+- Tolerance, chosen: none, because a margin lets through every change smaller than itself, and two renders of one settled state on one runner image agree or have a cause to find.
+- Tolerance, a pixel ratio of 0.001: rejected because it admits 329 changed pixels of a 390 by 844 frame, so a changed icon or a short word passes.
+- Tolerance, the runner's default colour threshold of 0.2 alone: rejected because it lets a near shade through, and a changed shade is what the gate is there to see.
+- Axe, chosen: a new spec over Tide at phone sizes with state fixtures and `target-size` on by name, because the kept stand-in audit stays byte-unchanged and the new gate reaches what it misses.
+- Axe, extending `a11y.spec.ts` in place: rejected because `a11y-coverage.test.ts` holds its shape and the kept check would change.
+- Axe, a separate config run by a new CI job: rejected because it changes a CI workflow while `scripts/check.sh` already runs `playwright.config.ts`'s projects.
+- Text size, chosen: the root font size at 200 percent, because the screens size their text in root-relative units and 200 percent is the resize the WCAG text rule names.
+- Text size, the browser's zoom: rejected because zoom scales every box with the text and so hides the overflow the check looks for.
+- Production, chosen: every change test-side (the config's projects, the specs, the fixtures, the Python check and the baselines), because the gates measure the screens and must not change them.
+- Production, a test mode in the app's own code (a fixture switch or a theme override in a screen): rejected because it changes screen files and ships test code to every learner.
+- Tests, chosen: the Python check red locally at the first commit and the Playwright reds read in CI by name on the first push, because the phone renders and the baselines exist only in CI.
+- Tests, one push with baselines rendered on a developer machine: rejected because a baseline rendered on one system and compared on another differs by font rendering.
+- Tests, rows over the Playwright specs: rejected because a mutant there can be killed only in CI, so its row could not be proved before the push.
+- First render, chosen: a render mode one CI push sets, writing each missing baseline under the run's stage logs by its committed name with `updateSnapshots: 'default'`, because the runner's own capture becomes the baseline byte for byte and every counted run compares with `none`.
+- First render, the page's image attached by the spec when its baseline is missing: rejected because that image is a second capture the comparison never made, so a baseline could differ from what the comparison takes.
+- First render, `missing` or `default` in every CI run: rejected because `missing` passes a test that writes its baseline, and `default` in every run leaves every comparing run writing, where a later test of one file reads a written image back and passes.
+- Stage time, chosen: each push measured against D6's budget by its web job's duration, because the stage has no bound of its own and the job's bound is the only limit.
+- Stage time, a stage limit in `scripts/check.sh` or a global limit in the config: rejected because a limit that cuts a run short hides the tests it never ran.
+- Stage time, a raised budget: rejected because the budget keeps the web job inside its bound as later screens join the matrix.
+- Not in this round, chosen: the vision critique (#1286), Core Web Vitals (#1287) and token conformance (#1288) each its own item, and the locales out of the matrix (#1289), because each measures something else and closes by its own condition.
+- Not in this round, one item for the critique, the vitals and token conformance together: rejected because the three close by different conditions, so one would hold the others open.
+- Not in this round, the other locales in the first matrix: rejected because a round that changes every message would re-render every baseline.
+
+## Consequences
+
+- A pull request that changes a screen's pixels in any of the four phone projects, or adds a WCAG 2.2 AA violation axe can find on Tide at a phone size, fails CI's web job.
+- A baseline change is a reviewed commit of its own; CI never accepts one.
+- How a phone's own text setting reaches the Mini App's web view, and how a device reads a screen, are not measured here.
+
+## What would make this wrong
+
+- The CI runner's image changes its font rasteriser: every baseline moves at once, and the re-render commit is the fix, never a looser tolerance.
+- Two CI renders of one settled state differ by a pixel on one runner image (an anti-aliased edge, a late font load): the snapshot needs its cause found, never a margin. Whether the comparator skips anti-aliased pixels is not measured; the planted 8 by 8 change and the clean planted page decide the gate.
+- A screen's state depends on a value the fixtures do not fix (a clock, a random draw): its snapshot moves between runs; the state table must fix it.
