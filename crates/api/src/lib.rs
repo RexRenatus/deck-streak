@@ -39,6 +39,7 @@
 
 pub mod analytics_routes;
 pub mod badges_routes;
+pub mod chests_routes;
 pub mod companion_routes;
 pub mod data_export_routes;
 pub mod drill_routes;
