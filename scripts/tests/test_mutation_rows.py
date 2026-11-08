@@ -1579,8 +1579,9 @@ SIGNALLED_KILLER = textwrap.dedent(
 #: The edge selects one patch, by the runner's base names: `starting` holds the killer's start
 #: (after its fork, before its output is collected) until the test's `sent` marker, `cleaning`
 #: holds the first group kill until the test's `sent-again` marker, and `ignored` starts the
-#: runner with SIGHUP ignored. Each held step ends in 20 short sleeps, whose backward jumps run a
-#: pending handler.
+#: runner with SIGHUP ignored; `interrupt-ignored` starts it with SIGINT ignored, and every other
+#: edge starts it with the interpreter's own SIGINT handler, whatever the test process inherited.
+#: Each held step ends in 20 short sleeps, whose backward jumps run a pending handler.
 SIGNALLED_DRIVER = textwrap.dedent(
     """\
     import os
@@ -1644,6 +1645,8 @@ SIGNALLED_DRIVER = textwrap.dedent(
     if EDGE == "cleaning":
         runner.kill_group = cleaning
     signal.signal(signal.SIGHUP, signal.SIG_IGN if EDGE == "ignored" else signal.SIG_DFL)
+    interrupt = signal.SIG_IGN if EDGE == "interrupt-ignored" else signal.default_int_handler
+    signal.signal(signal.SIGINT, interrupt)
     sys.exit(runner.main(["prove", "--all", "--root", str(DIRECTORY)]))
     """
 )
@@ -1769,6 +1772,151 @@ class TheRunnerEndsTheKillersGroupOnEverySignal(unittest.TestCase):
         os.kill(self.runner.pid, signal.SIGTERM)
         self.assert_ended(pids, "a SIGHUP, then a SIGTERM, of a runner that ignores SIGHUP", 143)
 
+    def test_a_sigint_while_the_killer_starts_is_held_until_its_group_can_end(self):
+        """SPEC-647 A1 (R1, R2): an interrupt during the killer's start waits for the group kill,
+        and the runner still ends by SIGINT."""
+        pids = self.start("starting")
+        self.wait_for("starting")
+        os.kill(self.runner.pid, signal.SIGINT)
+        self.mark("sent")
+        self.assert_ended(pids, "a SIGINT while the killer starts", -signal.SIGINT)
+
+    def test_a_second_signal_during_the_cleanup_is_ignored_whichever_came_first(self):
+        """SPEC-647 A2 (R3): once a cleanup has begun, a later signal is ignored whichever signal
+        began it, so the group ends and the runner ends as its first signal says."""
+        orders = [
+            (signal.SIGINT, signal.SIGINT),
+            (signal.SIGINT, signal.SIGTERM),
+            (signal.SIGTERM, signal.SIGINT),
+        ]
+        for first, second in examined("signal orders", orders):
+            with self.subTest(first=first.name, second=second.name):
+                pids = self.start("cleaning")
+                os.kill(self.runner.pid, first)
+                self.wait_for("cleaning")
+                os.kill(self.runner.pid, second)
+                self.mark("sent-again")
+                self.assert_ended(
+                    pids,
+                    f"a {second.name} during the cleanup a {first.name} began",
+                    -signal.SIGINT if first == signal.SIGINT else 128 + signal.SIGTERM,
+                )
+
+    def test_a_runner_started_with_sigint_ignored_keeps_it_ignored(self):
+        """SPEC-647 A3 (R1): a runner started with SIGINT ignored is not ended by one."""
+        pids = self.start("interrupt-ignored")
+        os.kill(self.runner.pid, signal.SIGINT)
+        os.kill(self.runner.pid, signal.SIGTERM)
+        self.assert_ended(pids, "a SIGINT, then a SIGTERM, of a runner that ignores SIGINT", 143)
+
+    def test_a_sigint_of_the_runner_still_ends_it_by_sigint_through_its_cleanup(self):
+        """SPEC-647 A6 (R2, R4, R5): a single interrupt still ends the group and the run by
+        SIGINT."""
+        pids = self.start("interrupt")
+        os.kill(self.runner.pid, signal.SIGINT)
+        self.assert_ended(pids, "a SIGINT of the runner", -signal.SIGINT)
+
+
+class TheRunEndsOnASigintAsOnItsOtherSignals(unittest.TestCase):
+    """SPEC-647 A4 and A5 (R1, R2, R4): `main()` run in this process takes SIGINT through its own
+    handler, ends an interrupted run as `KeyboardInterrupt`, keeps an ignored SIGINT ignored, and
+    reinstalls the SIGINT handler it found on every way out."""
+
+    def setUp(self):
+        for signum in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT):
+            found = signal.getsignal(signum)
+            self.addCleanup(signal.signal, signum, signal.SIG_DFL if found is None else found)
+        self.heard = []
+
+        def on_signal(signum, _frame):
+            self.heard.append(signum)
+
+        self.on_signal = on_signal
+        for signum in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT):
+            signal.signal(signum, on_signal)
+        self.runner = load_runner()
+        self.fixture, _ = leaving_row(self)
+        self.root = str(self.fixture.root)
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        self.scratch = Path(scratch.name)
+        self.killer = self.runner.Killer(*PASSING, cwd="scripts/tests")
+
+    def main(self, *argv):
+        """`main(argv)`'s way out, its output kept from the test's own: ("returned", code),
+        ("exited", code), ("interrupted", "KeyboardInterrupt") or ("raised", the class)."""
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            try:
+                return ("returned", self.runner.main(list(argv)))
+            except SystemExit as stop:
+                return ("exited", stop.code)
+            except KeyboardInterrupt:
+                return ("interrupted", "KeyboardInterrupt")
+            except Exception as error:
+                return ("raised", type(error).__name__)
+
+    def raise_sigint(self, *_args):
+        signal.raise_signal(signal.SIGINT)
+
+    def test_main_takes_sigint_and_restores_its_handler_on_every_way_out(self):
+        ways = [
+            ("a return", "count", contextlib.nullcontext, ("returned", 0)),
+            ("an argument error", "retired", contextlib.nullcontext, ("exited", 2)),
+            (
+                "an exception",
+                "census",
+                lambda: mock.patch.object(
+                    self.runner, "census", side_effect=RuntimeError("planted")
+                ),
+                ("raised", "RuntimeError"),
+            ),
+            (
+                "a SIGINT",
+                "count",
+                lambda: mock.patch.object(self.runner, "rows_of", side_effect=self.raise_sigint),
+                ("interrupted", "KeyboardInterrupt"),
+            ),
+        ]
+        for way, verb, patched, outcome in examined("ways out of main", ways):
+            signal.signal(signal.SIGINT, self.on_signal)
+            with patched():
+                self.assertEqual(self.main(verb, "--root", self.root), outcome, way)
+            self.assertIs(signal.getsignal(signal.SIGINT), self.on_signal, way)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        during = []
+
+        def read_sigint(*_args):
+            during.append(signal.getsignal(signal.SIGINT))
+            raise RuntimeError("planted")
+
+        with mock.patch.object(self.runner, "rows_of", side_effect=read_sigint):
+            self.assertEqual(
+                self.main("count", "--root", self.root), ("raised", "RuntimeError"), "ignored"
+            )
+        self.assertEqual(during, [signal.SIG_IGN], "an ignored SIGINT was taken during the run")
+        self.assertIs(signal.getsignal(signal.SIGINT), signal.SIG_IGN, "an ignored SIGINT")
+        signal.signal(signal.SIGINT, self.on_signal)
+        with mock.patch.object(signal, "getsignal", return_value=None):
+            self.assertEqual(self.main("count", "--root", self.root), ("returned", 0))
+        self.assertIs(signal.getsignal(signal.SIGINT), signal.SIG_DFL)
+        self.assertEqual(self.heard, [], "a signal main() handled reached the handler it found")
+
+    def test_a_sigint_held_while_a_killer_fails_to_start_still_ends_the_run(self):
+        def prove(root, _args, _leg=None):
+            return 0 if self.runner.run_killer(root, self.killer, self.scratch).passed else 1
+
+        def resolve_tool(command, _env, _cwd=None):
+            signal.raise_signal(signal.SIGINT)
+            raise self.runner.ToolMissing(command[0], "a planted refusal")
+
+        with (
+            mock.patch.object(self.runner, "prove", prove),
+            mock.patch.object(self.runner, "resolve_tool", resolve_tool),
+        ):
+            outcome = self.main("prove", "--all", "--root", self.root)
+        self.assertEqual(outcome, ("interrupted", "KeyboardInterrupt"))
+        self.assertEqual(self.heard, [], "a SIGINT main() held reached the handler it found")
+
 
 class MainLeavesTheProcessAsItFoundIt(unittest.TestCase):
     """SPEC-465 A10 to A12 (R7, R9): `main()` run in this process reinstalls the SIGTERM and
@@ -1776,7 +1924,7 @@ class MainLeavesTheProcessAsItFoundIt(unittest.TestCase):
     the exit of a signal it held while a killer failed to start."""
 
     def setUp(self):
-        for signum in (signal.SIGTERM, signal.SIGHUP):
+        for signum in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT):
             found = signal.getsignal(signum)
             self.addCleanup(signal.signal, signum, signal.SIG_DFL if found is None else found)
         self.heard = []
