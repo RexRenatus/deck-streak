@@ -354,11 +354,15 @@ RENAMING_WORKSPACE = FIXTURE_WORKSPACE + (
     'alias = { package = "deck-streak-kernel", path = "crates/kernel" }\n'
     'deck-streak-old = { package = "deck-streak-web-engine", path = "crates/web-engine" }\n'
     'fsrs7 = { package = "fsrs", version = "1" }\n'
+    'deck-streak-gen = { package = "deck-streak-codegen", path = "crates/codegen" }\n'
+    'glue = { package = "deck-streak-glue", path = "crates/glue" }\n'
 )
 INHERITING_INGEST = (
     '[package]\nname = "deck-streak-ingest"\n\n'
     "[dependencies]\nalias.workspace = true\nfsrs7.workspace = true\n\n"
+    "[build-dependencies]\ndeck-streak-gen.workspace = true\n\n"
     "[dev-dependencies]\ndeck-streak-old.workspace = true\n\n"
+    "[target.'cfg(unix)'.dependencies]\nglue = { workspace = true }\n\n"
     "[target.'cfg(unix)'.build-dependencies]\ndeck-streak-old = { workspace = true }\n"
 )
 
@@ -381,17 +385,21 @@ def fixture_findings(
     drawing_text=FIXTURE_DRAWING,
     fence_text=FIXTURE_FENCE,
     manifests=FIXTURE_MANIFESTS,
-    inherited=FIXTURE_INHERITED,
+    *,
+    inherited,
 ):
-    """The four criteria over the fixture tree, with the drawing, the fence, the manifests or the
-    workspace dependencies replaced."""
+    """The four criteria over the fixture tree, with the drawing, the fence or the manifests
+    replaced. Every call passes the workspace dependencies table it reads, the fixture tree's own
+    `FIXTURE_INHERITED` or another, so no reading takes a default (SPEC-617 R2)."""
     return judge(FIXTURE_DIRS, manifests, fence_text, drawing_text, inherited)
 
 
 class TheSchematicDrawsTheCrateGraph(unittest.TestCase):
     def assertFixtureClean(self):
         """The positive control: the clean fixture reads no finding in any criterion."""
-        self.assertEqual(fixture_findings(), {"A1": [], "A2": [], "A3": [], "A4": []})
+        self.assertEqual(
+            fixture_findings(inherited=FIXTURE_INHERITED), {"A1": [], "A2": [], "A3": [], "A4": []}
+        )
 
     def test_every_crate_directory_is_one_node_named_by_it(self):
         dirs, manifests, fence_text, schematic, inherited = real_tree()
@@ -414,7 +422,7 @@ class TheSchematicDrawsTheCrateGraph(unittest.TestCase):
             ),
         ]
         for text, finding in plants:
-            self.assertIn(finding, fixture_findings(text)["A1"])
+            self.assertIn(finding, fixture_findings(text, inherited=FIXTURE_INHERITED)["A1"])
         text = swap(
             FIXTURE_DRAWING,
             "\n  ingest --> kernel\n",
@@ -422,7 +430,7 @@ class TheSchematicDrawsTheCrateGraph(unittest.TestCase):
         )
         self.assertIn(
             f"line {line_of(text, 'classDef')}: the census cannot read it: classDef x fill:#fff",
-            fixture_findings(text)["A1"],
+            fixture_findings(text, inherited=FIXTURE_INHERITED)["A1"],
         )
 
     def test_every_arrow_is_a_manifest_edge_the_fence_names(self):
@@ -442,18 +450,18 @@ class TheSchematicDrawsTheCrateGraph(unittest.TestCase):
             (swap(FIXTURE_DRAWING, arrow, arrow + arrow), "ingest --> kernel: drawn twice"),
         ]
         for text, finding in plants:
-            self.assertIn(finding, fixture_findings(text)["A2"])
+            self.assertIn(finding, fixture_findings(text, inherited=FIXTURE_INHERITED)["A2"])
         text = swap(FIXTURE_DRAWING, arrow, "  ingest --> foundations\n")
         self.assertIn(
             f"line {line_of(text, '--> foundations')}: an arrow that names no crate: "
             "ingest --> foundations",
-            fixture_findings(text)["A2"],
+            fixture_findings(text, inherited=FIXTURE_INHERITED)["A2"],
         )
         text = swap(FIXTURE_DRAWING, arrow, "  ingest --> kernel & web_engine\n")
         self.assertIn(
             f"line {line_of(text, '&')}: an arrow line the census cannot read: "
             "ingest --> kernel & web_engine",
-            fixture_findings(text)["A2"],
+            fixture_findings(text, inherited=FIXTURE_INHERITED)["A2"],
         )
         fence = swap(
             FIXTURE_FENCE,
@@ -462,7 +470,7 @@ class TheSchematicDrawsTheCrateGraph(unittest.TestCase):
         )
         self.assertIn(
             "ingest: the fence names web-engine, the manifest does not",
-            fixture_findings(fence_text=fence)["A2"],
+            fixture_findings(fence_text=fence, inherited=FIXTURE_INHERITED)["A2"],
         )
         fence = swap(
             FIXTURE_FENCE,
@@ -471,7 +479,7 @@ class TheSchematicDrawsTheCrateGraph(unittest.TestCase):
         )
         self.assertIn(
             "ingest: the manifest names kernel, the fence does not",
-            fixture_findings(fence_text=fence)["A2"],
+            fixture_findings(fence_text=fence, inherited=FIXTURE_INHERITED)["A2"],
         )
         fence = swap(
             FIXTURE_FENCE,
@@ -479,10 +487,14 @@ class TheSchematicDrawsTheCrateGraph(unittest.TestCase):
             f"{FENCE}context-map\ndeck-streak-ghost (a ghost)  depends on: kernel\n",
         )
         self.assertIn(
-            "fence row of no kind: deck-streak-ghost", fixture_findings(fence_text=fence)["A2"]
+            "fence row of no kind: deck-streak-ghost",
+            fixture_findings(fence_text=fence, inherited=FIXTURE_INHERITED)["A2"],
         )
         fence = swap(FIXTURE_FENCE, FIXTURE_INGEST_ROW, "")
-        self.assertIn("ingest: no fence row", fixture_findings(fence_text=fence)["A2"])
+        self.assertIn(
+            "ingest: no fence row",
+            fixture_findings(fence_text=fence, inherited=FIXTURE_INHERITED)["A2"],
+        )
         planted = {
             "ingest": (
                 '[package]\nname = "deck-streak-ingest"\n\n'
@@ -511,30 +523,37 @@ class TheSchematicDrawsTheCrateGraph(unittest.TestCase):
         self.assertFixtureClean()
         self.assertIn(
             "the drawing is flowchart LR, not flowchart TB",
-            fixture_findings(swap(FIXTURE_DRAWING, "flowchart TB", "flowchart LR"))["A3"],
+            fixture_findings(
+                swap(FIXTURE_DRAWING, "flowchart TB", "flowchart LR"), inherited=FIXTURE_INHERITED
+            )["A3"],
         )
         text = swap(
             FIXTURE_DRAWING, FOUNDATIONS, "  kernel\n" + FOUNDATIONS.replace("    kernel\n", "")
         )
-        self.assertIn("kernel: outside every layer", fixture_findings(text)["A3"])
+        self.assertIn(
+            "kernel: outside every layer", fixture_findings(text, inherited=FIXTURE_INHERITED)["A3"]
+        )
         text = swap(
             FIXTURE_DRAWING,
             ADAPTERS + FOUNDATIONS,
             ADAPTERS.replace("  end\n", "    kernel\n  end\n")
             + FOUNDATIONS.replace("    kernel\n", ""),
         )
-        self.assertIn("ingest --> kernel: stays in layer adapters", fixture_findings(text)["A3"])
+        self.assertIn(
+            "ingest --> kernel: stays in layer adapters",
+            fixture_findings(text, inherited=FIXTURE_INHERITED)["A3"],
+        )
         text = swap(FIXTURE_DRAWING, ADAPTERS + FOUNDATIONS, FOUNDATIONS + ADAPTERS)
         self.assertIn(
             "ingest --> kernel: points up from adapters to foundations",
-            fixture_findings(text)["A3"],
+            fixture_findings(text, inherited=FIXTURE_INHERITED)["A3"],
         )
         text = swap(
             FIXTURE_DRAWING, "    ingest\n", "    subgraph inner[inner]\n    end\n    ingest\n"
         )
         self.assertIn(
             f"line {line_of(text, 'subgraph inner')}: subgraph inner inside adapters",
-            fixture_findings(text)["A3"],
+            fixture_findings(text, inherited=FIXTURE_INHERITED)["A3"],
         )
 
     def test_the_header_names_the_full_commit_it_was_read_at(self):
@@ -544,9 +563,15 @@ class TheSchematicDrawsTheCrateGraph(unittest.TestCase):
         examined("header lines", parsed["header"])
         self.assertFixtureClean()
         short = swap(FIXTURE_DRAWING, FIXTURE_COMMIT, FIXTURE_COMMIT[:7])
-        self.assertIn("the header names 0 full commits, not one", fixture_findings(short)["A4"])
+        self.assertIn(
+            "the header names 0 full commits, not one",
+            fixture_findings(short, inherited=FIXTURE_INHERITED)["A4"],
+        )
         two = swap(FIXTURE_DRAWING, f"{FIXTURE_COMMIT}.", f"{FIXTURE_COMMIT} and {'b' * 40}.")
-        self.assertIn("the header names 2 full commits, not one", fixture_findings(two)["A4"])
+        self.assertIn(
+            "the header names 2 full commits, not one",
+            fixture_findings(two, inherited=FIXTURE_INHERITED)["A4"],
+        )
 
     def test_an_inherited_package_rename_names_the_renamed_crate(self):
         inherited = workspace_dependencies(RENAMING_WORKSPACE)
@@ -554,14 +579,14 @@ class TheSchematicDrawsTheCrateGraph(unittest.TestCase):
         self.assertFixtureClean()
         self.assertEqual(
             manifest_edges({"ingest": INHERITING_INGEST}, inherited),
-            {("ingest", "kernel"), ("ingest", "web-engine")},
+            {("ingest", name) for name in ("kernel", "web-engine", "codegen", "glue")},
         )
         ingest = swap(FIXTURE_MANIFESTS["ingest"], "deck-streak-kernel.", "alias.")
         manifests = dict(FIXTURE_MANIFESTS, ingest=ingest)
         self.assertEqual(fixture_findings(manifests=manifests, inherited=inherited)["A2"], [])
         self.assertIn(
             "ingest --> kernel: an arrow no manifest names",
-            fixture_findings(manifests=manifests)["A2"],
+            fixture_findings(manifests=manifests, inherited=FIXTURE_INHERITED)["A2"],
         )
 
     def test_the_real_tree_reads_the_workspace_dependencies(self):
