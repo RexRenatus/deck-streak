@@ -150,6 +150,17 @@ def _row_id(row: object) -> str | None:
     return None
 
 
+def _refuse_misshapen_rows(where: str, table: str, rows: list) -> None:
+    """Refuse the first row of `table` in `where` that is not an array of strings, by its index
+    from 0. Every reader of a row indexes it and reads each cell as text, so a row of another
+    shape would end there in a traceback (SPEC-646 R2, R3)."""
+    for index, cells in enumerate(rows):
+        if not isinstance(cells, list):
+            raise PopulationRefused(f"{where}: {table}[{index}] is not an array of cells")
+        if not all(isinstance(cell, str) for cell in cells):
+            raise PopulationRefused(f"{where}: {table}[{index}] holds a cell that is not a string")
+
+
 def assemble(monolith: object, fragments: list[tuple[str, object]]) -> object:
     """The population: the header's document with each fragment's rows appended, table by table,
     fragments in band order. Raises `PopulationRefused` naming the file for every refusal the
@@ -170,6 +181,10 @@ def assemble(monolith: object, fragments: list[tuple[str, object]]) -> object:
     for (earlier, first, _), (later, second, _) in zip(banded, banded[1:]):
         if later[0] <= earlier[1]:
             raise PopulationRefused(f"{FRAGMENTS}/{first} and {FRAGMENTS}/{second} overlap")
+    for table, header_rows in tables.items():
+        if not isinstance(header_rows, list):
+            raise PopulationRefused(f"{MONOLITH}: {table} is not an array of rows")
+        _refuse_misshapen_rows(MONOLITH, table, header_rows)
     held: dict[str, str] = {}
     merged = {name: list(rows) for name, rows in tables.items()}
     for rows in tables.values():
@@ -191,6 +206,7 @@ def assemble(monolith: object, fragments: list[tuple[str, object]]) -> object:
                 raise PopulationRefused(f"{where} holds the table {table}, which {MONOLITH} lacks")
             if not isinstance(rows, list):
                 raise PopulationRefused(f"{where}: {table} is not an array of rows")
+            _refuse_misshapen_rows(where, table, rows)
             for row in rows:
                 identifier = _row_id(row)
                 if identifier is None:
