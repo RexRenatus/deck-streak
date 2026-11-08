@@ -214,6 +214,157 @@ fn a_file_lies_at_its_blob_path() {
     assert_eq!(media.blobs().path_of(&hash), expected);
 }
 
+/// Pins `FILE_CAP`, `100 * 1024 * 1024`: 100 MiB, the cap `put` gives the blob folder, so a file
+/// of two MiB is taken.
+#[test]
+fn the_store_takes_a_file_up_to_one_hundred_mebibytes() {
+    assert_eq!(FILE_CAP, 104_857_600, "100 MiB");
+    let folder = folder();
+    let media = open(&folder.db, &folder.root);
+    let large = vec![0x5a_u8; 2 * 1024 * 1024];
+    let hash = media
+        .put("large.bin", &large, NOW_MS)
+        .expect("a file of two MiB is taken");
+    assert_eq!(hash, MediaHash::of(&large));
+    assert_eq!(
+        media
+            .reader()
+            .read("large.bin", u64::MAX)
+            .map(|read| read.len()),
+        Some(large.len())
+    );
+}
+
+/// The refusal of a put of `bytes` named `name`, which leaves no file and no row.
+fn refused_name(media: &MediaStore, db: &Path, name: &str, bytes: &[u8]) -> Option<MediaError> {
+    let refused = media.put(name, bytes, NOW_MS).err();
+    let hash = MediaHash::of(bytes);
+    assert!(
+        !media.blobs().path_of(&hash).exists(),
+        "{name:?} placed its file"
+    );
+    assert_eq!(rows(db, &hash), 0, "{name:?} committed its row");
+    refused
+}
+
+/// Pins `put`'s name rule, `name.is_empty() || name.len() > NAME_MAX`: an empty name and a name
+/// of 256 bytes are refused before any file is placed, and a name of 255 bytes is taken.
+#[test]
+fn a_name_is_one_to_two_hundred_fifty_five_bytes() {
+    let folder = folder();
+    let media = open(&folder.db, &folder.root);
+    let empty = refused_name(&media, &folder.db, "", b"the bytes of an empty name");
+    assert!(matches!(empty, Some(MediaError::Name)), "{empty:?}");
+    let long = "n".repeat(256);
+    let refused = refused_name(&media, &folder.db, &long, b"the bytes of a long name");
+    assert!(matches!(refused, Some(MediaError::Name)), "{refused:?}");
+    let longest = "n".repeat(255);
+    let hash = media
+        .put(&longest, b"the bytes of the longest name", NOW_MS)
+        .expect("a name of 255 bytes is taken");
+    assert_eq!(rows(&folder.db, &hash), 1);
+    assert_eq!(
+        media.reader().read(&longest, LIMIT),
+        Some(b"the bytes of the longest name".to_vec())
+    );
+}
+
+/// Pins `entries`' guard, `error.kind() == std::io::ErrorKind::NotFound`: only a missing folder
+/// reads as no entries, so a staging path that is a file refuses the open.
+#[test]
+fn a_staging_path_that_is_a_file_refuses_the_open() {
+    let folder = folder();
+    fs::create_dir_all(&folder.root).expect("the blob folder");
+    fs::write(folder.root.join("tmp"), b"not a folder").expect("a file at the staging path");
+    let store = Store::open(&folder.db, SERVER).expect("the collection store opens");
+    let refused = MediaStore::open(store, &folder.root).err();
+    match refused {
+        Some(MediaError::Blob(BlobError::Io(error)))
+            if error.kind() == std::io::ErrorKind::NotADirectory => {}
+        other => panic!("an open over a staging file answered {other:?}"),
+    }
+}
+
+/// Pins `put_flow`'s cap, `bytes.len() > cap`: bytes as long as the cap are placed, and one byte
+/// over it is refused with nothing placed and nothing left staged.
+#[test]
+fn a_put_takes_bytes_up_to_its_cap() {
+    let folder = folder();
+    let media = open(&folder.db, &folder.root);
+    let length = u64::try_from(BYTES.len()).expect("a short length");
+    let hash = media
+        .blobs()
+        .put(BYTES, length)
+        .expect("bytes as long as the cap are placed");
+    assert_eq!(hash, MediaHash::of(BYTES));
+    assert_eq!(media.blobs().get(&hash, u64::MAX), Some(BYTES.to_vec()));
+    let over = b"one byte longer than its cap";
+    let cap = u64::try_from(over.len() - 1).expect("a short length");
+    let refused = media.blobs().put(over, cap);
+    assert!(matches!(refused, Err(BlobError::TooLarge)), "{refused:?}");
+    assert!(!media.blobs().path_of(&MediaHash::of(over)).exists());
+    assert_eq!(
+        staged(&folder.root),
+        0,
+        "the refused put left its staging file"
+    );
+}
+
+/// How many staging names a test plants, past every name this test binary's puts reach.
+const PLANTED: usize = 4096;
+
+/// Pins `create`'s guard, `error.kind() == ErrorKind::AlreadyExists`: a staging name another file
+/// holds is passed over for the next one, and the put gives up with its own `AlreadyExists` only
+/// after every try, not with the operating system's refusal of the first name.
+#[test]
+fn a_held_staging_name_is_passed_over_until_the_tries_run_out() {
+    let folder = folder();
+    let media = open(&folder.db, &folder.root);
+    let staging = folder.root.join("tmp");
+    fs::create_dir_all(&staging).expect("the staging folder");
+    for number in 0..PLANTED {
+        fs::write(staging.join(format!("put-{number}")), b"").expect("a planted staging name");
+    }
+    let refused = media.blobs().put(BYTES, LIMIT);
+    match refused {
+        Err(BlobError::Io(error))
+            if error.kind() == std::io::ErrorKind::AlreadyExists
+                && error.raw_os_error().is_none() => {}
+        other => panic!("a put over a staging folder whose names are all held answered {other:?}"),
+    }
+    assert_eq!(
+        staged(&folder.root),
+        PLANTED,
+        "only the planted names are staged"
+    );
+    assert!(!media.blobs().path_of(&MediaHash::of(BYTES)).exists());
+}
+
+/// Pins `create`'s guard the other way: a staging folder that refuses the file is refused at the
+/// first name, with the operating system's own refusal.
+#[test]
+#[cfg(unix)]
+fn a_staging_folder_that_refuses_the_file_refuses_the_put() {
+    use std::os::unix::fs::PermissionsExt;
+    let folder = folder();
+    let media = open(&folder.db, &folder.root);
+    let staging = folder.root.join("tmp");
+    fs::create_dir_all(&staging).expect("the staging folder");
+    fs::set_permissions(&staging, fs::Permissions::from_mode(0o555)).expect("read-only");
+    let admitted = fs::write(staging.join("probe"), b"").is_ok();
+    let refused = media.blobs().put(BYTES, LIMIT);
+    fs::set_permissions(&staging, fs::Permissions::from_mode(0o755)).expect("writable again");
+    assert!(
+        !admitted,
+        "the read-only staging folder admitted a write, so no put in it can be refused"
+    );
+    match refused {
+        Err(BlobError::Io(error)) if error.kind() == std::io::ErrorKind::PermissionDenied => {}
+        other => panic!("a put into a read-only staging folder answered {other:?}"),
+    }
+    assert!(!media.blobs().path_of(&MediaHash::of(BYTES)).exists());
+}
+
 /// The harness file, as the Kani verifier reads it.
 const HARNESSES: &str = include_str!("../src/kani_proofs.rs");
 
@@ -266,5 +417,102 @@ fn each_kani_harness_reads_as_it_was_written() {
         "examined {} of {} harness function(s)",
         WRITTEN.len(),
         WRITTEN.len()
+    );
+}
+
+/// `refused` and the `Staging` impl of `Steps` in the harness file, line by line as written: the
+/// refusal a failing step answers; each step's guard, `stage` over its own flag and `sync` and
+/// `place` over the flag of the step before and their own, each refusal through `refused`; what
+/// each step records; and the discard that forgets the staged file. No test build compiles them.
+const STEPS: [&str; 33] = [
+    "fn refused() -> BlobError {",
+    "    BlobError::Io(std::io::Error::from(std::io::ErrorKind::Other))",
+    "}",
+    "",
+    "impl Staging for Steps {",
+    "    fn stage(&mut self, _bytes: &[u8]) -> Result<(), BlobError> {",
+    "        if !self.stages {",
+    "            return Err(refused());",
+    "        }",
+    "        self.staged = true;",
+    "        Ok(())",
+    "    }",
+    "",
+    "    fn sync(&mut self) -> Result<(), BlobError> {",
+    "        if !self.staged || !self.syncs {",
+    "            return Err(refused());",
+    "        }",
+    "        self.synced = true;",
+    "        Ok(())",
+    "    }",
+    "",
+    "    fn place(&mut self, hash: &MediaHash) -> Result<(), BlobError> {",
+    "        if !self.synced || !self.places {",
+    "            return Err(refused());",
+    "        }",
+    "        self.placed = Some(*hash);",
+    "        Ok(())",
+    "    }",
+    "",
+    "    fn discard(&mut self) {",
+    "        self.staged = false;",
+    "    }",
+    "}",
+];
+
+/// The blob store's source, whose staging sync no test process can observe.
+const BLOB: &str = include_str!("../src/blob.rs");
+
+/// `FsStaging::sync` line by line as written: it syncs the staged file to its disk before the
+/// rename, which only a crash between the two would show, so the hold reads the call itself.
+const SYNC: [&str; 4] = [
+    "    fn sync(&mut self) -> Result<(), BlobError> {",
+    "        let (_, file) = self.staged()?;",
+    "        file.sync_all().map_err(BlobError::Io)",
+    "    }",
+];
+
+/// The line numbers at which `lines` start in `text` as consecutive whole lines.
+fn starts_of(text: &str, lines: &[&str]) -> Vec<usize> {
+    let read: Vec<&str> = text.lines().collect();
+    read.windows(lines.len())
+        .enumerate()
+        .filter(|(_, window)| *window == lines)
+        .map(|(index, _)| index + 1)
+        .collect()
+}
+
+#[test]
+fn the_steps_staging_and_the_staging_sync_read_line_by_line_as_written() {
+    assert_eq!(
+        starts_of(HARNESSES, &STEPS),
+        vec![38],
+        "refused and the Steps staging, once, from line 38"
+    );
+    assert_eq!(
+        starts_of(BLOB, &SYNC),
+        vec![229],
+        "the staging sync, once, from line 229"
+    );
+    let planted = HARNESSES.replacen(
+        "if !self.staged || !self.syncs {",
+        "if !self.staged && !self.syncs {",
+        1,
+    );
+    assert_eq!(
+        starts_of(&planted, &STEPS),
+        Vec::<usize>::new(),
+        "a planted change to a held line reads as a change"
+    );
+    let planted = BLOB.replacen("file.sync_all().map_err(BlobError::Io)", "Ok(())", 1);
+    assert_eq!(
+        starts_of(&planted, &SYNC),
+        Vec::<usize>::new(),
+        "a planted change to the sync reads as a change"
+    );
+    println!(
+        "examined {} held line(s) of the harness file and {} of the blob store",
+        STEPS.len(),
+        SYNC.len()
     );
 }
