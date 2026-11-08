@@ -489,4 +489,5 @@ Every vectors finding listed as found, each an `as_found` row:
 The rows added for the dev that this pull request merges when it is checked, over the rebuild's cut:
 
 `lean/AgentPinGroups`
+`lean/DeployEntryRefusal`
 `lean/PathGate`
