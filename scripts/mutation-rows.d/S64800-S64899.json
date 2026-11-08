@@ -1,0 +1,15 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S64801-A-DROPPED-READ-KEEPS-THE-COLLECTION-LOCK",
+        "ingest",
+        "src/reader.rs",
+        "held.hold_to_end(reading).await",
+        "Ok::<_, std::io::Error>((reading.await, held.release()))",
+        "lib::reader::tests::a_read_whose_caller_is_dropped_keeps_the_collection_lock_until_it_ends",
+        "a read whose caller is dropped keeps the shared collection lock until the read ends, so no exclusive holder runs beside it (SPEC-648 R1, A1)"
+      ]
+    ]
+  }
+}
