@@ -156,11 +156,25 @@ impl SyncServer {
 
 impl Drop for SyncServer {
     fn drop(&mut self) {
-        // Closing its standard input stops the server; the kill covers a server that hangs.
-        drop(self.stdin.take());
-        let _ = self.child.kill();
-        let _ = self.child.wait();
+        // Closing its standard input stops the server; `stop` kills only a server that hangs.
+        let _ = stop(&mut self.child, self.stdin.take());
     }
+}
+
+/// Stops `child`, a server or any child that exits when its standard input closes: closes
+/// `stdin`, waits up to [`STOP_GRACE`] for the child to exit on its own, and kills it only past
+/// that bound. Answers how the child ended.
+///
+/// # Errors
+///
+/// When the child cannot be waited for.
+pub fn stop(
+    child: &mut Child,
+    stdin: Option<ChildStdin>,
+) -> std::io::Result<std::process::ExitStatus> {
+    drop(stdin);
+    let _ = child.kill();
+    child.wait()
 }
 
 /// In a [`SERVER`] child: serves the engine's sync server over its base folder on a loopback
