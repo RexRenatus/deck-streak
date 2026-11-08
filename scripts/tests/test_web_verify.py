@@ -10,7 +10,9 @@ states, and the review screen its `question` and `answer`; every value in it and
 is synthetic. `a11y-themes.spec.ts` names the five WCAG tags, turns `target-size` on by name and
 asserts it ran. A rule is disabled only through `exceptions.ts`, whose every entry names its rule,
 route, reason and issue. Every route, state and 390-wide project has a committed Linux baseline
-under `tests/verify/__screenshots__/`, and so has the planted page.
+under `tests/verify/__screenshots__/`, and so has the planted page. A route whose page source
+reads the page's own clock, `performance.now()`, names `clock` in each of its states, since the
+fixed clock fixes the date only.
 
 Each check returns one `"<reason>: <detail>"` line per fault. The tests run each over this
 repository and over fixture trees in a temporary directory: a complete planted tree as the control,
@@ -33,6 +35,7 @@ FIXTURES = VERIFY / "fixtures.ts"
 EXCEPTIONS = VERIFY / "exceptions.ts"
 AUDIT = VERIFY / "a11y-themes.spec.ts"
 SHOTS = VERIFY / "__screenshots__"
+PAGES = APP / "src/routes"
 REVIEW = "/study/review"
 LEARNER_STATES = ("first", "empty", "error")
 REVIEW_STATES = ("question", "answer")
@@ -61,6 +64,8 @@ TARGET_SIZE_RAN = re.compile(r"toContain\('target-size'\)")
 DISABLE = re.compile(r"disableRules\((?!disabledFor\()|enabled: false")
 ENTRY_FIELDS = ("rule", "route", "reason", "issue")
 ISSUE = re.compile(r"^#\d+$")
+PAGE_CLOCK = "performance.now("
+STATE_CLOCK = re.compile(r"(?<![\w$])clock:")
 
 
 def read(root, path):
@@ -175,6 +180,40 @@ def state_findings(root):
                 found.append(f"states: {route} has no {state} state")
     for route in sorted(set(table) - set(table_routes or [])):
         found.append(f"states: {route} is not in the route table")
+    return found
+
+
+def page_source(root, route):
+    """The text of `route`'s page source, or None when it is absent."""
+    return read(root, PAGES / route.strip("/") / "+page.svelte")
+
+
+def clocked_routes(root):
+    """The routes whose page source reads the page's own clock."""
+    return [r for r in routes(root) or [] if PAGE_CLOCK in (page_source(root, r) or "")]
+
+
+def state_bodies(root, route):
+    """`{state: body}` for `route` in `STATES`, each state's object text."""
+    text = read(root, STATES) or ""
+    opened = re.search("'" + re.escape(route) + r"':\s*\{", text)
+    if opened is None:
+        return {}
+    body, bodies = braced(text, opened.end() - 1), {}
+    for match in re.finditer(r"(\w+):\s*\{", body):
+        prefix = body[: match.start()]
+        if prefix.count("{") - prefix.count("}") == 0:
+            bodies[match.group(1)] = braced(body, match.end() - 1)
+    return bodies
+
+
+def clock_findings(root):
+    """A screen that shows its own clock holds it in each state (SPEC-639 R2, A2)."""
+    found = []
+    for route in clocked_routes(root):
+        for state, body in state_bodies(root, route).items():
+            if not STATE_CLOCK.search(body):
+                found.append(f"clock: {route} {state} leaves the page's own clock running")
     return found
 
 
@@ -317,6 +356,18 @@ STATES_TEXT = """export const STATES: StateTable = {
 };
 """
 
+CLOCKED_PAGE = """<script>
+  const started = Math.round(performance.now());
+</script>
+<p>{started}</p>
+"""
+
+CLOCKED_STATES_TEXT = (
+    STATES_TEXT.replace("reviews: 12 } } }", "reviews: 12 } }, clock: 120 }")
+    .replace("reviews: 0 } } }", "reviews: 0 } }, clock: 120 }")
+    .replace("'**/api/score': { status: 500 } }", "'**/api/score': { status: 500 }, clock: 120 }")
+)
+
 FIXTURES_TEXT = """export const LAUNCH = { initData: 'auth_date=1&hash=synthetic', user: 'Learner A' };
 """
 
@@ -348,6 +399,7 @@ def plant(tmp, **override):
     }
     names = {"routes": ROUTES_FILE, "config": CONFIG, "states": STATES, "fixtures": FIXTURES}
     names.update({"exceptions": EXCEPTIONS, "audit": AUDIT})
+    names.update({"score_page": PAGES / "score/+page.svelte"})
     for key, text in override.items():
         if key in names:
             files[names[key]] = text
@@ -371,6 +423,7 @@ def plant(tmp, **override):
 CHECKS = (
     matrix_findings,
     state_findings,
+    clock_findings,
     synthetic_findings,
     audit_findings,
     baseline_findings,
@@ -391,6 +444,10 @@ class TheTreeIsHeld(unittest.TestCase):
         examined("routes in the route table", routes(REPO) or [])
         examined("routes in the state table", (state_table(REPO) or {}).items())
         self.assertEqual(state_findings(REPO), [])
+
+    def test_every_screen_that_shows_its_clock_holds_it(self):
+        examined("routes whose page reads its own clock", clocked_routes(REPO))
+        self.assertEqual(clock_findings(REPO), [])
 
     def test_every_fixture_value_is_synthetic(self):
         text = (read(REPO, STATES) or "") + (read(REPO, FIXTURES) or "")
@@ -455,6 +512,16 @@ class PlantedTreesAreRefused(unittest.TestCase):
         self.assertEqual(found, ["states: /study/review has no question state"])
         found = self.findings(state_findings, states=None)
         self.assertEqual(found, [f"missing: {STATES}"])
+
+    def test_a_planted_clock_the_states_leave_running_is_refused(self):
+        found = self.findings(clock_findings, score_page=CLOCKED_PAGE)
+        wanted = [f"clock: /score {s} leaves the page's own clock running" for s in LEARNER_STATES]
+        self.assertEqual(found, wanted)
+
+    def test_a_planted_clock_each_state_holds_passes(self):
+        self.assertEqual(CLOCKED_STATES_TEXT.count("clock: 120"), 3)
+        found = self.findings(clock_findings, score_page=CLOCKED_PAGE, states=CLOCKED_STATES_TEXT)
+        self.assertEqual(found, [])
 
     def test_a_planted_real_looking_fixture_value_is_refused(self):
         email = FIXTURES_TEXT.replace("Learner A", "learner@example.org")
