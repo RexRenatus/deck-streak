@@ -1,6 +1,7 @@
 {
   "owed": [
     {"entry": "lean/AgentPinGroups", "adr": "ADR-445"},
+    {"entry": "lean/DeployEntryRefusal", "adr": "ADR-445"},
     {"entry": "lean/PathGate", "adr": "ADR-445"},
     {"entry": "lean/RecordClassBinding", "adr": "ADR-445"},
     {"entry": "lean/ReleaseCarry", "adr": "ADR-445"},
