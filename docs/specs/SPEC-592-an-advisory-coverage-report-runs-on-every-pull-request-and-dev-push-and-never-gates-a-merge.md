@@ -258,3 +258,14 @@ or changes, and no Rust source changes.
   that starts Python without its site packages: they read as not executed, and the first dev push
   report counts the files left at zero executed lines.
 - Code generated into the build directory, which lies outside every lane glob.
+
+## Amendment (SPEC-649): a test's child exits on its own before any kill, so its raw profile is whole
+
+The Rust lane's merge refuses every profile of a run when one raw profile is cut short, and a
+test's child process writes its raw profile in its exit handlers. A test that stops a child it
+started, as the sync server helpers of the ingest, engine-core and ffi test support do, closes the
+child's standard input, waits a bounded grace for the child to exit on its own, and kills it only
+past that grace; it never kills a child at once. So every child's raw profile is written whole and
+counted, and a profile cut short for any other reason still fails the lane as a broken instrument
+(ADR-613 D2). The merge's failure mode stays the one that refuses: no lane flag drops, skips or
+ignores a profile, and no step re-runs the lane to hide its first result.
