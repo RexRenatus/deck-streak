@@ -36,3 +36,17 @@ That merge (6118295d) read red by name in the pull request run 42050736979, and 
 dev (7140a485) met this change only in the schematic, where dev had appended its own section 13
 first, so the schematic section this record's opening names as section 13 is now section 14; the
 commit after that merge changes only documents.
+
+## Amendment for #939
+
+A6 is red at the commit that adds the card and the census, before the spec's case exists, by its
+import assertion, and green once the case is added. The browser case R10 and R11 name is green at
+the base and carries no fence line: the first push's last commit plants the mutant of `attribute()`
+that drops its carriage-return write, whose `card-sandbox` run reads the case red in each engine,
+and the second push reverts it; that run is named here by its id. Each value below is the build's
+measurement at its commit.
+
+```red-first
+A6: red at <the first commit>: <the assertion quoted from its run>
+A6: green at <the second push's head>
+```
