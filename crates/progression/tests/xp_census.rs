@@ -17,7 +17,8 @@
 //! package from outside it that depends on progression. The graph is read with every feature on
 //! (`--all-features`), and the passes compile every combination of the members' own features. A
 //! Kani witness feature that [`WITNESSES`] names is left out while no package that reaches
-//! progression reaches its member, since no code under it can then be a use of `settle`.
+//! progression reaches its member, or while its member changes nothing another package compiles
+//! against ([`gates_only_bodies`]), since no code under it can then be a use of `settle`.
 //!
 //! The census's verdict depends only on the tree it judges (SPEC-072 §12, round 8). Progression is
 //! found by its manifest's path, never by its package's name, and a graph where that cannot be told
@@ -839,8 +840,9 @@ fn compiled_uses(root: &Path, target: &Path) -> Result<(Vec<Use>, Vec<String>), 
         }
     }
     // A Kani witness that WITNESSES names is left out of the combinations while no package that
-    // reaches progression reaches its member (ADR-531 D7, ADR-527 D7); every other declared
-    // feature is counted and compiled.
+    // reaches progression reaches its member (ADR-531 D7, ADR-527 D7), or while its member reaches
+    // no progression and changes nothing another package compiles against (ADR-345's second
+    // amendment); every other declared feature is counted and compiled.
     let owner_manifest = canonical(&root.join(OWNER_MANIFEST));
     let mut member_named: BTreeMap<&str, &str> = BTreeMap::new();
     let mut settling = None;
@@ -867,6 +869,7 @@ fn compiled_uses(root: &Path, target: &Path) -> Result<(Vec<Use>, Vec<String>), 
                     .zip(settling.as_ref())
                     .is_some_and(|(member, settling)| {
                         depending_on(&metadata, member).is_disjoint(settling)
+                            || gates_only_bodies(&metadata, member, feature, settling)
                     })
         })
         .cloned()
@@ -1068,6 +1071,145 @@ fn depending_on<'a>(metadata: &'a Value, id: &'a str) -> BTreeSet<&'a str> {
         }
     }
     found
+}
+
+/// Whether the Kani witness `feature` (its package's name, `/`, its own) of the member `id`
+/// changes nothing another package compiles against (ADR-345's second amendment): the member
+/// reaches no progression by a dependency of any kind (`settling` holds every package that does),
+/// it is no proc-macro crate and has no build script, the witness turns on nothing, and the code a
+/// dependant compiles of it, read with its comments blanked, defines and exports no macro, names
+/// no `include`, carries no `path` attribute, `cfg_attr` included, and names a feature only on the
+/// lines [`BODY_GATES`] pins for the member. That code is every Rust file under the member's
+/// folder, but the files under `tests/`, `benches/` and `examples/` while the library's root is
+/// `src/lib.rs`: a dependant builds the library alone, which then reaches no file outside `src/`,
+/// and the member's own test, bench and example targets can name `settle` only through a
+/// dependency, which `settling` counts. A package that reaches both then resolves every name of
+/// the member alike with the witness on and off, so no use of `settle` can appear or vanish.
+fn gates_only_bodies(metadata: &Value, id: &str, feature: &str, settling: &BTreeSet<&str>) -> bool {
+    let Some((_, witness)) = feature.split_once('/') else {
+        return false;
+    };
+    let Some(package) = metadata["packages"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .find(|package| package["id"] == id)
+    else {
+        return false;
+    };
+    let name = package["name"].as_str().unwrap_or_default();
+    let scripted = package["targets"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .flat_map(|target| target["kind"].as_array().into_iter().flatten())
+        .any(|kind| kind == "proc-macro" || kind == "custom-build");
+    let turns_on_nothing = package["features"][witness]
+        .as_array()
+        .is_some_and(Vec::is_empty);
+    let Some(folder) = package["manifest_path"]
+        .as_str()
+        .and_then(|manifest| Path::new(manifest).parent())
+    else {
+        return false;
+    };
+    if settling.contains(id) || scripted || !turns_on_nothing {
+        return false;
+    }
+    let library_root = folder.join("src").join("lib.rs");
+    let rooted_in_src = package["targets"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|target| {
+            target["kind"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|kind| kind == "lib")
+        })
+        .any(|target| {
+            target["src_path"]
+                .as_str()
+                .is_some_and(|path| Path::new(path) == library_root.as_path())
+        });
+    let pinned: Vec<(&str, &str, &str)> = BODY_GATES
+        .iter()
+        .filter(|(member, ..)| *member == name)
+        .map(|(_, file, gate, gated)| (*file, *gate, *gated))
+        .collect();
+    files(folder, "rs").iter().all(|file| {
+        let at = file
+            .strip_prefix(folder)
+            .unwrap_or(file.as_path())
+            .to_string_lossy()
+            .into_owned();
+        if rooted_in_src
+            && ["tests/", "benches/", "examples/"]
+                .iter()
+                .any(|own| at.starts_with(*own))
+        {
+            return true;
+        }
+        let Ok(text) = fs::read_to_string(file) else {
+            return false;
+        };
+        let code = strip(&text, true);
+        let bare = strip(&text, false);
+        let lines: Vec<&str> = code
+            .lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
+            .collect();
+        !code.contains("macro_rules")
+            && !code.contains("macro_export")
+            && !names_word(&bare, "include")
+            && !attribute_names(&bare, "path")
+            && lines.iter().enumerate().all(|(index, line)| {
+                !line.contains("feature")
+                    || pinned.iter().any(|(file, gate, gated)| {
+                        *file == at && gate == line && lines.get(index + 1) == Some(gated)
+                    })
+            })
+    })
+}
+
+/// Whether `code` names `word` as a whole identifier, however it is used: invoked as a macro, in
+/// a path, or renamed by a `use`.
+fn names_word(code: &str, word: &str) -> bool {
+    let identifier = |character: char| character.is_alphanumeric() || character == '_';
+    code.match_indices(word).any(|(at, _)| {
+        !code[..at].chars().next_back().is_some_and(identifier)
+            && !code[at + word.len()..]
+                .chars()
+                .next()
+                .is_some_and(identifier)
+    })
+}
+
+/// Whether an outer or an inner attribute of `code` names `key` anywhere inside its brackets,
+/// however it is spaced: `#[path = ..]`, `#![path = ..]` and `#[cfg_attr(.., path = ..)]` alike.
+/// `code` comes with its literals emptied, so no bracket inside a string is counted.
+fn attribute_names(code: &str, key: &str) -> bool {
+    code.match_indices('#').any(|(at, _)| {
+        let rest = code[at + 1..].trim_start();
+        let rest = rest.strip_prefix('!').unwrap_or(rest).trim_start();
+        rest.strip_prefix('[').is_some_and(|inside| {
+            let mut depth = 1_usize;
+            let end = inside
+                .char_indices()
+                .find(|&(_, character)| {
+                    match character {
+                        '[' => depth += 1,
+                        ']' => depth -= 1,
+                        _ => {}
+                    }
+                    depth == 0
+                })
+                .map_or(inside.len(), |(end, _)| end);
+            names_word(&inside[..end], key)
+        })
+    })
 }
 
 /// Every combination of `declared` (each `package/feature`), the empty one first, each joined by
@@ -1878,7 +2020,11 @@ const FEATURE_LIMIT: usize = 3;
 /// its combinations only while no package that reaches progression reaches the witness's member,
 /// the member itself among them, read from the graph with every feature on: no code under the
 /// feature, the member's own or a macro of the member's that another package expands, can then
-/// be a use of `settle`. Past that it is counted and compiled as any feature is.
+/// be a use of `settle`. It leaves one out too while [`gates_only_bodies`] holds for it: its member
+/// reaches no progression by a dependency of any kind, so no code of the member can name `settle`,
+/// and the witness changes no item, signature or macro of the code a dependant compiles of the
+/// member, so a package that reaches both resolves every name alike with it on and off. Past both
+/// it is counted and compiled as any feature is.
 const WITNESSES: [&str; 8] = [
     "deck-streak-media/kani-witness-bind",
     "deck-streak-media/kani-witness-blob-path",
@@ -1888,6 +2034,56 @@ const WITNESSES: [&str; 8] = [
     "deck-streak-sync/kani-witness-key-order-noseq",
     "deck-streak-sync/kani-witness-next-id-residue",
     "deck-streak-sync/kani-witness-sync-codec-len",
+];
+
+/// The lines on which a member's code may name a feature while [`gates_only_bodies`] leaves its
+/// witnesses out (ADR-345's second amendment), each by the member's package, the file under its
+/// folder, the `cfg` line and the code line it gates: a `let` statement or a match arm inside a
+/// function's body, which changes no item, signature or macro another package compiles against.
+/// Each pair is judged by hand when it is added; the census reads them on every run.
+const BODY_GATES: [(&str, &str, &str, &str); 7] = [
+    (
+        "deck-streak-media",
+        "src/bind.rs",
+        "#[cfg(not(feature = \"kani-witness-bind\"))]",
+        "Some(_) => (slot, Err(BindRefusal::Conflict)),",
+    ),
+    (
+        "deck-streak-media",
+        "src/bind.rs",
+        "#[cfg(feature = \"kani-witness-bind\")]",
+        "Some(_) => (Some(live), Ok(Bound::New)),",
+    ),
+    (
+        "deck-streak-media",
+        "src/hash.rs",
+        "#[cfg(not(feature = \"kani-witness-blob-path\"))]",
+        "let fan = [hex[0], hex[1]];",
+    ),
+    (
+        "deck-streak-media",
+        "src/hash.rs",
+        "#[cfg(feature = \"kani-witness-blob-path\")]",
+        "let fan = [hex[1], hex[0]];",
+    ),
+    (
+        "deck-streak-media",
+        "src/scan.rs",
+        "#[cfg(not(feature = \"kani-witness-scan\"))]",
+        "let name = &text[open..close];",
+    ),
+    (
+        "deck-streak-media",
+        "src/scan.rs",
+        "#[cfg(feature = \"kani-witness-scan\")]",
+        "let name = &text[open..open];",
+    ),
+    (
+        "deck-streak-media",
+        "src/sweep.rs",
+        "#[cfg(feature = \"kani-witness-sweep\")]",
+        "let grace = 0;",
+    ),
 ];
 
 /// The refusal of a call to `settle` in habits' library, a member other than coordination.
@@ -2112,8 +2308,9 @@ fn a_kani_witness_is_left_out_by_its_name_and_only_apart_from_settle() {
     // member itself among them. The controls: a feature the list does not name is counted, a plain
     // one, one named like a witness and a witness's name in another package alike, so four of them
     // are refused by name past the limit; and a witness whose member reaches settle, or whose
-    // member a package that reaches settle depends on, is compiled as any feature is, so a call
-    // under it, written in the member or in a macro the member exports, is refused for the call.
+    // member a package that reaches settle depends on while the member exports a macro, is
+    // compiled as any feature is, so a call under it, written in the member or in that macro, is
+    // refused for the call.
     let member = |name: &str, on: &[&str], features: &str| {
         (
             format!("crates/{name}/Cargo.toml"),
