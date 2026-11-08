@@ -69,7 +69,7 @@ A12: not red: the kept coverage check, web/app/src/lib/a11y-coverage.test.ts, is
 A13: red at ec249674: scripts/tests/test_web_verify.py:414: AssertionError: examined 0 screenshot expectations in the config: the population is empty, so nothing was judged
 A13: green at f592e928
 A14: red at d0155ed0957f3c764c472b84f20f7bbba63425bb: scripts/tests/test_public_scrub.py:938: AssertionError: 1 != 0 : public-scrub: web/app/tests/verify/__screenshots__/phone-light/verify/snapshots.spec.ts/today-first-linux.png: binary
-A14: green at 24aaafd37bb17fd728e50a9bcdc93e4030b9afaf
+A14: green at a44403b389d9d3256ac8d1dde28638d6aef8e639
 ```
 
 The baselines came from one render run. At 1df6f097 the `web` job of the pull request run (job
@@ -101,9 +101,11 @@ refuse a non-PNG file under the baselines, a PNG one folder outside them and a `
 passed there, because the scrub refused every binary before. 7211d7761d166b2df907fb9b9cc4938e0b6ddee4 admits
 the clean baselines, and A14's first CI green is the pull request run 42463446614 at
 ed16cfdbf192581a2980cc3a6bd5cee6b89463d7, whose hygiene job (job 128677485838) read `test_public_scrub` green.
-24aaafd37bb17fd728e50a9bcdc93e4030b9afaf then drops a loop bound that no outcome depended on, so the green line
-names it:
-`git diff --quiet 24aaafd37bb17fd728e50a9bcdc93e4030b9afaf HEAD -- scripts/public-scrub.py scripts/tests/test_public_scrub.py`
+24aaafd37bb17fd728e50a9bcdc93e4030b9afaf then drops a loop bound that no outcome depended on, and
+a44403b389d9d3256ac8d1dde28638d6aef8e639 makes `png_findings` return its malformed finding where its walk left the loop, so
+no loop exit is left to mutate; over the committed baselines, their truncations and generated
+byte strings, the function returns the same findings before and after it. The green line names it:
+`git diff --quiet a44403b389d9d3256ac8d1dde28638d6aef8e639 HEAD -- scripts/public-scrub.py scripts/tests/test_public_scrub.py`
 exits 0, so the run at this delivery's head runs the scrub and its test as they stand there.
 
 894bae5f re-renders eleven `/remote` baselines under `web/app/tests/verify/__screenshots__`. It
