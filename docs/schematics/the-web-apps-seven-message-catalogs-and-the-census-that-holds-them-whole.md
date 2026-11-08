@@ -103,3 +103,35 @@ flowchart TB
 
 `en.json`, the settings file, every component, route and style, the five per-screen locale tests,
 the runtime's locale order and the page-language hook keep their bytes.
+
+## The CJK and Latin spacing refusal (SPEC-629)
+
+SPEC-629 (ADR-651) adds one finding to the census. Every `path:line` below was read at the dev
+SPEC-629 §1 was measured at.
+
+```mermaid
+flowchart LR
+  value["a value of ja, zh-Hans<br/>or zh-Hant .json"] --> judged{"judged: stale, not-text,<br/>empty, not-nfc, placeholder"}
+  judged -->|"stale, not-text or empty"| stop["no spacing judged"]
+  judged -->|"text"| runs{"a whitespace run between<br/>a CJK letter and a letter,<br/>digit, % or brace?"}
+  runs -->|"n runs, n of 1 or more"| spaced["spaced locale key n<br/>exit 1"]
+  runs -->|"none"| green["no finding"]
+  css["cjk.css :58-69<br/>text-autospace: normal<br/>for :lang(ja) and :lang(zh)"] --> gap["the browser draws<br/>the narrow gap"]
+  green --> gap
+```
+
+1. The census reads each value of `ja`, `zh-Hans` and `zh-Hant`; English, Spanish, French and
+   Korean are never judged for spacing.
+2. A value that is stale, not text or blank gets its own finding and no spacing finding; any
+   other value gets its `not-nfc` and `placeholder` findings first, then `spaced <locale> <key> <n>`
+   when it holds n typed-space runs at a CJK and Latin boundary.
+3. With no typed space, the stylesheet's `text-autospace` draws the gap at each boundary, so every
+   Japanese and Chinese screen renders the same narrow gap.
+
+| step | test (`scripts/tests/test_locale_census.py`) | red | rows |
+|---|---|---|---|
+| a space between a CJK letter and a letter, digit or `%` | `TheWebCensus.test_a_space_typed_between_a_cjk_letter_and_a_latin_letter_digit_or_percent_is_refused` (A1) | the census judges no spacing | S62901 upward |
+| a space between a CJK letter and a placeholder brace | `TheWebCensus.test_a_space_typed_between_a_cjk_letter_and_a_placeholder_is_refused` (A2) | the census judges no spacing | the brace rows |
+| a space outside a boundary | `TheWebCensus.test_a_space_outside_a_cjk_and_latin_boundary_is_not_refused` (A3) | not red: it guards against over-refusal | the Python lane |
+| a complete tree reads green | `TheWebCensus.test_a_planted_complete_tree_reads_green` (A4) | not red: the control | the Python lane |
+| the web app's Japanese and Chinese catalogs | `TheWebTree.test_the_japanese_and_chinese_catalogs_hold_no_typed_space_at_a_boundary` (A5) | the control half, then the tree before the strip | the census in CI over every later change |

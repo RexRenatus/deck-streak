@@ -520,30 +520,6 @@ describe('the sign-in methods screen, each state', () => {
     expect(errors).toEqual([]);
   });
 
-  it('a removal whose list cannot be read again moves no focus and raises no error', async () => {
-    mocks.identities
-      .mockResolvedValueOnce({ kind: 'ok', value: [LISTED[0], LISTED[1]] })
-      .mockResolvedValueOnce({ kind: 'unavailable' });
-    server({ 'DELETE /api/identities/4': () => new Response(null, { status: 204 }) });
-    const rejections: unknown[] = [];
-    const collect = (reason: unknown) => rejections.push(reason);
-    process.on('unhandledRejection', collect);
-    try {
-      render(Methods);
-      await settle();
-      await confirm(rows()[1]);
-      await settle();
-    } finally {
-      process.off('unhandledRejection', collect);
-    }
-    expect(screen.getByRole('alert').textContent).toBe(
-      'DeckStreak could not reach its server. Try again in a moment.'
-    );
-    expect(screen.queryAllByRole('listitem')).toEqual([]);
-    expect(document.activeElement).toBe(document.body);
-    expect(rejections).toEqual([]);
-  });
-
   it('removing the first of three passkeys puts the focus on the one that took its place', async () => {
     const FOUR = { id: 4, kind: 'passkey', createdAt: Date.UTC(2001, 1, 3, 12) };
     const FIVE = { id: 5, kind: 'passkey', createdAt: Date.UTC(2001, 1, 4, 12) };
@@ -572,5 +548,71 @@ describe('the sign-in methods screen, each state', () => {
     expect([shown(rows()[1]), shown(rows()[2])]).toEqual([['Remove'], ['Remove']]);
     await open(rows()[1]);
     expect(shown(rows()[1])).toEqual(['Remove', 'Keep']);
+  });
+});
+
+// SPEC-642 A1 and A2 (R1 to R4); ADR-665 D1, D2. After a removal whose re-read fails, the alert in the list's place takes the focus; a failed first read of the screen moves none.
+describe('the passkey list places the focus when its re-read after a removal fails', () => {
+  it('a removal whose list cannot be read again moves the focus to the alert that says why', async () => {
+    const ANSWERS = [
+      ['reopen', 'Reopen DeckStreak from Telegram to sign in again.'],
+      ['unavailable', 'DeckStreak could not reach its server. Try again in a moment.']
+    ] as const;
+    let judged = 0;
+    for (const [kind, text] of ANSWERS) {
+      mocks.identities
+        .mockResolvedValueOnce({ kind: 'ok', value: [LISTED[0], LISTED[1]] })
+        .mockResolvedValueOnce({ kind });
+      server({ 'DELETE /api/identities/4': () => new Response(null, { status: 204 }) });
+      const rejections: unknown[] = [];
+      const collect = (reason: unknown) => rejections.push(reason);
+      let shown: { unmount: () => void } | undefined;
+      process.on('unhandledRejection', collect);
+      try {
+        shown = render(Methods);
+        await settle();
+        await confirm(rows()[1]);
+        await settle();
+      } finally {
+        process.off('unhandledRejection', collect);
+      }
+      const alert = screen.getByRole('alert');
+      expect([kind, alert.textContent]).toEqual([kind, text]);
+      expect(screen.queryAllByRole('listitem')).toEqual([]);
+      expect(document.activeElement).toBe(alert);
+      expect(alert.getAttribute('tabindex')).toBe('-1');
+      expect(rejections).toEqual([]);
+      shown!.unmount();
+      judged += 1;
+    }
+    console.log(`examined ${judged} of ${ANSWERS.length} answers`);
+    expect(judged).toBe(ANSWERS.length);
+  });
+
+  it('a list the screen cannot read when it opens moves no focus', async () => {
+    const ANSWERS = [
+      ['reopen', 'Reopen DeckStreak from Telegram to sign in again.'],
+      ['unavailable', 'DeckStreak could not reach its server. Try again in a moment.']
+    ] as const;
+    let judged = 0;
+    for (const [kind, text] of ANSWERS) {
+      const outside = document.createElement('button');
+      outside.textContent = 'Outside';
+      document.body.append(outside);
+      outside.focus();
+      try {
+        mocks.identities.mockResolvedValue({ kind });
+        const shown = render(Methods);
+        await settle();
+        expect([kind, screen.getByRole('alert').textContent]).toEqual([kind, text]);
+        expect(document.activeElement).toBe(outside);
+        shown.unmount();
+      } finally {
+        outside.remove();
+      }
+      judged += 1;
+    }
+    console.log(`examined ${judged} of ${ANSWERS.length} answers`);
+    expect(judged).toBe(ANSWERS.length);
   });
 });

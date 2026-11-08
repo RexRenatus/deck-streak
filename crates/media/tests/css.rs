@@ -1,7 +1,7 @@
 //! `scan_css` keeps every font case of the engine core's face suite (SPEC-513 A5): for each CSS
 //! the suite's font tests give a note type, the fonts `scan_css` names are the fonts the face's
 //! font pass inlines or empties, in the order written, and a URL the pass leaves as written for
-//! its scheme, its `data:` form or its path is no name. The census below holds the suite at its 18
+//! its scheme, its `data:` form or its path is no name. The census below holds the suite at its 21
 //! tests and finds every CSS line copied here in it, so a font case added or changed there fails
 //! here until it is copied.
 
@@ -15,8 +15,8 @@ use deck_streak_media::scan_css;
 /// The face suite whose font cases these are.
 const FACE_SUITE: &str = "crates/engine-core/tests/face.rs";
 
-/// The suite's test count when these cases were copied.
-const FACE_TESTS: usize = 18;
+/// The suite's test count: 18 when these cases were copied, and three sound tag tests since.
+const FACE_TESTS: usize = 21;
 
 /// The font table of the face's font pass (`crates/engine-core/src/media.rs`, `FONT_TYPES`).
 const FONT_EXTENSIONS: [&str; 4] = ["ttf", "otf", "woff", "woff2"];
@@ -117,7 +117,7 @@ fn the_face_suite_still_holds_its_tests_and_every_font_case_copied_here() {
         .lines()
         .filter(|line| line.trim() == "#[test]")
         .count();
-    assert_eq!(tests, FACE_TESTS, "{FACE_SUITE} holds its 18 tests");
+    assert_eq!(tests, FACE_TESTS, "{FACE_SUITE} holds its 21 tests");
     let mut lines = 0;
     for case in &CASES {
         assert!(

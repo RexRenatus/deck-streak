@@ -1,6 +1,7 @@
 """SPEC-618 A20 to A24: the bench profile, the bench targets and files, the benchmark list, the
 bench config and the bench exclusions, read from the tree. No workflow loader, no cargo, no pnpm."""
 
+import ast
 import json
 import re
 import tomllib
@@ -17,6 +18,8 @@ BENCH_TARGETS = {
 WEB_BENCH_ROOT = REPO / "web" / "app" / "bench"
 BENCH_LIST = REPO / "perf" / "benchmarks.txt"
 BENCH_CONFIG = REPO / "vitest.bench.config.ts"
+# The one web path outside web/app/src that Stryker mutates, by its exact name (SPEC-636 R1).
+STRYKER_OUTSIDE_SRC = ("scripts/build-tokens.ts",)
 RUST_BENCH = re.compile(r"#\[divan::bench(?:\([^)]*\))?\]\s*(?:pub\s+)?fn\s+(\w+)")
 MEASURED = re.compile(r"#\[inline\(never\)\]\s*(?:pub\s+)?fn\s+(\w+)_measured\b")
 WEB_BENCH = re.compile(r"\bbench\(\s*(['\"])(.+?)\1")
@@ -131,10 +134,21 @@ class TheBenchesAreInTheTree(unittest.TestCase):
         stryker = json.loads(
             (REPO / "web" / "app" / "stryker.config.json").read_text(encoding="utf-8")
         )
-        # Stryker reaches only web/app/src, SPEC-039 R2's root, and no bench file lies there.
+        # Stryker reaches web/app/src, SPEC-039 R2's root, and one exact path beside it,
+        # scripts/build-tokens.ts (SPEC-636 R1); no bench file lies in either.
         mutate = [glob for glob in stryker.get("mutate", []) if not glob.startswith("!")]
         for glob in examined("stryker mutate globs", mutate):
-            self.assertTrue(glob.startswith("src/"), f"Stryker mutates {glob}, outside src")
+            self.assertTrue(
+                glob.startswith("src/") or glob in STRYKER_OUTSIDE_SRC,
+                f"Stryker mutates {glob}, outside src",
+            )
+        outside = sorted(glob for glob in mutate if not glob.startswith("src/"))
+        self.assertEqual(outside, sorted(STRYKER_OUTSIDE_SRC), "Stryker mutates another path")
+        for path in examined("stryker paths outside src", outside):
+            self.assertFalse(
+                (REPO / "web" / "app" / path).match("*.bench.*"),
+                f"Stryker mutates the bench file {path}",
+            )
         self.assertEqual(sorted((REPO / "web" / "app" / "src").rglob("*.bench.*")), [])
         register = json.loads((REPO / "config" / "coverage.json").read_text(encoding="utf-8"))
         exclusions = {entry.get("glob"): entry for entry in register.get("exclusions", [])}
@@ -150,10 +164,6 @@ class TheBenchesAreInTheTree(unittest.TestCase):
                 self.assertTrue(str(entry.get("reason", "")).strip(), f"{glob} has no reason")
         # The web bench files the source-root check above stands for, outside that root.
         examined("web bench files outside the source root", web_bench_files())
-
-
-if __name__ == "__main__":
-    unittest.main()
 
 
 # A31: each web bench's own bound. Its two measured CI times in ms, each keyed by its job id.
@@ -217,3 +227,42 @@ class EachWebBenchPassesItsOwnBound(unittest.TestCase):
                 self.assertGreaterEqual(
                     bound, wanted, f"{name}: its bound {bound} is under {wanted}"
                 )
+
+
+# SPEC-637: a script run of this module reaches every class only when its main guard is its last
+# statement, after every test class (ADR-653).
+THIS_MODULE = REPO / "scripts" / "tests" / "test_perf_benches.py"
+
+
+def is_main_guard(node):
+    """Whether a top-level statement is the `if __name__ == "__main__":` guard."""
+    return (
+        isinstance(node, ast.If)
+        and isinstance(node.test, ast.Compare)
+        and isinstance(node.test.left, ast.Name)
+        and node.test.left.id == "__name__"
+        and len(node.test.ops) == 1
+        and isinstance(node.test.ops[0], ast.Eq)
+        and len(node.test.comparators) == 1
+        and isinstance(node.test.comparators[0], ast.Constant)
+        and node.test.comparators[0].value == "__main__"
+    )
+
+
+class TheScriptRunReachesEveryClass(unittest.TestCase):
+    def test_the_main_guard_is_the_last_statement_after_every_class(self):
+        body = ast.parse(THIS_MODULE.read_text(encoding="utf-8")).body
+        guards = examined(
+            "main guards", [at for at, node in enumerate(body) if is_main_guard(node)]
+        )
+        classes = examined(
+            "test classes",
+            [(at, node.name) for at, node in enumerate(body) if isinstance(node, ast.ClassDef)],
+        )
+        after = [name for at, name in classes if at > guards[0]]
+        self.assertEqual(after, [], "a class follows the main guard, so a script run skips it")
+        self.assertEqual(guards, [len(body) - 1], "the main guard is not the last statement")
+
+
+if __name__ == "__main__":
+    unittest.main()

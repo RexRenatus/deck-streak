@@ -1,0 +1,230 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S63901-THE-MATRIX-COMPARES-EVERY-PHONE-PROJECT",
+        "scripts/tests/test_web_verify.py",
+        "    for name, size, scheme, scale in sorted(MATRIX - projects):",
+        "    for name, size, scheme, scale in sorted(MATRIX - MATRIX):",
+        "the matrix check compares the config's phone projects with the six R1 names; without it a config missing a phone project is not refused (SPEC-639 R1, A1)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_missing_phone_project_is_refused"
+      ],
+      [
+        "S63902-EVERY-ROUTE-NEEDS-EACH-OF-ITS-STATES",
+        "scripts/tests/test_web_verify.py",
+        "            if state not in table.get(route, []):",
+        "            if state not in table.get(route, [state]):",
+        "the state check needs each of a route's states in the table; without it a route with no state is not refused (SPEC-639 R2, A2)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_route_with_no_state_is_refused"
+      ],
+      [
+        "S63903-AN-ACCOUNT-SIZED-NUMBER-IS-NOT-SYNTHETIC",
+        "scripts/tests/test_web_verify.py",
+        "ACCOUNT = re.compile(r\"(?<![\\w.])\\d{7,}(?![\\w.])\")",
+        "ACCOUNT = re.compile(r\"(?<![\\w.])\\d{8,}(?![\\w.])\")",
+        "the synthetic-value pattern refuses a number of seven or more digits; without it a planted seven-digit account-sized value is not refused (SPEC-639 R2, A3)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_real_looking_fixture_value_is_refused"
+      ],
+      [
+        "S63904-TARGET-SIZE-IS-ON-BY-NAME",
+        "scripts/tests/test_web_verify.py",
+        "    if not TARGET_SIZE_ON.search(text):",
+        "    if TARGET_SIZE_ON is None:",
+        "the audit check needs target-size turned on by name; without it a planted audit with the option removed is not refused (SPEC-639 R3, A5)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_audit_without_target_size_is_refused"
+      ],
+      [
+        "S63905-EVERY-BASELINE-IS-ON-DISK",
+        "scripts/tests/test_web_verify.py",
+        "    return [f\"baseline: missing {name}\" for name in wanted if not (root / SHOTS / name).is_file()]",
+        "    return [f\"baseline: missing {name}\" for name in wanted if not (root / SHOTS).is_dir()]",
+        "the baseline check looks for each route, state and project image by name; without it a tree missing one baseline is not refused (SPEC-639 R4, A10)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_missing_baseline_is_refused"
+      ],
+      [
+        "S63906-AN-EXCEPTION-ENTRY-NAMES-EVERY-FIELD",
+        "scripts/tests/test_web_verify.py",
+        "            if not fields.get(field):",
+        "            if field not in fields:",
+        "the exception check needs each entry's rule, route, reason and issue to be non-empty; without it an entry with an empty field is not refused (SPEC-639 R5, A11)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_bare_disable_is_refused"
+      ],
+      [
+        "S63907-THE-SCREENSHOT-THRESHOLD-IS-ZERO",
+        "scripts/tests/test_web_verify.py",
+        "    if not re.search(r\"\\bthreshold:\" + ZERO, options, re.M):",
+        "    if not re.search(r\"\\bthreshold:\", options, re.M):",
+        "the margin check needs the screenshot threshold to be 0; without it a planted config with a threshold of 0.2 alone is not refused (SPEC-639 R4, A13)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_screenshot_margin_is_refused"
+      ],
+      [
+        "S63908-THE-SCREENSHOT-PIXEL-COUNT-IS-ZERO",
+        "scripts/tests/test_web_verify.py",
+        "    if not re.search(r\"\\bmaxDiffPixels:\" + ZERO, options, re.M):",
+        "    if not re.search(r\"\\bmaxDiffPixels:\", options, re.M):",
+        "the margin check needs maxDiffPixels to be 0; without it a planted config allowing 10 pixels alone is not refused (SPEC-639 R4, A13)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_screenshot_margin_is_refused"
+      ],
+      [
+        "S63909-NO-SCREENSHOT-RATIO-IS-SET",
+        "scripts/tests/test_web_verify.py",
+        "    if any(\"maxDiffPixelRatio\" in part for part in [text] + spec_texts):",
+        "    if any(\"maxDiffPixelRatio\" in part for part in spec_texts):",
+        "the margin check refuses a maxDiffPixelRatio in the config; without it a planted config setting a ratio alone is not refused (SPEC-639 R4, A13)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_screenshot_margin_is_refused"
+      ],
+      [
+        "S63910-THE-AUDIT-REQUIRES-WCAG2A",
+        "scripts/tests/test_web_verify.py",
+        "        if f\"'{tag}'\" not in text:",
+        "        if f\"'{tag}'\" not in text and tag != \"wcag2a\":",
+        "the audit check requires the tag wcag2a; without it a planted audit missing wcag2a alone is not refused (SPEC-639 R3, A5)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_audit_missing_a_wcag_tag_is_refused"
+      ],
+      [
+        "S63911-THE-AUDIT-REQUIRES-WCAG2AA",
+        "scripts/tests/test_web_verify.py",
+        "        if f\"'{tag}'\" not in text:",
+        "        if f\"'{tag}'\" not in text and tag != \"wcag2aa\":",
+        "the audit check requires the tag wcag2aa; without it a planted audit missing wcag2aa alone is not refused (SPEC-639 R3, A5)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_audit_missing_a_wcag_tag_is_refused"
+      ],
+      [
+        "S63912-THE-AUDIT-REQUIRES-WCAG21A",
+        "scripts/tests/test_web_verify.py",
+        "        if f\"'{tag}'\" not in text:",
+        "        if f\"'{tag}'\" not in text and tag != \"wcag21a\":",
+        "the audit check requires the tag wcag21a; without it a planted audit missing wcag21a alone is not refused (SPEC-639 R3, A5)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_audit_missing_a_wcag_tag_is_refused"
+      ],
+      [
+        "S63913-THE-AUDIT-REQUIRES-WCAG21AA",
+        "scripts/tests/test_web_verify.py",
+        "        if f\"'{tag}'\" not in text:",
+        "        if f\"'{tag}'\" not in text and tag != \"wcag21aa\":",
+        "the audit check requires the tag wcag21aa; without it a planted audit missing wcag21aa alone is not refused (SPEC-639 R3, A5)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_audit_missing_a_wcag_tag_is_refused"
+      ],
+      [
+        "S63914-THE-AUDIT-REQUIRES-WCAG22AA",
+        "scripts/tests/test_web_verify.py",
+        "        if f\"'{tag}'\" not in text:",
+        "        if f\"'{tag}'\" not in text and tag != \"wcag22aa\":",
+        "the audit check requires the tag wcag22aa; without it a planted audit missing wcag22aa alone is not refused (SPEC-639 R3, A5)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_audit_missing_a_wcag_tag_is_refused"
+      ],
+      [
+        "S63915-A-BASELINE-SITS-UNDER-THE-SCREENSHOTS-FOLDER",
+        "scripts/public-scrub.py",
+        "named = path.startswith(BASELINES)",
+        "named = path.startswith(\"web/app/tests/verify/\")",
+        "the admission needs the screenshot baselines' folder; without it a PNG one folder outside it is admitted (SPEC-639 R9, A14)",
+        "test_public_scrub.OnlyAScreenshotBaselineWithNoTextIsAdmitted.test_a_png_one_folder_outside_the_baselines_is_refused_as_binary"
+      ],
+      [
+        "S63916-A-BASELINE-NAME-ENDS-IN-LOWER-CASE-PNG",
+        "scripts/public-scrub.py",
+        "path.endswith(\".png\")",
+        "path.lower().endswith(\".png\")",
+        "the admission matches the extension in lower case only; without it a name ending in .PNG is admitted (SPEC-639 R9, A14)",
+        "test_public_scrub.OnlyAScreenshotBaselineWithNoTextIsAdmitted.test_a_png_named_in_upper_case_is_refused_as_binary"
+      ],
+      [
+        "S63917-A-BASELINE-OPENS-WITH-THE-PNG-SIGNATURE",
+        "scripts/public-scrub.py",
+        "    return named and data.startswith(PNG_SIGNATURE)",
+        "    return named",
+        "the admission needs the PNG signature; without it a non-PNG file under the baselines' folder is not refused as binary (SPEC-639 R9, A14)",
+        "test_public_scrub.OnlyAScreenshotBaselineWithNoTextIsAdmitted.test_a_non_png_file_under_the_baselines_is_refused_as_binary"
+      ],
+      [
+        "S63918-A-TEXT-CHUNK-IS-REFUSED",
+        "scripts/public-scrub.py",
+        "        if kind in TEXT_CHUNKS:",
+        "        if kind in TEXT_CHUNKS - {b\"tEXt\"}:",
+        "the text-chunk check refuses a tEXt chunk; without it a baseline holding one is admitted (SPEC-639 R9, A14)",
+        "test_public_scrub.OnlyAScreenshotBaselineWithNoTextIsAdmitted.test_a_baseline_holding_a_text_chunk_is_refused_by_its_type"
+      ],
+      [
+        "S63919-A-ITXT-CHUNK-IS-REFUSED",
+        "scripts/public-scrub.py",
+        "        if kind in TEXT_CHUNKS:",
+        "        if kind in TEXT_CHUNKS - {b\"iTXt\"}:",
+        "the text-chunk check refuses a iTXt chunk; without it a baseline holding one is admitted (SPEC-639 R9, A14)",
+        "test_public_scrub.OnlyAScreenshotBaselineWithNoTextIsAdmitted.test_a_baseline_holding_a_text_chunk_is_refused_by_its_type"
+      ],
+      [
+        "S63920-A-ZTXT-CHUNK-IS-REFUSED",
+        "scripts/public-scrub.py",
+        "        if kind in TEXT_CHUNKS:",
+        "        if kind in TEXT_CHUNKS - {b\"zTXt\"}:",
+        "the text-chunk check refuses a zTXt chunk; without it a baseline holding one is admitted (SPEC-639 R9, A14)",
+        "test_public_scrub.OnlyAScreenshotBaselineWithNoTextIsAdmitted.test_a_baseline_holding_a_text_chunk_is_refused_by_its_type"
+      ],
+      [
+        "S63921-NOTHING-FOLLOWS-THE-END-CHUNK",
+        "scripts/public-scrub.py",
+        "return found if at == len(data) else [*found, \"baseline-malformed\"]",
+        "return found",
+        "the chunk walk refuses bytes after the end chunk; without it a baseline with a trailing byte is admitted (SPEC-639 R9, A14)",
+        "test_public_scrub.OnlyAScreenshotBaselineWithNoTextIsAdmitted.test_a_malformed_baseline_is_refused"
+      ],
+      [
+        "S63922-EVERY-CHUNK-CRC-IS-CHECKED",
+        "scripts/public-scrub.py",
+        "if end > len(data) or zlib.crc32(data[at + 4 : end - 4]) != crc:",
+        "if end > len(data):",
+        "the chunk walk checks each chunk's CRC; without it a baseline with a wrong CRC is admitted (SPEC-639 R9, A14)",
+        "test_public_scrub.OnlyAScreenshotBaselineWithNoTextIsAdmitted.test_a_malformed_baseline_is_refused"
+      ],
+      [
+        "S63923-A-BASELINE-NEEDS-ITS-END-CHUNK",
+        "scripts/public-scrub.py",
+        "    return [*found, \"baseline-malformed\"]",
+        "    return found",
+        "the chunk walk refuses a PNG with no end chunk; without it a cut baseline is admitted (SPEC-639 R9, A14)",
+        "test_public_scrub.OnlyAScreenshotBaselineWithNoTextIsAdmitted.test_a_malformed_baseline_is_refused"
+      ],
+      [
+        "S63924-HISTORY-ADMITS-A-CLEAN-BASELINE",
+        "scripts/public-scrub.py",
+        "            elif admits_baseline(path, data):",
+        "            elif False:",
+        "the history scan admits a clean screenshot baseline; without it a clean baseline in history is refused as binary (SPEC-639 R9, A14)",
+        "test_public_scrub.OnlyAScreenshotBaselineWithNoTextIsAdmitted.test_a_clean_screenshot_baseline_passes_the_tree_and_history_scans"
+      ],
+      [
+        "S63925-THE-TREE-ADMITS-A-CLEAN-BASELINE",
+        "scripts/public-scrub.py",
+        "            elif admits_baseline(rel.as_posix(), data):",
+        "            elif False:",
+        "the tree scan admits a clean screenshot baseline; without it a clean baseline in the tree is refused as binary (SPEC-639 R9, A14)",
+        "test_public_scrub.OnlyAScreenshotBaselineWithNoTextIsAdmitted.test_a_clean_screenshot_baseline_passes_the_tree_and_history_scans"
+      ],
+      [
+        "S63926-A-BASELINE-IS-STILL-SEARCHED-FOR-LITERALS",
+        "scripts/public-scrub.py",
+        "        self.admitted(shown, data)",
+        "        pass",
+        "an admitted baseline is still searched for the private literals; without it a private literal inside a baseline is not found (SPEC-639 R9, A14)",
+        "test_public_scrub.OnlyAScreenshotBaselineWithNoTextIsAdmitted.test_a_private_literal_inside_a_baseline_is_still_found"
+      ],
+      [
+        "S63927-A-STATE-LEAVING-ITS-CLOCK-RUNNING-IS-REFUSED",
+        "scripts/tests/test_web_verify.py",
+        "            if not STATE_CLOCK.search(body):",
+        "            if not STATE_CLOCK.search(body + \"clock:\"):",
+        "the clock check needs each state of a clocked screen to hold the clock; without it a state that leaves it running is not refused (SPEC-639 R2, A2)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_clock_the_states_leave_running_is_refused"
+      ],
+      [
+        "S63928-A-PAGE-READING-ITS-CLOCK-IS-FOUND",
+        "scripts/tests/test_web_verify.py",
+        "if PAGE_CLOCK in (page_source(root, r) or \"\")]",
+        "if PAGE_CLOCK + \"never\" in (page_source(root, r) or \"\")]",
+        "the clock check finds each screen whose page reads its own clock; without it a clocked screen is never checked (SPEC-639 R2, A2)",
+        "test_web_verify.PlantedTreesAreRefused.test_a_planted_clock_the_states_leave_running_is_refused"
+      ]
+    ]
+  }
+}

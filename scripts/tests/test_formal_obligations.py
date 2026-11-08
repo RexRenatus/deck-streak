@@ -228,6 +228,7 @@ NEW_ENTRIES = {
     "tla/OneInstrumentReader": ("re-stamp", {"O11"}),
     "lean/MediaGc": ("keep", {"O13"}),
     "lean/IdSlot": ("keep", {"O12"}),
+    "lean/DeployEntryRefusal": ("keep", set()),
     "tla/LogCaptureFloor": ("keep", set()),
     PATH_GATE: ("keep", {"O18"}),
 }

@@ -1,0 +1,54 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S64700-THE-RUNS-ONE-HANDLER-TAKES-SIGINT",
+        "scripts/mutation_rows.py",
+        "            signal.signal(signal.SIGINT, state.handle)\n",
+        "            pass\n",
+        "the run's one handler takes SIGINT as it takes SIGTERM and SIGHUP, so an interrupt is held and latched and never reaches the handler the run found (SPEC-647 R1)",
+        "test_mutation_rows.TheRunEndsOnASigintAsOnItsOtherSignals.test_main_takes_sigint_and_restores_its_handler_on_every_way_out"
+      ],
+      [
+        "S64701-AN-IGNORED-SIGINT-STAYS-IGNORED",
+        "scripts/mutation_rows.py",
+        "        if found[signal.SIGINT] is not signal.SIG_IGN:\n",
+        "        if True:\n",
+        "a run that began with SIGINT ignored keeps it ignored for the whole run, as a background job asked (SPEC-647 R1)",
+        "test_mutation_rows.TheRunEndsOnASigintAsOnItsOtherSignals.test_main_takes_sigint_and_restores_its_handler_on_every_way_out"
+      ],
+      [
+        "S64702-A-SIGINT-ENDS-THE-RUN-AS-AN-INTERRUPT",
+        "scripts/mutation_rows.py",
+        "            if signum == signal.SIGINT:\n",
+        "            if False:\n",
+        "the first SIGINT outside a killer start ends the run as the interpreter's own interrupt, never as an exit status (SPEC-647 R2)",
+        "test_mutation_rows.TheRunEndsOnASigintAsOnItsOtherSignals.test_main_takes_sigint_and_restores_its_handler_on_every_way_out"
+      ],
+      [
+        "S64703-A-HELD-SIGINT-ENDS-THE-RUN-AS-AN-INTERRUPT",
+        "scripts/mutation_rows.py",
+        "            if run.signum == signal.SIGINT:\n",
+        "            if False:\n",
+        "a SIGINT held while a killer starts ends the run at its release as an interrupt, after the group kill is in place (SPEC-647 R2)",
+        "test_mutation_rows.TheRunnerEndsTheKillersGroupOnEverySignal.test_a_sigint_while_the_killer_starts_is_held_until_its_group_can_end"
+      ],
+      [
+        "S64704-A-SIGINT-HELD-AT-A-FAILED-START-ENDS-AS-AN-INTERRUPT",
+        "scripts/mutation_rows.py",
+        "            if state.signum == signal.SIGINT:\n",
+        "            if False:\n",
+        "a SIGINT held while a killer fails to start ends the run as an interrupt when the command returns (SPEC-647 R2)",
+        "test_mutation_rows.TheRunEndsOnASigintAsOnItsOtherSignals.test_a_sigint_held_while_a_killer_fails_to_start_still_ends_the_run"
+      ],
+      [
+        "S64705-THE-RUN-KEEPS-THE-SIGINT-HANDLER-IT-FOUND",
+        "scripts/mutation_rows.py",
+        "        for signum in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT)\n",
+        "        for signum in (signal.SIGTERM, signal.SIGHUP)\n",
+        "the run keeps the SIGINT handler it found beside the other two, so every way out reinstalls it (SPEC-647 R4)",
+        "test_mutation_rows.TheRunEndsOnASigintAsOnItsOtherSignals.test_main_takes_sigint_and_restores_its_handler_on_every_way_out"
+      ]
+    ]
+  }
+}

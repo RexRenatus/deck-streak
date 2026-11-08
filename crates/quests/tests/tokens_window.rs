@@ -14,7 +14,7 @@ mod golden;
 use deck_streak_ingest::reader::Review;
 use deck_streak_kernel::{Db, Hour, StudyDay, StudyDayRule, UtcMillis, UtcOffset};
 use deck_streak_quests::tokens::{
-    Activation, ReviewXp, activate_token_on, settle_token_bonuses_on,
+    Activation, Holdings, ReviewXp, activate_token_on, holdings_on, settle_token_bonuses_on,
 };
 use serde_json::{Value, json};
 use sqlx::Row;
@@ -231,4 +231,43 @@ async fn the_token_bonus_matches_the_predecessors_golden() {
             case.input
         );
     }
+}
+
+/// SPEC-411 A19 (R11): the holdings count the tokens neither activated nor consumed, and name the
+/// end of the window open at the instant read; a spent token and a lapsed window count for neither.
+#[tokio::test]
+async fn the_holdings_count_unspent_tokens_and_name_the_open_window() {
+    const NOW: i64 = 1_700_100_000_000;
+    let (_directory, db) = fresh().await;
+    let token = |activated: i64, ends: i64, consumed: i64| {
+        json!({
+            "granted_at_ms": AT,
+            "activated_at_ms": activated,
+            "window_ends_at_ms": ends,
+            "consumed": consumed,
+        })
+    };
+    seed_tokens(
+        &db,
+        &json!({ "tokens": [
+            token(0, 0, 0),
+            token(NOW - 10_800_000, NOW - 3_600_000, 1),
+            token(0, 0, 0),
+            token(NOW - 9_000_000, NOW - 1_800_000, 0),
+            token(NOW - 3_600_000, NOW + 3_600_000, 0),
+        ] }),
+    )
+    .await;
+    let mut write = db.write().await.expect("a write");
+    let holdings = holdings_on(&mut write, UtcMillis::from_epoch_millis(NOW))
+        .await
+        .expect("the holdings are read");
+    assert_eq!(
+        holdings,
+        Holdings {
+            held: 2,
+            window_ends_at: Some(UtcMillis::from_epoch_millis(NOW + 3_600_000)),
+        },
+        "two tokens are held, and the window opened an hour ago ends an hour from now"
+    );
 }
