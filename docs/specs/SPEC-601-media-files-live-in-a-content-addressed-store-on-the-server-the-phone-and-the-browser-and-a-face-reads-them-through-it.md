@@ -148,6 +148,9 @@ plants a source line naming the engine's rewrite and reads it red, so its count 
 | `scripts/tests/test_ci_workflows.py` | ci | changed: two lines of `APPLE_PATHS` |
 | `.github/workflows/testflight-internal.yml` | ci | changed: one path-filter line |
 | `scripts/tests/test_testflight_workflows.py` | ci | changed: one line of `INTERNAL_PATHS` |
+| `crates/kernel/tests/allow_list_arms.rs` | kernel | changed: the census pin counts the six new source files |
+| `docs/schematics/the-app-campaigns-surfaces-each-carry-a-stride-table-whose-every-control-cites-a-line-that-holds.md` | docs | changed: the line citations below the two workflow path-filter inserts move down one line |
+| `scripts/mutation-rows.d/S39400-S39499.json` | mutation | changed: one row anchor names the new base commit of the context map schematic |
 
 ## 5. What this does NOT cover
 
