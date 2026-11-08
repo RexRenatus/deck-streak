@@ -13,8 +13,6 @@
 
 mod support;
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
 use anki_proto::card_rendering::HtmlToTextLineRequest;
 use anki_proto::generic::String as Text;
 use anki_proto::scheduler::card_answer::Rating;
@@ -70,14 +68,6 @@ fn snapshot(dispatcher: &Dispatcher, card: i64) -> Result<Value, Refusal> {
     first_row(dispatcher.read(Read::CardSnapshot(card)))
 }
 
-fn now_millis() -> i64 {
-    let millis = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("the clock reads after the epoch")
-        .as_millis();
-    i64::try_from(millis).expect("the clock's milliseconds fit an i64")
-}
-
 #[test]
 fn an_ordinary_call_reaches_the_engine_and_an_exempt_one_does_not() {
     let synthetic = support::synthetic("ordinary-and-exempt");
@@ -112,7 +102,7 @@ fn an_ordinary_call_reaches_the_engine_and_an_exempt_one_does_not() {
         current_state: states.current,
         new_state: states.good,
         rating: Rating::Good as i32,
-        answered_at_millis: now_millis(),
+        answered_at_millis: synthetic.clock.at_millis(),
         milliseconds_taken: 1000,
     };
     // The card's row changes through the owner's answer, the one door that records a grade
@@ -181,7 +171,7 @@ fn an_answer_through_run_is_held_for_the_owner_and_leaves_the_card() {
         current_state: states.current,
         new_state: states.good,
         rating: Rating::Good as i32,
-        answered_at_millis: now_millis(),
+        answered_at_millis: synthetic.clock.at_millis(),
         milliseconds_taken: 1000,
     };
     let through_run = run(&dispatcher, ANSWER_CARD, &answer.encode_to_vec()).map(|_| ());
@@ -255,7 +245,7 @@ fn an_undo_through_run_is_held_for_the_owner_and_leaves_the_answer() {
         current_state: states.current,
         new_state: states.good,
         rating: Rating::Good as i32,
-        answered_at_millis: now_millis(),
+        answered_at_millis: synthetic.clock.at_millis(),
         milliseconds_taken: 1000,
     };
     dispatcher

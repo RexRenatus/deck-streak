@@ -13,8 +13,6 @@
 
 mod support;
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
 use anki_proto::collection::UndoStatus;
 use anki_proto::scheduler::card_answer::Rating;
 use anki_proto::scheduler::{CardAnswer, GetQueuedCardsRequest, QueuedCards, SchedulingState};
@@ -90,17 +88,12 @@ fn newest(dispatcher: &Dispatcher) -> (i64, i64) {
     (column("/0/0"), column("/0/1"))
 }
 
-fn now_millis() -> i64 {
-    let millis = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("the clock reads after the epoch")
-        .as_millis();
-    i64::try_from(millis).expect("the clock's milliseconds fit an i64")
-}
-
 /// Answers the queue's head Good through the owner's press, and returns its card and the state it
 /// was shown in.
-fn press_head(dispatcher: &Dispatcher) -> (i64, Option<SchedulingState>) {
+fn press_head(
+    dispatcher: &Dispatcher,
+    clock: support::clock::Clock,
+) -> (i64, Option<SchedulingState>) {
     let request = GetQueuedCardsRequest {
         fetch_limit: 1,
         intraday_learning_only: false,
@@ -126,7 +119,7 @@ fn press_head(dispatcher: &Dispatcher) -> (i64, Option<SchedulingState>) {
         current_state: states.current,
         new_state: states.good,
         rating: Rating::Good as i32,
-        answered_at_millis: now_millis(),
+        answered_at_millis: clock.at_millis(),
         milliseconds_taken: 1000,
     };
     dispatcher
@@ -150,7 +143,7 @@ fn a_kept_answer_names_its_card_its_step_and_its_record() {
     // two flag steps before the press, so the engine's last step is past 0 and 1
     set_flag(&dispatcher, synthetic.cards[1], BLUE);
     set_flag(&dispatcher, synthetic.cards[1], NO_FLAG);
-    let (card, current) = press_head(&dispatcher);
+    let (card, current) = press_head(&dispatcher, synthetic.clock);
     let bytes = status(&dispatcher);
     let now = decoded(&bytes);
     assert!(
@@ -207,7 +200,7 @@ fn a_kept_answer_names_its_card_its_step_and_its_record() {
 #[test]
 fn a_kept_answer_is_judged_against_the_engine_now() {
     let (synthetic, dispatcher) = opened("native-undo-judged");
-    let (card, current) = press_head(&dispatcher);
+    let (card, current) = press_head(&dispatcher, synthetic.clock);
     let kept = native_undo::answered(
         &dispatcher,
         &status(&dispatcher),

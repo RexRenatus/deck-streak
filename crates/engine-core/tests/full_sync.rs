@@ -42,8 +42,9 @@ fn engine(collection: &Path) -> Collection {
         .expect("the engine opens the test's collection")
 }
 
-/// Answers `card` Good, as the engine's own reviewer does: one review-log row, unsynced.
-fn answer(collection: &Path, card: i64) {
+/// Answers `card` Good at `at`, the clock's instant, as the engine's own reviewer does: one
+/// review-log row, unsynced.
+fn answer(collection: &Path, card: i64, at: i64) {
     let mut col = engine(collection);
     let states = col
         .get_scheduling_states(CardId(card))
@@ -53,7 +54,7 @@ fn answer(collection: &Path, card: i64) {
         current_state: states.current,
         new_state: states.good,
         rating: Rating::Good,
-        answered_at: TimestampMillis::now(),
+        answered_at: TimestampMillis(at),
         milliseconds_taken: 1000,
         custom_data: None,
         from_queue: false,
@@ -130,8 +131,8 @@ fn open(synthetic: &support::Synthetic) -> Dispatcher {
 fn the_id_reads_take_every_row() {
     let synthetic = support::synthetic("id-reads");
     let [first, second] = synthetic.cards;
-    answer(&synthetic.collection, first);
-    answer(&synthetic.collection, second);
+    answer(&synthetic.collection, first, synthetic.clock.at_millis());
+    answer(&synthetic.collection, second, synthetic.clock.at_millis());
     let expected = held(&synthetic.collection);
     let read = open(&synthetic).id_sets();
     assert_eq!(
@@ -150,10 +151,10 @@ fn the_id_reads_take_every_row() {
 fn the_unsynced_read_counts_reviews_and_changes_since_the_last_sync() {
     let reviewed = support::synthetic("unsynced-reviewed");
     let [first, second] = reviewed.cards;
-    answer(&reviewed.collection, first);
-    answer(&reviewed.collection, second);
+    answer(&reviewed.collection, first, reviewed.clock.at_millis());
+    answer(&reviewed.collection, second, reviewed.clock.at_millis());
     mark_synced(&reviewed.collection);
-    answer(&reviewed.collection, first);
+    answer(&reviewed.collection, first, reviewed.clock.at_millis());
     let schema = support::synthetic("unsynced-schema");
     mark_synced(&schema.collection);
     change_schema(&schema.collection);

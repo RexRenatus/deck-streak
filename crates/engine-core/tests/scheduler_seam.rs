@@ -17,7 +17,6 @@ mod support;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use anki::card::CardId;
 use anki::collection::{Collection, CollectionBuilder};
@@ -93,6 +92,8 @@ struct Built {
     collection: PathBuf,
     /// The cards, one per Basic note, in the order they were added.
     cards: Vec<i64>,
+    /// The clock the collection was pinned at: every time the test hands the engine (SPEC-443 R3).
+    clock: support::clock::Clock,
 }
 
 /// The test's own engine handle on a closed collection file.
@@ -102,8 +103,9 @@ fn engine(collection: &Path) -> Collection {
         .expect("the engine opens the test's collection")
 }
 
-/// `count` Basic notes in the default deck, so `count` cards, with the engine's own API, and the
-/// collection's creation moved back `DAYS_BACK` days, as `tests/replay.rs:96-132` builds them.
+/// `count` Basic notes in the default deck, so `count` cards, with the engine's own API, the
+/// collection's cutoff pinned before any engine schedules it (SPEC-443 R2), and its creation then
+/// moved back `DAYS_BACK` days, as `tests/replay.rs:96-132` builds them.
 fn built(test: &str, count: usize) -> Built {
     let dir = support::scratch("engine-core-scheduler-seam", test);
     std::fs::create_dir_all(dir.join("collection.media")).expect("a media directory");
@@ -130,6 +132,9 @@ fn built(test: &str, count: usize) -> Built {
                 .expect("the note has one card")
         })
         .collect();
+    col.close(None).expect("the engine closes the collection");
+    let clock = support::clock::pin(&collection);
+    let col = engine(&collection);
     col.storage
         .db()
         .execute("update col set crt = crt - ?", [DAYS_BACK * 86_400])
@@ -139,15 +144,8 @@ fn built(test: &str, count: usize) -> Built {
         dir,
         collection,
         cards,
+        clock,
     }
-}
-
-fn now_millis() -> i64 {
-    let millis = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("the clock reads after the epoch")
-        .as_millis();
-    i64::try_from(millis).expect("the clock's milliseconds fit an i64")
 }
 
 /// Answers `card` with `rating` at `at`, as the engine's own reviewer does.
@@ -466,8 +464,8 @@ fn fsrs7_behind_the_port_gives_todays_due_days_on_the_replay_fixtures() {
     let review = built("seam-review-schedule", 2);
     let (easy, again) = (review.cards[0], review.cards[1]);
     let mut col = engine(&review.collection);
-    answer(&mut col, easy, Rating::Easy, now_millis());
-    answer(&mut col, again, Rating::Again, now_millis());
+    answer(&mut col, easy, Rating::Easy, review.clock.at_millis());
+    answer(&mut col, again, Rating::Again, review.clock.at_millis());
     col.set_due_date(&[CardId(again)], "0", None)
         .expect("the engine makes the card a review card due today");
     col.close(None).expect("the engine closes the collection");
@@ -514,7 +512,7 @@ fn fsrs7_behind_the_port_gives_todays_due_days_on_the_replay_fixtures() {
     let before_today = built("seam-review-before-today", 1);
     let card = before_today.cards[0];
     let mut col = engine(&before_today.collection);
-    answer(&mut col, card, Rating::Easy, now_millis());
+    answer(&mut col, card, Rating::Easy, before_today.clock.at_millis());
     let reviewed_at = newest_row(&col, card) / 1000;
     col.close(None).expect("the engine closes the collection");
     let day = EngineDay {
@@ -1162,7 +1160,7 @@ fn rows_the_selection_drops_after_the_last_review_leave_the_replay_on_the_direct
     let planted = built("seam-dropped-rows", 1);
     let card = planted.cards[0];
     let mut col = engine(&planted.collection);
-    let at = now_millis() - 2 * DAY_MS;
+    let at = planted.clock.at_millis() - 2 * DAY_MS;
     answer(&mut col, card, Rating::Good, at);
     // After the review: a row with no rating of a kind the selection keeps, and a rated row of a
     // kind it drops. The selection keeps neither, so the history stays the one review.
