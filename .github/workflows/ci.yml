@@ -278,6 +278,7 @@ jobs:
       - name: web (pnpm check with svelte-check --fail-on-warnings, vitest, vite build, playwright) and audit-web (pnpm audit)
         env:
           CHECK_LOG_DIR: ${{ runner.temp }}/check-logs
+          VERIFY_RENDER: '1'
         run: bash scripts/check.sh web audit-web
       - name: save the pnpm store
         if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main') && steps.pnpm-cache.outputs.cache-hit != 'true' }}

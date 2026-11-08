@@ -22,14 +22,18 @@ function phone(name: string, viewport: Size, colorScheme: Scheme, textScale: num
   };
 }
 
+// The render mode (ADR-662 D9): set by the CI web step for one push, it writes every baseline the
+// run renders under the stage logs, by its committed name, and fails the test that wrote it.
+const RENDER = process.env.VERIFY_RENDER === '1' && process.env.CHECK_LOG_DIR ? `${process.env.CHECK_LOG_DIR}/baselines` : '';
+
 export default defineConfig<VerifyOptions>({
   testDir: 'tests',
   forbidOnly: !!process.env.CI,
   // The images a run renders, a failed comparison's included, go with the run's stage logs.
   ...(process.env.CHECK_LOG_DIR ? { outputDir: `${process.env.CHECK_LOG_DIR}/playwright` } : {}),
-  // A baseline is committed with the platform in its name, and CI never writes one.
-  snapshotPathTemplate: '{testDir}/verify/__screenshots__/{projectName}/{testFilePath}/{arg}-{platform}{ext}',
-  updateSnapshots: process.env.CI ? 'none' : 'missing',
+  // A baseline is committed with the platform in its name; outside the render mode no run writes one.
+  snapshotPathTemplate: `${RENDER || '{testDir}/verify/__screenshots__'}/{projectName}/{testFilePath}/{arg}-{platform}{ext}`,
+  updateSnapshots: RENDER ? 'default' : 'none',
   // No margin: one changed pixel fails the comparison.
   expect: { toHaveScreenshot: { threshold: 0, maxDiffPixels: 0 } },
   projects: [
