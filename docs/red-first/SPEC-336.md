@@ -75,6 +75,16 @@ C configuration: a feature gates the call | accepted`, members escaping 0). So t
 expectation and the population's pinned digest changed in the change's commit (790ceb5d); the
 member beside it, whose call reaches `settle`, is still refused.
 
+A15 came with ADR-345's second amendment. Its test was committed alone over the census's rule as
+it stood, and it names no new item of the census, so it compiles against that rule. At that commit
+it fails by assertion on a local run (`cargo test --locked --offline -p deck-streak-progression
+--test xp_census -- --exact` and its name: 1 run, 0 passed, 1 failed), 11 of its 14 planted trees
+judged as expected: the reach guard alone counts the media crate's four witnesses, so the tree
+whose member holds a quiet library and the tree whose member's only `path` attribute sits in a test
+of its own are each refused past the limit, and the tree beside features the list does not name
+reads 8 features where 4 are expected. The rule follows in its own commit, and A15's red and green
+lines are recorded with it.
+
 ## Mutation coverage
 
 MUTATION COVERAGE, not red-first. cargo-mutants lists 10 mutants of the adapter

@@ -2210,6 +2210,261 @@ fn a_kani_witness_is_left_out_by_its_name_and_only_apart_from_settle() {
     );
 }
 
+#[test]
+#[allow(clippy::too_many_lines)]
+fn a_kani_witness_whose_member_changes_nothing_a_dependant_compiles_against_is_left_out() {
+    // ADR-345's second amendment beside SPEC-336 R11 (A15): a witness of a member that a package
+    // reaching settle depends on is left out while the member reaches no progression by a
+    // dependency of any kind, is no proc-macro crate, has no build script, and the code a
+    // dependant compiles of it defines no macro, names no `include`, carries no `path` attribute
+    // and names a feature only on lines `BODY_GATES` pins. The reds: the reach guard alone counts
+    // the four and refuses the tree past the limit, with a quiet library and with a `path`
+    // attribute only in a test of the member's own. The controls: the member with a macro, an
+    // exported macro, as a proc-macro crate or reaching progression itself is counted, so are
+    // features the list does not name; a witness that gates an item a glob import lets shadow
+    // progression's path is compiled as any feature is, so the call that only its absence hides
+    // is refused for the call; and a `path` attribute in the library, the library reaching a test
+    // file by one, by one inside `cfg_attr`, by a renamed `include` or by its root lying there,
+    // and a test reaching progression through a dev-dependency each keep the four counted.
+    let member = |name: &str, on: &[&str], features: &str| {
+        (
+            format!("crates/{name}/Cargo.toml"),
+            format!("{}\n{features}", manifest_of(name, on)),
+        )
+    };
+    let library = |name: &str, text: &str| (format!("crates/{name}/src/lib.rs"), text.to_owned());
+    let file = |path: &str, text: &str| (path.to_owned(), text.to_owned());
+    let witnesses = "[features]\nkani-witness-bind = []\nkani-witness-blob-path = []\n\
+                     kani-witness-scan = []\nkani-witness-sweep = []\n";
+    let bind = "[features]\nkani-witness-bind = []\n";
+    let quiet = "pub fn quiet() {}\n";
+    let reaching = || member("habits", &[OWNER, "media"], "");
+    let past = format!(
+        "the members declare 4 features (deck-streak-media/kani-witness-bind, \
+         deck-streak-media/kani-witness-blob-path, deck-streak-media/kani-witness-scan, \
+         deck-streak-media/kani-witness-sweep), and the census compiles every combination of at \
+         most {FEATURE_LIMIT}"
+    );
+    let unnamed = format!(
+        "the members declare 4 features (deck-streak-habits/f0, \
+         deck-streak-habits/kani-witness-bind, deck-streak-media/fast, \
+         deck-streak-media/kani-witness-other), and the census compiles every combination of at \
+         most {FEATURE_LIMIT}"
+    );
+    let proc_macro = "crates/media is a proc-macro crate, and rustc reports no deprecation \
+                      inside a derive's expansion";
+    let decoy = "#[cfg(not(feature = \"kani-witness-bind\"))]\n\
+                 pub mod deck_streak_progression {\n    pub fn settle() -> usize {\n        \
+                 0\n    }\n}\n";
+    let shadowed = "pub fn sneak() -> usize {\n    use deck_streak_media::*;\n    \
+                    deck_streak_progression::settle()\n}\n";
+    let golden_test = "#[path = \"../../../tools/parity-oracle/golden.rs\"]\nmod golden;\n\n\
+                       #[test]\nfn reads_the_golden() {\n    assert_eq!(golden::golden(), 0);\n}\n";
+    let golden = "pub fn golden() -> usize {\n    0\n}\n";
+    let inner_lib = "#[path = \"gated/inner.rs\"]\nmod inner;\npub fn quiet() {}\n";
+    let inner = "pub fn inner() {}\n";
+    let shared_lib = "#[path = \"../tests/common/shared.rs\"]\nmod shared;\npub fn quiet() {}\n";
+    let shared = "#[cfg(feature = \"kani-witness-bind\")]\npub fn gated() {}\n";
+    let cfg_attr_lib = "#[cfg_attr(all(), path = \"../tests/common/shared.rs\")]\nmod shared;\n\
+                        pub fn quiet() {}\n";
+    let spliced_lib = "use core::include as splice;\nsplice!(\"../tests/common/shared.rs\");\n\
+                       pub fn quiet() {}\n";
+    let rooted = format!("[lib]\npath = \"tests/common/lib.rs\"\n\n{witnesses}");
+    let rooted_lib = "pub fn quiet() {}\n#[cfg(feature = \"kani-witness-bind\")]\n\
+                      pub fn gated() {}\n";
+    let dev_on_owner = format!(
+        "[dev-dependencies]\ndeck-streak-progression = {{ path = \"../progression\" }}\n\n\
+         {witnesses}"
+    );
+    let sneak_test = "#[cfg(feature = \"kani-witness-bind\")]\n#[test]\nfn sneaks() {\n    \
+                      assert_eq!(deck_streak_progression::settle(), 0);\n}\n";
+    let cases = examined(
+        "planted tree(s) of a witness whose member a package reaching settle reaches",
+        vec![
+            (
+                "the red, four witnesses of a member that changes nothing a dependant reads",
+                vec![
+                    member("media", &[], witnesses),
+                    library("media", quiet),
+                    reaching(),
+                    library("habits", quiet),
+                ],
+                Vec::new(),
+            ),
+            (
+                "the control, the member defines a macro",
+                vec![
+                    member("media", &[], witnesses),
+                    library("media", "macro_rules! noop {\n    () => {};\n}\n"),
+                    reaching(),
+                    library("habits", quiet),
+                ],
+                vec![past.clone()],
+            ),
+            (
+                "the control, the member exports a macro",
+                vec![
+                    member("media", &[], witnesses),
+                    library(
+                        "media",
+                        "#[macro_export]\nmacro_rules! noop {\n    () => {};\n}\n",
+                    ),
+                    reaching(),
+                    library("habits", quiet),
+                ],
+                vec![past.clone()],
+            ),
+            (
+                "the control, the member is a proc-macro crate",
+                vec![
+                    member(
+                        "media",
+                        &[],
+                        &format!("[lib]\nproc-macro = true\n\n{witnesses}"),
+                    ),
+                    library("media", quiet),
+                    reaching(),
+                    library("habits", quiet),
+                ],
+                vec![proc_macro.to_owned(), past.clone()],
+            ),
+            (
+                "the control, the member reaches progression itself",
+                vec![
+                    member("media", &[OWNER], witnesses),
+                    library("media", quiet),
+                    reaching(),
+                    library("habits", quiet),
+                ],
+                vec![past.clone()],
+            ),
+            (
+                "the control, features the list does not name beside the witnesses",
+                vec![
+                    member(
+                        "media",
+                        &[],
+                        &format!("{witnesses}fast = []\nkani-witness-other = []\n"),
+                    ),
+                    library("media", quiet),
+                    member(
+                        "habits",
+                        &[OWNER, "media"],
+                        "[features]\nf0 = []\nkani-witness-bind = []\n",
+                    ),
+                    library("habits", quiet),
+                ],
+                vec![unnamed],
+            ),
+            (
+                "the control, a witness that gates an item a glob import lets shadow settle",
+                vec![
+                    member("media", &[], bind),
+                    library("media", decoy),
+                    reaching(),
+                    library("habits", shadowed),
+                ],
+                vec![HABITS_CALL.to_owned()],
+            ),
+            (
+                "the red, the member's only path attribute is in a test of its own",
+                vec![
+                    member("media", &[], witnesses),
+                    library("media", quiet),
+                    file("crates/media/tests/golden.rs", golden_test),
+                    file("tools/parity-oracle/golden.rs", golden),
+                    reaching(),
+                    library("habits", quiet),
+                ],
+                Vec::new(),
+            ),
+            (
+                "the control, a path attribute in the member's library",
+                vec![
+                    member("media", &[], witnesses),
+                    library("media", inner_lib),
+                    file("crates/media/src/gated/inner.rs", inner),
+                    reaching(),
+                    library("habits", quiet),
+                ],
+                vec![past.clone()],
+            ),
+            (
+                "the control, the library reaches a test file by a path attribute",
+                vec![
+                    member("media", &[], witnesses),
+                    library("media", shared_lib),
+                    file("crates/media/tests/common/shared.rs", shared),
+                    reaching(),
+                    library("habits", quiet),
+                ],
+                vec![past.clone()],
+            ),
+            (
+                "the control, the library reaches a test file by a path inside cfg_attr",
+                vec![
+                    member("media", &[], witnesses),
+                    library("media", cfg_attr_lib),
+                    file("crates/media/tests/common/shared.rs", shared),
+                    reaching(),
+                    library("habits", quiet),
+                ],
+                vec![past.clone()],
+            ),
+            (
+                "the control, the library includes a test file through a renamed include",
+                vec![
+                    member("media", &[], witnesses),
+                    library("media", spliced_lib),
+                    file("crates/media/tests/common/shared.rs", shared),
+                    reaching(),
+                    library("habits", quiet),
+                ],
+                vec![past.clone()],
+            ),
+            (
+                "the control, the library's root lies under tests",
+                vec![
+                    member("media", &[], &rooted),
+                    file("crates/media/tests/common/lib.rs", rooted_lib),
+                    reaching(),
+                    library("habits", quiet),
+                ],
+                vec![past.clone()],
+            ),
+            (
+                "the control, a test of the member reaches progression through a dev-dependency",
+                vec![
+                    member("media", &[], &dev_on_owner),
+                    library("media", quiet),
+                    file("crates/media/tests/sneak.rs", sneak_test),
+                    reaching(),
+                    library("habits", quiet),
+                ],
+                vec![past],
+            ),
+        ],
+    );
+    let mut judged = Vec::new();
+    for (label, files, expected) in &cases {
+        let planted = tempfile::tempdir().expect("a temporary directory");
+        let root = planted.path();
+        plant_workspace(root);
+        for (path, text) in files {
+            plant(root, path, text);
+        }
+        let refused = census(root).refused;
+        println!("verdict: {label}: {refused:?}");
+        judged.push((*label, refused == *expected, refused));
+    }
+    let as_expected = judged.iter().filter(|(_, right, _)| *right).count();
+    assert_eq!(
+        as_expected,
+        cases.len(),
+        "each tree is judged as its case expects: {judged:#?}"
+    );
+}
+
 /// Judges each planted habits (a label, its manifest's `[features]` table and its library) in a
 /// workspace of its own, and prints each verdict, so a run quotes what the census refused in each.
 fn habits_verdicts<'a>(cases: &[(&'a str, &str, String)]) -> Vec<(&'a str, Vec<String>)> {
