@@ -133,6 +133,12 @@ export async function open(
       intercepted.fulfill({ contentType: 'text/javascript', body: engineStandIn(engine) })
     );
   }
+  if (state.clock !== undefined) {
+    // The fixed clock fixes the date only: a state that names the page's own clock holds it.
+    await page.addInitScript((now) => {
+      Object.defineProperty(performance, 'now', { value: () => now, configurable: true });
+    }, state.clock);
+  }
   await page.goto(route);
   await expect
     .poll(() => page.evaluate(() => document.documentElement.style.getPropertyValue('--tg-color-scheme')))

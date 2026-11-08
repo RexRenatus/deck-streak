@@ -23,6 +23,12 @@ export interface State {
   readonly engine?: Engine;
   /** Whether the review shows its answer side, after its show-answer control. */
   readonly reveal?: boolean;
+  /**
+   * The page's own clock, `performance.now()` in milliseconds, held at this value. The fixed
+   * clock fixes the date only, so a screen whose page source reads this clock names it in each
+   * of its states.
+   */
+  readonly clock?: number;
 }
 
 /** Every route of the route table, each with its states by name. */
@@ -30,6 +36,8 @@ export type StateTable = Readonly<Record<RoutePath, Readonly<Record<string, Stat
 
 const DAY = '2001-02-03';
 const SERVER_ERROR: Reply = { status: 500 };
+/** The remote's page clock, the start-up time its event log shows, in milliseconds. */
+const REMOTE_CLOCK = 120;
 
 const WALLET = {
   study_day: DAY,
@@ -288,9 +296,9 @@ export const STATES: StateTable = {
     error: { calls: LAYOUT_ERROR }
   },
   '/remote': {
-    first: { calls: LAYOUT_FIRST },
-    empty: { calls: LAYOUT_EMPTY },
-    error: { calls: LAYOUT_ERROR }
+    first: { calls: LAYOUT_FIRST, clock: REMOTE_CLOCK },
+    empty: { calls: LAYOUT_EMPTY, clock: REMOTE_CLOCK },
+    error: { calls: LAYOUT_ERROR, clock: REMOTE_CLOCK }
   },
   '/study': {
     first: { calls: LAYOUT_FIRST, engine: 'card' },
