@@ -82,11 +82,11 @@ jobs:
         run: rustup show
       - name: llvm-tools, in this job only (the toolchain pin and the shared cache key stay as they are)
         run: rustup component add llvm-tools
-      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-llvm-cov@0.9.1
           fallback: none
-      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-nextest@0.9.149
           fallback: none
@@ -229,7 +229,7 @@ jobs:
         run: python3 scripts/coverage-report.py controls --lane python
       - name: the pinned Rust toolchain (rust-toolchain.toml)
         run: rustup show
-      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-deny@0.20.2
       - name: restore the Rust cache, keyed on the toolchain pin and Cargo.lock
