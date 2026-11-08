@@ -105,9 +105,10 @@ The one move the census clears projects 570.47 s (job 128188919143), so the main
 - **R5.** A suite with no module, or one that ran 0 tests, fails the stage, and so does a non-zero module exit: the runner then exits 1, else 0 (SPEC-054 R7).
 - **R6.** `stage_python` keeps `need_python && need_cargo` and its comments, keeps its suite loop over `scripts/tests tools/parity-oracle agent/tests`, and calls `python3 scripts/python_stage.py "${suites[@]}"` with the suites it collected; no other line of `scripts/check.sh` changes.
 - **R7.** SPEC-054 A13's test, `ThePythonStageRunsEverySuite`, plants the runner beside its copy of `scripts/check.sh`. Its python3 stand-in answers a `-m unittest` call with `Ran 0 tests` and hands every other call to the real python3, found before the test narrows PATH. Every assertion keeps its text.
+- **R8.** After each module's output, the runner prints one line that names the module, `module: <suite>/<module> ran N test(s), OK`, where N is that module's own last `Ran N` (0 for a module that printed none), with `FAILED (exit c)` in place of `OK` when the module exits c, not 0. So one module's result is read by name in `python.log`, and the verdict line stays the last line.
 
-R1 to R5 are the runner; R6 is the stage's one call; R7 keeps the gate's own test of the stage
-true to the stage it now runs.
+R1 to R5 and R8 are the runner; R6 is the stage's one call; R7 keeps the gate's own test of the
+stage true to the stage it now runs.
 
 ## 3. Acceptance criteria of SPEC-633
 
@@ -117,12 +118,14 @@ true to the stage it now runs.
 | A2 | the verdict line gives each suite's tests and exit in argument order; a red module, a suite with no module and a module that ran no test each fail the stage; each module's output comes in module-name order; every tail entry, the pattern too, runs and is named with its reason (R3, R4, R5) | `python3 -m unittest discover -s scripts/tests -p test_python_stage.py -k test_the_verdict_line_sums_each_suite` |
 | A3 | SPEC-054 A13's four cases hold over the runner: a red suite leaves the others run and named, a suite that ran no test fails by name, so does one whose unittest exits 0 having run nothing, and green suites pass (R6, R7) | `python3 -m unittest discover -s scripts/tests -p test_check_gate.py -k ThePythonStageRunsEverySuite` |
 | A4 | a planted test module that imports a planted sibling module leaves no `.pyc` file and no `__pycache__` folder under its suite, even when the stage's own environment allows bytecode writes (R1) | `python3 -m unittest discover -s scripts/tests -p test_python_stage.py -k test_module_processes_write_no_bytecode` |
+| A5 | after each module's output, one line names the module with its own tests and its `OK`, or `FAILED` with its exit, pooled and tail modules alike, in module-name order, each after its own module's `Ran` line (R8) | `python3 -m unittest discover -s scripts/tests -p test_python_stage.py -k test_each_module_is_named_beside_its_ran_line` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_python_stage.py -k test_two_modules_run_at_once
 A2: python3 -m unittest discover -s scripts/tests -p test_python_stage.py -k test_the_verdict_line_sums_each_suite
 A3: python3 -m unittest discover -s scripts/tests -p test_check_gate.py -k ThePythonStageRunsEverySuite
 A4: python3 -m unittest discover -s scripts/tests -p test_python_stage.py -k test_module_processes_write_no_bytecode
+A5: python3 -m unittest discover -s scripts/tests -p test_python_stage.py -k test_each_module_is_named_beside_its_ran_line
 ```
 
 A2 pins rules the serial runner already keeps, so it is recorded `not red` with its reason.
@@ -135,10 +138,10 @@ any that dev adds before the run, and its `timings.tsv` reads python at 600 s or
 
 | path | part | change |
 |---|---|---|
-| `scripts/python_stage.py` | gate scripts | added: the module runner, its pool and its serial tail |
+| `scripts/python_stage.py` | gate scripts | added: the module runner, its pool, its serial tail and its module lines |
 | `scripts/check.sh` | gate scripts | changed: `stage_python` hands the suites of its loop to the runner |
 | `scripts/mutation-python.json` | mutation scripts | changed: one entry maps the runner to `test_python_stage` |
-| `scripts/tests/test_python_stage.py` | tests | added: the A1, A2 and A4 tests |
+| `scripts/tests/test_python_stage.py` | tests | added: the A1, A2, A4 and A5 tests |
 | `scripts/tests/fixtures/python_stage/barrier_a.py` | tests | added: a planted module for A1 |
 | `scripts/tests/fixtures/python_stage/barrier_b.py` | tests | added: the other planted module for A1 |
 | `scripts/tests/test_check_gate.py` | tests | changed: `python_tree` copies the runner, and `EMPTY_UNITTEST` hands every call but `-m unittest` to the real python3 |

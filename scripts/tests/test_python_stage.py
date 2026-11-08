@@ -2,6 +2,7 @@
 and its last line sums each suite's tests and exit (SPEC-633 A1 and A2, SPEC-054 R7)."""
 
 import os
+import re
 import subprocess
 import tempfile
 import unittest
@@ -235,3 +236,43 @@ class TheModulesWriteNoBytecodeWithoutACachePrefix(unittest.TestCase):
             entries = examined("planted suite entries", sorted(suite.rglob("*")))
             self.assertEqual([path.name for path in entries if path.suffix == ".pyc"], [])
             self.assertEqual([path.name for path in entries if path.name == "__pycache__"], [])
+
+
+class EachModuleIsNamedBesideItsRanLine(unittest.TestCase):
+    def test_each_module_is_named_beside_its_ran_line(self):
+        """A5: after each module's output, one line names the module with its own tests and its OK,
+        or FAILED with its exit, pooled and tail modules alike, in module-name order, and each line
+        follows its own module's Ran line (none for a module that printed none)."""
+        tree = {
+            "one": {"test_b.py": planted("b", 2), "test_a.py": planted("a")},
+            "two": {
+                "test_d.py": planted("d", red=True),
+                "test_engine_pin.py": planted("tail"),
+                "test_quiet.py": QUIET,
+            },
+        }
+        with tempfile.TemporaryDirectory() as scratch:
+            done = run_stage(Path(scratch), tree, ["one", "two"])
+        lines = done.stdout.splitlines()
+        named = examined("module lines", [line for line in lines if line.startswith("module: ")])
+        self.assertEqual(
+            named,
+            [
+                "module: one/test_a.py ran 1 test(s), OK",
+                "module: one/test_b.py ran 2 test(s), OK",
+                "module: two/test_d.py ran 2 test(s), FAILED (exit 1)",
+                "module: two/test_engine_pin.py ran 1 test(s), OK",
+                "module: two/test_quiet.py ran 0 test(s), OK",
+            ],
+        )
+        ran, beside = None, []
+        for line in lines:
+            found = re.match(r"Ran (\d+) tests? in ", line)
+            if found:
+                ran = int(found.group(1))
+            elif line.startswith("module: "):
+                beside.append(ran)
+                ran = None
+        self.assertEqual(beside, [1, 2, 2, 1, None])
+        self.assertEqual(lines[-1], "python: one ran 3 test(s), exit 0; two ran 3 test(s), exit 1")
+        self.assertEqual(done.returncode, 1, done.stdout)
