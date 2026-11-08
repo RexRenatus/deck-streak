@@ -180,6 +180,14 @@ impl Drop for SyncServer {
     }
 }
 
+/// How long a child whose standard input is closed has to exit on its own before [`stop`] kills
+/// it. Its own exit runs its exit handlers to their end, and under the coverage run one of them
+/// writes the child's raw profile: a kill that lands inside that write leaves the profile cut
+/// short, and the merge then refuses every profile of the run.
+const STOP_GRACE: std::time::Duration = std::time::Duration::from_secs(10);
+/// How often [`stop`] looks at the child again while it waits.
+const STOP_POLL: std::time::Duration = std::time::Duration::from_millis(10);
+
 /// Stops `child`, a server or any child that exits when its standard input closes: closes
 /// `stdin`, waits up to [`STOP_GRACE`] for the child to exit on its own, and kills it only past
 /// that bound. Answers how the child ended.
@@ -192,6 +200,13 @@ pub fn stop(
     stdin: Option<ChildStdin>,
 ) -> std::io::Result<std::process::ExitStatus> {
     drop(stdin);
+    let deadline = std::time::Instant::now() + STOP_GRACE;
+    while std::time::Instant::now() < deadline {
+        if let Some(status) = child.try_wait()? {
+            return Ok(status);
+        }
+        thread::sleep(STOP_POLL);
+    }
     let _ = child.kill();
     child.wait()
 }
