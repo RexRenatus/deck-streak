@@ -362,7 +362,9 @@ impl CollectionReader {
     /// Runs `work` on the copy, open read-only, under the shared collection lock, on the offload
     /// (R1): every read of this crate goes through here. `work` receives the open copy and runs to
     /// its end on the offload's blocking thread; the copy is closed after it, and the lock released
-    /// explicitly.
+    /// explicitly. The lock and the read go to a task of their own (SPEC-648 R1): a caller who
+    /// stops waiting leaves the read to end and the lock to be released after it, and a task its
+    /// runtime drops keeps the lock until the process exits.
     pub(crate) async fn with_copy<T, W, Fut>(
         &self,
         operation: &'static str,
@@ -375,23 +377,26 @@ impl CollectionReader {
     {
         let held = self.lock.shared().await.map_err(ReadError::Lock)?;
         let copy = self.copy.clone();
+        let offload = self.offload.clone();
         let runtime = Handle::current();
-        let outcome = self
-            .offload
-            .run(operation, move || {
-                on_this_thread(&runtime, async move {
-                    let db = Db::open_foreign_read_only(&copy)
-                        .await
-                        .map_err(ReadError::Copy)?;
-                    let read = work(db.clone()).await;
-                    db.close().await;
-                    read
+        let reading = async move {
+            offload
+                .run(operation, move || {
+                    on_this_thread(&runtime, async move {
+                        let db = Db::open_foreign_read_only(&copy)
+                            .await
+                            .map_err(ReadError::Copy)?;
+                        let read = work(db.clone()).await;
+                        db.close().await;
+                        read
+                    })
                 })
-            })
-            .await;
-        // An explicit unlock before the lock file closes (SPEC-022 R7); a failed unlock is released
-        // by the close that follows it.
-        let _ = held.release();
+                .await
+        };
+        // The task keeps the lock until the read has ended, then unlocks it before the lock file
+        // closes (SPEC-022 R7); a failed unlock is released by the close that follows it.
+        let (outcome, released) = held.hold_to_end(reading).await.map_err(ReadError::Lock)?;
+        let _ = released;
         outcome.map_err(ReadError::Copy)?
     }
 }
