@@ -21,6 +21,30 @@ A6: python3 -m unittest discover -s scripts/tests -p test_mutation_rows.py -k Ma
 ```
 
 ```red-first
+A1: red at eb661cc6: AssertionError: True is not false : the killer <pid> still runs after a SIGINT while the killer starts
+A1: green at bab238b9
+A2: red at eb661cc6: AssertionError: True is not false : the killer <pid> still runs after a SIGINT during the cleanup a SIGINT began
+A2: green at bab238b9
+A4: red at eb661cc6: AssertionError: Tuples differ: ('raised', 'TypeError') != ('interrupted', 'KeyboardInterrupt')
+A4: green at bab238b9
+A5: red at eb661cc6: AssertionError: Tuples differ: ('returned', 2) != ('interrupted', 'KeyboardInterrupt')
+A5: green at bab238b9
 A3: not red: a runner started with SIGINT ignored already kept it ignored at the base, where no handler of the run took SIGINT; this test guards that reading against the new installation
 A6: not red: a SIGINT of the runner already ended the killer group and the run by SIGINT at the base, and the other signal edges were already held; these tests guard both against the cure
 ```
+
+## What changed between the red and its green
+
+The greening commit (bab238b9) changed only `scripts/mutation_rows.py`, by the cure SPEC-647
+section 4 names, and no test file. The commit after it (bc4aa4ac) added only
+`scripts/mutation-rows.d/S64700-S64799.json`.
+
+## Rows
+
+S64700 to S64705 were proved KILLED by id at bc4aa4ac, each by its own killer, through
+`scripts/mutation_rows.py prove --band S64700-S64799`, whose summary read `rows: examined 6: killed 6, survived 0, void 0`.
+
+## The green at the head
+
+`git diff --quiet bab238b9 HEAD -- scripts/mutation_rows.py` exits 0, and `scripts/tests` is
+unchanged since eb661cc6, so each green above holds at the head.
