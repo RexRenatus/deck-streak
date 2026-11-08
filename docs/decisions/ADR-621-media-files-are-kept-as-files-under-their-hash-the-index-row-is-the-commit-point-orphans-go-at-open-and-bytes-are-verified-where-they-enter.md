@@ -90,3 +90,15 @@ crate owns the store, how each client switches, and how the face rewrite leaves 
 - The store is dormant: nothing live reads or writes it, and each client's switch is its own later change.
 - The collection's schema is 2; a store at 1 migrates on its next writer open.
 - The face rewrite no longer reads the engine's grammar; the engine core keeps the engine for rendering.
+
+## Appendix: the crate edges this ADR admits
+
+The crate-edges census reads each token below exactly as it is spelled (SPEC-431 R5), so each sits on one line.
+Each is an edge this delivery's manifests add, under no target table:
+
+- `collection -> media`, a `[dependencies]` row (D6).
+- `engine-core -> collection`, a `[dev-dependencies]` row, for the face tests (D6).
+- `engine-core -> media`, a `[dependencies]` row (D6, D8).
+- `ffi -> collection`, a `[dependencies]` row (D6).
+- `ffi -> media`, a `[dependencies]` row (D6).
+- `web-engine -> media`, a `[dependencies]` row (D6).

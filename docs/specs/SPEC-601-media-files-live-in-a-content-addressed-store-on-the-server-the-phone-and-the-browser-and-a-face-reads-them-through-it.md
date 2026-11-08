@@ -139,6 +139,7 @@ plants a source line naming the engine's rewrite and reads it red, so its count 
 | `crates/web-engine/Cargo.toml` | web-engine | changed: the media core edge |
 | `crates/web-engine/src/lib.rs` | web-engine | changed: the `handed` module |
 | `formal/obligations.json` | formal | changed: K-put's `at` |
+| `config/crate-edges.json` | fitness | changed: six rows, one per new crate edge, each citing ADR-621 |
 | `Cargo.lock` | lock | changed: four dependency lists only |
 | `docs/CONTEXT-MAP.md` | docs | changed: four dependency lines, the sentences they amend, three table rows |
 | `docs/LEXICON.md` | docs | unchanged: the context map's register test holds the register, never the lexicon |
