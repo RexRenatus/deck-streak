@@ -50,7 +50,7 @@
 \* @phx covers crates/api/src/insights_routes.rs anchor=run digest=sha256:5bb86aa9e35cae2d1a3f471913c014075a1f820ab68bc63ce5ceb90c3e2f42f8
 \* @phx covers crates/ingest/src/lock.rs anchor=try_exclusive digest=sha256:b1da026e6f5852c4ace61f2de705f7991c9401c15aa9e9d1a52dad8b929e6787
 \* @phx covers crates/ingest/src/lock.rs anchor=hold_to_end digest=sha256:899a64a80497994057fbeb497e43159d4f44d4834224a2884761ac88f038cbd6
-\* @phx covers crates/ingest/src/reader.rs anchor=with_copy digest=sha256:e7e2caa8e9b7ace8be00389872e81cc227e8e78f1ea549ed9a6ec02332dc63fc
+\* @phx covers crates/ingest/src/reader.rs anchor=with_copy digest=sha256:aea52087073b9e39ad23fc89013d09fa369979f563ad9a5628e745092de25682
 \* @phx cites #476
 \* @phx cites #142
 \* @phx property AtMostOneReader ramp=report
@@ -145,6 +145,8 @@ TryLock(r) == /\ pc[r] = "try"
                                     /\ answer' = [answer EXCEPT ![r] = "inProgress"]
               /\ UNCHANGED <<reading, due, up>>
 
+\* reader.rs::with_copy holds the collection lock in a task of its own until its read ends;
+\* that lock is no variable of this model, so the move is a stuttering step here.
 \* reader.rs::with_copy: the read starts on the offload's blocking thread.
 StartRead(r) == /\ pc[r] = "held"
                 /\ Live(r)

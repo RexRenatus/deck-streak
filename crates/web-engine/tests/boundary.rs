@@ -175,6 +175,7 @@ const OWED: [(&str, &str, &[&str]); 39] = [
             "grade.pick(states.again, states.good)",
             "OwnerAnswer::from_press(shown.card, pressed(grade))",
             ".run_answer(answer, &request.encode_to_vec())",
+            "&request.encode_to_vec()).map_err(refuse)?",
             "query(Read::NewestReview)?",
             "newest.card == shown.card",
             "LAST_ANSWER.with(|kept| *kept.borrow_mut() = recorded)",

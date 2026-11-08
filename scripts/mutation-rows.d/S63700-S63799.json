@@ -1,0 +1,14 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S63700-A-GUARD-STANDS-ABOVE-THE-BOUND-TABLE",
+        "scripts/tests/test_perf_benches.py",
+        "# A31: each web bench's own bound.",
+        "if __name__ == \"__main__\":\n    unittest.main()\n\n\n# A31: each web bench's own bound.",
+        "a main guard stands above the bound table again, so a script run stops before the bound test, which the guard test refuses (SPEC-637 A1)",
+        "test_perf_benches.TheScriptRunReachesEveryClass.test_the_main_guard_is_the_last_statement_after_every_class"
+      ]
+    ]
+  }
+}

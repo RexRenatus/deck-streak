@@ -1,0 +1,33 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S63801-THE-NATIVE-PRESS-NAMES-THE-ENGINES-REFUSAL",
+        "ffi",
+        "src/engine.rs",
+        "        AnswerRefusal::Engine { error } => PressRefusal::Engine { error },",
+        "        AnswerRefusal::Engine { .. } => PressRefusal::NotTheCard,",
+        "stale_press::a_native_press_on_a_card_changed_since_it_was_shown_is_the_engines_refusal_and_records_nothing",
+        "the native adapter hands the engine refusal on as its own Engine variant; read as NotTheCard, a client would tell the owner that another card was pressed (SPEC-638 A1)"
+      ],
+      [
+        "S63802-A-REFUSED-NATIVE-PRESS-RECORDS-NOTHING",
+        "ffi",
+        "src/engine.rs",
+        "            .run_answer(answer, &request)\n            .map_err(press_refusal)?;",
+        "            .run_answer(answer, &request)\n            .unwrap_or_default();",
+        "stale_press::a_native_press_on_a_card_changed_since_it_was_shown_is_the_engines_refusal_and_records_nothing",
+        "the native adapter returns the engine refusal before it keeps the answer; read as an empty reply, the caller would see a recorded grade on a card the engine refused (SPEC-638 A1)"
+      ],
+      [
+        "S63803-THE-WEB-RATE-THROWS-THE-ENGINES-REFUSAL",
+        "web-engine",
+        "src/wasm.rs",
+        "        .run_answer(answer, &request.encode_to_vec())\n        .map_err(refuse)?;",
+        "        .run_answer(answer, &request.encode_to_vec())\n        .unwrap_or_default();",
+        "boundary::each_boundary_function_reaches_the_engine_through_the_dispatcher",
+        "rate throws the engine refusal to the Worker before it forgets the shown card; swallowed, the page would read a refused rating as recorded (SPEC-638 A3)"
+      ]
+    ]
+  }
+}
