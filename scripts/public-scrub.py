@@ -269,13 +269,12 @@ def png_findings(data: bytes) -> list[str]:
         kind, end = data[at + 4 : at + 8], at + 12 + length
         crc = int.from_bytes(data[end - 4 : end], "big")
         if end > len(data) or zlib.crc32(data[at + 4 : end - 4]) != crc:
-            break
+            return [*found, "baseline-malformed"]
         if kind in TEXT_CHUNKS:
             found.append(f"baseline-text-chunk {kind.decode('ascii')}")
         at = end
         if kind == b"IEND":
             return found if at == len(data) else [*found, "baseline-malformed"]
-    return [*found, "baseline-malformed"]
 
 
 class Scan:
