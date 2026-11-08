@@ -131,3 +131,7 @@ here, and that change is reviewed here. Confirmation: SPEC-295's A9 pins the val
 ## Addendum: the slot capacity's reason is superseded by ADR-418 (#703)
 
 The slot capacity's value stands. Its reason, "equal to the checker's own setting", is superseded: the reason is now ADR-418 D2, which makes the settings file the one place the slot setting is stated and holds the file to the reading the checker's reader takes. This addendum records no new decision; the decision and what it was chosen against are ADR-418's.
+
+## Addendum: the settings file states a Kani run budget, decided by ADR-626 (#1131)
+
+The settings file holds one field more than the budgets of SPEC-295's R1 that the Decision Outcome names: `budgets.kani_seconds`, the most one Kani run may take, with a value of 300 beside the other budgets, as SPEC-605 amends R1. This addendum records no new decision; the field, its value and its reading, and what they were chosen against, are ADR-626's.

@@ -143,3 +143,17 @@ A7: pnpm exec vitest run web/app/src/lib/card/planted-coverage.test.ts -t "the c
 
 No assertion of the planted suite is narrowed in any engine: every existing test runs in every engine
 as at `dev`, and the one new test adds a reach and an absence.
+
+## Amendment: SPEC-462, a carriage return in the card document or the title is carried
+
+SPEC-462 (#798) and ADR-479 change what A2 (section 3) names as a host the read-back refuses. The
+host now writes a carriage return in the card document or the title as its numeric reference, and
+the parser reads that reference back as the carriage return itself, so a host holding one reads
+back byte for byte and is kept. A card whose field carries a carriage return reference therefore
+renders as it did before this SPEC.
+
+A2's test in `web/app/src/lib/card/frame-host.test.ts` keeps its title, its double quote in the
+policy and its kept control; its two carriage-return plants become a NUL in the card document and a
+NUL in the title, the one character no attribute value can carry. R3's read-back is unchanged: it
+compares the whole head, the whole card document and the whole title, and refuses any host that
+does not read back as written. SPEC-462's A1 to A5 decide the change.

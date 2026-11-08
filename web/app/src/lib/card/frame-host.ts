@@ -13,12 +13,13 @@ const HOST_STYLE =
   '<style>html,body{margin:0;height:100%;overflow:hidden}iframe{display:block;border:0;width:100%;height:100%}</style>';
 
 /**
- * Text as a double-quoted attribute value: `&` first, then the quote. A carriage return is left as
- * written, and the parser reads it back as a line feed, so the read-back refuses a card or a title
- * that holds one rather than carrying it changed.
+ * SPEC-462 R1; ADR-479 D2. Text as a double-quoted attribute value: `&` first, then the quote, then
+ * a carriage return as its numeric reference. The parser reads a raw carriage return back as a line
+ * feed and the reference back as the carriage return itself, so a card or a title that holds one is
+ * carried byte for byte. A NUL has no reference the parser keeps, so the read-back still refuses one.
  */
 function attribute(text: string): string {
-  return text.replaceAll('&', '&amp;').replaceAll('"', '&quot;');
+  return text.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('\r', '&#13;');
 }
 
 function parse(text: string): Document {

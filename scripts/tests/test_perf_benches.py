@@ -17,6 +17,8 @@ BENCH_TARGETS = {
 WEB_BENCH_ROOT = REPO / "web" / "app" / "bench"
 BENCH_LIST = REPO / "perf" / "benchmarks.txt"
 BENCH_CONFIG = REPO / "vitest.bench.config.ts"
+# The one web path outside web/app/src that Stryker mutates, by its exact name (SPEC-636 R1).
+STRYKER_OUTSIDE_SRC = ("scripts/build-tokens.ts",)
 RUST_BENCH = re.compile(r"#\[divan::bench(?:\([^)]*\))?\]\s*(?:pub\s+)?fn\s+(\w+)")
 MEASURED = re.compile(r"#\[inline\(never\)\]\s*(?:pub\s+)?fn\s+(\w+)_measured\b")
 WEB_BENCH = re.compile(r"\bbench\(\s*(['\"])(.+?)\1")
@@ -131,10 +133,22 @@ class TheBenchesAreInTheTree(unittest.TestCase):
         stryker = json.loads(
             (REPO / "web" / "app" / "stryker.config.json").read_text(encoding="utf-8")
         )
-        # Stryker reaches only web/app/src, SPEC-039 R2's root, and no bench file lies there.
+        # Stryker reaches web/app/src, SPEC-039 R2's root, and one exact path beside it,
+        # scripts/build-tokens.ts (SPEC-636 R1); no bench file lies in either.
         mutate = [glob for glob in stryker.get("mutate", []) if not glob.startswith("!")]
         for glob in examined("stryker mutate globs", mutate):
-            self.assertTrue(glob.startswith("src/"), f"Stryker mutates {glob}, outside src")
+            self.assertTrue(
+                glob.startswith("src/") or glob in STRYKER_OUTSIDE_SRC,
+                f"Stryker mutates {glob}, outside src",
+            )
+        outside = sorted(glob for glob in mutate if not glob.startswith("src/"))
+        self.assertEqual(outside, sorted(STRYKER_OUTSIDE_SRC), "Stryker mutates another path")
+        for path in examined("stryker paths outside src", outside):
+            self.assertFalse(
+                (REPO / "web" / "app" / path).match("*.bench.*"),
+                f"Stryker mutates the bench file {path}",
+            )
+        self.assertEqual(sorted((REPO / "web" / "app" / "src").rglob("*.bench.*")), [])
         self.assertEqual(sorted((REPO / "web" / "app" / "src").rglob("*.bench.*")), [])
         register = json.loads((REPO / "config" / "coverage.json").read_text(encoding="utf-8"))
         exclusions = {entry.get("glob"): entry for entry in register.get("exclusions", [])}

@@ -135,6 +135,33 @@
         "    (1..1_usize << declared.len())\n",
         "xp_census::the_census_refuses_a_call_gated_on_a_features_absence",
         "the census compiles the empty combination, every declared feature off, so a call to settle gated on a feature's absence, cfg(not(feature = \"a\")) with no default, is compiled and refused for the call, never left uncompiled by combinations that each hold a feature (SPEC-336 R11, ruling 205 (1))"
+      ],
+      [
+        "S33615-THE-CENSUS-LEAVES-OUT-A-WITNESS-NO-DEPENDANT-SEES",
+        "progression",
+        "tests/xp_census.rs",
+        "                            || gates_only_bodies(&metadata, member, feature, settling)",
+        "                            || (gates_only_bodies(&metadata, member, feature, settling) && false)",
+        "xp_census::a_kani_witness_whose_member_changes_nothing_a_dependant_compiles_against_is_left_out",
+        "a listed Kani witness whose member reaches no progression and changes nothing a dependant compiles against is left out of the combinations by the filter's second disjunct, so the media crate's four witnesses add no combination once a package that reaches settle reaches that crate, never counted past the bound by the reach guard alone (SPEC-336 R11, A15)"
+      ],
+      [
+        "S33616-THE-WITNESS-RULE-READS-A-RENAMED-INCLUDE",
+        "progression",
+        "tests/xp_census.rs",
+        "        !code[..at].chars().next_back().is_some_and(identifier)",
+        "        code[..at].chars().next_back().is_some_and(identifier)",
+        "xp_census::a_kani_witness_whose_member_changes_nothing_a_dependant_compiles_against_is_left_out",
+        "names_word reads a word that follows a character no identifier holds as a whole identifier, so a member whose library renames include through a use, or carries a path attribute, keeps its witnesses counted, never left out because the word follows a path separator or a bracket (SPEC-336 R11, A15)"
+      ],
+      [
+        "S33617-THE-WITNESS-RULE-READS-A-PATH-INSIDE-CFG-ATTR",
+        "progression",
+        "tests/xp_census.rs",
+        "            names_word(&inside[..end], key)",
+        "            inside[..end].trim_start().starts_with(key)",
+        "xp_census::a_kani_witness_whose_member_changes_nothing_a_dependant_compiles_against_is_left_out",
+        "attribute_names reads its key anywhere inside an attribute's brackets, so a path attribute written inside cfg_attr keeps the member's witnesses counted, never read only where the attribute starts (SPEC-336 R11, A15)"
       ]
     ]
   }

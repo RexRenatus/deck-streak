@@ -13,10 +13,13 @@ that carries the rebuild fix (SPEC-055 A1, A2, A3 and A5; ADR-058).
   judged dirty, and cargo's own time stays inside R2's bound. Unpatched, the second build recompiles
   `anki_proto` and `anki` (#228).
 - A3 runs `cargo deny` over the advisories and the sources, and reads the notes it prints at the
-  info level. Every advisory exception in `deny.toml` is one it still encounters, and every allowed
-  git source is one a crate of the graph comes from.
+  info level. It refuses any advisory exception in `deny.toml` and any ignore cargo deny applies,
+  and every allowed git source is one a crate of the graph comes from.
+- A24 reads `deny.toml`'s `[advisories]` table. It holds no ignore entry in either form, and its
+  `unmaintained` scope is `"all"`, written out so that no later default narrows it (SPEC-055 R15).
 - A25 reads the lockfile's packages. No unmaintained crate that SPEC-055's amendments retire
-  (`paste` and `basic-toml`, ADR-657) is one of them, at any version and from any source.
+  (`paste` and `basic-toml`, ADR-657; the five `unic` crates and `rustls-pemfile`, ADR-058's
+  latest note) is one of them, at any version and from any source.
 - A5 reads ADR-058's Confirmation: the pinned commit and its one-file difference from the upstream
   tag, the no-op build before and after the pin, CI's runs, and a final status. When a note
   appended to ADR-058 moved the pin (SPEC-338 A15), the Confirmation is judged at the fix's own
@@ -419,12 +422,97 @@ PLANTED_LIVE = [
     note("allowed-source", ("source", f"git+{RUST_URL}"), ("source allowance", RUST_URL)),
 ]
 
+# ----------------------------------------------------------------------------------------- A24
+
+#: The `unmaintained` scope `deny.toml` sets: every crate of the graph, cargo-deny's default,
+#: written out so that no later default narrows it (SPEC-055 R15).
+UNMAINTAINED = "all"
+
+
+def exception_findings(deny):
+    """Why `deny.toml` admits an advisory exception or a narrowed unmaintained scope; empty when it
+    admits neither."""
+    advisories = tomllib.loads(deny).get("advisories", {})
+    found = []
+    for entry in advisories.get("ignore", []):
+        if isinstance(entry, dict):
+            named = entry["id"] if "id" in entry else entry.get("crate")
+        else:
+            named = entry
+        found.append(f"deny.toml ignores {named}: an advisory exception is not a fix")
+    scope = advisories.get("unmaintained")
+    if scope is None:
+        found.append("deny.toml sets no unmaintained scope, so a later default can narrow it")
+    elif scope != UNMAINTAINED:
+        found.append(f"deny.toml narrows the unmaintained scope to {scope!r}, not {UNMAINTAINED!r}")
+    return found
+
+
+def planted_advisories(*lines):
+    """A planted `deny.toml` whose `[advisories]` table holds the given lines."""
+    return "[advisories]\n" + "".join(f"{line}\n" for line in lines)
+
+
+PLANTED_CLEAN_DENY = planted_advisories('unmaintained = "all"')
+#: One defect apiece, each file otherwise clean: (name, file, the one finding it reads).
+PLANTED_DENY_DEFECTS = (
+    (
+        "an ignore entry by id",
+        planted_advisories(
+            'unmaintained = "all"', 'ignore = [{ id = "RUSTSEC-0000-0001", reason = "planted" }]'
+        ),
+        "deny.toml ignores RUSTSEC-0000-0001: an advisory exception is not a fix",
+    ),
+    (
+        "a bare ignore string",
+        planted_advisories('unmaintained = "all"', 'ignore = ["RUSTSEC-0000-0002"]'),
+        "deny.toml ignores RUSTSEC-0000-0002: an advisory exception is not a fix",
+    ),
+    (
+        "an ignore entry by crate",
+        planted_advisories(
+            'unmaintained = "all"', 'ignore = [{ crate = "planted@0.1.0", reason = "planted" }]'
+        ),
+        "deny.toml ignores planted@0.1.0: an advisory exception is not a fix",
+    ),
+    (
+        "the workspace scope",
+        planted_advisories('unmaintained = "workspace"'),
+        "deny.toml narrows the unmaintained scope to 'workspace', not 'all'",
+    ),
+    (
+        "the transitive scope",
+        planted_advisories('unmaintained = "transitive"'),
+        "deny.toml narrows the unmaintained scope to 'transitive', not 'all'",
+    ),
+    (
+        "the none scope",
+        planted_advisories('unmaintained = "none"'),
+        "deny.toml narrows the unmaintained scope to 'none', not 'all'",
+    ),
+    (
+        "no unmaintained key",
+        planted_advisories(),
+        "deny.toml sets no unmaintained scope, so a later default can narrow it",
+    ),
+)
+
 # ----------------------------------------------------------------------------------------- A25
 
 #: The unmaintained crates SPEC-055's amendments retire, each with its notice: the lockfile names
-#: none of them as a package, at any version and from any source (SPEC-055 §9, ADR-657). A later
-#: amendment widens this by insertion only.
-RETIRED = (("paste", "RUSTSEC-2024-0436"), ("basic-toml", "RUSTSEC-2026-0374"))
+#: none of them as a package, at any version and from any source (SPEC-055 §9 and §10: `paste` and
+#: `basic-toml`, ADR-657; the five `unic` crates and `rustls-pemfile`, ADR-058's latest note). A
+#: later amendment widens this by insertion only.
+RETIRED = (
+    ("paste", "RUSTSEC-2024-0436"),
+    ("basic-toml", "RUSTSEC-2026-0374"),
+    ("unic-char-range", "RUSTSEC-2025-0075"),
+    ("unic-common", "RUSTSEC-2025-0080"),
+    ("unic-char-property", "RUSTSEC-2025-0081"),
+    ("unic-ucd-category", "RUSTSEC-2025-0094"),
+    ("unic-ucd-version", "RUSTSEC-2025-0098"),
+    ("rustls-pemfile", "RUSTSEC-2025-0134"),
+)
 #: The maintained successors already in the lock, which a clean planted lock holds.
 SUCCESSORS = (("pastey", "0.2.3"), ("toml", "0.5.11"))
 
@@ -842,7 +930,7 @@ class DenyTomlIsLive(unittest.TestCase):
             )
         deny = DENY.read_text(encoding="utf-8")
         ids, urls = exceptions_of(deny)
-        examined("advisory exception(s) in deny.toml", ids)
+        self.assertEqual(ids, [], "deny.toml ignores an advisory: an exception is not a fix")
         examined("allowed git source(s) in deny.toml", urls)
         try:
             done = subprocess.run(
@@ -856,6 +944,18 @@ class DenyTomlIsLive(unittest.TestCase):
         summaries = [d for d in diagnostics if d.get("type") == "summary"]
         self.assertEqual(len(summaries), 1, f"cargo deny ran no check: {done.stderr[-2000:]}")
         self.assertEqual(audit_findings(deny, diagnostics), [])
+        self.assertEqual(spans(diagnostics, "advisory-ignored", "advisory ignored here"), set())
+
+
+class DenyTomlAdmitsNoException(unittest.TestCase):
+    def test_deny_toml_admits_no_advisory_exception_and_no_narrowed_scope(self):
+        self.assertEqual(exception_findings(PLANTED_CLEAN_DENY), [])
+        for name, planted, finding in examined("planted deny.toml defect(s)", PLANTED_DENY_DEFECTS):
+            with self.subTest(name):
+                self.assertEqual(exception_findings(planted), [finding])
+        live = DENY.read_text(encoding="utf-8")
+        examined("[advisories] key(s) in deny.toml", tomllib.loads(live).get("advisories", {}))
+        self.assertEqual(exception_findings(live), [])
 
 
 class RetiredCratesAreGone(unittest.TestCase):

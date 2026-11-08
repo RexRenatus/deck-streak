@@ -506,6 +506,25 @@
         "the record is trusted as committed until it is admitted only from an owner-signed commit"
       ],
       "status": "tied"
+    },
+    {
+      "id": "O18",
+      "property": "A gated Rust job is skipped only when the change touches nothing it reads",
+      "layers": ["ci"],
+      "artifacts": [
+        {"kind": "lean", "entry": "lean/PathGate", "property": "the_gate_skips_exactly_the_changes_no_read_reaches", "state": "present"},
+        {"kind": "lean", "entry": "lean/PathGate", "property": "a_skipped_job_passes_only_on_the_gates_own_skip", "state": "present"}
+      ],
+      "ties": [
+        {"method": "vectors", "for": "lean/PathGate", "test": "scripts/tests/test_path_gate.py::TheLeanVectors.test_every_vector_is_the_gates_decision"}
+      ],
+      "gaps": [
+        "a Lean port proves the port; the vectors tie it to scripts/path_gate.py",
+        "the read map's completeness is held by the read-map census and the dev trace, not proved",
+        "the YAML wiring is held by test_path_gate_wiring.py, not proved",
+        "a skip inherits the base tip's result: decide compares HEAD^1 with the merge commit, so while dev's push run is red for a gated job, a PR touching no read path reads ci green; the red stays visible on dev and in the NET"
+      ],
+      "status": "tied"
     }
   ],
   "entries": [
@@ -544,6 +563,7 @@
     {"entry": "lean/AgentPinGroups", "disposition": "keep", "act": "new with the token groups proof of the agent pins (SPEC-469): re-stamped when a pin span it covers moves, with no weakening", "obligations": []},
     {"entry": "lean/Chest", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
     {"entry": "lean/CompanionDecide", "disposition": "keep", "act": "new with the scheduling companion's interface (SPEC-501); re-stamped when the decision or the handshake it covers moves, with no weakening", "obligations": ["O6"]},
+    {"entry": "lean/DeployEntryRefusal", "disposition": "keep", "act": "new with the Caddy steps' settings check (SPEC-473); re-stamped when the function it covers moves, with no weakening", "obligations": []},
     {"entry": "lean/DocsMermaidRead", "disposition": "keep", "act": "new with the docs reader's formal path (SPEC-474); a pure function of a docs text, unaffected by the engine's replacement", "obligations": []},
     {"entry": "lean/DueReorder", "disposition": "keep", "act": "a pure ordering over any due queue, unaffected by the engine's replacement", "obligations": []},
     {"entry": "lean/Exchange", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
@@ -558,6 +578,7 @@
     {"entry": "lean/MediaGc", "disposition": "keep", "act": "new with the media core (SPEC-513): a sweep keeps every live, pinned, young or imported file; re-stamped when the decision it covers moves, with no weakening", "obligations": ["O13"]},
     {"entry": "lean/NextMilestone", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
     {"entry": "lean/OpenLapse", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
+    {"entry": "lean/PathGate", "disposition": "keep", "act": "new with the path gate (SPEC-634): the gate's skip and admit decisions; re-stamped when a covered span of the path gate moves, with no weakening", "obligations": ["O18"]},
     {"entry": "lean/PushJudge", "disposition": "re-stamp", "act": "stamped when the sync core lands: its judge gains a cover and its test reads the vectors byte-equal", "obligations": ["O1", "O16"]},
     {"entry": "lean/RecordClassBinding", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
     {"entry": "lean/ReleaseCarry", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},

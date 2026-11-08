@@ -19,7 +19,7 @@ flowchart TD
   first --> plan
   plan --> classes{each changed path's class}
   classes -->|crates/*/src/**/*.rs| rust[rust]
-  classes -->|web/app/src/** less tests, paraglide, d.ts| web[web]
+  classes -->|web/app/src/** less tests, paraglide, d.ts, and web/app/scripts/build-tokens.ts| web[web]
   classes -->|tools/parity-oracle/generate.py| oracle[oracle]
   classes -->|anything else| other([not production: counted, never mutated])
   plan --> lines{each production file's changed lines}

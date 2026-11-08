@@ -437,3 +437,25 @@ for the removal, S12749 for its reload and S12750 for its restoring reload.
 
 The insertion this amendment makes is this section, appended after the file's last line, and
 nothing above it is edited (SPEC-038 section 8, ruling (i)).
+
+## Amendment (SPEC-473): the settings check is one function a Lean entry covers
+
+This amendment is SPEC-473's, for #484. The settings check of both Caddy steps, the two loops A39
+measures, is now one shell function of `deploy/deploy.sh`, `refuse_unlisted_settings`. It is
+defined after `SETTINGS` and before the subcommand `case`, and the `caddy-install | caddy-remove`
+arm calls it as its only command. Its body is the check's lines as they stood, moved and not
+edited, so every verdict and every refusal line A39 reads is unchanged, and the check still runs
+before the step reads or writes anything else.
+
+A39's declared opening gains one command: the call, between the `case` line and the refusal's
+first command, which bash's DEBUG trap under `set -T` records twice before the function's first
+command. Nothing else runs before the refusal, and A39 still compares every recorded command
+before it with the declared opening, exactly. A39's criterion, its fence line and its rows stand.
+
+A Lean entry, `formal/lean/Formal/DeployEntryRefusal.lean`, covers the function, ports it and
+proves the refusal over every environment block, and a test runs the step on every one of the
+entry's vectors (SPEC-473; ADR-490). The first limit above stands: a name outside the prefix that
+the shell reads as code when it starts is outside the check and outside the proof (#423).
+
+The insertion this amendment makes is this section, appended after the file's last line, and
+nothing above it is edited (SPEC-038 section 8).

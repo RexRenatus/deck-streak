@@ -1,6 +1,7 @@
 import Formal.AgentPinGroupsVectors
 import Formal.ChestVectors
 import Formal.CompanionDecideVectors
+import Formal.DeployEntryRefusalVectors
 import Formal.DocsMermaidReadVectors
 import Formal.DueReorderVectors
 import Formal.ExchangeVectors
@@ -14,6 +15,7 @@ import Formal.MediaBindVectors
 import Formal.MediaGcVectors
 import Formal.NextMilestoneVectors
 import Formal.OpenLapseVectors
+import Formal.PathGateVectors
 import Formal.RecordClassBindingVectors
 import Formal.ReleaseCarryVectors
 import Formal.ReleaseGatesVectors
@@ -48,6 +50,7 @@ def main (args : List String) : IO UInt32 := do
   | ["AgentPinGroups"] => Formal.AgentPinGroupsVectors.run
   | ["Chest"] => Formal.ChestVectors.run
   | ["CompanionDecide"] => Formal.CompanionDecideVectors.run
+  | ["DeployEntryRefusal"] => Formal.DeployEntryRefusalVectors.run
   | ["DocsMermaidRead"] => Formal.DocsMermaidReadVectors.run
   | ["DueReorder"] => Formal.DueReorderVectors.run
   | ["Exchange"] => Formal.ExchangeVectors.run
@@ -61,6 +64,7 @@ def main (args : List String) : IO UInt32 := do
   | ["MediaGc"] => Formal.MediaGcVectors.run
   | ["NextMilestone"] => Formal.NextMilestoneVectors.run
   | ["OpenLapse"] => Formal.OpenLapseVectors.run
+  | ["PathGate"] => Formal.PathGateVectors.run
   | ["RecordClassBinding"] => Formal.RecordClassBindingVectors.run
   | ["ReleaseCarry"] => Formal.ReleaseCarryVectors.run
   | ["ReleaseGates"] => Formal.ReleaseGatesVectors.run

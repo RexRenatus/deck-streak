@@ -273,3 +273,7 @@ A10: python3 -m unittest discover -s scripts/tests -p test_formal_config.py -k t
 
 - R7's value stands, and so do A9 and A10. Its reason, "equal to the formal checker's own compiled setting", is superseded by SPEC-404 and ADR-418 D2: the settings file is the one place the slot setting is stated, the formal checker reads it there, and SPEC-404's tests hold the file to the reading the checker's reader takes (#703).
 - The row S29530 keeps its id and its anchor; its words name the superseded reason, and its meaning is read from SPEC-404 (#516).
+
+## 16. Amendments: SPEC-605 adds the Kani run budget (#1131)
+
+- R1 holds one more field: `config/formal.json` also states `budgets.kani_seconds`, the most one Kani run may take, with a value of 300 between `lean_seconds` and `entry_seconds`. SPEC-605 R1 and ADR-626 decide the field, its value and its reading, and SPEC-605 R2 adds it to the settings test's tables, so A1 and A3 stay the same tests, generated from the table SPEC-605 extends.

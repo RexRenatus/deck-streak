@@ -41,6 +41,7 @@ const EXPECTED = {
   'reparse-target': 'study_card_refused_reparse_target',
   'body-attributes': 'study_card_refused_body_attributes',
   'host-readback': 'study_card_refused_host_readback',
+  withheld: 'study_card_withheld',
   done: 'study_done'
 };
 
