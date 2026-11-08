@@ -1947,7 +1947,9 @@ class TheRowsPlanRefusesAWrongShape(unittest.TestCase):
             with self.subTest(rows=rows):
                 self.assert_refused(
                     {"rows": rows},
-                    lambda plan: PLAN_ENTRY_NOT_A_STRING.format(plan=plan, index=index),
+                    lambda plan, index=index: PLAN_ENTRY_NOT_A_STRING.format(
+                        plan=plan, index=index
+                    ),
                 )
 
     def test_a_well_formed_plan_still_selects_its_rows(self):
