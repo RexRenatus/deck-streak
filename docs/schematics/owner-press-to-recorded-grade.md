@@ -127,3 +127,31 @@ The engine compares the card's computed scheduling state, not its row: a bury or
 show and answer leaves a new or review card's state equal, and is not refused (ADR-477 D1).
 `formal/tla/AnswerOnTheShownState` models this section's two presses, the other caller and the
 comparison as one action.
+
+## 7. Each adapter's handover of the refusal (SPEC-638)
+
+Kind: **data flow**. Every `path:line` in this section was read at DeckStreak `dev` `36efa139`;
+section 6's adapter line numbers (`engine.rs:266`, `wasm.rs:837`) were read at an older `dev` and
+are left as written. It draws the refusal from section 6's `mapped` node through each adapter's
+own mapping to its caller, the test that runs each leg, and the three rows (dashed).
+
+```mermaid
+flowchart TD
+  mapped["dispatch.rs: run_answer, AnswerRefusal::Engine with the engine's bytes (section 6)"] --> nativecall["engine.rs:225-226: Engine::answer, the door's refusal through press_refusal"]
+  nativecall --> nativearm["engine.rs:739: press_refusal, PressRefusal::Engine with the engine's bytes"]
+  nativearm --> nativecaller["the native caller: a thrown PressRefusal::Engine, and no bytes"]
+  nativecall -.-> rowtwo["row S63802: the refusal swallowed as an empty reply"]
+  nativearm -.-> rowone["row S63801: the refusal named NotTheCard"]
+  nativecaller --> testone["A1: stale_press.rs, kind INVALID_INPUT, head card was modified, queue unchanged"]
+  mapped --> webthrow["wasm.rs:892: rate, map_err(refuse), the core's sentence thrown before the forget at :893"]
+  webthrow --> worker["session.ts: refusalCode, engine-failed"]
+  worker --> page["the page: the Worker client's refusal, code engine-failed"]
+  page --> testtwo["A2: sync.spec.ts, in Chromium and WebKit, the review count unchanged"]
+  census["A3: boundary.rs, rate owes the statement that throws the refusal"] -.-> webthrow
+  census -.-> rowthree["row S63803: the web refusal swallowed"]
+```
+
+| adapter | its handover | run by | its red |
+|---|---|---|---|
+| the native `Engine::answer` (`engine.rs:203-232`) | `.map_err(press_refusal)?` (`:226`), whose arm (`:739`) hands the engine's bytes on as `PressRefusal::Engine { error }`; no bytes are returned | A1, `crates/ffi/tests/stale_press.rs`, through the adapter's own entry | rows S63801 and S63802, each killed by A1 |
+| the web `rate` (`wasm.rs:874-912`) | `.map_err(refuse)?` (`:892`), before the shown card is forgotten (`:893`); the Worker codes it `engine-failed` | A2, `web/app/tests-engine/sync.spec.ts`, in CI's `web-engine` job; A3, `crates/web-engine/tests/boundary.rs`, as text | row S63803, killed by A3 |
