@@ -153,6 +153,7 @@ plants a source line naming the engine's rewrite and reads it red, so its count 
 | `scripts/mutation-rows.d/S39400-S39499.json` | mutation | changed: one row anchor names the new base commit of the context map schematic |
 | `crates/coordination/tests/relight_order.rs` | coordination | changed: the static census writes out the media store's staging-name sequence |
 | `crates/ingest/tests/skip_census.rs` | ingest | changed: the engine port list drops the media module, so its planted copy is refused |
+| `scripts/mutation-equivalent.d/deck-streak-media.json` | mutation | changed: ten records for the equivalent mutants the rewrite module copies from the scanner |
 
 ## 5. What this does NOT cover
 

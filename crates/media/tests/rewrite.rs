@@ -121,6 +121,11 @@ fn an_attribute_item_is_a_character_or_a_quoted_run_of_at_least_one() {
         vec!["z.png"],
         "the run ends after its closing quote, which starts no run of its own"
     );
+    assert_eq!(
+        visited("<img alt=\"a>\" src=\"x.png\">"),
+        vec!["x.png"],
+        "the search goes on after the closing quote of a run that ends in >"
+    );
 }
 
 /// Pins `value_at`: a quoted value holds at least one character (`close > at + 1`), else the
