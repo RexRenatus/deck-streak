@@ -1,6 +1,7 @@
 """SPEC-618 A20 to A24: the bench profile, the bench targets and files, the benchmark list, the
 bench config and the bench exclusions, read from the tree. No workflow loader, no cargo, no pnpm."""
 
+import ast
 import json
 import re
 import tomllib
@@ -166,10 +167,6 @@ class TheBenchesAreInTheTree(unittest.TestCase):
         examined("web bench files outside the source root", web_bench_files())
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 # A31: each web bench's own bound. Its two measured CI times in ms, each keyed by its job id.
 WEB_BENCH_TIMES = {
     "frame-document::frameDocument": {
@@ -231,3 +228,42 @@ class EachWebBenchPassesItsOwnBound(unittest.TestCase):
                 self.assertGreaterEqual(
                     bound, wanted, f"{name}: its bound {bound} is under {wanted}"
                 )
+
+
+# SPEC-637: a script run of this module reaches every class only when its main guard is its last
+# statement, after every test class (ADR-653).
+THIS_MODULE = REPO / "scripts" / "tests" / "test_perf_benches.py"
+
+
+def is_main_guard(node):
+    """Whether a top-level statement is the `if __name__ == "__main__":` guard."""
+    return (
+        isinstance(node, ast.If)
+        and isinstance(node.test, ast.Compare)
+        and isinstance(node.test.left, ast.Name)
+        and node.test.left.id == "__name__"
+        and len(node.test.ops) == 1
+        and isinstance(node.test.ops[0], ast.Eq)
+        and len(node.test.comparators) == 1
+        and isinstance(node.test.comparators[0], ast.Constant)
+        and node.test.comparators[0].value == "__main__"
+    )
+
+
+class TheScriptRunReachesEveryClass(unittest.TestCase):
+    def test_the_main_guard_is_the_last_statement_after_every_class(self):
+        body = ast.parse(THIS_MODULE.read_text(encoding="utf-8")).body
+        guards = examined(
+            "main guards", [at for at, node in enumerate(body) if is_main_guard(node)]
+        )
+        classes = examined(
+            "test classes",
+            [(at, node.name) for at, node in enumerate(body) if isinstance(node, ast.ClassDef)],
+        )
+        after = [name for at, name in classes if at > guards[0]]
+        self.assertEqual(after, [], "a class follows the main guard, so a script run skips it")
+        self.assertEqual(guards, [len(body) - 1], "the main guard is not the last statement")
+
+
+if __name__ == "__main__":
+    unittest.main()
