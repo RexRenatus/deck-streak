@@ -75,12 +75,12 @@ jobs:
       - name: the pinned Rust toolchain (rust-toolchain.toml)
         if: ${{ inputs.package != 'miniapp' }}
         run: rustup show
-      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         if: ${{ inputs.package != 'miniapp' }}
         with:
           tool: cargo-mutants@27.1.0
           fallback: none
-      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         if: ${{ inputs.package != 'miniapp' }}
         with:
           tool: cargo-nextest@0.9.149
@@ -145,11 +145,11 @@ jobs:
             rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
       - name: the locked dependency graph, every target's packages (the census reads it offline at the baseline)
         run: cargo fetch --locked --manifest-path Cargo.toml
-      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-mutants@27.1.0
           fallback: none
-      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-nextest@0.9.149
           fallback: none
@@ -314,13 +314,13 @@ jobs:
           persist-credentials: false
       - name: the pinned Rust toolchain (rust-toolchain.toml)
         run: rustup show
-      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-mutants@27.1.0
           fallback: none
       # cargo-mutants reads .cargo/mutants.toml, whose test tool is nextest; the listing runs no
       # test and builds nothing, but it carries the same tool and bounds as every other command.
-      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-nextest@0.9.149
           fallback: none
@@ -431,11 +431,11 @@ jobs:
             rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
       - name: the locked dependency graph, every target's packages (the rehearsal's baseline reads it as a shard's does)
         run: cargo fetch --locked --manifest-path Cargo.toml
-      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-mutants@27.1.0
           fallback: none
-      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-nextest@0.9.149
           fallback: none

@@ -150,7 +150,6 @@ class TheBenchesAreInTheTree(unittest.TestCase):
                 f"Stryker mutates the bench file {path}",
             )
         self.assertEqual(sorted((REPO / "web" / "app" / "src").rglob("*.bench.*")), [])
-        self.assertEqual(sorted((REPO / "web" / "app" / "src").rglob("*.bench.*")), [])
         register = json.loads((REPO / "config" / "coverage.json").read_text(encoding="utf-8"))
         exclusions = {entry.get("glob"): entry for entry in register.get("exclusions", [])}
         wanted = {"crates/*/benches/**": "rust", "web/app/bench/**": "web"}
