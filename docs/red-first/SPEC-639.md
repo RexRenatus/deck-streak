@@ -103,7 +103,7 @@ the clean baselines, and A14's first CI green is the pull request run 4246344661
 ed16cfdbf192581a2980cc3a6bd5cee6b89463d7, whose hygiene job (job 128677485838) read `test_public_scrub` green.
 24aaafd37bb17fd728e50a9bcdc93e4030b9afaf then drops a loop bound that no outcome depended on, so the green line
 names it:
-`git -C /tmp/ds-worktrees/web-verify-639 diff --quiet 24aaafd37bb17fd728e50a9bcdc93e4030b9afaf HEAD -- scripts/public-scrub.py scripts/tests/test_public_scrub.py`
+`git diff --quiet 24aaafd37bb17fd728e50a9bcdc93e4030b9afaf HEAD -- scripts/public-scrub.py scripts/tests/test_public_scrub.py`
 exits 0, so the run at this delivery's head runs the scrub and its test as they stand there.
 
 894bae5f re-renders eleven `/remote` baselines under `web/app/tests/verify/__screenshots__`. It
