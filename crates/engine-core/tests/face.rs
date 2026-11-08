@@ -44,7 +44,7 @@ use anki_proto::deck_config::deck_configs_for_update::current_deck::Limits;
 use anki_proto::decks::deck::filtered::SearchTerm;
 use deck_streak_engine_core::dispatch::Dispatcher;
 use deck_streak_engine_core::face::{Clip, Face, Side};
-use deck_streak_engine_core::media::{self, Reader};
+use deck_streak_engine_core::media::{self, Reader, TYPES, VIDEO_TYPES};
 use deck_streak_engine_core::table::Transport;
 use prost::Message;
 
@@ -1114,4 +1114,431 @@ fn a_reader_that_does_not_ask_keeps_a_video_tag_as_a_sound() {
             face.text
         );
     }
+}
+
+/// What a sound tag's plain spelling presents (SPEC-464 section 3).
+#[derive(Clone, Copy)]
+enum Shown {
+    /// Refused before any read, and named once in `omitted` as written.
+    Refused,
+    /// Read, then replayed and autoplayed as a sound over the file's bytes, named as written.
+    Sound,
+    /// Read, then written after the side's text as a video element of this type over this base64.
+    Element(&'static str, &'static str),
+}
+
+/// One extension of `TYPES` or `VIDEO_TYPES`: its plain spelling, the spelling with its dot
+/// escaped, the spelling with its extension's first letter escaped, and what the plain spelling
+/// presents for a reader that asks for video and for one that does not. Each file's bytes are its
+/// plain name's.
+type Spelt = (&'static str, &'static str, &'static str, Shown, Shown);
+
+/// Every extension of `TYPES` and `VIDEO_TYPES` once, written out by hand (SPEC-464 R2).
+const SPELLINGS: [Spelt; 18] = [
+    (
+        "x.png",
+        "x%2Epng",
+        "x.%70ng",
+        Shown::Refused,
+        Shown::Refused,
+    ),
+    (
+        "x.jpg",
+        "x%2Ejpg",
+        "x.%6Apg",
+        Shown::Refused,
+        Shown::Refused,
+    ),
+    (
+        "x.jpeg",
+        "x%2Ejpeg",
+        "x.%6Apeg",
+        Shown::Refused,
+        Shown::Refused,
+    ),
+    (
+        "x.gif",
+        "x%2Egif",
+        "x.%67if",
+        Shown::Refused,
+        Shown::Refused,
+    ),
+    (
+        "x.webp",
+        "x%2Ewebp",
+        "x.%77ebp",
+        Shown::Refused,
+        Shown::Refused,
+    ),
+    (
+        "x.svg",
+        "x%2Esvg",
+        "x.%73vg",
+        Shown::Refused,
+        Shown::Refused,
+    ),
+    (
+        "x.avif",
+        "x%2Eavif",
+        "x.%61vif",
+        Shown::Refused,
+        Shown::Refused,
+    ),
+    ("x.mp3", "x%2Emp3", "x.%6Dp3", Shown::Sound, Shown::Sound),
+    ("x.m4a", "x%2Em4a", "x.%6D4a", Shown::Sound, Shown::Sound),
+    ("x.aac", "x%2Eaac", "x.%61ac", Shown::Sound, Shown::Sound),
+    ("x.ogg", "x%2Eogg", "x.%6Fgg", Shown::Sound, Shown::Sound),
+    ("x.oga", "x%2Eoga", "x.%6Fga", Shown::Sound, Shown::Sound),
+    ("x.opus", "x%2Eopus", "x.%6Fpus", Shown::Sound, Shown::Sound),
+    ("x.wav", "x%2Ewav", "x.%77av", Shown::Sound, Shown::Sound),
+    ("x.webm", "x%2Ewebm", "x.%77ebm", Shown::Sound, Shown::Sound),
+    (
+        "x.mp4",
+        "x%2Emp4",
+        "x.%6Dp4",
+        Shown::Element("video/mp4", "eC5tcDQ="),
+        Shown::Sound,
+    ),
+    (
+        "x.m4v",
+        "x%2Em4v",
+        "x.%6D4v",
+        Shown::Element("video/mp4", "eC5tNHY="),
+        Shown::Refused,
+    ),
+    (
+        "x.mov",
+        "x%2Emov",
+        "x.%6Dov",
+        Shown::Element("video/quicktime", "eC5tb3Y="),
+        Shown::Refused,
+    ),
+];
+
+/// A front whose sound tags spell, with escapes, names `admit` refuses beside both caps: a name that
+/// does not decode, names that decode to a separator, a backslash, a NUL or a dot name, a file past
+/// the file cap under both spellings, a file the reader lacks, and five sounds, the fifth past the
+/// face cap (SPEC-464 R3).
+const ESCAPED_REFUSALS_FRONT: &str = concat!(
+    "[sound:%FF.mp4][sound:sub%2Fx.mp4][sound:sub%5Cx.mp4][sound:x%00.mp4][sound:%2E%2E]",
+    "[sound:large%2Emp4][sound:large.mp4][sound:gone%2Emp4]",
+    "[sound:f1%2Emp3][sound:f2%2Emp3][sound:f3%2Emp3][sound:f4%2Emp3][sound:f5%2Emp3]",
+);
+
+/// What one side presents to one reader: the elements its text ends with, the clips it replays and
+/// autoplays, the names it omits, and every name its reader was asked for, in order.
+struct Presented {
+    elements: String,
+    replay: Vec<Clip>,
+    autoplay: Vec<Clip>,
+    omitted: Vec<String>,
+    asked: Vec<String>,
+}
+
+/// Reads from memory like [`Memory`], asks for a sound tag's video when `asks` holds, and records
+/// every name it is asked for.
+struct VideoRecording {
+    memory: Memory,
+    asks: bool,
+    asked: RefCell<Vec<String>>,
+}
+
+impl Reader for VideoRecording {
+    fn read(&self, name: &str, limit: u64) -> Option<Vec<u8>> {
+        self.asked.borrow_mut().push(name.to_owned());
+        self.memory.read(name, limit)
+    }
+
+    fn shows_video(&self) -> bool {
+        self.asks
+    }
+}
+
+/// The files `SPELLINGS` names, each holding its plain name's bytes.
+fn spelt_files() -> Memory {
+    Memory(
+        SPELLINGS
+            .iter()
+            .map(|spelt| (spelt.0, spelt.0.as_bytes().to_vec()))
+            .collect(),
+    )
+}
+
+/// The files `ESCAPED_REFUSALS_FRONT` reaches: the names a separator, a backslash or a NUL
+/// decode to, a file one byte past the file cap, four files at the file cap and one more byte.
+fn refusal_files() -> Memory {
+    Memory(HashMap::from([
+        ("sub/x.mp4", b"hostile".to_vec()),
+        ("sub\\x.mp4", b"hostile".to_vec()),
+        ("x\0.mp4", b"hostile".to_vec()),
+        ("large.mp4", vec![0; 4_194_305]),
+        ("f1.mp3", vec![0; 4_194_304]),
+        ("f2.mp3", vec![0; 4_194_304]),
+        ("f3.mp3", vec![0; 4_194_304]),
+        ("f4.mp3", vec![0; 4_194_304]),
+        ("f5.mp3", b"f".to_vec()),
+    ]))
+}
+
+/// A sound tag's video element as SPEC-410 R3 writes it, over a type and a base64 written by hand.
+fn element(media_type: &str, base64: &str) -> String {
+    [
+        "<video controls ",
+        "style=\"display:block;max-width:100%;height:auto;margin:0 auto\" ",
+        "src=\"data:",
+        media_type,
+        ";base64,",
+        base64,
+        "\"></video>",
+    ]
+    .concat()
+}
+
+/// The question side of a note whose front is `front`, read from `files`, as presented to a reader
+/// that asks for video and then to one that does not.
+fn presented(scratch: &str, front: &str, files: fn() -> Memory) -> [Presented; 2] {
+    let (dispatcher, cards) = video_notes(scratch, front, "");
+    [true, false].map(|asks| {
+        let reader = VideoRecording {
+            memory: files(),
+            asks,
+            asked: RefCell::new(Vec::new()),
+        };
+        let face = dispatcher
+            .face(cards.plain, Side::Question, true, &reader)
+            .expect("the engine renders the card");
+        let elements = face
+            .text
+            .find("<video ")
+            .map_or("", |at| &face.text[at..])
+            .to_owned();
+        Presented {
+            elements,
+            replay: face.replay,
+            autoplay: face.autoplay,
+            omitted: face.omitted,
+            asked: reader.asked.into_inner(),
+        }
+    })
+}
+
+/// What the hand table says a side presents when its sound tags spell each name by `spell`, for a
+/// reader that asks for video (`asks`) or one that does not.
+fn expected(spell: fn(&Spelt) -> &'static str, asks: bool) -> Presented {
+    let mut want = Presented {
+        elements: String::new(),
+        replay: Vec::new(),
+        autoplay: Vec::new(),
+        omitted: Vec::new(),
+        asked: Vec::new(),
+    };
+    for spelt in &SPELLINGS {
+        let written = spell(spelt);
+        let sound = || Clip::Sound {
+            name: written.to_owned(),
+            bytes: spelt.0.as_bytes().to_vec(),
+        };
+        let shown = if asks { spelt.3 } else { spelt.4 };
+        match shown {
+            Shown::Refused => want.omitted.push(written.to_owned()),
+            Shown::Sound => {
+                want.replay.push(sound());
+                want.autoplay.push(sound());
+                want.asked.push(spelt.0.to_owned());
+            }
+            Shown::Element(media_type, base64) => {
+                want.elements.push_str(&element(media_type, base64));
+                want.asked.push(spelt.0.to_owned());
+            }
+        }
+    }
+    want
+}
+
+/// The names of `clips`, for a failure message that never prints a file's bytes.
+fn clip_names(clips: &[Clip]) -> Vec<String> {
+    clips
+        .iter()
+        .map(|clip| {
+            if let Clip::Sound { name, .. } = clip {
+                name.clone()
+            } else {
+                "not a sound".to_owned()
+            }
+        })
+        .collect()
+}
+
+/// Holds `got` to `want` field by field, naming `what` in each message.
+fn assert_presents(got: &Presented, want: &Presented, what: &str) {
+    assert_eq!(
+        got.elements, want.elements,
+        "{what}: the elements after the side's text"
+    );
+    assert!(
+        got.replay == want.replay,
+        "{what}: replays {:?}, not {:?}",
+        clip_names(&got.replay),
+        clip_names(&want.replay)
+    );
+    assert!(
+        got.autoplay == want.autoplay,
+        "{what}: autoplays {:?}, not {:?}",
+        clip_names(&got.autoplay),
+        clip_names(&want.autoplay)
+    );
+    assert_eq!(
+        got.omitted, want.omitted,
+        "{what}: the names omitted, as written"
+    );
+    assert_eq!(
+        got.asked, want.asked,
+        "{what}: the names its reader was asked for"
+    );
+}
+
+/// Checks the hand table against both tables and its own spellings, and the element helper against
+/// SPEC-410's own pin; returns how many extensions it examined.
+fn examined_spellings() -> usize {
+    let mut tables: Vec<&str> = TYPES
+        .iter()
+        .chain(VIDEO_TYPES.iter())
+        .map(|(extension, _)| *extension)
+        .collect();
+    tables.sort_unstable();
+    tables.dedup();
+    let mut named = Vec::new();
+    for spelt in &SPELLINGS {
+        let (stem, extension) = spelt.0.split_once('.').expect("a plain spelling has a dot");
+        let mut letters = extension.chars();
+        let first = letters.next().expect("an extension has a first letter");
+        assert_eq!(
+            spelt.1,
+            format!("{stem}%2E{extension}"),
+            "{}: the dot escaped",
+            spelt.0
+        );
+        assert_eq!(
+            spelt.2,
+            format!("{stem}.%{:02X}{}", u32::from(first), letters.as_str()),
+            "{}: the first letter escaped",
+            spelt.0
+        );
+        named.push(extension);
+    }
+    named.sort_unstable();
+    assert_eq!(
+        named, tables,
+        "the hand table names every extension of both tables, once"
+    );
+    assert_eq!(
+        element("video/mp4", "c2lnbi12aWRlbw=="),
+        SIGN_ELEMENT,
+        "the element helper writes SPEC-410 R3's element"
+    );
+    SPELLINGS.len()
+}
+
+/// Drives every extension of both tables through a note spelt plainly and a note spelt by
+/// `spell`, for a reader that asks for video and for one that does not, and holds each face to the
+/// hand table.
+fn presents_as_its_plain_spelling(scratch: &str, spell: fn(&Spelt) -> &'static str, how: &str) {
+    assert_eq!(examined_spellings(), 18, "examined 18 of 18 extensions");
+    let front = |by: fn(&Spelt) -> &'static str| -> String {
+        SPELLINGS
+            .iter()
+            .flat_map(|spelt| ["[sound:", by(spelt), "]"])
+            .collect()
+    };
+    let plain: fn(&Spelt) -> &'static str = |spelt| spelt.0;
+    let [plain_asks, plain_does_not_ask] =
+        presented(&format!("{scratch}-plain"), &front(plain), spelt_files);
+    assert_presents(
+        &plain_asks,
+        &expected(plain, true),
+        "a reader that asks, the plain spelling",
+    );
+    assert_presents(
+        &plain_does_not_ask,
+        &expected(plain, false),
+        "a reader that does not ask, the plain spelling",
+    );
+    let [asks, does_not_ask] = presented(scratch, &front(spell), spelt_files);
+    assert_presents(
+        &asks,
+        &expected(spell, true),
+        &format!("a reader that asks, {how}"),
+    );
+    assert_presents(
+        &does_not_ask,
+        &expected(spell, false),
+        &format!("a reader that does not ask, {how}"),
+    );
+}
+
+/// RED-FIRST (SPEC-464 R1, R2, A1): over every extension of both tables, a sound tag whose dot is
+/// escaped presents as its plain spelling does, for a reader that asks for video and for one that
+/// does not: the same elements, the same clips under the name as written, the same names omitted
+/// and the same files read.
+#[test]
+fn an_escaped_dot_presents_as_its_plain_spelling_over_the_whole_type_table() {
+    presents_as_its_plain_spelling("escaped-dot", |spelt| spelt.1, "the dot escaped");
+}
+
+/// RED-FIRST (SPEC-464 R1, R2, A2): as A1, for a sound tag whose extension's first letter is
+/// escaped.
+#[test]
+fn an_escaped_extension_letter_presents_as_its_plain_spelling_over_the_whole_type_table() {
+    presents_as_its_plain_spelling(
+        "escaped-letter",
+        |spelt| spelt.2,
+        "the extension's first letter escaped",
+    );
+}
+
+/// MUTATION COVERAGE (SPEC-464 R3, A3): names `admit` refuses stay refused when spelt with
+/// escapes, under both caps, for a reader that asks for video and for one that does not, and only a
+/// name that passes the name and type rules is read.
+#[test]
+fn escaped_names_admit_refuses_stay_refused_under_both_caps_for_both_readers() {
+    let sounds = || -> Vec<Clip> {
+        ["f1%2Emp3", "f2%2Emp3", "f3%2Emp3", "f4%2Emp3"]
+            .into_iter()
+            .map(|name| Clip::Sound {
+                name: name.to_owned(),
+                bytes: vec![0; 4_194_304],
+            })
+            .collect()
+    };
+    let owned =
+        |names: &[&str]| -> Vec<String> { names.iter().copied().map(str::to_owned).collect() };
+    let want = || Presented {
+        elements: String::new(),
+        replay: sounds(),
+        autoplay: sounds(),
+        omitted: owned(&[
+            "%FF.mp4",
+            "sub%2Fx.mp4",
+            "sub%5Cx.mp4",
+            "x%00.mp4",
+            "%2E%2E",
+            "large%2Emp4",
+            "large.mp4",
+            "gone%2Emp4",
+            "f5%2Emp3",
+        ]),
+        asked: owned(&[
+            "large.mp4",
+            "large.mp4",
+            "gone.mp4",
+            "f1.mp3",
+            "f2.mp3",
+            "f3.mp3",
+            "f4.mp3",
+            "f5.mp3",
+        ]),
+    };
+    let [asks, does_not_ask] = presented("escaped-refusals", ESCAPED_REFUSALS_FRONT, refusal_files);
+    assert_presents(&asks, &want(), "a reader that asks");
+    assert_presents(&does_not_ask, &want(), "a reader that does not ask");
 }
