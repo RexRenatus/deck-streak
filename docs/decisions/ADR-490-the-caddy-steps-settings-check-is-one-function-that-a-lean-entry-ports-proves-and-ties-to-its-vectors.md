@@ -290,3 +290,27 @@ SPEC-473 criteria A1 to A3, rows S47301 to S47303, and the red-first record `doc
 ## More Information
 
 #484, #423, #428, #468, SPEC-473, SPEC-127, ADR-198, SPEC-295.
+
+## Amendment: the vectors test's route carries an empty entry
+
+The vectors test read 60 of the 63 vectors: `EXEC_ENTRIES` read each entry as a hex word, the
+words split at spaces, so an empty entry, whose hex is an empty word, never reached the step.
+Chosen: each entry is one word, `x` and then its hex. An empty entry is the word `x` and reaches
+the step as itself, and a word written without its `x` is hex of odd length, which fails before
+the exec. The test now runs all 63 vectors (SPEC-473 R10, R11 and A4).
+
+Chosen against:
+
+- A second exec text beside `EXEC_ENTRIES`: two routes to keep alike, and one more text for the
+  stand-in's stub scan to review.
+- A count word followed by one argument per entry: it changes the shape of both calls' arguments,
+  where a marked word changes one expression in each.
+- A mapping, through `subprocess` or `os.execve`: each builds every entry as a key, `=` and a
+  value, so it cannot hold an empty entry.
+- Loading `ctypes` in the test module itself: the read census's vetted modules do not hold it, so
+  each use would be a site to list.
+- Leaving the 3 unrun because the proof holds the port on them: the port would then agree with
+  itself on them, which D2 chose against.
+
+The insertion this amendment makes is this section, appended after the file's last line, and
+nothing above it is edited (SPEC-038 section 8).
