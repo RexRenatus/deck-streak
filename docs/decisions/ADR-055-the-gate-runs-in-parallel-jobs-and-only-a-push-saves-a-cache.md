@@ -310,3 +310,51 @@ an exact version (ADR-442 D4).
 - Good, because a change to the Dependabot configuration is audited on the pull request that
   makes it.
 - Bad, because a finding on that file fails `workflow-lint`, and so `ci`, until the file is cured.
+
+## Amendment: a scheduled run re-audits dev's dependencies
+
+Recorded by SPEC-038, its section 19. This decision is unchanged; the amendment decides how `dev`
+is audited again between pushes, since both audits read an advisory database when they run.
+
+Chosen, and what each was chosen against:
+
+- A workflow of its own, `advisory-audit.yml`, that runs `audit-rust` and `audit-web` over `dev`
+  once a day and on dispatch, and on no pull request and no push. It was chosen because a new
+  advisory then reads red on a run of its own before a push or a pull request meets it, while no
+  required check and no pull request waits on that run.
+  - A `schedule` trigger on `ci.yml`: rejected, because a scheduled `ci` run executes every job of
+    the gate, the test stages among them, to read two stages again, and open pull requests change
+    `ci.yml`.
+  - A `pull_request` or `push` trigger on the new workflow: rejected, because its jobs would then
+    report on pull requests and pushes beside `ci`'s own audits, which already judge them there.
+- A read-only token, `contents: read`, that no job widens; the run's conclusion and its uploaded
+  stage logs are its result. It was chosen because a scheduled job that writes nothing holds no
+  write token, and the stage logs already name each advisory.
+  - `issues: write`, so that each red run opens an issue for its advisories or comments on the
+    open one: rejected, because it adds a production script that writes from a scheduled job, with
+    its own tests and mutation legs, to say what the red run and its logs already say.
+  - A token of its own, so that the run opens the fix pull request with checks of its own:
+    rejected, because it needs a secret, and no workflow reads one (SPEC-034, its section 7).
+- No `continue-on-error`, no condition on an audit, no advisory ignored and no cache. It was chosen
+  because an advisory with no fix is fixed by us and never ignored, and a run that passed with a
+  finding would hide the advisory it exists to show.
+  - `continue-on-error` on the audit steps, so that the run reads green and only its logs carry
+    the finding: rejected, because the run's conclusion would then never read red.
+
+### Consequences of the amendment
+
+- Good, because a new advisory against `dev`'s lockfiles reads red on the next scheduled run,
+  before a push or a pull request meets it.
+- Good, because the change adds no required check and changes no line of `ci.yml`.
+- Bad, because a schedule runs only from the default branch's copy of a workflow, so the daily run
+  takes effect only when that copy holds the file; until then a dispatch at `dev` runs it.
+- Bad, because both jobs read the network when they run, so an outage of the advisory database or
+  the registry reds the run until a re-run.
+- Bad, because the run files nothing: its red is read only by whoever reads its runs.
+
+### What would make this amendment wrong
+
+- A red scheduled run that nobody reads before a push meets the same advisory: the run then has to
+  write where it is read, and this amendment is amended.
+- The audits gain a source they read when they run that this workflow does not set up: the
+  scheduled run would then judge less than `ci` does, and it is changed to set that source up.
