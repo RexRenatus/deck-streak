@@ -59,6 +59,10 @@ A24: red at 83b2734a: AssertionError: False is not true : the script wrote no ic
 A24: green at edf2fa57
 A25: red at 7124d3ce: AssertionError: Lists differ: ["crates/engine-core/**: the XCFramework l[157 chars] it"] != []
 A25: green at 85c644d7
+A29: red at d2c61361: AssertionError: 0 != 1 : security find-certificate ran 0 times
+A29: green at 71427932
+A30: red at d2c61361: AssertionError: Lists differ: [('scripts/ios_lane.py', 312, 'sha1')] != []
+A30: green at 71427932
 ```
 
 - Three red lines are shortened where the failure printed more than a criterion needs: A8's set
@@ -93,3 +97,4 @@ A25: green at 85c644d7
   amended block, and green at 85c644d7. A25's planted control, the live workflow with
   `crates/engine-core/**` dropped, was red by name: `crates/engine-core/**: the XCFramework links
   it, and the internal lane's push filter does not watch it`.
+- The identity-match amendment (SPEC-352 R8 as amended). Its tests were committed alone at d2c61361, before the lane changed at 71427932, and each red and green was read by running `test_ios_lane.py` in a `git archive` of each commit. With the fixture's identity now the keychain's, every test that signs is red at d2c61361 on the refusal "the profile was not issued for the imported certificate", because the base computes a SHA-1 the fake tool no longer prints; A29 and A30 are new, and each red quoted above is its own assertion. The census's planted control, `test_the_digest_census_refuses_each_planted_spelling_of_a_weak_digest`, is green at both commits by design: it judges the census, not the lane.
