@@ -52,3 +52,47 @@ row's mutant was installed alone and `cargo test -p deck-streak-coordination --t
 The class rule's test kills none of the six. The parity golden of the badge context already kills
 S47701 to S47705; each stays a row with A1 as its killer, since A1 is the test that holds the
 window's edges under three study-day rules.
+
+## The rows and the planted copies, each read red by A1
+
+Each proof below installed its copy alone by script over the committed tree with A1 in it, rebuilt,
+ran `cargo test -p deck-streak-coordination --test badges_steps -- --exact
+every_window_edge_day_awards_exactly_the_badges_its_local_hours_earn_once` (running 1 test, 1
+failed), and restored the file by writing its saved bytes back. Each first failing assertion is
+A1's awarded set, at pass 1 of the settle evaluation, for the member named. Every restore of
+`badge_context.rs` read sha256 `e88397876377bd6972816c346a4152a6601a7c9008144eab8722882bd1575eda`
+and every restore of `hours.rs` read sha256
+`b3b677db16a6e040a963e74e0d74315d65c589c467ee66cd2f06256b16ebcdc2`, equal to the base.
+
+The rows, on `crates/coordination/src/progression/badge_context.rs`:
+
+- S47700-THE-NIGHT-WINDOW-STARTS-AT-MIDNIGHT: the member at rollover 4 at UTC, from hour 0 on D+1; awarded
+  `first_steps`, `sharpshooter`, expected `first_steps`, `night_owl`, `sharpshooter`.
+- S47701-THE-NIGHT-WINDOW-ENDS-BEFORE-THE-ROLLOVER: the member at rollover 4 at UTC, from hour 4 on D;
+  awarded `early_bird`, `first_steps`, `night_owl`, `sharpshooter`, expected `early_bird`,
+  `first_steps`, `sharpshooter`.
+- S47702-THE-EARLY-WINDOW-STARTS-AT-THE-ROLLOVER: the member at rollover 4 at UTC, from hour 4 on D; awarded
+  `first_steps`, `sharpshooter`, expected `early_bird`, `first_steps`, `sharpshooter`.
+- S47703-THE-EARLY-WINDOW-ENDS-BEFORE-SEVEN: the member at rollover 4 at UTC, from hour 7 on D; awarded
+  `early_bird`, `first_steps`, `sharpshooter`, expected `first_steps`, `sharpshooter`.
+- S47704-THE-NIGHT-WINDOW-READS-THE-CONFIGURED-RULE: the member at rollover 4 at UTC+1, from hour 0 on D+1;
+  awarded `first_steps`, `sharpshooter`, expected `first_steps`, `night_owl`, `sharpshooter`.
+- S47705-THE-EARLY-WINDOW-READS-THE-CONFIGURED-RULE: the member at rollover 4 at UTC+1, from hour 4 on D;
+  awarded `first_steps`, `sharpshooter`, expected `early_bird`, `first_steps`, `sharpshooter`.
+
+The planted copies of `crates/progression/src/badges/hours.rs`, which are not rows, since a
+progression row cannot name a coordination test as its killer:
+
+- H1, the range's end included (`start..=end`): the member at rollover 4 at UTC, from hour 4 on D; awarded
+  `early_bird`, `first_steps`, `night_owl`, `sharpshooter`, expected `early_bird`, `first_steps`,
+  `sharpshooter`.
+- H2, the range's start excluded (`start + 1..end`): the member at rollover 4 at UTC, from hour 0 on D+1;
+  awarded `first_steps`, `sharpshooter`, expected `first_steps`, `night_owl`, `sharpshooter`.
+- H3, the offset added twice: the member at rollover 4 at UTC+1, before hour 0 on D+1; awarded
+  `first_steps`, `night_owl`, `sharpshooter`, expected `first_steps`, `sharpshooter`. The first
+  member of the UTC+1 rule fails first, ahead of the rollover on D+1, before.
+- H4, the offset not applied: the member at rollover 4 at UTC+1, from hour 0 on D+1; awarded `first_steps`,
+  `sharpshooter`, expected `first_steps`, `night_owl`, `sharpshooter`. The midnight member of the
+  UTC+1 rule fails first, ahead of the rollover on D, after.
+- H5, the hour rounded to the nearest: the member at rollover 4 at UTC, before hour 0 on D+1; awarded
+  `first_steps`, `night_owl`, `sharpshooter`, expected `first_steps`, `sharpshooter`.
