@@ -188,3 +188,75 @@ test file, which no `@phx covers` path can name, and their proof is their plants
 ADR-439 D5 holds them: live precision over the last 30 merged pull requests, below 0.8 with at
 least 5 hits; 2 or more false hits among a new arm's first 5; a demotion is the owner's signed
 ruling; and an `examined 0`, or a tool missing or off its pin, is VOID, which blocks.
+
+## 10. Amendment for #852: the census holds an `iframe` without `sandbox` at none, and the host's frame carries the card frame's sandbox
+
+Every `path:line` here is read at dev `0756b82f`. Section 5's second bullet is resolved here; the
+line it cites writes the host's body at `web/app/src/lib/card/frame-host.ts:46` at this dev.
+
+- **The frames.** The card frame is `<iframe sandbox={FRAME_SANDBOX} ...>`
+  (`web/app/src/lib/card/CardFrame.svelte:19`), and `FRAME_SANDBOX` is empty
+  (`web/app/src/lib/card/policy.js:18`): no token. Its document is the host, whose body is one
+  `iframe` with a `title` and a `srcdoc` and no `sandbox` (`frame-host.ts:46`, SPEC-407 R1).
+- **What the card document needs.** It runs no script, submits no form, opens no popup and reads no
+  other document: the frame policy and the host policy admit `data:` images, media and fonts and
+  inline styles only (`policy.js:25-26`, `:33`), and the strip leaves no `target` (SPEC-402 R7). It
+  needs no sandbox token.
+- **What the census reads.** Of the walk's shipped files, two hold an `iframe` tag:
+  `CardFrame.svelte:19`, which names `sandbox`, and `frame-host.ts:46`, which does not. No shipped
+  file creates a frame by script.
+- **The inheritance.** A nested frame's document takes its parent document's sandboxing flags as
+  well as its own frame's (ADR-421 D2), so the card document already carries every flag the card
+  frame sets. A `srcdoc` document's policy is the policy of its frame's node document, whatever that
+  frame's `sandbox`, so a sandbox on the host's frame keeps the host policy in force in the card
+  document from its creation.
+
+R7. The census holds one more arm of its own, `iframe without sandbox`, in a third table,
+    `FRAME_SHAPES`, under a test of its own, at none over R4's walk, with no expected site and no
+    allow-list: an `iframe` tag whose own tag, from `<iframe` to the nearest `>`, names no
+    `sandbox` attribute once its quoted values and `{...}` expressions are blanked.
+R8. The arm reads each of its plants once and each near miss none, and a text holding all its plants
+    reads one hit per plant. Where text is ambiguous it reads a hit, never a miss, by R3's rule: a
+    tag the census misreads, a value that names the word, a longer name that holds it and a spelling
+    it cannot read as the attribute each read as a hit.
+R9. The host's one frame carries `sandbox`, set from `FRAME_SANDBOX`, as its first attribute, so W1
+    is one value set at two points, as W2 is one policy delivered at two: on the card frame and on
+    the host's frame. No token is added to either frame, and the host policy, the frame policy and
+    the read-back are unchanged.
+R10. The harness's W1 variant takes both points off, so W1 off leaves no sandbox anywhere, and its
+    host is the one the variant built before this amendment, byte for byte; every other variant
+    keeps both points.
+
+| id | criterion | decided by |
+|---|---|---|
+| A4 | the census holds an `iframe` without `sandbox` at none over the walk, reads each plant once, one hit per plant in one text, and no near miss | `web/app/src/lib/card/card-sinks.test.ts` "shipped code holds no iframe without a sandbox attribute" |
+| A5 | the host's one frame carries an empty `sandbox` as its first attribute, for the host policy, an empty policy and a title that names a sandbox value | `web/app/src/lib/card/frame-host.test.ts` "the host's one frame is sandboxed with no token, as the card frame is" |
+
+```acceptance
+A4: pnpm exec vitest run web/app/src/lib/card/card-sinks.test.ts -t "shipped code holds no iframe without a sandbox attribute"
+A5: pnpm exec vitest run web/app/src/lib/card/frame-host.test.ts -t "the host's one frame is sandboxed with no token, as the card frame is"
+```
+
+A4 is red at the base for its criterion: the census reads the host's frame as its one hit. A5 is red
+at the base for its criterion: the host's frame has no `sandbox`. SPEC-407's A1 and A4 read the name
+`sandbox` among the host's frame's attributes, which SPEC-407's amendment for #852 records; SPEC-341's
+census keeps its expected census, and A1's six arms and A2's walk are unchanged. ADR-439 D5's kill criteria hold the new
+arm as a new arm. No mutation row is added, by ADR-439 D7's reason: the plants are the arm's kill
+proof, and StrykerJS proves the changed production file, `frame-host.ts`. Formal is not applicable
+by surface: no actor, shared state or write path is added.
+
+| path | part | change |
+|---|---|---|
+| `web/app/src/lib/card/frame-host.ts` | `miniapp` | changed (A5): the host's frame carries `sandbox` from `FRAME_SANDBOX` |
+| `web/app/src/lib/card/card-sinks.test.ts` | `miniapp` | changed (A4): the frame arm, its table, its plants and near misses, and its test |
+| `web/app/src/lib/card/frame-host.test.ts` | `miniapp` | changed (A5): its test, and SPEC-407 A1's names read `sandbox` |
+| `web/app/src/lib/card/card-frame.test.ts` | `miniapp` | changed: SPEC-407 A4's names read `sandbox` |
+| `web/app/tests-card/harness/main.ts` | `miniapp` | changed (R10): the W1 variant takes both points off |
+| `docs/specs/SPEC-425-the-web-sink-census-holds-six-more-shapes-at-none-and-the-type-check-refuses-a-switch-fall-through.md` | docs | changed: section 10 appended, insert-only |
+| `docs/specs/SPEC-407-the-card-document-inherits-the-frame-policy-from-a-host-so-every-engine-holds-the-image-set-forms.md` | docs | changed: an amendment appended, insert-only |
+| `docs/decisions/ADR-439-the-six-shapes-join-the-card-sink-census-as-text-arms-over-one-widened-population-and-the-apps-own-config-refuses-a-switch-fall-through.md` | docs | changed: an amendment appended |
+| `docs/decisions/ADR-421-the-frame-policy-is-in-force-from-the-card-documents-creation-through-a-host-document-it-inherits-from.md` | docs | changed: an amendment appended |
+| `docs/schematics/web-sink-census.md` | docs | changed: section 4 appended |
+| `docs/schematics/card-frame-channels.md` | docs | changed: section 3's host sentence and W1 row, and section 15 appended |
+| `docs/red-first/SPEC-425.md` | docs | changed: A4 and A5 appended |
+| `changelog.d/card-frame-host-sandbox-852.md` | docs | added |
