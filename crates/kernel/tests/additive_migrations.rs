@@ -54,14 +54,16 @@ const ADMITTED: [Admitted; 2] = [
         class: "removes a table",
         count: 1,
         spec: "SPEC-041",
-        reason: "a `STRICT` rebuild that adds the claim column and the sending state (section 8)",
+        reason: "a `STRICT` rebuild that adds the claim column and the sending state (SPEC-041 \
+                 section 8, recorded by ADR-449 D1)",
     },
     Admitted {
         migration: "004102_notifications_queue_claim.sql",
         class: "renames",
         count: 1,
         spec: "SPEC-041",
-        reason: "the same rebuild's rename of the new table into place (section 8)",
+        reason: "the same rebuild's rename of the new table into place (SPEC-041 section 8, \
+                 recorded by ADR-449 D1)",
     },
 ];
 
@@ -601,4 +603,232 @@ fn an_empty_migration_directory_is_void() {
         (1, 0),
         "one additive migration is read and is no hit"
     );
+}
+
+/// The ruling rule's level (SPEC-435 R21): at `Warn` an admitted row that cites no recorded ruling
+/// prints its `WARN` line and the census passes, and at `Fail` it fails the census. An entry no row
+/// matches fails at both.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Level {
+    /// An uncited row prints its `WARN` line and the census passes.
+    Warn,
+    /// An uncited row fails the census.
+    Fail,
+}
+
+/// The ruling rule's level today (SPEC-435 R22). The delivery that moves it to `Fail` edits this
+/// line and cites R22.
+const RULING_LEVEL: Level = Level::Warn;
+
+/// The rule's name, in every line the ruling rule prints.
+const RULING_RULE: &str = "destructive-migration-ruling";
+
+/// The rows admitted before the ruling rule (SPEC-435 R20), each by the SPEC its `ADMITTED` row
+/// names: the migration's file name, the class and the reason, which names the record that
+/// admits it. They cite no recorded ruling.
+const BEFORE_THE_RULE: [(&str, &str, &str); 2] = [
+    (
+        "004102_notifications_queue_claim.sql",
+        "removes a table",
+        "admitted by SPEC-041 section 8, recorded by ADR-449 D1",
+    ),
+    (
+        "004102_notifications_queue_claim.sql",
+        "renames",
+        "admitted by SPEC-041 section 8, recorded by ADR-449 D1",
+    ),
+];
+
+/// Each `ADMITTED` row added after the ruling rule, with the recorded ruling that admits it
+/// (SPEC-435 R20): the migration's file name, the class and `docs/rulings/<file>.md`.
+const CITED: [(&str, &str, &str); 0] = [];
+
+/// The ruling rule over `register` (SPEC-435 R20, R21): each row that is not before the rule cites
+/// one recorded ruling, a file `docs/rulings/<file>.md` that the tree at `root` holds and whose text
+/// names the row's migration file name. An uncited row prints `WARN <rule> <migration> <class>:
+/// <why>` and passes at `Warn`, or prints `FAIL` in its place and fails at `Fail`; an entry no row
+/// matches prints `STALE` and fails at both. `Ok` holds the printed lines when it passes.
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "the red-first stub keeps every input and drops the behaviour"
+)]
+fn rulings(
+    root: &Path,
+    register: &[Admitted],
+    before: &[(&str, &str, &str)],
+    cited: &[(&str, &str, &str)],
+    level: Level,
+) -> Result<Vec<String>, Vec<String>> {
+    let _ = (root, register, before, cited, level, recorded, RULING_RULE);
+    Ok(Vec::new())
+}
+
+/// Whether `ruling` is a recorded ruling the tree at `root` holds, one file
+/// `docs/rulings/<file>.md`, whose text names `migration` (SPEC-435 R20).
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "the red-first stub keeps every input and drops the behaviour"
+)]
+fn recorded(root: &Path, ruling: &str, migration: &str) -> Result<(), String> {
+    let _ = (root, ruling, migration);
+    Ok(())
+}
+
+/// A planted register row of `class` for the planted migration.
+fn planted_row(class: &'static str) -> Admitted {
+    Admitted {
+        migration: "090001_planted.sql",
+        class,
+        count: 1,
+        spec: "SPEC-901",
+        reason: "planted",
+    }
+}
+
+/// A temporary tree whose `docs/rulings/` holds a ruling that names the planted migration and one
+/// that names another.
+fn planted_rulings() -> tempfile::TempDir {
+    let tree = planted_tree(&[], &[]);
+    let rulings_dir = tree.path().join("docs/rulings");
+    fs::create_dir_all(&rulings_dir).expect("docs/rulings/ is made");
+    fs::write(
+        rulings_dir.join("OWNER-RULING-names-it.md"),
+        "# Admits 090001_planted.sql\n",
+    )
+    .expect("a planted ruling is written");
+    fs::write(
+        rulings_dir.join("OWNER-RULING-names-another.md"),
+        "# Admits 090002_other.sql\n",
+    )
+    .expect("a planted ruling is written");
+    tree
+}
+
+#[test]
+fn every_destructive_migration_after_the_ruling_rule_cites_its_recorded_ruling() {
+    let root = root();
+
+    assert_eq!(RULING_LEVEL, Level::Warn, "the ruling rule starts at warn");
+    println!(
+        "examined {} admitted row(s): {} before the ruling rule, {} citing a ruling",
+        ADMITTED.len(),
+        BEFORE_THE_RULE.len(),
+        CITED.len()
+    );
+    assert!(
+        !ADMITTED.is_empty(),
+        "examined 0 admitted row(s), which is VOID and never a pass"
+    );
+    assert_eq!(
+        (ADMITTED.len(), BEFORE_THE_RULE.len(), CITED.len()),
+        (2, 2, 0),
+        "the register holds 2 row(s): 2 before the ruling rule, 0 citing a ruling"
+    );
+    let printed = rulings(&root, &ADMITTED, &BEFORE_THE_RULE, &CITED, RULING_LEVEL);
+    assert!(
+        printed.is_ok(),
+        "the ruling rule refuses at {RULING_LEVEL:?}: {printed:#?}"
+    );
+}
+
+#[test]
+fn a_destructive_migration_with_no_recorded_ruling_is_reported_at_warn_and_refused_at_fail() {
+    let tree = planted_rulings();
+    let register = [
+        planted_row("removes a table"),
+        planted_row("removes a column"),
+        planted_row("removes an index"),
+        planted_row("removes a view"),
+        planted_row("renames"),
+        planted_row("removes a trigger"),
+    ];
+    let before = [("090001_planted.sql", "removes a table", "planted")];
+    let cited = [
+        (
+            "090001_planted.sql",
+            "removes an index",
+            "docs/rulings/OWNER-RULING-absent.md",
+        ),
+        (
+            "090001_planted.sql",
+            "removes a view",
+            "docs/rulings/OWNER-RULING-names-another.md",
+        ),
+        (
+            "090001_planted.sql",
+            "renames",
+            "docs/specs/SPEC-901-planted.md",
+        ),
+        (
+            "090001_planted.sql",
+            "removes a trigger",
+            "docs/rulings/OWNER-RULING-names-it.md",
+        ),
+    ];
+    let reported = [
+        "090001_planted.sql removes a column: cites no recorded ruling under docs/rulings/",
+        "090001_planted.sql removes an index: cites docs/rulings/OWNER-RULING-absent.md, which the \
+         tree does not hold",
+        "090001_planted.sql removes a view: cites docs/rulings/OWNER-RULING-names-another.md, which \
+         does not name 090001_planted.sql",
+        "090001_planted.sql renames: cites docs/specs/SPEC-901-planted.md, which is not a file \
+         docs/rulings/<file>.md",
+    ];
+    let at = |word: &str| -> Vec<String> {
+        reported
+            .iter()
+            .map(|line| format!("{word} destructive-migration-ruling {line}"))
+            .collect()
+    };
+    println!(
+        "examined {} planted row(s), {} reported",
+        register.len(),
+        reported.len()
+    );
+
+    assert_eq!(
+        rulings(tree.path(), &register, &before, &cited, Level::Warn),
+        Ok(at("WARN")),
+        "at warn each uncited row is reported by its reason and the census passes"
+    );
+    assert_eq!(
+        rulings(tree.path(), &register, &before, &cited, Level::Fail),
+        Err(at("FAIL")),
+        "at fail each uncited row is refused by its reason"
+    );
+}
+
+#[test]
+fn a_ruling_entry_no_admitted_row_matches_is_stale_at_both_levels() {
+    let tree = planted_rulings();
+    let register = [planted_row("removes a table")];
+    let before = [
+        ("090001_planted.sql", "removes a table", "planted"),
+        ("090009_gone.sql", "removes a table", "planted"),
+    ];
+    let cited = [(
+        "090009_gone.sql",
+        "renames",
+        "docs/rulings/OWNER-RULING-names-it.md",
+    )];
+    let stale = vec![
+        "STALE destructive-migration-ruling 090009_gone.sql removes a table: before the rule, and \
+         no row lists it"
+            .to_owned(),
+        "STALE destructive-migration-ruling 090009_gone.sql renames: cites \
+         docs/rulings/OWNER-RULING-names-it.md, and no row lists it"
+            .to_owned(),
+    ];
+    println!(
+        "examined {} planted entr(ies), 2 stale",
+        before.len() + cited.len()
+    );
+
+    for level in [Level::Warn, Level::Fail] {
+        assert_eq!(
+            rulings(tree.path(), &register, &before, &cited, level),
+            Err(stale.clone()),
+            "an entry no row matches is stale at {level:?}"
+        );
+    }
 }
