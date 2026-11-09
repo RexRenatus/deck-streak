@@ -491,3 +491,50 @@ The rows added for the dev that this pull request merges when it is checked, ove
 `lean/AgentPinGroups`
 `lean/DeployEntryRefusal`
 `lean/PathGate`
+
+## Amendment: D11, the clock reads of TypeScript and Swift
+
+### D11, a census per language beside the Rust one
+
+- Chosen: two censuses beside the Rust one, each its own check with its own reader and its own
+  list, as D4 makes each check fail and be measured alone, and each row naming the ADR that admits
+  it, as D3 does. The Swift census is a module under `scripts/tests` that reads every tracked
+  production Swift file by the register's roles through its own lexer, which blanks comments and
+  the text of every string, raw string and `#/.../#` regex literal and reads each interpolation as
+  code, and lists its reads in `config/clock-reads-swift.json`. The web census is a vitest test that
+  reads every production source of the web app through the Svelte compiler's own parser, the
+  reader an earlier web census already uses, default-deny over references to `Date`, `performance`
+  and `Temporal`, and lists its reads in `config/clock-reads-web.json`. Each list's rows are the
+  reads at this amendment's base, each listed as found with its use, and each cites this ADR. D7's
+  last chosen-against bullet is answered: the reads are measured, and each language has its own
+  reader and list.
+- Kill criteria: D6's criteria hold for each list.
+
+Chosen against:
+
+- One census over both languages: lost, because D4 makes each check fail and be measured alone,
+  and the two languages need different readers.
+- A Python text reader for the web client: lost, because a regular expression literal after an
+  ambiguous `/` can hide a read on the rest of its line, and the Svelte parser reads `.svelte`,
+  `.ts` and `.js` alike with a closed grammar.
+- The TypeScript compiler's own API: lost, because it does not read `.svelte` files.
+- A lint rule over restricted properties: lost, because the web app carries no linter that holds
+  one.
+- A Swift syntax library or a Swift lint rule: lost, because neither is carried, both need the
+  macOS leg, and a lint rule's custom pattern is a regular expression with the same blind spots as
+  this lexer.
+- Moving a found read to a test path, or out of a census's population: lost, because a read found
+  is listed with its use, never moved to pass a census.
+
+### Appendix: the rows D11 admits
+
+The Swift reads, each listed as found:
+
+- `ios/App/Sources/ReviewSession.swift`: 1, the answer clock's default instant source, `Date()`.
+- `ios/Harness/Sources/EngineSession.swift`: 2, the harness's show and answer times, `.now`.
+
+The web reads, each listed as found:
+
+- `web/app/scripts/record-docs-mermaid-fences.js`: 2, a build tool's pace timer, `Date.now`.
+- `web/app/src/lib/study/ReviewScreen.svelte`: 1, the review's answer clock, `performance.now`.
+- `web/app/src/routes/remote/+page.svelte`: 1, the remote page's event log time, `performance.now`.
