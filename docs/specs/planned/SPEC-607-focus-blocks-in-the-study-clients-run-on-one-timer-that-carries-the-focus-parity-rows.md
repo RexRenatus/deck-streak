@@ -364,7 +364,7 @@ the tests above that prove their numbers, and they close with the release (#924)
 | `docs/specs/planned/SPEC-079-a-focus-block-runs-on-the-services-clock-and-deep-work-earns-once.md` | docs | unchanged by this build: its status already names this SPEC as superseding it |
 | `docs/decisions/ADR-079-a-focus-block-ends-on-the-services-clock-armed-by-each-long-running-role-and-claimed-once.md` | docs | changed: a note that ADR-628 replaces its role list |
 | `docs/decisions/ADR-628-one-timer-serves-a-block-and-the-focus-rows-and-a-block-shows-only-its-own-time-left.md` | docs | changed: accepted |
-| `docs/decisions/ADR-629-the-rest-guard-is-opt-in-and-keeps-its-readings-on-the-device.md` | docs | changed: accepted |
+| `docs/decisions/ADR-629-the-rest-guard-is-opt-in-and-keeps-its-measurements-on-the-device.md` | docs | changed: accepted |
 | `docs/schematics/focus-timer-state-machine.md` | docs | changed: the bot role leaves, and the block's states point to `docs/schematics/focus-blocks.md` |
 | `docs/PRD.md` | docs | changed: an amendment note that the third non-goal does not forbid a block's own time left (D1) |
 | `docs/red-first/SPEC-607.md` | docs | added |

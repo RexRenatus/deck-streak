@@ -239,7 +239,7 @@ describe('the frame document', () => {
       ['a srcset the re-parse brings back', { ...clean, html: `${CARD}${mutation}<img alt="" srcset="${ELSEWHERE}a.png 1x">` }],
       ['a target the re-parse brings back', { ...clean, html: `${CARD}${mutation}<a target="_blank" href="${ELSEWHERE}a">a</a>` }],
       ['a body attribute the re-parse brings', { ...clean, html: `${CARD}${mutation}<body data-plant="1">` }],
-      ['a host whose title does not read back', { ...clean, title: 'The\rcard' }]
+      ['a host whose title does not read back', { ...clean, title: 'The\u0000card' }]
     ];
 
     // the identity control: the clean card, with every field each plant starts from, is kept
@@ -270,7 +270,7 @@ describe('the frame document', () => {
     'reparse-srcset': { markup: `<img alt="" srcset="${ELSEWHERE}a.png 1x">` },
     'reparse-target': { markup: `<a target="_blank" href="${ELSEWHERE}a">a</a>` },
     'body-attributes': { markup: '<body data-plant="1">' },
-    'host-readback': { title: 'The\rcard' }
+    'host-readback': { title: 'The\u0000card' }
   };
 
   /** The reason the frame gives the clean card with each named check's fault planted in it. */

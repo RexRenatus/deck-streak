@@ -54,4 +54,63 @@ A20: not red: SPEC-022's existing settings test, which had to stay green at the 
 A21: not red: SPEC-022's existing no-upload census, which had to stay green at the new pin (R7); it passed at 4df16b0
 A22: not red: SPEC-022's existing sync test, which had to stay green at the new pin (R7); it passed at 4df16b0
 A23: not red: SPEC-022's existing sync test, which had to stay green at the new pin (R7); it passed at 4df16b0
+A24: red at 05341277: AssertionError: Lists differ: ['deny.toml ignores RUSTSEC-2025-0075: an [477 chars] it'] != []
+A24: green at 4c3b370d
+A25: red at 3772e659: AssertionError: Lists differ: ['paste (RUSTSEC-2024-0436) is a package of Cargo.lock', 'basic-toml (RUSTSEC-2026-0374) is a package of Cargo.lock'] != []
+A25: green at 2efb88df
 ```
+
+## §9: the paste and basic-toml notices
+
+The commit that removes the two ignore entries from `deny.toml` also adds A25, with `Cargo.toml`
+and `Cargo.lock` as c302d698 holds them. A25's red above was taken there, over c302d698's lock: its
+planted controls pass (one finding per retired crate, none for the clean plant), and the lockfile's
+656 packages hold both crates. Each notice is red in the same tree: `cargo deny --locked check
+advisories` (cargo-deny 0.20.2) fails with exactly these two errors, and the six engine entries
+apply.
+
+- RUSTSEC-2024-0436: red at c302d698: error[unmaintained]: paste - no longer maintained (paste 1.0.15)
+- RUSTSEC-2026-0374: red at c302d698: error[unmaintained]: `basic-toml` is unmaintained (basic-toml 0.1.10)
+- RUSTSEC-2026-0374: green at ced88ca4: `basic-toml` has left the lock, and the run names RUSTSEC-2024-0436 alone
+- RUSTSEC-2024-0436: green at 2efb88df: `paste` has left the lock, and the run passes with no error, the six engine entries applied
+
+A1 already has its fence lines, so its red for each fork is recorded here, in SPEC-565 A6b's form:
+`deny.toml` was edited first and A1 run with the test unchanged, then the test's exact list grew by
+that fork and A1 passed at the fork's commit. The uniffi-rs fork: red with deny.toml edited and the
+test unchanged: `allow-git is [...], not exactly the fork, rust-url, fsrs-rs, web-push-native and
+sqlx`; green at 37551ff3. The askama fork: red the same way: `allow-git is [...], not exactly the
+fork, rust-url, fsrs-rs, web-push-native, sqlx and uniffi-rs`; green at ced88ca4. The frankenstein
+fork: red the same way: `allow-git is [...], not exactly the fork, rust-url, fsrs-rs,
+web-push-native, sqlx, uniffi-rs and askama`; green at 2efb88df.
+
+## §10: the engine's six notices
+
+The test commit adds A24, widens A25 and tightens A3, with `deny.toml`, `Cargo.toml` and
+`Cargo.lock` as 74ad834d holds them, so A24's red above was taken at that commit: its seven planted
+defects read one finding apiece and the clean plant none, and the base's file reads seven findings,
+one per ignore entry and one for the absent `unmaintained` key. The next commit removes the six
+ignore entries from `deny.toml` and writes `unmaintained = "all"`, with the lock unchanged. Each
+notice is red over 74ad834d's lock: with the six entries removed, `cargo deny --locked check
+advisories` (cargo-deny 0.20.2) fails with exactly these six errors and no other.
+
+- RUSTSEC-2025-0075: red at 74ad834d: error[unmaintained]: `unic-char-range` is unmaintained (unic-char-range 0.9.0)
+- RUSTSEC-2025-0080: red at 74ad834d: error[unmaintained]: `unic-common` is unmaintained (unic-common 0.9.0)
+- RUSTSEC-2025-0081: red at 74ad834d: error[unmaintained]: `unic-char-property` is unmaintained (unic-char-property 0.9.0)
+- RUSTSEC-2025-0094: red at 74ad834d: error[unmaintained]: `unic-ucd-category` is unmaintained (unic-ucd-category 0.9.0)
+- RUSTSEC-2025-0098: red at 74ad834d: error[unmaintained]: `unic-ucd-version` is unmaintained (unic-ucd-version 0.9.0)
+- RUSTSEC-2025-0134: red at 74ad834d: error[unmaintained]: rustls-pemfile is unmaintained (rustls-pemfile 2.2.0)
+- RUSTSEC-2025-0075: green at 532301d7: `unic-char-range` has left the lock, and the run passes with no error and no ignore entry
+- RUSTSEC-2025-0080: green at 532301d7: `unic-common` has left the lock, and the run passes with no error and no ignore entry
+- RUSTSEC-2025-0081: green at 532301d7: `unic-char-property` has left the lock, and the run passes with no error and no ignore entry
+- RUSTSEC-2025-0094: green at 532301d7: `unic-ucd-category` has left the lock, and the run passes with no error and no ignore entry
+- RUSTSEC-2025-0098: green at 532301d7: `unic-ucd-version` has left the lock, and the run passes with no error and no ignore entry
+- RUSTSEC-2025-0134: green at 532301d7: `rustls-pemfile` has left the lock, and the run passes with no error and no ignore entry
+
+A3 and A25 already have their fence lines, so their new reds are recorded here. A3's new form, run
+at the test commit over 74ad834d's `deny.toml`, fails at its first new assertion, which reads
+the six ids: `AssertionError: Lists differ: ['RUSTSEC-2025-0075', 'RUSTSEC-2025-0080',[79 chars]134']
+!= [] : deny.toml ignores an advisory: an exception is not a fix`. A25, run at the test commit
+over 74ad834d's lock, fails naming the six crates: `AssertionError: Lists differ:
+['unic-char-range (RUSTSEC-2025-0075) is a[350 chars]ock'] != []`. A3 is green at 4c3b370d, the
+commit that removes the six entries, where it examined 8 allowed git sources, and A25 is green at
+532301d7, where the pin has taken the six crates out of the lock and it examined 647 packages.

@@ -102,6 +102,18 @@
       "test_mutation_rows_survivor_kills"
     ]
   },
+  "scripts/path_gate.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_path_gate"
+    ]
+  },
+  "scripts/perf-census.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_perf_census"
+    ]
+  },
   "scripts/perf-plan.py": {
     "dir": "scripts/tests",
     "modules": [
@@ -123,10 +135,22 @@
       "test_deploy_templates"
     ]
   },
+  "scripts/python_stage.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_python_stage"
+    ]
+  },
   "scripts/release_gates.py": {
     "dir": "scripts/tests",
     "modules": [
       "test_release_gates"
+    ]
+  },
+  "scripts/swift_mutants.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_swift_mutants"
     ]
   },
   "scripts/testflight_age.py": {

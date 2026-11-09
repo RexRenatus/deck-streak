@@ -12,6 +12,9 @@ SPEC-465's tests close the module: a retired list of the wrong shape refused by 
 a runner process signalled at each edge of a killer's run (A6 to A9), `main()` run in this
 process and leaving its handlers as it found them (A10 to A12), and the reader driven through
 every vector of its Lean proof (A14).
+SPEC-645's tests follow them: a `--rows-from` plan of the wrong shape refused by name by `prove`,
+`legs` and `merge` as processes and by its reader as a function (A1 to A5), and a well-formed
+plan read as before (A6).
 """
 
 import argparse
@@ -429,6 +432,88 @@ class TheCensusRefusesARowThatCanProveNothing(unittest.TestCase):
         held = census(twice.root)
         self.assertEqual(held.returncode, 1, held.stdout + held.stderr)
         self.assertIn("the row id S00041-FIRST is held twice", held.stdout)
+
+
+# --------------------------------------------------------------------------- SPEC-646
+
+POPULATION_HEADER = "scripts/mutation-rows.json"
+POPULATION_BAND = "scripts/mutation-rows.d/S00000-S00099.json"
+#: A well-formed row set before each wrong one, so that every refusal names the wrong row's place.
+WELL_SHAPED = script_row(
+    "S00080-SHAPED", "x * 2", "x * 3", "test_fixmod.Double.test_two_doubles_to_four"
+)
+#: Where a row is planted: the header's table, or the band file's.
+PLACES = {"header": POPULATION_HEADER, "band": POPULATION_BAND}
+
+
+class ThePopulationReaderRefusesAMisshapenTableOrRow(unittest.TestCase):
+    """SPEC-646 A1 to A4 (R1 to R4): a header table that is not an array, a row that is not an
+    array and a row holding a cell that is not a string are each refused by the sentence naming
+    the file, the place and the shape it needed, exit 2, with no traceback, by `count` as a
+    process and by the reader in this process. A well-formed population reads as it did, and the
+    refusals the reader made before of a band file's table and of a row with no id stand."""
+
+    def planted(self, place, rows):
+        """A fixture whose `SCRIPT_MUTATIONS` table in the header or in the band file holds
+        `rows`, written over the committed fixture."""
+        fixture = Fixture(self)
+        if place == "header":
+            header = json.loads(json.dumps(HEADER))
+            header["tables"]["SCRIPT_MUTATIONS"] = rows
+            fixture.write(POPULATION_HEADER, json.dumps(header, indent=2) + "\n")
+        else:
+            tables = {"MUTATIONS": [], "CARGO_KILLED_SCRIPT_MUTATIONS": []}
+            tables["SCRIPT_MUTATIONS"] = rows
+            fixture.write(POPULATION_BAND, json.dumps({"tables": tables}) + "\n")
+        return fixture
+
+    def assert_refused(self, fixture, sentence):
+        done = fixture.run("count")
+        self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+        self.assertIn(f"mutation_rows: REFUSED: {sentence}", done.stderr.splitlines())
+        self.assertNotIn("Traceback", done.stderr)
+        runner = load_runner()
+        with self.assertRaises(runner.PopulationRefused) as refused:
+            runner.rows_of(runner.load_tree(fixture.root))
+        self.assertEqual(str(refused.exception), sentence)
+
+    def test_a_header_table_that_is_not_an_array_is_refused_naming_it(self):
+        sentence = f"{POPULATION_HEADER}: SCRIPT_MUTATIONS is not an array of rows"
+        for value in examined("planted header tables", [1, {}, "rows", None]):
+            with self.subTest(value=value):
+                self.assert_refused(self.planted("header", value), sentence)
+
+    def test_a_row_that_is_not_an_array_is_refused_naming_its_place(self):
+        planted = [(place, value) for place in PLACES for value in (1, "S00081-ROW", {})]
+        for place, value in examined("planted rows", planted):
+            with self.subTest(place=place, value=value):
+                sentence = f"{PLACES[place]}: SCRIPT_MUTATIONS[1] is not an array of cells"
+                self.assert_refused(self.planted(place, [WELL_SHAPED, value]), sentence)
+
+    def test_a_row_holding_a_cell_that_is_not_a_string_is_refused_naming_its_place(self):
+        wrong = {0: 7, 1: None, 2: 5}
+        planted = [(place, cell) for place in PLACES for cell in sorted(wrong)]
+        for place, cell in examined("planted cells", planted):
+            with self.subTest(place=place, cell=cell):
+                row = ["S00082-CELL", *WELL_SHAPED[1:]]
+                row[cell] = wrong[cell]
+                sentence = f"{PLACES[place]}: SCRIPT_MUTATIONS[1] holds a cell that is not a string"
+                self.assert_refused(self.planted(place, [WELL_SHAPED, row]), sentence)
+
+    def test_a_well_formed_population_reads_as_before_beside_the_refusals_it_kept(self):
+        fixture = Fixture(self, [("SCRIPT_MUTATIONS", WELL_SHAPED)])
+        done = fixture.run("count")
+        self.assertEqual((done.returncode, done.stdout), (0, "1\n"), done.stderr)
+        runner = load_runner()
+        rows = runner.rows_of(runner.load_tree(fixture.root))
+        self.assertEqual([row.id for row in rows], ["S00080-SHAPED"])
+        kept = [
+            ({}, f"{POPULATION_BAND}: SCRIPT_MUTATIONS is not an array of rows"),
+            ([WELL_SHAPED, []], f"{POPULATION_BAND}: a SCRIPT_MUTATIONS row has no id"),
+        ]
+        for planted_rows, sentence in examined("kept refusals", kept):
+            with self.subTest(sentence=sentence):
+                self.assert_refused(self.planted("band", planted_rows), sentence)
 
 
 class TheRunnerProvesEverySelectedRow(unittest.TestCase):
@@ -1579,8 +1664,9 @@ SIGNALLED_KILLER = textwrap.dedent(
 #: The edge selects one patch, by the runner's base names: `starting` holds the killer's start
 #: (after its fork, before its output is collected) until the test's `sent` marker, `cleaning`
 #: holds the first group kill until the test's `sent-again` marker, and `ignored` starts the
-#: runner with SIGHUP ignored. Each held step ends in 20 short sleeps, whose backward jumps run a
-#: pending handler.
+#: runner with SIGHUP ignored; `interrupt-ignored` starts it with SIGINT ignored, and every other
+#: edge starts it with the interpreter's own SIGINT handler, whatever the test process inherited.
+#: Each held step ends in 20 short sleeps, whose backward jumps run a pending handler.
 SIGNALLED_DRIVER = textwrap.dedent(
     """\
     import os
@@ -1644,6 +1730,8 @@ SIGNALLED_DRIVER = textwrap.dedent(
     if EDGE == "cleaning":
         runner.kill_group = cleaning
     signal.signal(signal.SIGHUP, signal.SIG_IGN if EDGE == "ignored" else signal.SIG_DFL)
+    interrupt = signal.SIG_IGN if EDGE == "interrupt-ignored" else signal.default_int_handler
+    signal.signal(signal.SIGINT, interrupt)
     sys.exit(runner.main(["prove", "--all", "--root", str(DIRECTORY)]))
     """
 )
@@ -1769,6 +1857,151 @@ class TheRunnerEndsTheKillersGroupOnEverySignal(unittest.TestCase):
         os.kill(self.runner.pid, signal.SIGTERM)
         self.assert_ended(pids, "a SIGHUP, then a SIGTERM, of a runner that ignores SIGHUP", 143)
 
+    def test_a_sigint_while_the_killer_starts_is_held_until_its_group_can_end(self):
+        """SPEC-647 A1 (R1, R2): an interrupt during the killer's start waits for the group kill,
+        and the runner still ends by SIGINT."""
+        pids = self.start("starting")
+        self.wait_for("starting")
+        os.kill(self.runner.pid, signal.SIGINT)
+        self.mark("sent")
+        self.assert_ended(pids, "a SIGINT while the killer starts", -signal.SIGINT)
+
+    def test_a_second_signal_during_the_cleanup_is_ignored_whichever_came_first(self):
+        """SPEC-647 A2 (R3): once a cleanup has begun, a later signal is ignored whichever signal
+        began it, so the group ends and the runner ends as its first signal says."""
+        orders = [
+            (signal.SIGINT, signal.SIGINT),
+            (signal.SIGINT, signal.SIGTERM),
+            (signal.SIGTERM, signal.SIGINT),
+        ]
+        for first, second in examined("signal orders", orders):
+            with self.subTest(first=first.name, second=second.name):
+                pids = self.start("cleaning")
+                os.kill(self.runner.pid, first)
+                self.wait_for("cleaning")
+                os.kill(self.runner.pid, second)
+                self.mark("sent-again")
+                self.assert_ended(
+                    pids,
+                    f"a {second.name} during the cleanup a {first.name} began",
+                    -signal.SIGINT if first == signal.SIGINT else 128 + signal.SIGTERM,
+                )
+
+    def test_a_runner_started_with_sigint_ignored_keeps_it_ignored(self):
+        """SPEC-647 A3 (R1): a runner started with SIGINT ignored is not ended by one."""
+        pids = self.start("interrupt-ignored")
+        os.kill(self.runner.pid, signal.SIGINT)
+        os.kill(self.runner.pid, signal.SIGTERM)
+        self.assert_ended(pids, "a SIGINT, then a SIGTERM, of a runner that ignores SIGINT", 143)
+
+    def test_a_sigint_of_the_runner_still_ends_it_by_sigint_through_its_cleanup(self):
+        """SPEC-647 A6 (R2, R4, R5): a single interrupt still ends the group and the run by
+        SIGINT."""
+        pids = self.start("interrupt")
+        os.kill(self.runner.pid, signal.SIGINT)
+        self.assert_ended(pids, "a SIGINT of the runner", -signal.SIGINT)
+
+
+class TheRunEndsOnASigintAsOnItsOtherSignals(unittest.TestCase):
+    """SPEC-647 A4 and A5 (R1, R2, R4): `main()` run in this process takes SIGINT through its own
+    handler, ends an interrupted run as `KeyboardInterrupt`, keeps an ignored SIGINT ignored, and
+    reinstalls the SIGINT handler it found on every way out."""
+
+    def setUp(self):
+        for signum in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT):
+            found = signal.getsignal(signum)
+            self.addCleanup(signal.signal, signum, signal.SIG_DFL if found is None else found)
+        self.heard = []
+
+        def on_signal(signum, _frame):
+            self.heard.append(signum)
+
+        self.on_signal = on_signal
+        for signum in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT):
+            signal.signal(signum, on_signal)
+        self.runner = load_runner()
+        self.fixture, _ = leaving_row(self)
+        self.root = str(self.fixture.root)
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        self.scratch = Path(scratch.name)
+        self.killer = self.runner.Killer(*PASSING, cwd="scripts/tests")
+
+    def main(self, *argv):
+        """`main(argv)`'s way out, its output kept from the test's own: ("returned", code),
+        ("exited", code), ("interrupted", "KeyboardInterrupt") or ("raised", the class)."""
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            try:
+                return ("returned", self.runner.main(list(argv)))
+            except SystemExit as stop:
+                return ("exited", stop.code)
+            except KeyboardInterrupt:
+                return ("interrupted", "KeyboardInterrupt")
+            except Exception as error:
+                return ("raised", type(error).__name__)
+
+    def raise_sigint(self, *_args):
+        signal.raise_signal(signal.SIGINT)
+
+    def test_main_takes_sigint_and_restores_its_handler_on_every_way_out(self):
+        ways = [
+            ("a return", "count", contextlib.nullcontext, ("returned", 0)),
+            ("an argument error", "retired", contextlib.nullcontext, ("exited", 2)),
+            (
+                "an exception",
+                "census",
+                lambda: mock.patch.object(
+                    self.runner, "census", side_effect=RuntimeError("planted")
+                ),
+                ("raised", "RuntimeError"),
+            ),
+            (
+                "a SIGINT",
+                "count",
+                lambda: mock.patch.object(self.runner, "rows_of", side_effect=self.raise_sigint),
+                ("interrupted", "KeyboardInterrupt"),
+            ),
+        ]
+        for way, verb, patched, outcome in examined("ways out of main", ways):
+            signal.signal(signal.SIGINT, self.on_signal)
+            with patched():
+                self.assertEqual(self.main(verb, "--root", self.root), outcome, way)
+            self.assertIs(signal.getsignal(signal.SIGINT), self.on_signal, way)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        during = []
+
+        def read_sigint(*_args):
+            during.append(signal.getsignal(signal.SIGINT))
+            raise RuntimeError("planted")
+
+        with mock.patch.object(self.runner, "rows_of", side_effect=read_sigint):
+            self.assertEqual(
+                self.main("count", "--root", self.root), ("raised", "RuntimeError"), "ignored"
+            )
+        self.assertEqual(during, [signal.SIG_IGN], "an ignored SIGINT was taken during the run")
+        self.assertIs(signal.getsignal(signal.SIGINT), signal.SIG_IGN, "an ignored SIGINT")
+        signal.signal(signal.SIGINT, self.on_signal)
+        with mock.patch.object(signal, "getsignal", return_value=None):
+            self.assertEqual(self.main("count", "--root", self.root), ("returned", 0))
+        self.assertIs(signal.getsignal(signal.SIGINT), signal.SIG_DFL)
+        self.assertEqual(self.heard, [], "a signal main() handled reached the handler it found")
+
+    def test_a_sigint_held_while_a_killer_fails_to_start_still_ends_the_run(self):
+        def prove(root, _args, _leg=None):
+            return 0 if self.runner.run_killer(root, self.killer, self.scratch).passed else 1
+
+        def resolve_tool(command, _env, _cwd=None):
+            signal.raise_signal(signal.SIGINT)
+            raise self.runner.ToolMissing(command[0], "a planted refusal")
+
+        with (
+            mock.patch.object(self.runner, "prove", prove),
+            mock.patch.object(self.runner, "resolve_tool", resolve_tool),
+        ):
+            outcome = self.main("prove", "--all", "--root", self.root)
+        self.assertEqual(outcome, ("interrupted", "KeyboardInterrupt"))
+        self.assertEqual(self.heard, [], "a SIGINT main() held reached the handler it found")
+
 
 class MainLeavesTheProcessAsItFoundIt(unittest.TestCase):
     """SPEC-465 A10 to A12 (R7, R9): `main()` run in this process reinstalls the SIGTERM and
@@ -1776,7 +2009,7 @@ class MainLeavesTheProcessAsItFoundIt(unittest.TestCase):
     the exit of a signal it held while a killer failed to start."""
 
     def setUp(self):
-        for signum in (signal.SIGTERM, signal.SIGHUP):
+        for signum in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT):
             found = signal.getsignal(signum)
             self.addCleanup(signal.signal, signum, signal.SIG_DFL if found is None else found)
         self.heard = []
@@ -1863,6 +2096,108 @@ class MainLeavesTheProcessAsItFoundIt(unittest.TestCase):
         ):
             outcome = self.main("prove", "--all", "--root", self.root)
         self.assertEqual(outcome, ("exited", 143))
+
+
+PLAN_NOT_AN_OBJECT = "{plan} must hold a top-level object"
+PLAN_ROWS_NOT_AN_ARRAY = "{plan}: `rows` is not an array of row ids"
+PLAN_ENTRY_NOT_A_STRING = "{plan}: rows[{index}] is not a string"
+
+
+class TheRowsPlanRefusesAWrongShape(unittest.TestCase):
+    """SPEC-645 A1 to A6 (R1 to R5): a `--rows-from` plan of the wrong shape is refused by the
+    sentence naming the file and the shape it needed, as one `mutation_rows: REFUSED:` line on
+    stderr, exit 2, an empty stdout and nothing written, by `prove`, `legs` and `merge` as
+    processes and by the reader as a function; a well-formed plan reads as it did."""
+
+    IDS = ("S00001-FIRST", "S00002-SECOND", "S00003-THIRD")
+
+    def setUp(self):
+        self.fixture = Fixture(self, [unproved_row(identifier) for identifier in self.IDS])
+
+    def assert_refused(self, document, said_for):
+        """`document` as the plan of each verb that reads one, refused with the sentence
+        `said_for` spells from the plan's path, and by the reader in this process."""
+        plan = self.fixture.write("plan.json", json.dumps(document))
+        said = said_for(plan)
+        report = self.fixture.root / "merged.json"
+        sink = self.fixture.write("legs-output", "")
+        verbs = [
+            ("prove", lambda: self.fixture.run("prove", "--rows-from", str(plan))),
+            ("legs", lambda: self.fixture.run("legs", "--rows-from", str(plan), output=sink)),
+            (
+                "merge",
+                lambda: self.fixture.run(
+                    "merge",
+                    "--rows-from",
+                    str(plan),
+                    "--legs",
+                    "1",
+                    "--from",
+                    str(self.fixture.root / "legs"),
+                    "--report",
+                    str(report),
+                ),
+            ),
+        ]
+        for verb, run in examined("verbs that read a plan", verbs):
+            done = run()
+            first = (done.stderr.splitlines() or [""])[0]
+            self.assertEqual(done.returncode, 2, f"{verb} ended {done.returncode}: {first}")
+            self.assertEqual(done.stderr, f"mutation_rows: REFUSED: {said}\n", verb)
+            self.assertEqual(done.stdout, "", verb)
+        self.assertFalse(report.exists(), "a refused merge wrote a report")
+        self.assertEqual(outputs(sink), {}, "a refused plan wrote outputs")
+        runner = load_runner()
+        with self.assertRaises(runner.PlanRefused) as refused:
+            runner.plan_rows(str(plan), document)
+        self.assertEqual(str(refused.exception), said)
+
+    def test_a_plan_that_is_an_array_is_refused_naming_the_shape(self):
+        self.assert_refused(["S00001-FIRST"], lambda plan: PLAN_NOT_AN_OBJECT.format(plan=plan))
+
+    def test_a_plan_that_is_a_string_is_refused_naming_the_shape(self):
+        self.assert_refused("S00001-FIRST", lambda plan: PLAN_NOT_AN_OBJECT.format(plan=plan))
+
+    def test_a_plan_that_is_a_number_a_boolean_or_null_is_refused_naming_the_shape(self):
+        for value in examined("planted scalar plans", [7, 1.5, True, False, None]):
+            with self.subTest(value=value):
+                self.assert_refused(value, lambda plan: PLAN_NOT_AN_OBJECT.format(plan=plan))
+
+    def test_a_rows_value_that_is_not_an_array_is_refused_naming_the_shape(self):
+        planted = [7, "S00001-FIRST", None, {"S00001-FIRST": 1}]
+        for value in examined("planted rows values", planted):
+            with self.subTest(value=value):
+                self.assert_refused(
+                    {"rows": value}, lambda plan: PLAN_ROWS_NOT_AN_ARRAY.format(plan=plan)
+                )
+
+    def test_a_row_id_that_is_not_a_string_is_refused_naming_its_place(self):
+        planted = [(["S00001-FIRST", 1], 1), ([["S00001-FIRST"]], 0)]
+        for rows, index in examined("planted row ids", planted):
+            with self.subTest(rows=rows):
+                self.assert_refused(
+                    {"rows": rows},
+                    lambda plan, index=index: PLAN_ENTRY_NOT_A_STRING.format(
+                        plan=plan, index=index
+                    ),
+                )
+
+    def test_a_well_formed_plan_still_selects_its_rows(self):
+        plans = [
+            (
+                {"_": ["a note"], "rows": list(self.IDS), "scope": {"decision": "run"}},
+                0,
+                "legs: 1 leg(s) for 3 row(s), the largest 3 row(s)",
+            ),
+            ({"_": ["a note"]}, 0, "legs: 1 leg(s) for 0 row(s), the largest 0 row(s)"),
+            ({"rows": ["S99999-GHOST"]}, 2, "legs: REFUSED: no row holds the id(s) S99999-GHOST"),
+        ]
+        for document, code, line in examined("well-formed plans", plans):
+            plan = self.fixture.write("plan.json", json.dumps(document))
+            done = self.fixture.run("legs", "--rows-from", str(plan))
+            self.assertEqual(done.returncode, code, done.stdout + done.stderr)
+            self.assertIn(line, done.stdout)
+            self.assertEqual(done.stderr, "")
 
 
 if __name__ == "__main__":

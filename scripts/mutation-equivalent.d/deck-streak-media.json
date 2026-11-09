@@ -28,6 +28,96 @@
       "issue": "#1060"
     },
     {
+      "file": "crates/media/src/rewrite.rs",
+      "mutant": "replace > with >= in push_items",
+      "anchor": "close > at + 1\n        {\n            stack.push(",
+      "reason": "The mutant adds the empty quoted run \"\" as an item ending at at + 2, a position the closing quote's own character item reaches first.",
+      "evidence": "push_items is scan.rs's, copied. close is found from at + 1, so close >= at + 1 always holds and the mutant only adds close == at + 1, an empty run ending at at + 2. The character item at + 1 is pushed after it, so it is popped first; at + 1 holds a quote, not >, so its own character item at + 2 is tried within its subtree. If at + 1 was already marked, its subtree, at + 2 included, ran before at was popped, since every item lies after the position that pushes it. Either way the extra entry is popped marked and skipped, so tag_at tries the same positions in the same order.",
+      "reached_by": "rewrite::an_attribute_item_is_a_character_or_a_quoted_run_of_at_least_one",
+      "issue": "#1267"
+    },
+    {
+      "file": "crates/media/src/rewrite.rs",
+      "mutant": "replace + with * in push_items",
+      "anchor": "close > at + 1\n        {\n            stack.push(",
+      "reason": "close > at * 1 is close > at, which, like the >= mutant, only adds the empty quoted run whose end the closing quote's character item reaches first.",
+      "evidence": "close is found from at + 1, so close > at always holds: the condition admits exactly what close >= at + 1 admits, an empty run ending at at + 2. This file's record for replace > with >= in push_items gives why that extra item is always popped marked: at + 1 is a quote, not >, and its character item at + 2 is tried before the extra entry, or ran before at was popped.",
+      "reached_by": "rewrite::an_attribute_item_is_a_character_or_a_quoted_run_of_at_least_one",
+      "issue": "#1267"
+    },
+    {
+      "file": "crates/media/src/rewrite.rs",
+      "mutant": "replace + with - in push_items",
+      "anchor": "close > at + 1\n        {\n            stack.push(",
+      "reason": "close > at - 1 always holds, so, like the >= mutant, the mutant only adds the empty quoted run whose end the closing quote's character item reaches first.",
+      "evidence": "close is found from at + 1, so close >= at + 1 > at - 1, and at lies at or past the end of the tag's name, where tag_at first calls push_items, so at - 1 does not wrap: the condition admits exactly what the >= mutant admits, an empty run ending at at + 2, whose record in this file gives why that entry is always popped marked.",
+      "reached_by": "rewrite::an_attribute_item_is_a_character_or_a_quoted_run_of_at_least_one",
+      "issue": "#1267"
+    },
+    {
+      "file": "crates/media/src/rewrite.rs",
+      "mutant": "replace + with * in value_at",
+      "anchor": "find_byte(bytes, close + 1, b'>')",
+      "reason": "The search for the tag's > then starts at the closing quote instead of after it, and a quote is not >.",
+      "evidence": "bytes[close] is the quote find_byte just found, so find_byte(bytes, close, b'>') skips it and answers the first > after it, the same position find_byte(bytes, close + 1, b'>') answers; find_byte reads bytes, so no char boundary is involved.",
+      "reached_by": "rewrite::a_value_is_quoted_with_at_least_one_character_or_read_unquoted",
+      "issue": "#1267"
+    },
+    {
+      "file": "crates/media/src/rewrite.rs",
+      "mutant": "replace + with * in value_at",
+      "anchor": "close, end + 1))",
+      "reason": "The match then ends at the tag's > instead of after it, and each_match resumes at any < from the end on, which a > is not.",
+      "evidence": "tag_at hands value_at's end to each_match, which uses it only as resume, trying each occurrence of < that starts at or after it; the place at + 1..close is unchanged. A resume of end instead of end + 1 differs only for an occurrence starting at end, and bytes[end] is the > that find_byte found. end is the position of an ASCII byte, so a char boundary, and each_match's boundary assertion holds both ways.",
+      "reached_by": "rewrite::a_value_is_quoted_with_at_least_one_character_or_read_unquoted",
+      "issue": "#1267"
+    },
+    {
+      "file": "crates/media/src/rewrite.rs",
+      "mutant": "replace + with * in value_at",
+      "anchor": "Some((at..stop, stop + 1))",
+      "reason": "The match then ends at the tag's > instead of after it, and each_match resumes at any < from the end on, which a > is not.",
+      "evidence": "tag_at hands value_at's end to each_match, which uses it only as resume, trying each occurrence of < that starts at or after it; the place at..stop is unchanged. A resume of stop instead of stop + 1 differs only for an occurrence starting at stop, and bytes[stop] is the > this arm matched. stop is the position of an ASCII byte, so a char boundary, and each_match's boundary assertion holds both ways.",
+      "reached_by": "rewrite::a_value_is_quoted_with_at_least_one_character_or_read_unquoted",
+      "issue": "#1267"
+    },
+    {
+      "file": "crates/media/src/rewrite.rs",
+      "mutant": "replace + with - in value_at",
+      "anchor": "find_byte(bytes, stop + 1, b'>')",
+      "reason": "The search for the tag's > then starts at the name's last byte, and neither it nor the space after it is >.",
+      "evidence": "stop is the first space or > at or after at, and stop != at, so stop - 1 lies in the name and bytes[stop - 1] is neither a space nor >; bytes[stop] is the space this arm matched. So find_byte from stop - 1 answers the first > after stop, as find_byte from stop + 1 does; find_byte reads bytes, so no char boundary is involved.",
+      "reached_by": "rewrite::a_value_is_quoted_with_at_least_one_character_or_read_unquoted",
+      "issue": "#1267"
+    },
+    {
+      "file": "crates/media/src/rewrite.rs",
+      "mutant": "replace + with * in value_at",
+      "anchor": "find_byte(bytes, stop + 1, b'>')",
+      "reason": "The search for the tag's > then starts at the space that ended the name, and a space is not >.",
+      "evidence": "This arm runs only when bytes[stop] is b' ', so find_byte(bytes, stop, b'>') skips it and answers the first > after it, the position find_byte(bytes, stop + 1, b'>') answers.",
+      "reached_by": "rewrite::a_value_is_quoted_with_at_least_one_character_or_read_unquoted",
+      "issue": "#1267"
+    },
+    {
+      "file": "crates/media/src/rewrite.rs",
+      "mutant": "replace + with * in value_at",
+      "anchor": "stop, end + 1))",
+      "reason": "The match then ends at the tag's > instead of after it, and each_match resumes at any < from the end on, which a > is not.",
+      "evidence": "tag_at hands value_at's end to each_match, which uses it only as resume, trying each occurrence of < that starts at or after it; the place at..stop is unchanged. A resume of end instead of end + 1 differs only for an occurrence starting at end, and bytes[end] is the > that find_byte found after the space. end is the position of an ASCII byte, so a char boundary, and each_match's boundary assertion holds both ways.",
+      "reached_by": "rewrite::a_value_is_quoted_with_at_least_one_character_or_read_unquoted",
+      "issue": "#1267"
+    },
+    {
+      "file": "crates/media/src/rewrite.rs",
+      "mutant": "replace + with * in sound_at",
+      "anchor": "Some((open..close, close + 1))",
+      "reason": "each_match then resumes at the tag's ] instead of after it, and [sound: cannot begin at a ].",
+      "evidence": "places hands sound_at's end to each_match, which uses it only as resume, trying each occurrence of SOUND_OPEN that starts at or after it; the place open..close is unchanged. A resume of close instead of close + 1 differs only for an occurrence starting at close, and text[close] is the ] that find(']') found, while SOUND_OPEN begins with [. close is the position of an ASCII byte, so a char boundary, and each_match's boundary assertion holds both ways.",
+      "reached_by": "rewrite::a_place_inside_an_earlier_place_is_skipped_and_one_after_it_is_written",
+      "issue": "#1267"
+    },
+    {
       "file": "crates/media/src/scan.rs",
       "mutant": "replace > with >= in push_items",
       "anchor": "close > at + 1\n        {\n            stack.push(",

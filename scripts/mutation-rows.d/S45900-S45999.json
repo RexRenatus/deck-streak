@@ -1,0 +1,33 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S45900-THE-CHANGE-KEEPS-THE-STAMP-IT-FOUND",
+        "ingest",
+        "tests/support/synthetic.rs",
+        "            .execute(\"update col set mod = ?\", (found + 1,))",
+        "            .execute(\"update col set mod = ?\", (found,))",
+        "skip_write::a_change_on_another_client_stamps_its_copy_one_past_the_stamp_it_found",
+        "the other client's change moves its collection's stamp one past the stamp it found, so a copy that holds the server's stamp never keeps it through the change (SPEC-459 R1, A1)"
+      ],
+      [
+        "S45901-THE-CHANGE-STAMPS-THE-CLOCKS-WHOLE-SECOND",
+        "ingest",
+        "tests/support/synthetic.rs",
+        "            .execute(\"update col set mod = ?\", (found + 1,))",
+        "            .execute(\"update col set mod = ?\", ({ let _ = found; now * 1000 },))",
+        "skip_write::a_change_on_another_client_stamps_its_copy_one_past_the_stamp_it_found",
+        "the other client's change no longer stamps the clock's whole second, which can equal the server's stamp and leave the change on that client (SPEC-459 R1, A1)"
+      ],
+      [
+        "S45902-A-SYNC-THAT-CARRIED-NOTHING-PASSES",
+        "ingest",
+        "tests/support/mod.rs",
+        "    assert_ne!(\n        after, before,\n",
+        "    assert!(\n        after != before || true,\n",
+        "skip_write::an_other_clients_sync_that_carries_no_change_is_refused_by_name",
+        "the other client's sync that left its collection's stamp where it was is refused by name, never passed as a sync that sent the change (SPEC-459 R2, A2)"
+      ]
+    ]
+  }
+}

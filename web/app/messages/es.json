@@ -1,6 +1,6 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-  "tagline": "Convierte tus repasos diarios de Anki en una racha que vale la pena mantener.",
+  "tagline": "Convierte tus repasos diarios en una racha que vale la pena mantener.",
   "score_title": "Puntuación de hoy",
   "score_pillars": "Los cinco pilares de la puntuación",
   "pillar_consistency": "Constancia",
@@ -98,6 +98,7 @@
   "study_card_refused_reparse_target": "Esta tarjeta no se puede mostrar aquí de forma segura. Su marcado recupera el destino de un enlace (target) al leerse dos veces. Abre la nota en modo de código fuente y quítalo. Aún puedes responderla, enterrarla o marcarla.",
   "study_card_refused_body_attributes": "Esta tarjeta no se puede mostrar aquí de forma segura. Su marcado da a la página de la tarjeta atributos propios al leerse dos veces. Abre la nota en modo de código fuente. Aún puedes responderla, enterrarla o marcarla.",
   "study_card_refused_host_readback": "Esta tarjeta no se puede mostrar aquí de forma segura. No se lee igual dentro de su marco, a menudo por un retorno de carro. Abre la nota en modo de código fuente. Aún puedes responderla, enterrarla o marcarla.",
+  "study_card_withheld": "Esta tarjeta de oclusión de imagen no se puede mostrar aquí, porque esta aplicación no dibuja sus máscaras. Aún puedes enterrarla o marcarla.",
   "study_done": "Has terminado este mazo por hoy.",
   "study_title": "Estudiar",
   "study_decks": "Mazos",

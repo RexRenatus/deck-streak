@@ -369,3 +369,16 @@ its own.
 - **The other limits stand.** A descendant that leaves the group is not reached, a SIGKILL of the
   runner runs no cleanup, and SIGINT is untouched (A21).
 - **Files.** SPEC-465's manifest.
+
+## 13. Amendment: an interrupt while the killer starts or during its cleanup leaves no killer running (#952)
+
+- **SIGINT joins the one handler.** The sentences "SIGINT is untouched (A21)" of sections 10 and
+  12 now read: `main()` takes SIGINT through the same handler as SIGTERM and SIGHUP, unless SIGINT
+  was ignored when the run began, so an interrupt while a killer is starting is held until the
+  cleanup that ends its group is in place, and every signal after the first, an interrupt
+  included, is ignored until that cleanup ends. The first interrupt still ends the run as the
+  interpreter's own `KeyboardInterrupt`, so an interrupted run still ends by SIGINT, and A21 still
+  holds. `main()` restores the SIGINT handler it found with the other two.
+- **The other limits stand.** A descendant that leaves the group is not reached, and a SIGKILL of
+  the runner runs no cleanup.
+- **Files.** SPEC-647's manifest.

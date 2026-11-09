@@ -362,7 +362,9 @@ impl CollectionReader {
     /// Runs `work` on the copy, open read-only, under the shared collection lock, on the offload
     /// (R1): every read of this crate goes through here. `work` receives the open copy and runs to
     /// its end on the offload's blocking thread; the copy is closed after it, and the lock released
-    /// explicitly.
+    /// explicitly. The lock and the read go to a task of their own (SPEC-648 R1): a caller who
+    /// stops waiting leaves the read to end and the lock to be released after it, and a task its
+    /// runtime drops keeps the lock until the process exits.
     pub(crate) async fn with_copy<T, W, Fut>(
         &self,
         operation: &'static str,
@@ -375,23 +377,26 @@ impl CollectionReader {
     {
         let held = self.lock.shared().await.map_err(ReadError::Lock)?;
         let copy = self.copy.clone();
+        let offload = self.offload.clone();
         let runtime = Handle::current();
-        let outcome = self
-            .offload
-            .run(operation, move || {
-                on_this_thread(&runtime, async move {
-                    let db = Db::open_foreign_read_only(&copy)
-                        .await
-                        .map_err(ReadError::Copy)?;
-                    let read = work(db.clone()).await;
-                    db.close().await;
-                    read
+        let reading = async move {
+            offload
+                .run(operation, move || {
+                    on_this_thread(&runtime, async move {
+                        let db = Db::open_foreign_read_only(&copy)
+                            .await
+                            .map_err(ReadError::Copy)?;
+                        let read = work(db.clone()).await;
+                        db.close().await;
+                        read
+                    })
                 })
-            })
-            .await;
-        // An explicit unlock before the lock file closes (SPEC-022 R7); a failed unlock is released
-        // by the close that follows it.
-        let _ = held.release();
+                .await
+        };
+        // The task keeps the lock until the read has ended, then unlocks it before the lock file
+        // closes (SPEC-022 R7); a failed unlock is released by the close that follows it.
+        let (outcome, released) = held.hold_to_end(reading).await.map_err(ReadError::Lock)?;
+        let _ = released;
         outcome.map_err(ReadError::Copy)?
     }
 }
@@ -435,5 +440,196 @@ fn refusal(error: sqlx::Error) -> ReadError {
         ReadError::WriteRefused
     } else {
         read_failed(error)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    //! SPEC-648 A1 to A3: a collection read keeps its shared collection lock until the read has
+    //! ended, whoever still waits for it. A gated read waits for a gate its test opens, a bounded
+    //! wait, and the gate's guard opens it when it drops, so no red hangs.
+
+    use std::fs::{File, OpenOptions, TryLockError};
+    use std::future::{Ready, ready};
+    use std::path::Path;
+    use std::sync::Arc;
+    use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
+    use std::time::Duration;
+
+    use deck_streak_kernel::{
+        Courses, Environment, ManualClock, Offload, OffloadWorkers, UtcMillis,
+    };
+
+    use super::{CollectionReader, ForeignDb, ReadError};
+    use crate::lock::CollectionLock;
+    use crate::settings::{INCLUDE_DECKS, ScopeSettings};
+
+    /// The longest a gated read waits for its gate, and a test for the read's end.
+    const BOUND: Duration = Duration::from_secs(30);
+
+    /// The value a read's work returns.
+    const VALUE: u32 = 7;
+
+    /// A gate a read waits for; it opens when its test opens it, or when it drops.
+    struct Gate(Option<SyncSender<()>>);
+
+    impl Gate {
+        /// Opens the gate, so the read's wait ends.
+        fn open(&mut self) {
+            if let Some(gate) = self.0.take() {
+                let _ = gate.send(());
+            }
+        }
+    }
+
+    impl Drop for Gate {
+        fn drop(&mut self) {
+            self.open();
+        }
+    }
+
+    /// A reader of a zero-length copy in `dir`, with its lock file beside it, on an offload of one
+    /// worker, its scope and courses built as the crate's test support builds them.
+    fn reader_in(dir: &Path) -> CollectionReader {
+        let copy = dir.join("collection.anki2");
+        File::create(&copy).expect("a zero-length copy");
+        let scope = ScopeSettings::from_env(&Environment::from_vars(vec![(INCLUDE_DECKS, "Law")]))
+            .expect("the scope parses");
+        let clock = Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(0)));
+        CollectionReader {
+            copy,
+            lock: CollectionLock::new(dir.join("collection.lock")),
+            offload: Offload::new(OffloadWorkers::new(1).expect("one worker"), clock),
+            scope,
+            courses: Courses::default(),
+        }
+    }
+
+    /// The work of a gated read: it says it started, waits for its gate, says it ended and returns
+    /// [`VALUE`]. It runs on the offload's blocking thread, so its waits block no runtime.
+    fn gated(
+        started: SyncSender<()>,
+        gate: Receiver<()>,
+        ended: SyncSender<()>,
+    ) -> impl FnOnce(ForeignDb) -> Ready<Result<u32, ReadError>> + Send + 'static {
+        move |_copy| {
+            let _ = started.send(());
+            let _ = gate.recv_timeout(BOUND);
+            let _ = ended.send(());
+            ready(Ok(VALUE))
+        }
+    }
+
+    /// Polls `done` until it holds, and says whether it did; the polling bounds a wait for another
+    /// thread, and no assertion reads the time it took.
+    async fn until(mut done: impl FnMut() -> bool) -> bool {
+        for _ in 0..10_000 {
+            if done() {
+                return true;
+            }
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        }
+        false
+    }
+
+    /// Whether another holder has the lock file at `path`, read by a fresh open of the file and a
+    /// lock that never waits, which needs no runtime; a lock it takes, it unlocks at once.
+    fn held_elsewhere(path: &Path) -> bool {
+        let file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(path)
+            .expect("the lock file opens");
+        match file.try_lock() {
+            Ok(()) => {
+                file.unlock().expect("the probe unlocks");
+                false
+            }
+            Err(TryLockError::WouldBlock) => true,
+            Err(TryLockError::Error(error)) => panic!("the probe failed: {error}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn a_read_whose_caller_is_dropped_keeps_the_collection_lock_until_it_ends() {
+        let dir = tempfile::tempdir().expect("a directory");
+        let reader = reader_in(dir.path());
+        let lock = CollectionLock::new(dir.path().join("collection.lock"));
+        let (started_tx, started) = sync_channel(1);
+        let (ended_tx, ended) = sync_channel(1);
+        let (gate_tx, gate_rx) = sync_channel(1);
+        let mut gate = Gate(Some(gate_tx));
+        let work = gated(started_tx, gate_rx, ended_tx);
+        let caller = tokio::spawn(async move { reader.with_copy("dropped_read", work).await });
+        let began = until(|| started.try_recv().is_ok()).await;
+        // The caller is dropped while its read waits for the gate, as the request limit drops a
+        // handler.
+        caller.abort();
+        let cancelled = caller.await.is_err_and(|error| error.is_cancelled());
+        let kept = lock.try_exclusive().await.expect("the take").is_none();
+        gate.open();
+        let finished = until(|| ended.try_recv().is_ok()).await;
+        let mut free = false;
+        for _ in 0..10_000 {
+            if let Some(again) = lock.try_exclusive().await.expect("the take") {
+                again.release().expect("the release");
+                free = true;
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        }
+        assert_eq!(
+            (began, cancelled, kept, finished, free),
+            (true, true, true, true, true),
+            "(the read started, its caller dropped, the lock held while the read ran, the read \
+             ended, the lock free after it)"
+        );
+    }
+
+    #[test]
+    fn a_read_its_runtime_drops_keeps_the_collection_lock_until_the_process_ends() {
+        let dir = tempfile::tempdir().expect("a directory");
+        let path = dir.path().join("collection.lock");
+        let reader = reader_in(dir.path());
+        let (started_tx, started) = sync_channel(1);
+        let (ended_tx, ended) = sync_channel(1);
+        let (gate_tx, gate_rx) = sync_channel(1);
+        let mut gate = Gate(Some(gate_tx));
+        let work = gated(started_tx, gate_rx, ended_tx);
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("a runtime");
+        drop(runtime.spawn(async move { reader.with_copy("stopped_read", work).await }));
+        let began = runtime.block_on(until(|| started.try_recv().is_ok()));
+        // The runtime stops while the read waits for the gate, as a stopping process's does.
+        runtime.shutdown_timeout(Duration::from_millis(100));
+        let kept = held_elsewhere(&path);
+        gate.open();
+        let finished = ended.recv_timeout(BOUND).is_ok();
+        let still = held_elsewhere(&path);
+        assert_eq!(
+            (began, kept, finished, still),
+            (true, true, true, true),
+            "(the read started, the lock held after the runtime stopped while the read ran, the \
+             read ended, the lock still held after the read ended)"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_read_that_ends_releases_the_collection_lock_and_returns_its_value() {
+        let dir = tempfile::tempdir().expect("a directory");
+        let reader = reader_in(dir.path());
+        let lock = CollectionLock::new(dir.path().join("collection.lock"));
+        let value = reader
+            .with_copy("ended_read", |_copy| ready(Ok(VALUE)))
+            .await
+            .map_err(|error| error.to_string());
+        let free = lock.try_exclusive().await.expect("the take").is_some();
+        assert_eq!(
+            (value, free),
+            (Ok(VALUE), true),
+            "(the read's value, the lock free after it)"
+        );
     }
 }

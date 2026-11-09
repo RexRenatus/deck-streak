@@ -3,7 +3,9 @@
 //!
 //! Each test opens a synthetic collection the engine builds, on a native dispatcher, and reads
 //! each card's scheduling row through the core's fixed snapshot read, so what the engine wrote is
-//! observed rather than inferred from a reply.
+//! observed rather than inferred from a reply. Every answer is made at the collection's clock, its
+//! cutoff pinned twelve hours away, and the Forget test also runs on each side of a cutoff
+//! (SPEC-443 A1, A5, A6).
 
 #![allow(
     clippy::expect_used,
@@ -13,7 +15,7 @@
 
 mod support;
 
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::path::Path;
 
 use anki::collection::CollectionBuilder;
 use anki_proto::cards::RemoveCardsRequest;
@@ -31,12 +33,14 @@ use deck_streak_engine_core::table::{EXEMPT, ExemptWrite, Transport};
 use deck_streak_engine_core::undo_answer::Recorded;
 use prost::Message;
 use serde_json::Value;
+use support::clock;
 
 const OPEN_COLLECTION: (u32, u32) = (3, 0);
 const GET_QUEUED_CARDS: (u32, u32) = (13, 3);
 /// The snapshot's columns: `[id, queue, type, due, ivl, reps, lapses]`.
 const QUEUE: usize = 1;
 const TYPE: usize = 2;
+const DUE: usize = 3;
 /// The default preset every collection has.
 const DEFAULT_PRESET: i64 = 1;
 /// A preset no synthetic collection holds.
@@ -118,17 +122,20 @@ fn note_count(dispatcher: &Dispatcher) -> Value {
         .unwrap_or(Value::Null)
 }
 
-fn now_millis() -> i64 {
-    let millis = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("the clock reads after the epoch")
-        .as_millis();
-    i64::try_from(millis).expect("the clock's milliseconds fit an i64")
+/// The engine's own timing of today on a closed collection, read through the engine's own
+/// interface: its day count and its next cutoff.
+fn engine_day(collection: &Path) -> (u32, i64) {
+    let mut col = CollectionBuilder::new(collection)
+        .build()
+        .expect("the engine opens the collection");
+    let timing = col.timing_today().expect("the engine reads its timing");
+    col.close(None).expect("the engine closes the collection");
+    (timing.days_elapsed, timing.next_day_at.0)
 }
 
-/// Answers the card at the head of the queue Good, through an owner's answer (SPEC-365 R3), and
-/// returns its id.
-fn answer_next(dispatcher: &Dispatcher) -> i64 {
+/// Answers the card at the head of the queue Good, through an owner's answer (SPEC-365 R3),
+/// answered at `answered_at_millis`, and returns its id.
+fn answer_next(dispatcher: &Dispatcher, answered_at_millis: i64) -> i64 {
     let request = GetQueuedCardsRequest {
         fetch_limit: 1,
         intraday_learning_only: false,
@@ -150,7 +157,7 @@ fn answer_next(dispatcher: &Dispatcher) -> i64 {
         current_state: states.current,
         new_state: states.good,
         rating: Rating::Good as i32,
-        answered_at_millis: now_millis(),
+        answered_at_millis,
         milliseconds_taken: 1000,
     };
     dispatcher
@@ -322,12 +329,12 @@ fn outcome(result: Result<Vec<u8>, GestureRefusal>) -> String {
     }
 }
 
-#[test]
-fn a_forget_gesture_resets_its_one_card_and_no_other() {
-    let synthetic = support::synthetic("forget-one-card");
-    let dispatcher = opened(&synthetic);
-    let card = answer_next(&dispatcher);
-    let other = answer_next(&dispatcher);
+/// The Forget test's own body (SPEC-345 A13), on `synthetic`: two answers take both cards into
+/// learning, and the gesture returns its one card to the new queue and leaves the other.
+fn forget_resets_its_one_card_and_no_other(synthetic: &support::Synthetic) {
+    let dispatcher = opened(synthetic);
+    let card = answer_next(&dispatcher, synthetic.clock.at_millis());
+    let other = answer_next(&dispatcher, synthetic.clock.at_millis());
     assert_ne!(
         card, other,
         "the two answers took the collection's two cards"
@@ -355,6 +362,60 @@ fn a_forget_gesture_resets_its_one_card_and_no_other() {
         (answered.0[QUEUE].as_i64(), answered.1[QUEUE].as_i64()),
         (Some(1), Some(1)),
         "both cards were in learning before the gesture"
+    );
+}
+
+#[test]
+fn a_forget_gesture_resets_its_one_card_and_no_other() {
+    forget_resets_its_one_card_and_no_other(&support::synthetic("forget-one-card"));
+}
+
+/// SPEC-443 A1 (R5): the Forget test's own body, on a collection first placed five minutes before
+/// its cutoff, then on one first placed five minutes after it, each then pinned by the fixture.
+#[test]
+fn a_forget_gesture_resets_its_one_card_and_no_other_on_each_side_of_the_cutoff() {
+    forget_resets_its_one_card_and_no_other(&support::synthetic_placed(
+        "forget-one-card-just-before",
+        clock::JUST_BEFORE_SECS,
+    ));
+    forget_resets_its_one_card_and_no_other(&support::synthetic_placed(
+        "forget-one-card-just-after",
+        clock::JUST_AFTER_SECS,
+    ));
+}
+
+/// SPEC-443 A5 (R1, R2): the core's fixture, first placed five minutes before its cutoff and then
+/// pinned, holds the engine's next cutoff more than 11 and at most 12 hours after its clock's
+/// instant, at day 0, as the engine's own timing reads it.
+#[test]
+fn the_core_fixture_holds_the_engines_cutoff_twelve_hours_after_the_clock() {
+    let synthetic = support::synthetic_placed("fixture-cutoff", clock::JUST_BEFORE_SECS);
+    let (days, cutoff) = engine_day(&synthetic.collection);
+    let at_secs = synthetic.clock.at_secs();
+    assert_eq!(
+        (days, cutoff - at_secs > 39_600, cutoff - at_secs <= 43_200),
+        (0, true, true),
+        "the engine's day count and next cutoff on the core's fixture: day 0, the cutoff more than \
+         39 600 s and at most 43 200 s after the clock's instant; read day {days}, the cutoff \
+         {cutoff}, {} s after the instant {at_secs}",
+        cutoff - at_secs
+    );
+}
+
+/// SPEC-443 A6 (R6): five minutes before a cutoff the fixture has not pinned, a Good press takes a
+/// new card past its ten-minute step into the day-learning queue, due on day 1.
+#[test]
+fn a_core_good_press_just_before_the_cutoff_moves_the_card_to_tomorrow() {
+    let synthetic = support::synthetic("good-press-just-before");
+    let just_before = clock::place(&synthetic.collection, clock::JUST_BEFORE_SECS);
+    let dispatcher = opened(&synthetic);
+    let card = answer_next(&dispatcher, just_before.at_millis());
+    let answered = snapshot(&dispatcher, card);
+    assert_eq!(
+        (answered[QUEUE].as_i64(), answered[DUE].as_i64()),
+        (Some(3), Some(1)),
+        "the Good press five minutes before the cutoff left the card in the day-learning queue, due \
+         on day 1: {answered}"
     );
 }
 

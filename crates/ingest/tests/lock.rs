@@ -1,7 +1,11 @@
 //! The collection lock serialises syncs (SPEC-022 A12, R7).
+//!
+//! SPEC-470 A4 to A6: not red first; they call the added `Held::hold_to_end`; rows S47001 to
+//! S47004 are their reds.
 
 mod support;
 
+use std::fs::{OpenOptions, TryLockError};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -10,7 +14,7 @@ use deck_streak_ingest::lock::CollectionLock;
 use deck_streak_ingest::sync::SyncReport;
 use deck_streak_ingest::sync_runs::Trigger;
 use support::{Fixture, MemoryRuns, ScriptedEngine, Step};
-use tokio::sync::Notify;
+use tokio::sync::{Notify, mpsc};
 
 /// Polls `ready` until it holds, and says whether it did; the polling bounds a wait for another
 /// thread, and no assertion reads the time it took.
@@ -108,4 +112,111 @@ async fn a_try_take_answers_the_lock_when_free_and_nothing_while_held() {
     first.release().expect("release");
     let third = lock.try_exclusive().await.expect("the take");
     assert!(third.is_some(), "a released lock is taken again");
+}
+
+#[tokio::test]
+async fn a_held_lock_handed_to_a_task_runs_to_its_end_when_its_caller_stops_waiting() {
+    let dir = tempfile::tempdir().expect("a directory");
+    let lock = CollectionLock::new(dir.path().join("instruments.lock"));
+    let held = lock
+        .try_exclusive()
+        .await
+        .expect("the take")
+        .expect("a free lock is taken");
+    let go = Arc::new(Notify::new());
+    let (sent, mut ends) = mpsc::channel(1);
+    let work = {
+        let go = Arc::clone(&go);
+        async move {
+            go.notified().await;
+            sent.send(7_u32).await.expect("the test reads the end");
+            7_u32
+        }
+    };
+    let mut caller = Box::pin(held.hold_to_end(work));
+    let waited = tokio::time::timeout(Duration::from_millis(50), &mut caller).await;
+    // The caller stops waiting while the work runs.
+    drop(caller);
+    let kept = lock.try_exclusive().await.expect("lock").is_none();
+    go.notify_one();
+    let ended = tokio::time::timeout(Duration::from_secs(10), ends.recv())
+        .await
+        .ok()
+        .flatten();
+    let mut free = false;
+    for _ in 0..10_000 {
+        if let Some(again) = lock.try_exclusive().await.expect("lock") {
+            again.release().expect("release");
+            free = true;
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(1)).await;
+    }
+    assert_eq!(
+        (waited.is_err(), kept, ended, free),
+        (true, true, Some(7), true),
+        "(the caller stopped waiting, the lock kept while the work ran, the work's end, the lock \
+         free after it)"
+    );
+}
+
+#[tokio::test]
+async fn a_task_that_panics_releases_the_lock_and_its_caller_sees_the_panic() {
+    let dir = tempfile::tempdir().expect("a directory");
+    let lock = CollectionLock::new(dir.path().join("instruments.lock"));
+    let held = lock
+        .try_exclusive()
+        .await
+        .expect("the take")
+        .expect("a free lock is taken");
+    let work = async {
+        assert!(!std::hint::black_box(true), "the work panicked");
+    };
+    let answer = tokio::spawn(held.hold_to_end(work)).await;
+    let free = lock.try_exclusive().await.expect("lock").is_some();
+    assert_eq!(
+        (answer.is_err_and(|error| error.is_panic()), free),
+        (true, true),
+        "(the caller saw the work's panic, the lock free after it)"
+    );
+}
+
+#[test]
+fn a_task_its_runtime_drops_keeps_the_lock_until_the_process_ends() {
+    let dir = tempfile::tempdir().expect("a directory");
+    let path = dir.path().join("instruments.lock");
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("a runtime");
+    runtime.block_on(async {
+        let lock = CollectionLock::new(path.clone());
+        let held = lock
+            .try_exclusive()
+            .await
+            .expect("the take")
+            .expect("a free lock is taken");
+        let (sent, mut started) = mpsc::channel(1);
+        let work = async move {
+            sent.send(()).await.expect("the test reads the start");
+            std::future::pending::<()>().await;
+        };
+        drop(tokio::spawn(held.hold_to_end(work)));
+        tokio::time::timeout(Duration::from_secs(10), started.recv())
+            .await
+            .expect("the work started")
+            .expect("the work started");
+    });
+    // The runtime stops while the work runs, as a stopping process's does.
+    runtime.shutdown_timeout(Duration::from_millis(100));
+    let file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(&path)
+        .expect("the lock file");
+    let answer = file.try_lock();
+    assert!(
+        matches!(answer, Err(TryLockError::WouldBlock)),
+        "the lock read free after the runtime dropped the task: {answer:?}"
+    );
 }

@@ -1,0 +1,86 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S47601-THE-REMOVAL-SPARES-THE-PARENT",
+        "scripts/box-packs.sh",
+        "            shutil.rmtree(out, ignore_errors=True)\n",
+        "            shutil.rmtree(out.parent, ignore_errors=True)\n",
+        "a run removes exactly the cards directory it made, never its parent, so the temporary directory and every other entry in it survive (SPEC-476 R1)",
+        "test_box_packs.TheRunnerCleansUpItsCards.test_a_decoy_sibling_and_the_parent_survive_every_end"
+      ],
+      [
+        "S47602-THE-REMOVAL-SPARES-EVERY-SIBLING",
+        "scripts/box-packs.sh",
+        "            shutil.rmtree(out, ignore_errors=True)\n",
+        "            for sibling in out.parent.glob(\"deckstreak-box-cards.*\"):\n                shutil.rmtree(sibling, ignore_errors=True)\n",
+        "a run removes only the path it made, never every deckstreak-box-cards entry beside it, so a sibling survives byte for byte (SPEC-476 R1)",
+        "test_box_packs.TheRunnerCleansUpItsCards.test_a_decoy_sibling_and_the_parent_survive_every_end"
+      ],
+      [
+        "S47603-AN-EMPTY-OUT-NAMES-NO-DIRECTORY",
+        "scripts/box-packs.sh",
+        "    if chosen:\n",
+        "    if chosen is not None:\n",
+        "an empty BOX_PACKS_OUT names no directory: the run makes its own in the temporary directory, never one at its working directory (SPEC-476 R2)",
+        "test_box_packs.TheRunnerCleansUpItsCards.test_an_empty_out_is_read_as_unset"
+      ],
+      [
+        "S47604-AN-EMPTY-OUT-LEAVES-THE-DIRECTORY-THE-RUNS-OWN",
+        "scripts/box-packs.sh",
+        "    made = not os.environ.get(\"BOX_PACKS_OUT\")\n",
+        "    made = \"BOX_PACKS_OUT\" not in os.environ\n",
+        "an empty BOX_PACKS_OUT leaves the made directory the run's own, so it is removed when the run ends and no cards line is printed (SPEC-476 R2)",
+        "test_box_packs.TheRunnerCleansUpItsCards.test_an_empty_out_is_read_as_unset"
+      ],
+      [
+        "S47605-A-KEEP-OF-0-KEEPS",
+        "scripts/box-packs.sh",
+        "    keep = bool(os.environ.get(\"BOX_PACKS_KEEP\"))\n",
+        "    keep = os.environ.get(\"BOX_PACKS_KEEP\") == \"1\"\n",
+        "BOX_PACKS_KEEP keeps the made directory for any non-empty value, 0 included, never only for 1 (SPEC-476 R3)",
+        "test_box_packs.TheRunnerCleansUpItsCards.test_a_keep_of_0_keeps_the_made_directory"
+      ],
+      [
+        "S47606-AN-EMPTY-KEEP-KEEPS-NOTHING",
+        "scripts/box-packs.sh",
+        "    keep = bool(os.environ.get(\"BOX_PACKS_KEEP\"))\n",
+        "    keep = \"BOX_PACKS_KEEP\" in os.environ\n",
+        "BOX_PACKS_KEEP is read by its value: an empty one keeps nothing, so the made directory is removed (SPEC-476 R4)",
+        "test_box_packs.TheRunnerCleansUpItsCards.test_an_empty_keep_removes_the_made_directory"
+      ],
+      [
+        "S47607-NOTHING-RUNS-BETWEEN-THE-MAKE-AND-THE-TRY",
+        "scripts/box-packs.sh",
+        "    keep = bool(os.environ.get(\"BOX_PACKS_KEEP\"))\n    out = cards_directory()\n",
+        "    out = cards_directory()\n    keep = bool(os.environ.get(\"BOX_PACKS_KEEP\"))\n",
+        "both variables are read before the cards directory is made, so no statement runs between the make and the try that removes it (SPEC-476 R6)",
+        "test_box_packs.TheRunnerSourceHoldsItsCures.test_the_cards_directory_is_made_just_before_its_try"
+      ],
+      [
+        "S47608-THE-SCRATCH-PLACES-LOOP-STAYS-WRAPPED",
+        "scripts/box-packs.sh",
+        "            for repository, what in (\n                (root, \"the DeckStreak repository\"),\n                (checkout, \"the checkout\"),\n            ):\n",
+        "            for repository, what in ((root, \"the DeckStreak repository\"), (checkout, \"the checkout\")):\n",
+        "the loop over the two places the scratch directory must not sit in stays wrapped, so every line of the runner fits 100 columns (SPEC-476 R5)",
+        "test_box_packs.TheRunnerSourceHoldsItsCures.test_every_runner_line_fits_100_columns"
+      ],
+      [
+        "S47609-THE-SCRATCH-REFUSAL-STAYS-WRAPPED",
+        "scripts/box-packs.sh",
+        "                    raise Refusal(\n                        f\"the scratch directory is inside {what}; set TMPDIR outside both\"\n                    )\n",
+        "                    raise Refusal(f\"the scratch directory is inside {what}; set TMPDIR outside both\")\n",
+        "the refusal of a scratch directory inside either repository stays wrapped, so every line of the runner fits 100 columns (SPEC-476 R5)",
+        "test_box_packs.TheRunnerSourceHoldsItsCures.test_every_runner_line_fits_100_columns"
+      ],
+      [
+        "S47610-THE-JUDGING-LINE-STAYS-SPLIT",
+        "scripts/box-packs.sh",
+        "                f\"box-packs: judging {sha[:12]} ({args.rev}) with the packs checkout \"\n                f\"at {have[:12]}\",\n",
+        "                f\"box-packs: judging {sha[:12]} ({args.rev}) with the packs checkout at {have[:12]}\",\n",
+        "the judging line's text stays split across two literals, so every line of the runner fits 100 columns (SPEC-476 R5)",
+        "test_box_packs.TheRunnerSourceHoldsItsCures.test_every_runner_line_fits_100_columns"
+      ]
+    ]
+  }
+}

@@ -170,3 +170,14 @@ and no engine path, and no Rust source changes.
 
 SPEC-592; ADR-589 (the deprecated Telegram code the list excludes); SPEC-038 and ADR-055 (the gate
 jobs and the aggregate `ci`); ADR-017 (the branch model and hosted runners).
+
+## Amendment (SPEC-649): a red Rust lane read for a test helper's kill, and the cure kept the refusal
+
+A Rust lane run read red while every test passed: the merge refused one raw profile whose header
+its reader called corrupt, and so merged none. The test support's sync server helpers closed a
+child's standard input, which starts the child's exit, and killed the child at once; a kill that
+landed while the child's exit handlers wrote its raw profile left that profile cut short. D2 holds
+as decided: the lane still exits 1 on a profile it cannot read. The cure is in the tests: a stopped
+child gets a bounded grace to exit on its own before any kill (SPEC-649). The merge's other failure
+mode, a skip of an unreadable profile and a re-run that hides the first result are each rejected,
+because each would let the lane read green with a profile left out.

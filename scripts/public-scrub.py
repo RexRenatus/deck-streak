@@ -39,6 +39,13 @@ the history it would read is incomplete.
 A binary whose path, sha256 and byte count equal an entry of `scripts/brand-files.json` at the
 root is admitted instead of refused, in the tree and in history, and is still searched for the
 private literals; a list that cannot be read is a usage error (SPEC-579).
+A screenshot baseline, a file under `web/app/tests/verify/__screenshots__/` whose name ends in
+the lower-case `.png` and whose bytes open with the PNG signature, is admitted instead of
+refused, in the tree and in history, only when its chunks run whole to `IEND` with nothing after
+it (else `baseline-malformed`) and it holds no `tEXt`, `iTXt` or `zTXt` chunk (else
+`baseline-text-chunk` and the chunk's type); it is still searched for the private literals
+(SPEC-639). A name in any other case, a file outside that folder and every other binary stay
+refused by the rule `binary`.
 
 A finding names the rule, the file (or `history:<path>@<blob>`) and the line, never the value (a
 literal is reported by its index in the private list). The deny lists themselves are skipped: they
@@ -58,6 +65,7 @@ import re
 import subprocess
 import sys
 import unicodedata
+import zlib
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -74,6 +82,10 @@ SKIP_PREFIXES = ("LICENSES/", "scripts/scrub-rules/")
 #: The brand list (SPEC-579): a binary is admitted only at a path it names, with the sha256 and the
 #: byte count it names for that path; every other binary is still refused by the rule `binary`.
 BRAND_LIST = Path("scripts") / "brand-files.json"
+#: The screenshot baselines (SPEC-639): the one binary admission by path, a PNG with no text.
+BASELINES = "web/app/tests/verify/__screenshots__/"
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+TEXT_CHUNKS = frozenset({b"tEXt", b"iTXt", b"zTXt"})
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 ADDRESS_RULES = {"ipv4", "ipv6"}
 # The ranges privacy-gdpr's public scrub passes: documentation (RFC 5737, RFC 3849, RFC 9637).
@@ -243,6 +255,28 @@ def admits(admitted: set[tuple[str, str, int]], path: str, data: bytes) -> bool:
     return (path, hashlib.sha256(data).hexdigest(), len(data)) in admitted
 
 
+def admits_baseline(path: str, data: bytes) -> bool:
+    named = path.startswith(BASELINES) and path.endswith(".png")
+    return named and data.startswith(PNG_SIGNATURE)
+
+
+def png_findings(data: bytes) -> list[str]:
+    """Each text chunk a PNG holds, and `baseline-malformed` unless its chunks, each with its
+    CRC, run whole to `IEND` with nothing after it."""
+    found, at = [], len(PNG_SIGNATURE)
+    while True:
+        length = int.from_bytes(data[at : at + 4], "big")
+        kind, end = data[at + 4 : at + 8], at + 12 + length
+        crc = int.from_bytes(data[end - 4 : end], "big")
+        if end > len(data) or zlib.crc32(data[at + 4 : end - 4]) != crc:
+            return [*found, "baseline-malformed"]
+        if kind in TEXT_CHUNKS:
+            found.append(f"baseline-text-chunk {kind.decode('ascii')}")
+        at = end
+        if kind == b"IEND":
+            return found if at == len(data) else [*found, "baseline-malformed"]
+
+
 class Scan:
     """Applies the composed shapes and literals, and collects findings that never carry a value."""
 
@@ -280,6 +314,13 @@ class Scan:
     def admitted(self, shown: str, data: bytes) -> None:
         # Admitted by the brand list: not refused for being binary, and still searched.
         self.search_literals(shown, data)
+
+    def baseline(self, shown: str, data: bytes) -> None:
+        # A screenshot baseline: refused for each text chunk or a malformed chunk sequence, and
+        # still searched, as an admitted binary is.
+        for rule in png_findings(data):
+            self.findings.append(f"{shown}: {rule}")
+        self.admitted(shown, data)
 
     def search_literals(self, shown: str, data: bytes) -> None:
         folded = data.decode("latin-1").casefold()
@@ -350,6 +391,8 @@ def history(root: Path, rev: str, scan: Scan, admitted: set[tuple[str, str, int]
         if is_binary(data):
             if admits(admitted, path, data):
                 scan.admitted(shown, data)
+            elif admits_baseline(path, data):
+                scan.baseline(shown, data)
             else:
                 scan.binary(shown, data)
         elif not skipped_name(path):
@@ -410,6 +453,8 @@ def examine(scan: Scan, files: list[Path], root: Path, admitted: set[tuple[str, 
             rel = path.relative_to(root) if path.is_relative_to(root) else path
             if admits(admitted, rel.as_posix(), data):
                 scan.admitted(shown, data)
+            elif admits_baseline(rel.as_posix(), data):
+                scan.baseline(shown, data)
             else:
                 scan.binary(shown, data)
             continue

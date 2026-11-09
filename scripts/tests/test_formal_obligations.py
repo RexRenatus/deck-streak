@@ -20,7 +20,7 @@ import _formal_ledger as ledger
 from _support import REPO, examined
 
 LEDGER = REPO / "formal" / "obligations.json"
-IDS = ["O1a"] + [f"O{n}" for n in range(1, 18)]
+IDS = ["O1a"] + [f"O{n}" for n in range(1, 19)]
 PHASES = {
     "1": ["O1a", "O4", "O5", "O6"],
     "2": ["O1", "O2", "O3", "O4", "O5", "O6", "O7", "O8", "O9", "O11"],
@@ -92,6 +92,7 @@ SYNC_MODELS = ("tla/FullSyncChoice", "tla/MinimumClientHandshake", "tla/SyncCred
 ENGINE_TIED = SYNC_MODELS + (
     "tla/SyncSnapshotWindow",
     "tla/UndoOwnAnswer",
+    "tla/AnswerOnTheShownState",
     "tla/SkipDayWrite",
     "tla/AwardOnce",
     "tla/FoldSettlesOnce",
@@ -101,6 +102,7 @@ ENGINE_TIED = SYNC_MODELS + (
     "tla/SensitiveDeckGate",
     "tla/SkipDayOnce",
     "tla/DueReorderInput",
+    "tla/OneInstrumentReader",
     "lean/Fsrs7MemoryState",
     "lean/Fsrs7PortState",
     "lean/Fsrs7Schedule",
@@ -148,6 +150,14 @@ RELEASE_GATES_TIE = {
     "for": RELEASE_GATES,
     "test": "scripts/tests/test_release_gates.py"
     "::TheLeanVectors.test_every_vector_is_the_scripts_verdict",
+}
+# The path gate's entry (SPEC-634): present, and tied by its Python vectors test.
+PATH_GATE = "lean/PathGate"
+PATH_GATE_TIE = {
+    "method": "vectors",
+    "for": PATH_GATE,
+    "test": "scripts/tests/test_path_gate.py"
+    "::TheLeanVectors.test_every_vector_is_the_gates_decision",
 }
 # SPEC-501: the scheduling companion's decision, the first planned entry built, present under O6
 # with its vectors tie.
@@ -208,13 +218,19 @@ SYNC_CORE_TIES = [
 # The entries built after the 44 were dispositioned, each with its disposition and the
 # obligations that name it.
 NEW_ENTRIES = {
+    "tla/AnswerOnTheShownState": ("re-point", {"O11"}),
     "lean/CompanionDecide": ("keep", {"O6"}),
     "lean/DocsMermaidRead": ("keep", set()),
     "lean/SearchHolds": ("keep", {"O14"}),
+    "lean/AgentPinGroups": ("keep", set()),
     "lean/RetiredListShape": ("keep", set()),
     "lean/MediaBind": ("keep", {"O13"}),
+    "tla/OneInstrumentReader": ("re-stamp", {"O11"}),
     "lean/MediaGc": ("keep", {"O13"}),
     "lean/IdSlot": ("keep", {"O12"}),
+    "lean/DeployEntryRefusal": ("keep", set()),
+    "tla/LogCaptureFloor": ("keep", set()),
+    PATH_GATE: ("keep", {"O18"}),
 }
 # The 55 existing entries' dispositions.
 # They are the 43 that predate the sync entries, those five, the release gates' entry, and the
@@ -898,7 +914,7 @@ class TheFormalLedger(unittest.TestCase):
         self.assertEqual([item["id"] for item in obligations], IDS)
         self.assertEqual(
             {item["id"]: item["status"] for item in obligations},
-            dict.fromkeys(IDS, "planned") | {"O17": "tied"},
+            dict.fromkeys(IDS, "planned") | {"O17": "tied", "O18": "tied"},
         )
         planned, harnesses, companions, present_names = {}, {}, {}, {}
         for item in obligations:
@@ -929,6 +945,7 @@ class TheFormalLedger(unittest.TestCase):
             "O13": MEDIA_ENTRIES,
             "O14": SEARCH_ENTRIES,
             "O17": (RELEASE_GATES,),
+            "O18": (PATH_GATE,),
         }
         for identity, entries in sync_named.items():
             if identity != "O11":
@@ -948,6 +965,7 @@ class TheFormalLedger(unittest.TestCase):
                 *MEDIA_TIES,
                 *SYNC_CORE_TIES,
                 RELEASE_GATES_TIE,
+                PATH_GATE_TIE,
             ],
         )
         examined("planned entries", planned)

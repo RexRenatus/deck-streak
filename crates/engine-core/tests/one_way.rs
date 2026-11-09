@@ -56,8 +56,9 @@ fn engine(collection: &Path) -> Collection {
         .expect("the engine opens the test's collection")
 }
 
-/// Answers `card` Good, as the engine's own reviewer does: one review-log row, unsynced.
-fn answer(collection: &Path, card: i64) {
+/// Answers `card` Good at `at`, the clock's instant, as the engine's own reviewer does: one
+/// review-log row, unsynced.
+fn answer(collection: &Path, card: i64, at: i64) {
     let mut col = engine(collection);
     let states = col
         .get_scheduling_states(CardId(card))
@@ -67,7 +68,7 @@ fn answer(collection: &Path, card: i64) {
         current_state: states.current,
         new_state: states.good,
         rating: Rating::Good,
-        answered_at: TimestampMillis::now(),
+        answered_at: TimestampMillis(at),
         milliseconds_taken: 1000,
         custom_data: None,
         from_queue: false,
@@ -239,18 +240,10 @@ fn upload_checked(
         .expect("a found snapshot checks the upload")
 }
 
-fn now_millis() -> i64 {
-    let millis = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .expect("the clock reads after the epoch")
-        .as_millis();
-    i64::try_from(millis).expect("the clock's milliseconds fit an i64")
-}
-
-/// Answers the card at the head of the queue Good, through the owner's answer door (SPEC-365 R3),
-/// after the dispatcher's ordinary queue read, as a client studies while the choice is open, and
-/// returns its id.
-fn answer_next(dispatcher: &Dispatcher) -> i64 {
+/// Answers the card at the head of the queue Good at `at`, the clock's instant, through the
+/// owner's answer door (SPEC-365 R3), after the dispatcher's ordinary queue read, as a client
+/// studies while the choice is open, and returns its id.
+fn answer_next(dispatcher: &Dispatcher, at: i64) -> i64 {
     let request = GetQueuedCardsRequest {
         fetch_limit: 1,
         intraday_learning_only: false,
@@ -272,7 +265,7 @@ fn answer_next(dispatcher: &Dispatcher) -> i64 {
         current_state: states.current,
         new_state: states.good,
         rating: card_answer::Rating::Good as i32,
-        answered_at_millis: now_millis(),
+        answered_at_millis: at,
         milliseconds_taken: 1000,
     };
     dispatcher
@@ -288,8 +281,8 @@ fn answer_next(dispatcher: &Dispatcher) -> i64 {
 fn a_downloads_backup_holds_every_device_id_before_the_write() {
     let device = support::synthetic("one-way-download-backup-device");
     let [first, second] = device.cards;
-    answer(&device.collection, first);
-    answer(&device.collection, second);
+    answer(&device.collection, first, device.clock.at_millis());
+    answer(&device.collection, second, device.clock.at_millis());
     let server = support::synthetic("one-way-download-backup-server");
     let device_ids = held(&device.collection);
     assert_eq!(
@@ -437,8 +430,8 @@ fn the_write_sends_the_direction_the_owner_confirmed_and_no_media() {
     let (engine_auth, auth) = logged_in(&server);
     let donor = support::synthetic("one-way-direction-donor");
     let [first, second] = donor.cards;
-    answer(&donor.collection, first);
-    answer(&donor.collection, second);
+    answer(&donor.collection, first, donor.clock.at_millis());
+    answer(&donor.collection, second, donor.clock.at_millis());
     let donor_ids = held(&donor.collection);
     seed(&engine_auth, &donor.collection);
     let device = support::synthetic("one-way-direction-device");
@@ -469,7 +462,7 @@ fn a_server_copy_is_fetched_only_into_an_empty_file() {
     let server = SyncServer::start("a_server_copy_is_fetched_only_into_an_empty_file");
     let (engine_auth, auth) = logged_in(&server);
     let donor = support::synthetic("one-way-copy-donor");
-    answer(&donor.collection, donor.cards[0]);
+    answer(&donor.collection, donor.cards[0], donor.clock.at_millis());
     let donor_ids = held(&donor.collection);
     seed(&engine_auth, &donor.collection);
     let device = support::synthetic("one-way-copy-device");
@@ -542,9 +535,9 @@ fn an_uploads_backup_is_the_counted_server_copy() {
     let (engine_auth, auth) = logged_in(&server);
     let device = support::synthetic("one-way-upload-backup-device");
     let [first, second] = device.cards;
-    answer(&device.collection, first);
+    answer(&device.collection, first, device.clock.at_millis());
     seed(&engine_auth, &device.collection);
-    answer(&device.collection, second);
+    answer(&device.collection, second, device.clock.at_millis());
     let dispatcher = open(&device);
     let copy = device.dir.join("copy.anki2");
     let confirmed = counted(&dispatcher, &auth, &copy)
@@ -581,7 +574,7 @@ fn a_server_changed_after_the_count_returns_to_the_counts() {
     let (engine_auth, auth) = logged_in(&server);
     let device = support::synthetic("one-way-recheck-device");
     let [first, second] = device.cards;
-    answer(&device.collection, first);
+    answer(&device.collection, first, device.clock.at_millis());
     seed(&engine_auth, &device.collection);
     let dispatcher = open(&device);
     let copy = device.dir.join("copy.anki2");
@@ -594,7 +587,7 @@ fn a_server_changed_after_the_count_returns_to_the_counts() {
     let second_client =
         support::scratch("engine-core-one-way", "a-second-client").join("second.anki2");
     download_to(&engine_auth, &second_client);
-    answer(&second_client, second);
+    answer(&second_client, second, device.clock.at_millis());
     assert_eq!(
         synced(&engine_auth, &second_client).required(),
         ChangesRequired::NoChanges,
@@ -634,7 +627,7 @@ fn a_device_review_after_the_backup_refuses_the_download() {
         &device.dir.join("backup.anki2"),
         &copy,
     );
-    let reviewed = answer_next(&dispatcher);
+    let reviewed = answer_next(&dispatcher, device.clock.at_millis());
 
     let written =
         one_way::write(&dispatcher, ready, one_way_tap(), &auth).map_err(
@@ -671,10 +664,14 @@ fn the_backup_and_the_server_copies_outlive_the_write() {
     let server = SyncServer::start("the_backup_and_the_server_copies_outlive_the_write");
     let (engine_auth, auth) = logged_in(&server);
     let donor = support::synthetic("one-way-outlive-donor");
-    answer(&donor.collection, donor.cards[0]);
+    answer(&donor.collection, donor.cards[0], donor.clock.at_millis());
     seed(&engine_auth, &donor.collection);
     let device = support::synthetic("one-way-outlive-device");
-    answer(&device.collection, device.cards[1]);
+    answer(
+        &device.collection,
+        device.cards[1],
+        device.clock.at_millis(),
+    );
     let dispatcher = open(&device);
     let path = |name: &str| device.dir.join(name);
 
@@ -732,8 +729,8 @@ fn an_evicted_device_is_offered_the_download_alone_and_restores_every_review() {
     let (engine_auth, auth) = logged_in(&server);
     let donor = support::synthetic("one-way-evicted-donor");
     let [first, second] = donor.cards;
-    answer(&donor.collection, first);
-    answer(&donor.collection, second);
+    answer(&donor.collection, first, donor.clock.at_millis());
+    answer(&donor.collection, second, donor.clock.at_millis());
     let donor_ids = held(&donor.collection);
     seed(&engine_auth, &donor.collection);
     let dir = support::scratch("engine-core-one-way", "an-evicted-device");
@@ -807,7 +804,7 @@ fn rechecked_after(
     server: &SyncServer,
     test: &str,
     plant: impl FnOnce(&Path),
-    change: impl FnOnce(&Path),
+    change: impl FnOnce(&Path, support::clock::Clock),
     send: fn(&EngineAuth, &Path),
 ) -> (Result<Result<(), Option<Losses>>, Reason>, bool) {
     let (engine_auth, auth) = logged_in(server);
@@ -824,7 +821,7 @@ fn rechecked_after(
     );
     let second_client = support::scratch("engine-core-one-way", test).join("second.anki2");
     download_to(&engine_auth, &second_client);
-    change(&second_client);
+    change(&second_client, device.clock);
     send(&engine_auth, &second_client);
     let fresh = device.dir.join("fresh.anki2");
 
@@ -855,7 +852,7 @@ fn an_edit_that_adds_no_id_returns_the_upload_to_the_counts() {
         &server,
         "one-way-edit-no-id",
         |_| (),
-        |second| {
+        |second, _| {
             let mut col = engine(second);
             edit_first_note(&mut col, "edited after the count");
             col.close(None).expect("the engine closes the collection");
@@ -881,7 +878,7 @@ fn a_tag_or_config_change_alone_returns_the_upload_to_the_counts() {
         &server,
         "one-way-new-tag",
         |_| (),
-        |second| {
+        |second, clock| {
             let col = engine(second);
             let db = col.storage.db();
             db.execute(
@@ -889,7 +886,7 @@ fn a_tag_or_config_change_alone_returns_the_upload_to_the_counts() {
                 [],
             )
             .expect("the second client registers a tag no note carries");
-            db.execute("update col set mod = ?1", [now_millis()])
+            db.execute("update col set mod = ?1", [clock.at_millis()])
                 .expect("the second client's collection reads as changed");
             col.close(None).expect("the engine closes the collection");
         },
@@ -899,7 +896,7 @@ fn a_tag_or_config_change_alone_returns_the_upload_to_the_counts() {
         &server,
         "one-way-config",
         |_| (),
-        |second| {
+        |second, _| {
             let mut col = engine(second);
             col.set_config_json("plantedAfterTheCount", &true, true)
                 .expect("the engine sets the config key");
@@ -936,7 +933,7 @@ fn a_deletion_returns_the_upload_to_the_counts() {
                 .expect("the engine adds an empty deck");
             col.close(None).expect("the engine closes the collection");
         },
-        |second| {
+        |second, _| {
             let mut col = engine(second);
             let id = col
                 .get_deck_id(deck)
@@ -970,7 +967,7 @@ fn an_edit_dated_at_or_below_the_greatest_returns_the_upload_to_the_counts() {
         &server,
         "one-way-edit-dated-below",
         |_| (),
-        |second| {
+        |second, _| {
             let mut col = engine(second);
             let dated = first_note(&col).mtime;
             let note = edit_first_note(&mut col, "edited after the count, dated as before");
@@ -1002,7 +999,7 @@ fn a_full_upload_after_the_count_returns_the_upload_to_the_counts() {
     let server =
         SyncServer::start("a_full_upload_after_the_count_returns_the_upload_to_the_counts");
 
-    let rechecked = rechecked_after(&server, "one-way-full-upload", |_| (), |_| (), seed);
+    let rechecked = rechecked_after(&server, "one-way-full-upload", |_| (), |_, _| (), seed);
 
     assert_eq!(
         rechecked,
@@ -1019,7 +1016,7 @@ fn an_unchanged_server_rechecks_equal() {
     }
     let server = SyncServer::start("an_unchanged_server_rechecks_equal");
 
-    let rechecked = rechecked_after(&server, "one-way-unchanged", |_| (), |_| (), |_, _| ());
+    let rechecked = rechecked_after(&server, "one-way-unchanged", |_| (), |_, _| (), |_, _| ());
 
     assert_eq!(
         rechecked,
@@ -1032,7 +1029,11 @@ fn an_unchanged_server_rechecks_equal() {
 #[test]
 fn the_stamp_reads_every_synced_tables_greatest_usn_and_the_schema() {
     let device = support::synthetic("one-way-stamp");
-    answer(&device.collection, device.cards[0]);
+    answer(
+        &device.collection,
+        device.cards[0],
+        device.clock.at_millis(),
+    );
     let col = engine(&device.collection);
     let db = col.storage.db();
     db.execute(
@@ -1097,7 +1098,7 @@ fn a_server_copy_is_fetched_into_a_file_whose_collection_holds_no_row() {
         SyncServer::start("a_server_copy_is_fetched_into_a_file_whose_collection_holds_no_row");
     let (engine_auth, auth) = logged_in(&server);
     let donor = support::synthetic("one-way-no-row-donor");
-    answer(&donor.collection, donor.cards[0]);
+    answer(&donor.collection, donor.cards[0], donor.clock.at_millis());
     let donor_ids = held(&donor.collection);
     seed(&engine_auth, &donor.collection);
     let device = support::synthetic("one-way-no-row-device");

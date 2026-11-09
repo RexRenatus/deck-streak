@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""locale_census: every message of the web app exists in all seven locales (SPEC-571, ADR-590).
+"""locale_census: every message of the web app exists in all seven locales (SPEC-571, ADR-590),
+with no space typed at a CJK and Latin boundary in Japanese and Chinese (SPEC-629, ADR-651).
 
     python3 scripts/locale_census.py [--root ROOT]
 
@@ -24,7 +25,10 @@ It refuses, one line per finding:
   trimming, in any locale, English included;
 - `not-nfc <locale> <key>`: a value not in Unicode NFC;
 - `placeholder <locale> <key>`: a value whose `{name}` placeholders, counted as a multiset, differ
-  from English's.
+  from English's;
+- `spaced <locale> <key> <n>`: a Japanese or Chinese value holding n runs of whitespace typed
+  between a CJK letter and an ASCII letter, a digit, a percent sign or a placeholder brace; the
+  stylesheet's `text-autospace` draws that gap (SPEC-629, ADR-651).
 
 Then it prints `examined <n> locales, <m> keys`: the catalogs it examined and English's keys. The
 `$schema` member is not a message. It exits 0 when green, 1 on a finding, and 3 when it examined no
@@ -46,6 +50,21 @@ PATTERN = "./messages/{locale}.json"
 PLACEHOLDER = re.compile(r"\{[^{}]*\}")
 FORM = "NFC"
 VOID = 3
+SPACED_LOCALES = ("ja", "zh-Hans", "zh-Hant")
+CJK_RANGES = (
+    (0x3005, 0x3007),
+    (0x3041, 0x3096),
+    (0x309D, 0x309F),
+    (0x30A1, 0x30FA),
+    (0x30FC, 0x30FF),
+    (0x31F0, 0x31FF),
+    (0x3400, 0x4DBF),
+    (0x4E00, 0x9FFF),
+    (0xF900, 0xFAFF),
+    (0x20000, 0x323AF),
+)
+LATIN = re.compile(r"[A-Za-z0-9%]")
+SPACE_RUN = re.compile(r"\s+")
 
 REPO = Path(__file__).resolve().parents[1]
 SETTINGS = "web/app/project.inlang/settings.json"
@@ -54,6 +73,26 @@ SETTINGS = "web/app/project.inlang/settings.json"
 def placeholders(value):
     """The `{name}` placeholders of a message, counted as a multiset."""
     return collections.Counter(PLACEHOLDER.findall(value))
+
+
+def is_cjk(ch):
+    """Whether a character is a CJK letter (SPEC-629 R2)."""
+    code = ord(ch)
+    return any(lo <= code <= hi for lo, hi in CJK_RANGES)
+
+
+def typed_spaces(value):
+    """The typed-space runs of a value at a CJK and Latin boundary (SPEC-629 R3, R4)."""
+    runs = 0
+    for m in SPACE_RUN.finditer(value):
+        if m.start() == 0 or m.end() == len(value):
+            continue
+        before, after = value[m.start() - 1], value[m.end()]
+        if is_cjk(before) and (LATIN.fullmatch(after) or after == "{"):
+            runs += 1
+        elif (LATIN.fullmatch(before) or before == "}") and is_cjk(after):
+            runs += 1
+    return runs
 
 
 def catalog_of(path, locale, findings):
@@ -94,6 +133,10 @@ def judged(locale, key, value, reference):
     english = reference[key]
     if isinstance(english, str) and placeholders(value) != placeholders(english):
         found.append(f"placeholder {locale} {key}")
+    if locale in SPACED_LOCALES:
+        runs = typed_spaces(value)
+        if runs:
+            found.append(f"spaced {locale} {key} {runs}")
     return found
 
 

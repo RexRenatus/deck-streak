@@ -79,7 +79,7 @@ describe('the card frame', () => {
       [{ html: CARD, css: CSS, title: 'The card', classes: 'card card0' }, 'class-list'],
       [{ html: CARD, css: `${CSS}</style><base href="https://cards.example/">`, title: 'The card' }, 'style-closed'],
       [{ html: `${mutation}<link rel="preconnect" href="https://cards.example/">`, css: CSS, title: 'The card' }, 'reparse-element'],
-      [{ html: CARD, css: CSS, title: 'The\rcard' }, 'host-readback']
+      [{ html: CARD, css: CSS, title: 'The\u0000card' }, 'host-readback']
     ];
     for (const [props, reason] of plants) {
       const shown = render(CardFrame, props);
@@ -90,6 +90,20 @@ describe('the card frame', () => {
       shown.unmount();
     }
     console.log(`examined ${plants.length} refused frames`);
+  });
+
+  // SPEC-462 R4; ADR-479 D2. A field's carriage return reference renders through the host: the card
+  // document carries the carriage return, and the frame reads it as a line feed.
+  it('a card whose field holds a carriage return reference renders through the host', () => {
+    const shown = render(CardFrame, { html: '<p>Der&#13;Hund</p>', css: CSS, title: 'The card' });
+    const [frame] = [...shown.container.querySelectorAll('iframe')];
+
+    expect(frame.getAttribute('data-card-refused')).toBeNull();
+    expect(frame.getAttributeNames().sort()).toEqual(['sandbox', 'srcdoc', 'title']);
+    const card = cardDocument(frame);
+    expect(card).toContain('<p>Der\rHund</p>');
+    const text = new DOMParser().parseFromString(card ?? '', 'text/html').querySelector('p')?.textContent;
+    expect(text).toBe('Der\nHund');
   });
 });
 

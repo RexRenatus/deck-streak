@@ -812,12 +812,15 @@ APPLE_PATHS = [
     "crates/ffi/**",
     "crates/engine-core/**",
     "crates/fsrs7/**",
+    "crates/collection/**",
+    "crates/media/**",
     "ios/**",
     "Cargo.lock",
     "Cargo.toml",
     "rust-toolchain.toml",
     ".github/workflows/xcframework.yml",
     ".github/workflows/apple-on-change.yml",
+    "scripts/swift_mutants.py",
 ]
 PULL_REQUEST_ONLY = (
     "github.event.pull_request",
@@ -900,6 +903,476 @@ def watch_problems(paths, closure):
         for pattern in sorted(globs - wanted)
     ]
     return unwatched + unlinked
+
+
+# SPEC-428 (ADR-442): every install-action tool names an exact version, every job that runs steps
+# sets its own timeout, and zizmor reads the `.github` directory. The helpers and the one class that
+# holds the three rules live together in this block, so a later delivery's checks in this module
+# edit other lines.
+INSTALL_ACTION = "taiki-e/install-action"
+# An exact version: a tool name, `@` and three dot-separated numbers with nothing after them (R1).
+# A looser form names a moving target: the action installs the newest release inside it.
+EXACT_TOOL = re.compile(r"[a-z0-9][a-z0-9_.-]*@\d+\.\d+\.\d+")
+# The pin check's control (R2): each line of a file's text whose `uses:` value, after an optional
+# `- `, starts with the install action in any letter case. A comment line starts with `#`, so it
+# is never counted. The reader must find exactly as many sites as these lines name.
+INSTALL_USES = re.compile(r"(?im)^[ \t]*(?:- )?uses:[ \t]*taiki-e/install-action@")
+# zizmor's one command, word for word (R4): a new option could narrow its inputs or drop its exit
+# code, so any change to the command is a reviewed edit of this list.
+ZIZMOR_WORDS = ["zizmor", "--no-online-audits", "--persona", "regular", ".github"]
+DEPENDABOT = REPO / ".github" / "dependabot.yml"
+# The engine site's pin record (R7): `engine_job_problems` counts the engine job's test runner only
+# when an entry of its install equals this one exact string, so a re-pin of that site edits this
+# record in the same change, or the engine job's check reads red.
+ENGINE_NEXTEST_PIN = "cargo-nextest@0.9.149"
+
+
+def install_sites(value, path=()):
+    """Every mapping in a read workflow whose `uses` names the install action in any letter case,
+    each beside its path from the workflow's root, wherever it sits: a step, or any other mapping,
+    so a site outside `steps` is read too."""
+    found = []
+    if isinstance(value, dict):
+        if action(value).lower() == INSTALL_ACTION:
+            found.append((path, value))
+        for key, item in value.items():
+            found += install_sites(item, (*path, key))
+    elif isinstance(value, list):
+        for at, item in enumerate(value):
+            found += install_sites(item, (*path, at))
+    return found
+
+
+def site_place(path):
+    """Where a site sits, as a problem line names it: `<job>: step <n>` for a job's n-th step,
+    counted from 1 as a reader of the file counts them, else its path joined by dots."""
+    if len(path) == 4 and path[0] == "jobs" and path[2] == "steps":
+        return f"{path[1]}: step {path[3] + 1}"
+    return ".".join(str(part) for part in path)
+
+
+def tool_entries(site):
+    """The entries of a site's `tool` input, split on commas and white space as the action splits
+    them, empty entries dropped; none when the input is missing, empty or not a string."""
+    given = site.get("with")
+    value = given.get("tool") if isinstance(given, dict) else None
+    if not isinstance(value, str) or not value.strip():
+        return []
+    return [entry for entry in re.split(r"[,\s]+", value.strip()) if entry]
+
+
+def tool_pin_problems(texts):
+    """What the workflows get wrong about the install action's tools (SPEC-428 R1, R2), for
+    {workflow file name: its text}: a site with no tool, an entry that is not an exact version,
+    and a file whose `uses` lines and read sites differ in number. Returns the problems, the sites
+    as (file, place) and the entries as (file, place, entry)."""
+    problems, sites, entries = [], [], []
+    for name, text in sorted(texts.items()):
+        found = install_sites(read_workflow(text))
+        for path, site in found:
+            where = site_place(path)
+            sites.append((name, where))
+            named = tool_entries(site)
+            if not named:
+                problems.append(f"{name}: {where}: the install names no tool")
+            for entry in named:
+                entries.append((name, where, entry))
+                if not EXACT_TOOL.fullmatch(entry):
+                    problems.append(f"{name}: {where}: {entry} names no exact version")
+        spelled = len(INSTALL_USES.findall(text))
+        if spelled != len(found):
+            problems.append(
+                f"{name}: {spelled} uses lines name the install action, and the reader found "
+                f"{len(found)}"
+            )
+    return problems, sites, entries
+
+
+def job_timeout_problems(texts):
+    """What the workflows get wrong about job timeouts (SPEC-428 R3), for {workflow file name: its
+    text}: a job that runs steps with no `timeout-minutes` of its own, or one whose value is not a
+    whole number of minutes from 1. A job with its own `uses` calls a reusable workflow, takes no
+    timeout, and is counted apart; a step's timeout bounds only that step, so it is never read.
+    Returns the problems, the jobs checked and the call jobs, each as (file, job)."""
+    problems, checked, calls = [], [], []
+    for name, text in sorted(texts.items()):
+        for job_name, job in (read_workflow(text).get("jobs") or {}).items():
+            if "uses" in job:
+                calls.append((name, job_name))
+                continue
+            checked.append((name, job_name))
+            if "timeout-minutes" not in job:
+                problems.append(f"{name}: {job_name}: sets no timeout-minutes")
+                continue
+            minutes = str(job["timeout-minutes"])
+            if not re.fullmatch(r"[1-9]\d*", minutes):
+                problems.append(
+                    f"{name}: {job_name}: timeout-minutes is {minutes}, not a whole number of "
+                    "minutes from 1"
+                )
+    return problems, checked, calls
+
+
+def zizmor_problems(texts):
+    """What the workflows get wrong about zizmor (SPEC-428 R4), for {workflow file name: its text}:
+    other than one command in all of them, a command whose words are not `ZIZMOR_WORDS`, and a
+    command whose operand does not reach the Dependabot configuration. A command is a line of a
+    step's `run` whose first word is `zizmor`, read by splitting on white space, never by a shell
+    lexer, since a script elsewhere may not lex. The inputs a command reaches are the known inputs,
+    the workflow files and the Dependabot configuration, equal to or under its last word. Returns
+    the problems, the commands as (file, job, words) and the first command's inputs."""
+    commands = []
+    for name, text in sorted(texts.items()):
+        for job_name, job in (read_workflow(text).get("jobs") or {}).items():
+            for step in job.get("steps") or []:
+                run = step.get("run") if isinstance(step, dict) else None
+                if not isinstance(run, str):
+                    continue
+                for line in run.splitlines():
+                    words = line.split()
+                    if words[:1] == ["zizmor"]:
+                        commands.append((name, job_name, words))
+    problems = []
+    if len(commands) != 1:
+        problems.append(f"zizmor runs {len(commands)} times across the workflows, not once")
+    known = workflow_files(WORKFLOWS) + ([DEPENDABOT] if DEPENDABOT.is_file() else [])
+    reached = []
+    for name, job_name, words in commands:
+        if words != ZIZMOR_WORDS:
+            problems.append(
+                f"{name}: {job_name}: zizmor runs as {' '.join(words)}, not "
+                f"{' '.join(ZIZMOR_WORDS)}"
+            )
+        operand = REPO / words[-1]
+        inputs = [path for path in known if path.is_relative_to(operand)]
+        if DEPENDABOT not in inputs:
+            problems.append("zizmor's inputs miss .github/dependabot.yml")
+        reached.append(inputs)
+    return problems, commands, reached[0] if reached else []
+
+
+# The plants' anchors, each a line the cured workflows hold exactly once in the file it names.
+LINT_TOOL = "          tool: zizmor@1.31.1\n"
+RUST_TOOL = "          tool: cargo-nextest@0.9.149,cargo-deny@0.20.2\n"
+LINT_ZIZMOR = "        run: zizmor --no-online-audits --persona regular .github\n"
+BASE_IS_DEV = "  base-is-dev:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 5\n"
+NO_NEXTEST = "the engine job installs no cargo-nextest before its stage"
+
+
+class CiToolsArePinnedAndJobsBounded(unittest.TestCase):
+    """SPEC-428: every install-action tool names an exact version, every job that runs steps sets
+    its own timeout, and zizmor reads `.github`, so the Dependabot configuration is audited too."""
+
+    def setUp(self):
+        self.texts = {path.name: workflow_file_text(path) for path in workflow_files(WORKFLOWS)}
+
+    def plant_once(self, label, text, old, new):
+        """`text` with its one `old` replaced by `new`; a plant whose anchor is missing or repeated
+        changes nothing it can name, so it is refused before it is judged."""
+        self.assertEqual(text.count(old), 1, f"{label}: the plant's anchor is not in the text once")
+        return text.replace(old, new)
+
+    def test_every_install_action_tool_names_an_exact_version(self):
+        problems, sites, entries = tool_pin_problems(self.texts)
+        self.assertEqual(problems, [])
+        examined("install-action sites", sites)
+        examined("tool entries", entries)
+        spelled = sum(len(INSTALL_USES.findall(text)) for text in self.texts.values())
+        self.assertEqual(len(sites), spelled)
+        names = {entry.split("@")[0] for _name, _where, entry in entries}
+        for tool in ("cargo-deny", "cargo-nextest", "zizmor"):
+            self.assertIn(tool, names)
+
+    def test_each_planted_tool_pin_defect_is_refused_by_its_own_line(self):
+        control, _sites, _entries = tool_pin_problems(self.texts)
+        self.assertEqual(control, [], f"the control reads {control[:1]}")
+        ci = self.texts["ci.yml"]
+        lint = "ci.yml: workflow-lint: step 2:"
+        rust = "ci.yml: rust: step 4:"
+        plants = [
+            (
+                "a bare name",
+                LINT_TOOL,
+                "          tool: zizmor\n",
+                [f"{lint} zizmor names no exact version"],
+            ),
+            (
+                "latest",
+                LINT_TOOL,
+                "          tool: zizmor@latest\n",
+                [f"{lint} zizmor@latest names no exact version"],
+            ),
+            (
+                "one number",
+                LINT_TOOL,
+                "          tool: zizmor@1\n",
+                [f"{lint} zizmor@1 names no exact version"],
+            ),
+            (
+                "two numbers",
+                LINT_TOOL,
+                "          tool: zizmor@1.31\n",
+                [f"{lint} zizmor@1.31 names no exact version"],
+            ),
+            (
+                "a range",
+                LINT_TOOL,
+                "          tool: zizmor@^1.31.1\n",
+                [f"{lint} zizmor@^1.31.1 names no exact version"],
+            ),
+            (
+                "a v prefix",
+                LINT_TOOL,
+                "          tool: zizmor@v1.31.1\n",
+                [f"{lint} zizmor@v1.31.1 names no exact version"],
+            ),
+            (
+                "a pre-release",
+                LINT_TOOL,
+                "          tool: zizmor@1.31.1-rc.1\n",
+                [f"{lint} zizmor@1.31.1-rc.1 names no exact version"],
+            ),
+            (
+                "an expression",
+                LINT_TOOL,
+                "          tool: ${{ matrix.tool }}\n",
+                [
+                    lint + " ${{ names no exact version",
+                    lint + " matrix.tool names no exact version",
+                    lint + " }} names no exact version",
+                ],
+            ),
+            (
+                "no tool input",
+                LINT_TOOL,
+                "          fallback: none\n",
+                [f"{lint} the install names no tool"],
+            ),
+            (
+                "a floating second entry",
+                RUST_TOOL,
+                "          tool: cargo-nextest@0.9.149,cargo-deny\n",
+                [f"{rust} cargo-deny names no exact version"],
+            ),
+            (
+                "a floating whitespace entry",
+                RUST_TOOL,
+                "          tool: cargo-nextest@0.9.149 cargo-deny\n",
+                [f"{rust} cargo-deny names no exact version"],
+            ),
+            (
+                "an exact whitespace list",
+                RUST_TOOL,
+                "          tool: cargo-nextest@0.9.149 cargo-deny@0.20.2\n",
+                [],
+            ),
+        ]
+        for label, old, new, expected in examined("tool pin plants", plants):
+            plant = {**self.texts, "ci.yml": self.plant_once(label, ci, old, new)}
+            self.assertEqual(tool_pin_problems(plant)[0], expected, label)
+        cased, count = re.subn(
+            r"taiki-e/install-action(@[^\n]*\n[ \t]*with:\n[ \t]*tool: )zizmor@1\.31\.1\n",
+            r"Taiki-E/Install-Action\1zizmor\n",
+            ci,
+        )
+        self.assertEqual(count, 1, "the workflow-lint site is not in ci.yml once")
+        self.assertEqual(
+            tool_pin_problems({**self.texts, "ci.yml": cased})[0],
+            [f"{lint} zizmor names no exact version"],
+        )
+        copy = self.plant_once("a .yaml copy", ci, LINT_TOOL, "          tool: zizmor\n")
+        self.assertEqual(
+            tool_pin_problems({**self.texts, "copy.yaml": copy})[0],
+            ["copy.yaml: workflow-lint: step 2: zizmor names no exact version"],
+        )
+
+    def test_every_job_that_runs_steps_sets_its_own_timeout(self):
+        problems, checked, calls = job_timeout_problems(self.texts)
+        self.assertEqual(problems, [])
+        examined("jobs that run steps", checked)
+        examined("call jobs", calls)
+        self.assertIn(("changelog.yml", "fragment"), checked)
+        self.assertIn(("testflight-rerelease-check.yml", "rerelease"), checked)
+        for call in (
+            ("apple-on-change.yml", "apple"),
+            ("apple-on-tag.yml", "apple"),
+            ("testflight-internal.yml", "framework"),
+            ("testflight-release.yml", "framework"),
+        ):
+            self.assertIn(call, calls)
+
+    def test_each_planted_timeout_defect_is_refused_by_its_own_line(self):
+        control, _checked, calls = job_timeout_problems(self.texts)
+        self.assertEqual(control, [], f"the control reads {control[:1]}")
+        # The accepted form: the live call jobs set no timeout and raise nothing.
+        self.assertIn(("apple-on-change.yml", "apple"), calls)
+        ci = self.texts["ci.yml"]
+        bare = "  base-is-dev:\n    runs-on: ubuntu-24.04\n"
+        lint = "  workflow-lint:\n    runs-on: ubuntu-24.04\n"
+        whole = "not a whole number of minutes from 1"
+        plants = [
+            (
+                "a run job's timeout removed",
+                BASE_IS_DEV,
+                bare,
+                ["ci.yml: base-is-dev: sets no timeout-minutes"],
+            ),
+            (
+                "an action job's timeout removed",
+                f"{lint}    timeout-minutes: 10\n",
+                lint,
+                ["ci.yml: workflow-lint: sets no timeout-minutes"],
+            ),
+            (
+                "a timeout of 0",
+                BASE_IS_DEV,
+                f"{bare}    timeout-minutes: 0\n",
+                [f"ci.yml: base-is-dev: timeout-minutes is 0, {whole}"],
+            ),
+            (
+                "an expression",
+                BASE_IS_DEV,
+                bare + "    timeout-minutes: ${{ inputs.minutes }}\n",
+                ["ci.yml: base-is-dev: timeout-minutes is ${{ inputs.minutes }}, " + whole],
+            ),
+            (
+                "a word",
+                BASE_IS_DEV,
+                f"{bare}    timeout-minutes: ten\n",
+                [f"ci.yml: base-is-dev: timeout-minutes is ten, {whole}"],
+            ),
+            (
+                "a unit",
+                BASE_IS_DEV,
+                f"{bare}    timeout-minutes: 5m\n",
+                [f"ci.yml: base-is-dev: timeout-minutes is 5m, {whole}"],
+            ),
+        ]
+        for label, old, new, expected in examined("timeout plants", plants):
+            plant = {**self.texts, "ci.yml": self.plant_once(label, ci, old, new)}
+            self.assertEqual(job_timeout_problems(plant)[0], expected, label)
+        # A timeout moved onto a step: the job's own line removed and the step given one, two
+        # anchors, since the base spells comments and outputs between them.
+        moved = self.plant_once(
+            "a timeout moved onto a step",
+            self.plant_once("a timeout moved onto a step", ci, BASE_IS_DEV, bare),
+            "    steps:\n      - name: a pull request into main",
+            "    steps:\n      - timeout-minutes: 5\n        name: a pull request into main",
+        )
+        self.assertEqual(
+            job_timeout_problems({**self.texts, "ci.yml": moved})[0],
+            ["ci.yml: base-is-dev: sets no timeout-minutes"],
+        )
+        copy = self.plant_once(
+            "a .yaml copy",
+            self.texts["changelog.yml"],
+            "    runs-on: ubuntu-24.04\n    timeout-minutes: 5\n",
+            "    runs-on: ubuntu-24.04\n",
+        )
+        self.assertEqual(
+            job_timeout_problems({**self.texts, "changelog-copy.yaml": copy})[0],
+            ["changelog-copy.yaml: fragment: sets no timeout-minutes"],
+        )
+
+    def test_zizmor_audits_the_github_directory_and_its_dependabot_configuration(self):
+        problems, commands, inputs = zizmor_problems(self.texts)
+        self.assertIn(
+            ".github/dependabot.yml", [path.relative_to(REPO).as_posix() for path in inputs]
+        )
+        self.assertEqual(problems, [])
+        examined("zizmor commands", commands)
+        examined("zizmor inputs", inputs)
+        self.assertEqual(len(inputs), len(self.texts) + 1)
+
+    def test_each_planted_zizmor_defect_is_refused_by_its_own_line(self):
+        control, _commands, _inputs = zizmor_problems(self.texts)
+        self.assertEqual(control, [], f"the control reads {control[:1]}")
+        ci = self.texts["ci.yml"]
+        command = "zizmor --no-online-audits --persona regular"
+        runs = "ci.yml: workflow-lint: zizmor runs as"
+        want = "not zizmor --no-online-audits --persona regular .github"
+        miss = "zizmor's inputs miss .github/dependabot.yml"
+        plants = [
+            (
+                "the old operand",
+                f"        run: {command} .github/workflows\n",
+                [f"{runs} {command} .github/workflows, {want}", miss],
+            ),
+            (
+                "workflows collected alone",
+                f"        run: {command} --collect=workflows .github\n",
+                [f"{runs} {command} --collect=workflows .github, {want}"],
+            ),
+            (
+                "no exit codes",
+                f"        run: {command} --no-exit-codes .github\n",
+                [f"{runs} {command} --no-exit-codes .github, {want}"],
+            ),
+            (
+                "a SARIF report",
+                f"        run: {command} --format sarif .github\n",
+                [f"{runs} {command} --format sarif .github, {want}"],
+            ),
+            ("the repository root", f"        run: {command} .\n", [f"{runs} {command} ., {want}"]),
+            # The operand is the command's last word, so a swallowed exit also names no input.
+            (
+                "its exit swallowed",
+                f"        run: {command} .github || true\n",
+                [f"{runs} {command} .github || true, {want}", miss],
+            ),
+            (
+                "a second command",
+                f"        run: |\n          {command} .github\n          {command} .github\n",
+                ["zizmor runs 2 times across the workflows, not once"],
+            ),
+            (
+                "the command removed",
+                "        run: echo no lint\n",
+                ["zizmor runs 0 times across the workflows, not once"],
+            ),
+        ]
+        for label, new, expected in examined("zizmor plants", plants):
+            plant = {**self.texts, "ci.yml": self.plant_once(label, ci, LINT_ZIZMOR, new)}
+            self.assertEqual(zizmor_problems(plant)[0], expected, label)
+        lint = self.plant_once(
+            "a .yaml copy",
+            self.texts["changelog.yml"],
+            "        run: |\n",
+            f"        run: |\n          {command} .github\n",
+        )
+        self.assertEqual(
+            zizmor_problems({**self.texts, "lint.yaml": lint})[0],
+            ["zizmor runs 2 times across the workflows, not once"],
+        )
+
+    def test_the_engine_check_counts_only_the_pinned_nextest(self):
+        # The pin record first: the check reads it as the engine job's test runner. Then every
+        # other spelling, the bare name, another version and a longer string that starts with the
+        # pin, reads as no test runner at all.
+        for tool, expected in (
+            (ENGINE_NEXTEST_PIN, []),
+            ("cargo-nextest", [NO_NEXTEST]),
+            ("cargo-nextest@1.2.3", [NO_NEXTEST]),
+            (ENGINE_NEXTEST_PIN + ".0", [NO_NEXTEST]),
+        ):
+            workflow = read_workflow(workflow_file_text(WORKFLOWS / "ci.yml"))
+            steps = [
+                step
+                for step in workflow["jobs"][ENGINE_JOB]["steps"]
+                if action(step) == INSTALL_ACTION
+            ]
+            examined("engine install steps", steps)
+            self.assertEqual(len(steps), 1)
+            steps[0]["with"]["tool"] = tool
+            self.assertEqual(
+                [
+                    step["with"]["tool"]
+                    for step in workflow["jobs"][ENGINE_JOB]["steps"]
+                    if action(step) == INSTALL_ACTION
+                ],
+                [tool],
+            )
+            self.assertEqual(engine_job_problems(workflow), expected, tool)
 
 
 class TheAppleBuildRunsFromOneBody(unittest.TestCase):
@@ -2954,25 +3427,42 @@ class OnlyAPushSavesACache(unittest.TestCase):
             fallback = key.split("${{ hashFiles('Cargo.lock') }}")[0]
             self.assertEqual(lines_of(restore["with"]["restore-keys"]), [fallback])
             restored[job_id] = (gate, restore)
-        # One job saves it: the one that builds every target, after its stages.
+        # One save per profile key, each by the one job that restores it, after its stages: the
+        # debug key by the job that builds every target, the release key by the release job.
         saves = [
             (job_id, n, s)
             for job_id, job in workflow["jobs"].items()
             for n, s in enumerate(job.get("steps") or [])
             if action(s) == "actions/cache/save" and paths(s) == RUST_CACHE
         ]
-        self.assertEqual(len(saves), 1, f"the Rust cache is saved by {len(saves)} steps")
-        job_id, at, save = saves[0]
-        self.assertIn(job_id, restored, f"{job_id} saves a Rust cache it never restored")
-        gate, restore = restored[job_id]
-        self.assertIn("clippy", dict(stage_calls(workflow))[job_id], f"{job_id} builds no target")
-        self.assertGreater(at, gate, f"{job_id} saves the Rust cache before its stages")
-        primary = "${{ steps." + restore["id"] + ".outputs.cache-primary-key }}"
-        self.assertEqual(save["with"]["key"], primary)
-        # The workspace's own artifacts are rebuilt from any fresh checkout: clean them first.
-        clean = workflow["jobs"][job_id]["steps"][at - 1]
-        self.assertEqual(str(clean.get("run", "")).strip(), "cargo clean --workspace")
-        self.assertEqual(clean.get("if"), save.get("if"))
+        self.assertEqual(len(saves), 2, f"the Rust cache is saved by {len(saves)} steps")
+        release_restorers = sorted(
+            job_id
+            for job_id, (_, restore) in restored.items()
+            if restore["with"]["key"].startswith("rust-release-")
+        )
+        self.assertEqual(len(release_restorers), 1, f"{release_restorers} restore the release key")
+        profiles = {}
+        for job_id, at, save in saves:
+            self.assertIn(job_id, restored, f"{job_id} saves a Rust cache it never restored")
+            gate, restore = restored[job_id]
+            release = restore["with"]["key"].startswith("rust-release-")
+            profile = "release" if release else "debug"
+            self.assertNotIn(profile, profiles, f"the {profile} key is saved by two jobs")
+            profiles[profile] = job_id
+            built = "test-release" if release else "clippy"
+            self.assertIn(built, dict(stage_calls(workflow))[job_id], f"{job_id} builds no target")
+            self.assertGreater(at, gate, f"{job_id} saves the Rust cache before its stages")
+            primary = "${{ steps." + restore["id"] + ".outputs.cache-primary-key }}"
+            self.assertEqual(save["with"]["key"], primary)
+            # The workspace's own artifacts are rebuilt from any fresh checkout: clean them first,
+            # in the profile the key holds.
+            clean = workflow["jobs"][job_id]["steps"][at - 1]
+            cleaned = "cargo clean --workspace --release" if release else "cargo clean --workspace"
+            self.assertEqual(str(clean.get("run", "")).strip(), cleaned)
+            self.assertEqual(clean.get("if"), save.get("if"))
+        self.assertEqual(sorted(profiles), ["debug", "release"])
+        self.assertEqual(profiles["release"], release_restorers[0])
 
     def test_a_cache_is_saved_only_by_a_push_to_dev_or_main(self):
         problems, saves = cache_scan(WORKFLOWS)
@@ -3071,6 +3561,1874 @@ class OnlyAPushSavesACache(unittest.TestCase):
             self.assertEqual(uploads[0].get("if"), "${{ always() }}", job_id)
             names.append(inputs["name"])
         self.assertEqual(sorted(set(names)), sorted(names), "two jobs upload one artifact name")
+
+
+# ------------------------------------------------ The cache shape (SPEC-430, ADR-444)
+
+# The one shared Rust key, byte for byte, and the one fallback that keeps the toolchain's hash: an
+# entry another toolchain built holds artifacts no build can reuse (SPEC-430 R5, R7).
+SHAPE_KEY = (
+    "rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}"
+)
+SHAPE_RUST_FALLBACK = "rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-"
+# The release profile's own Rust key and its one fallback, beside the shared key (R16).
+SHAPE_RELEASE_KEY = "rust-release-" + SHAPE_KEY.removeprefix("rust-")
+SHAPE_RELEASE_FALLBACK = "rust-release-" + SHAPE_RUST_FALLBACK.removeprefix("rust-")
+# The pnpm store's key over the lockfile, and its fallback (R7).
+SHAPE_PNPM_KEY = "pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}"
+SHAPE_PNPM_FALLBACK = "pnpm-${{ runner.os }}-"
+# The browser's key, over the version a step reads from the lockfile (R7).
+SHAPE_BROWSER_KEY = re.compile(
+    r"playwright-\$\{\{ runner\.os \}\}-\$\{\{ steps\.([\w-]+)\.outputs\.version \}\}"
+    r"-chromium-headless-shell"
+)
+# A save's key that names a restore's primary key, and a path that names a step's output (R6, R7).
+SHAPE_PRIMARY_KEY = re.compile(r"\$\{\{ steps\.([\w-]+)\.outputs\.cache-primary-key \}\}")
+SHAPE_STORE_PATH = re.compile(r"\$\{\{ steps\.([\w-]+)\.outputs\.path \}\}")
+# The steps that carry a cache key (R7, R8).
+SHAPE_CACHE_STEPS = ("actions/cache/restore", "actions/cache/save", "actions/cache")
+# What a cargo subcommand looks like, after any options (R2).
+SHAPE_SUBCOMMAND = re.compile(r"[a-z][a-z0-9-]*")
+# A step's call of a shell script under scripts/, at a command position, and of a Python script
+# under scripts/, with the subcommand it names when one follows the path (R2, R13).
+SHAPE_SHELL_CALL = re.compile(
+    r"(?m)(?:^|;|&&|\|\||\||\(|\$\(|`)[ \t]*(?:bash|sh)[ \t]+(scripts/\S+)"
+)
+SHAPE_PYTHON_CALL = re.compile(
+    r"\bpython3[ \t]+(scripts/[^\s;&|)`'\"]+\.py)(?:[ \t]+([a-z][a-z0-9-]*)(?=[\s;&|)`]|$))?"
+)
+SHAPE_DISCOVERY = re.compile(r"-m[ \t]+unittest[ \t]+discover\b")  # test discovery (R14)
+# An `if:` inside its one enclosing `${{ }}`, whose conditions a first build's guard reads (R18).
+SHAPE_CONDITION = re.compile(r"^\s*\$\{\{\s*(.*?)\s*\}\}\s*$", re.S)
+# The names through which a run can reach a name no walk follows, so a script naming one is read
+# whole (R13). Strings, never called.
+SHAPE_RUN_TIME_LOOKUPS = frozenset(
+    {"getattr", "globals", "vars", "locals", "eval", "exec", "__import__", "importlib"}
+)
+
+
+def shape_bare(script):
+    """A run script as the cargo reader reads it (SPEC-430 R2): backslash continuations joined
+    first, so a call split over lines reads whole, then comments removed, so a word in one is no
+    call."""
+    joined = re.sub(r"\\\n", " ", str(script))
+    return re.sub(r"(?m)(^|[ \t])#.*$", r"\1", joined)
+
+
+def shape_cargo(text):
+    """(subcommand, words) for each cargo call of a bare script (SPEC-430 R2): `cargo` at a command
+    position, its subcommand the first word past any options. A word that does not look like a
+    subcommand makes no call, so `cargo = x`, a Python line inside a script, is not read as one."""
+    position = r"(?:^|;|&&|\|\||\||\(|\$\(|`|[ \t]--[ \t])"
+    keywords = r"(?:(?:if|then|do|else|elif|while|until|!|exec|time)[ \t]+)*"
+    assigns = r"(?:[A-Za-z_]\w*=(?:\"[^\"]*\"|'[^']*'|[^\s;&|]*)[ \t]+)*"
+    found = []
+    for call in re.finditer(
+        rf"(?m){position}[ \t]*{keywords}{assigns}cargo((?:[ \t]+[^\s;&|)`]+)*)", text
+    ):
+        words = call.group(1).split()
+        while words and words[0].startswith(("-", "+")):
+            words = words[1:]
+        if not words or not SHAPE_SUBCOMMAND.match(words[0]):
+            continue
+        found.append((words[0], words[1:]))
+    return found
+
+
+def shape_kind(subcommand, words):
+    """What one cargo call builds (SPEC-430 R3): `nothing`, `other` (another profile or target,
+    which the shared entry does not hold) or `cache` (the cache's profile). A subcommand no rule
+    names builds the cache's profile, so a new one fails closed; a bench build, `codspeed build`,
+    builds another profile (R15)."""
+    if subcommand in ("fmt", "fetch", "deny", "clean", "metadata"):
+        return "nothing"
+    if subcommand == "mutants" and "--list" in words:
+        return "nothing"
+    if subcommand == "nextest" and list(words[:1]) == ["list"]:
+        return "nothing"
+    if subcommand == "codspeed" and list(words[:1]) == ["build"]:
+        return "other"
+    other = subcommand == "install"
+    for at, flag in enumerate(words):
+        profile = words[at + 1] if at + 1 < len(words) else ""
+        if flag in ("--release", "-r", "--target") or flag.startswith("--target="):
+            other = True
+        if flag == "--profile" and profile not in ("dev", "test"):
+            other = True
+        if flag.startswith("--profile=") and flag.split("=", 1)[1] not in (
+            "dev",
+            "test",
+        ):
+            other = True
+    return "other" if other else "cache"
+
+
+def shape_script(root, name, where, problems):
+    """A called script's text, read from the tree at `root` through the loader, or None, its absence
+    a problem by name: a step that calls a script the tree lacks reads as no call otherwise."""
+    path = Path(root) / name
+    if not path.is_file():
+        problems.append(f"{where}: calls {name}, which the tree lacks")
+        return None
+    return workflow_file_text(path)
+
+
+def shape_stage_body(check, stage):
+    """The body of check.sh's function for one stage, written on one line or several, or None."""
+    function = "stage_" + stage.replace("-", "_")
+    one = re.search(rf"(?m)^{function}\(\)\s*\{{(.*)\}}[ \t]*$", check)
+    if one:
+        return one.group(1)
+    many = re.search(rf"(?ms)^{function}\(\)\s*\{{[ \t]*\n(.*?)^\}}", check)
+    return many.group(1) if many else None
+
+
+def shape_dispatch(test):
+    """(subject, strings) for a dispatch test of a script's `main` (SPEC-430 R13): one expression
+    compared with a string by `==`, or with a tuple, list or set of strings by `in`; else None."""
+    if not isinstance(test, ast.Compare) or len(test.ops) != 1:
+        return None
+    op, right = test.ops[0], test.comparators[0]
+    if isinstance(op, ast.Eq) and isinstance(right, ast.Constant) and isinstance(right.value, str):
+        return ast.unparse(test.left), {right.value}
+    strings = isinstance(right, (ast.Tuple, ast.List, ast.Set)) and all(
+        isinstance(item, ast.Constant) and isinstance(item.value, str) for item in right.elts
+    )
+    if isinstance(op, ast.In) and strings and right.elts:
+        return ast.unparse(test.left), {item.value for item in right.elts}
+    return None
+
+
+def shape_prune(statements, word):
+    """The statements of `main` a run with the subcommand `word` can reach (SPEC-430 R13): a
+    dispatch `if` gives way to its body when its strings hold the subcommand and to its `else`
+    otherwise, at any `elif` depth, and every other statement is kept, the fall-through too."""
+    kept = []
+    for node in statements:
+        dispatch = shape_dispatch(node.test) if isinstance(node, ast.If) else None
+        if dispatch is None:
+            kept.append(node)
+            continue
+        words = dispatch[1]
+        taken = node.body if word in words else node.orelse
+        kept += shape_prune(taken, word)
+    return kept
+
+
+def shape_names(node):
+    """Every name and attribute name a node holds: what a body the walk reads can reach."""
+    return {
+        found.id if isinstance(found, ast.Name) else found.attr
+        for found in ast.walk(node)
+        if isinstance(found, (ast.Name, ast.Attribute))
+    }
+
+
+def shape_argv_lists(nodes):
+    """(line, subcommand, words) for each list literal among the nodes that starts `["cargo",
+    "<subcommand>"`, its words the string items after the subcommand."""
+    found = set()
+    for top in nodes:
+        for node in ast.walk(top):
+            if not isinstance(node, ast.List) or len(node.elts) < 2:
+                continue
+            first, second = node.elts[0], node.elts[1]
+            if not (isinstance(first, ast.Constant) and first.value == "cargo"):
+                continue
+            if not (isinstance(second, ast.Constant) and isinstance(second.value, str)):
+                continue
+            words = tuple(
+                item.value
+                for item in node.elts[2:]
+                if isinstance(item, ast.Constant) and isinstance(item.value, str)
+            )
+            found.add((node.lineno, second.value, words))
+    return sorted(found)
+
+
+def shape_python_read(text, word):
+    """(scope, lists, dropped) for a `python3 <script> [word]` call (SPEC-430 R13). The script's
+    text is parsed and walked, never run: from its top-level statements, which run on every call,
+    to each top-level function or class, and each method of a top-level class, that a body read
+    names, until no new name is reached. With a subcommand, and a dispatch over one expression,
+    `main` is read along that subcommand; with neither, every branch is kept. A script naming a
+    run-time lookup is read whole. `dropped` is the line of each list the whole script holds and
+    this read does not. A `main` with no dispatch of its own that calls, by name, exactly one
+    top-level function holding one is read through that function (R17)."""
+    tree = ast.parse(text)
+    whole = shape_argv_lists([tree])
+    if SHAPE_RUN_TIME_LOOKUPS & shape_names(tree):
+        return "whole", whole, []
+    defined = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+    defs = {}
+    for node in tree.body:
+        if isinstance(node, defined):
+            defs.setdefault(node.name, []).append(node)
+        if isinstance(node, ast.ClassDef):
+            for item in node.body:
+                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    defs.setdefault(item.name, []).append(item)
+    mains = [
+        node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "main"
+    ]
+    # A main that holds no dispatch and calls one top-level function that holds one delegates (R17).
+    dispatching = [
+        node
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef)
+        and any(isinstance(test, ast.If) and shape_dispatch(test.test) for test in ast.walk(node))
+    ]
+    named = {
+        node.func.id
+        for node in (ast.walk(mains[-1]) if mains and mains[-1] not in dispatching else [])
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    }
+    delegates = [node for node in dispatching if node.name in named]
+    if len(delegates) == 1:
+        mains = delegates
+    subjects = {
+        shape_dispatch(node.test)[0]
+        for node in (ast.walk(mains[-1]) if mains else [])
+        if isinstance(node, ast.If) and shape_dispatch(node.test)
+    }
+    scope = "unscoped"
+    if word is not None and len(subjects) == 1:
+        last = mains[-1]
+        kept = [last.args, *last.decorator_list, *shape_prune(last.body, word)]
+        defs[last.name] = [node for node in defs[last.name] if node is not last] + kept
+        scope = "scoped"
+    roots = [node for node in tree.body if not isinstance(node, defined)]
+    reached, todo = set(), list(roots)
+    while todo:
+        node = todo.pop()
+        for name in shape_names(node):
+            if name in defs and name not in reached:
+                reached.add(name)
+                todo.extend(defs[name])
+    lists = shape_argv_lists(roots + [node for name in sorted(reached) for node in defs[name]])
+    return (
+        scope,
+        lists,
+        sorted({line for line, _, _ in whole} - {line for line, _, _ in lists}),
+    )
+
+
+def shape_calls(script, root, where, problems, reads):
+    """The kind of every cargo call one step's run script makes (SPEC-430 R2): its own; each named
+    check.sh stage's, from the stage's body, every stage when it names none, a stage that calls
+    `need_cargo` and shows no cargo command counting as one build; each called shell script's;
+    and each called Python script's argument lists, along the subcommand the call names. One
+    script deep. Each Python call read is appended to `reads`. A test discovery run reads the
+    `python` stage's body, as a call of that stage does (R14)."""
+    text = shape_bare(script)
+    calls = [shape_kind(sub, words) for sub, words in shape_cargo(text)]
+    for gate in GATE_CALL.finditer(text):
+        check = shape_script(root, "scripts/check.sh", where, problems)
+        if check is None:
+            continue
+        for stage in gate.group(1).split() or STAGES.search(check).group(1).split():
+            body = shape_stage_body(check, stage)
+            if body is None:
+                problems.append(f"{where}: check.sh has no stage {stage}")
+                continue
+            inner = [shape_kind(sub, words) for sub, words in shape_cargo(shape_bare(body))]
+            if not inner and re.search(r"\bneed_cargo\b", body):
+                inner = ["cache"]
+            calls += inner
+    for _ in SHAPE_DISCOVERY.finditer(text):
+        discovery = "python"
+        suites = shape_script(root, "scripts/check.sh", where, problems)
+        if suites is None:
+            continue
+        discovered = shape_stage_body(suites, discovery)
+        if discovered is None:
+            problems.append(f"{where}: check.sh has no stage {discovery}")
+            continue
+        found = [shape_kind(sub, words) for sub, words in shape_cargo(shape_bare(discovered))]
+        if not found and re.search(r"\bneed_cargo\b", discovered):
+            found = ["cache"]
+        calls += found
+    for shell in SHAPE_SHELL_CALL.finditer(text):
+        name = shell.group(1)
+        called = None if name == "scripts/check.sh" else shape_script(root, name, where, problems)
+        if called is not None:
+            calls += [shape_kind(sub, words) for sub, words in shape_cargo(shape_bare(called))]
+    for python in SHAPE_PYTHON_CALL.finditer(text):
+        name, word = python.group(1), python.group(2)
+        source = shape_script(root, name, where, problems)
+        if source is None:
+            continue
+        scope, lists, dropped = shape_python_read(source, word)
+        reads.append((where, name, word, scope, dropped))
+        calls += [shape_kind(sub, list(words)) for _, sub, words in lists]
+    return calls
+
+
+def shape_release_files(workflows):
+    """The workflows whose jobs take the release class (SPEC-430 R4): each one a tag push or a
+    release event starts, and each one such a workflow calls, at any depth. A release build that
+    restores a cache built elsewhere is a cache-poisoning sink."""
+    release = set()
+    for name, workflow in workflows.items():
+        on = workflow.get("on")
+        events = (
+            on if isinstance(on, dict) else dict.fromkeys([on] if isinstance(on, str) else on or [])
+        )
+        push = events.get("push")
+        tagged = isinstance(push, dict) and ("tags" in push or "tags-ignore" in push)
+        if "release" in events or tagged:
+            release.add(name)
+    grew = True
+    while grew:
+        grew = False
+        for name in sorted(release):
+            for job in (workflows[name].get("jobs") or {}).values():
+                uses = str((job or {}).get("uses", ""))
+                call = LOCAL_CALL.search(uses) or re.match(
+                    r"\./\.github/workflows/([^/@\s]+)", uses
+                )
+                if call and call.group(1) in workflows and call.group(1) not in release:
+                    release.add(call.group(1))
+                    grew = True
+    return release
+
+
+def shape_reads_a_cache(step):
+    """Whether a step can restore a cache into a release build (SPEC-430 R5): a cache action, one
+    that caches by itself, setup-node or pnpm's setup with caching on, or any action naming one."""
+    uses, inputs = action(step), step.get("with") or {}
+    if uses == "actions/setup-node":
+        return "cache" in inputs or str(inputs.get("package-manager-cache", "true")) != "false"
+    if uses == "pnpm/action-setup":
+        return str(inputs.get("cache", "false")) != "false"
+    return uses in CACHE_BY_THEMSELVES or "cache" in uses.lower()
+
+
+def shape_shared_problems(where, steps, restores, calls):
+    """A shared job's restore (SPEC-430 R5): exactly one restore of the shared key that is not a
+    lookup, before the job's first build of the cache's profile, under that step's `if:` or none, or
+    under part of it: conditions that step's `if:` joins to more by `&&` (R18)."""
+    shared = [
+        (at, step)
+        for at, step in restores
+        if str((step.get("with") or {}).get("key", "")) == SHAPE_KEY
+        and str((step.get("with") or {}).get("lookup-only", "")) != "true"
+    ]
+    first = min(at for at, kind in calls if kind == "cache")
+    if len(shared) != 1:
+        return [f"{where}: restores the shared Rust key {len(shared)} times, not once"]
+    at, restore = shared[0]
+    if at > first:
+        return [
+            f"{where}: restores the shared Rust key at step {at}, after its first build at {first}"
+        ]
+    # A first build whose `if:` holds each of the restore's conditions and more, joined by `&&`,
+    # with no `||` and no parenthesis in either, runs only when the restore ran (R18).
+    guard, build = (str(step.get("if", "")) for step in (restore, steps[first]))
+    conditions = [
+        {part.strip() for part in SHAPE_CONDITION.sub(r"\1", text).split("&&")}
+        for text in (guard, build)
+    ]
+    if not re.search(r"\|\||[()]", guard + build) and conditions[0] <= conditions[1]:
+        restore = {**restore, "if": steps[first].get("if")}
+    if "if" in restore and restore.get("if") != steps[first].get("if"):
+        return [f"{where}: restores the shared Rust key under another if than its first build's"]
+    return []
+
+
+def shape_resolve(step, earlier):
+    """A cache step's key as GitHub resolves it (SPEC-430 R7): a `cache-primary-key` names an
+    earlier restore of the job with the same paths, whose key it is, or None when none does; any
+    other key is itself."""
+    key = str((step.get("with") or {}).get("key", ""))
+    primary = SHAPE_PRIMARY_KEY.fullmatch(key)
+    if not primary:
+        return key
+    for restore in earlier:
+        if (
+            restore.get("id") == primary.group(1)
+            and action(restore) == "actions/cache/restore"
+            and paths(restore) == paths(step)
+        ):
+            return str((restore.get("with") or {}).get("key", ""))
+    return None
+
+
+def shape_cache_of(step, earlier):
+    """The cache a step's paths name (SPEC-430 R7): `Rust`, `pnpm` (the one path an earlier step's
+    `pnpm store path` produced), `Playwright`, or `unknown`, which no key rule knows."""
+    named = paths(step)
+    if named == RUST_CACHE:
+        return "Rust"
+    if named == BROWSERS:
+        return "Playwright"
+    store = SHAPE_STORE_PATH.fullmatch(named[0]) if len(named) == 1 else None
+    producers = [s for s in earlier if store and s.get("id") == store.group(1)]
+    if any("pnpm store path" in str(s.get("run", "")) for s in producers):
+        return "pnpm"
+    return "unknown"
+
+
+def shape_key_problems(where, step, earlier):
+    """Whether a cache step's key hashes its inputs (SPEC-430 R7): the template its paths choose,
+    exactly, and a fallback that keeps what it must; a cache no template knows is a problem. The
+    release profile's own key keeps the release fallback (R16)."""
+    key = shape_resolve(step, earlier)
+    fallbacks = lines_of((step.get("with") or {}).get("restore-keys"))
+    cache = shape_cache_of(step, earlier)
+    if key is None:
+        named = (step.get("with") or {}).get("key")
+        return [f"{where}: keys on {named}, which no earlier restore of its paths sets"]
+    problems = []
+    if (cache, key) == ("Rust", SHAPE_RELEASE_KEY):
+        for line in fallbacks:
+            if line != SHAPE_RELEASE_FALLBACK:
+                problems.append(
+                    f"{where}: the release Rust fallback {line} is not the release key's prefix"
+                )
+        return problems
+    if cache == "Rust":
+        if key != SHAPE_KEY:
+            problems.append(f"{where}: the Rust key {key} is not the shared key")
+        for line in fallbacks:
+            if line != SHAPE_RUST_FALLBACK:
+                problems.append(f"{where}: the Rust fallback {line} is not the toolchain's prefix")
+    elif cache == "pnpm":
+        if key != SHAPE_PNPM_KEY:
+            problems.append(f"{where}: the pnpm key {key} is not the lockfile's")
+        for line in fallbacks:
+            if line != SHAPE_PNPM_FALLBACK:
+                problems.append(f"{where}: the pnpm fallback {line} is not the store's prefix")
+    elif cache == "Playwright":
+        version = SHAPE_BROWSER_KEY.fullmatch(key)
+        steps = [s for s in earlier if version and s.get("id") == version.group(1)]
+        if not version:
+            problems.append(f"{where}: the browser key {key} is not the locked version's")
+        elif not any("pnpm-lock.yaml" in str(s.get("run", "")) for s in steps):
+            problems.append(f"{where}: the browser key's version step reads no pnpm-lock.yaml")
+        if fallbacks:
+            problems.append(f"{where}: the browser cache falls back to {', '.join(fallbacks)}")
+    else:
+        problems.append(f"{where}: caches {', '.join(paths(step))}, which no key rule knows")
+    return problems
+
+
+def shape_unique_problems(where, text, envs, steps):
+    """Whether a key or fallback text carries a run-unique part (SPEC-430 R8): each `${{ }}` in it
+    is `runner.os`, `hashFiles` over literal paths, a step's output whose producing step reads no
+    run identity, clock or randomness, an `env` value judged the same way, or a `matrix` value;
+    `envs` are the step's, the job's and the workflow's `env:`, innermost first."""
+    problems = []
+    for expression in re.findall(r"\$\{\{\s*(.*?)\s*\}\}", text):
+        named = re.findall(r"\bgithub\.(run_id|run_number|run_attempt|sha)\b", expression)
+        output = re.fullmatch(r"steps\.([\w-]+)\.outputs\.[\w-]+", expression)
+        env = re.fullmatch(r"env\.(\w+)", expression)
+        if named:
+            for context in named:
+                problems.append(
+                    f"{where}: {text} carries github.{context}, which changes every run"
+                )
+        elif output:
+            producers = [step for step in steps if step.get("id") == output.group(1)]
+            if not producers:
+                problems.append(
+                    f"{where}: {text} reads steps.{output.group(1)}, which the job lacks"
+                )
+            for producer in producers:
+                run = str(producer.get("run", ""))
+                for word in dict.fromkeys(
+                    re.findall(
+                        r"\b(GITHUB_RUN_ID|GITHUB_RUN_NUMBER|GITHUB_RUN_ATTEMPT|GITHUB_SHA|date"
+                        r"|EPOCHSECONDS|EPOCHREALTIME|RANDOM|uuidgen)\b",
+                        run,
+                    )
+                ):
+                    problems.append(
+                        f"{where}: {text} reads steps.{output.group(1)}, whose run names {word}"
+                    )
+        elif env:
+            scopes = [at for at, scope in enumerate(envs) if env.group(1) in scope]
+            if not scopes:
+                problems.append(f"{where}: {text} reads env.{env.group(1)}, which no env sets")
+            else:
+                value = envs[scopes[0]][env.group(1)]
+                inner = f"{where} env.{env.group(1)}"
+                problems += shape_unique_problems(inner, str(value), envs[scopes[0] + 1 :], steps)
+        elif not re.fullmatch(
+            r"runner\.os|hashFiles\('[^']*'(?:\s*,\s*'[^']*')*\)|matrix\.[\w-]+",
+            expression,
+        ):
+            problems.append(
+                f"{where}: {text} carries an expression no key rule places: {expression}"
+            )
+    return problems
+
+
+def shape_cargo_census(directory, root, reads):
+    """Every job of every workflow in `directory` that runs cargo, with its class, and every way a
+    job breaks its class (SPEC-430 R2 to R5, R13): (problems, [(workflow, job, class)]). The
+    scripts a step calls are read from the tree at `root`; each Python call read is appended to
+    `reads` as (where, script, subcommand, scope, dropped lines), for A1's print. A discovery run
+    and a bench build are read by R14 and R15, and a cache-free job may restore the release
+    profile's own key (R16)."""
+    workflows = {
+        path.name: read_workflow(workflow_file_text(path)) for path in workflow_files(directory)
+    }
+    release = shape_release_files(workflows)
+    problems, population = [], []
+    for name, workflow in workflows.items():
+        for job_id, job in (workflow.get("jobs") or {}).items():
+            job = job or {}
+            steps = job.get("steps") or []
+            calls = []
+            for at, step in enumerate(steps):
+                if "run" in step:
+                    where = f"{name}:{job_id}:{at}"
+                    kinds = shape_calls(step["run"], root, where, problems, reads)
+                    calls += [(at, kind) for kind in kinds]
+            if not calls:
+                continue
+            runs_on = job.get("runs-on")
+            if name in release:
+                cls = "release"
+            elif isinstance(runs_on, str) and runs_on.startswith(("macos-", "windows-")):
+                cls = "another runner"
+            elif any(kind == "cache" for _, kind in calls):
+                cls = "shared"
+            else:
+                cls = "cache-free"
+            population.append((name, job_id, cls))
+            where = f"{name}:{job_id}"
+            restores = [
+                (at, step)
+                for at, step in enumerate(steps)
+                if action(step) == "actions/cache/restore" and paths(step) == RUST_CACHE
+            ]
+            if cls == "cache-free":
+                restores = [
+                    (at, step)
+                    for at, step in restores
+                    if str((step.get("with") or {}).get("key", "")) != SHAPE_RELEASE_KEY
+                ]
+            if cls == "shared":
+                problems += shape_shared_problems(where, steps, restores, calls)
+            elif cls == "cache-free":
+                problems += [
+                    f"{where}: a cache-free job restores the Rust cache under another key at {at}"
+                    for at, step in restores
+                    if str((step.get("with") or {}).get("key", "")) != SHAPE_KEY
+                ]
+            elif cls == "release":
+                problems += [
+                    f"{where}: a release job reads a cache at step {at}, through {action(step)}"
+                    for at, step in enumerate(steps)
+                    if shape_reads_a_cache(step)
+                ]
+            else:
+                problems += [
+                    f"{where}: a job on another runner restores the Rust cache at step {at}"
+                    for at, _ in restores
+                ]
+    return problems, population
+
+
+def shape_writer_census(directory):
+    """Every step of every workflow in `directory` that can write a cache, and every way one writes
+    where it must not (SPEC-430 R6): (problems, [(where, action, Rust save)]). Each workflow's
+    writers are judged by the module's own save scenarios, and a Rust save keys on an earlier
+    restore of the shared key in its job; an action that names a cache and that no rule describes
+    is a problem by name. A Rust save may key on a restore of the release profile's own key
+    (R16)."""
+    problems, population = [], []
+    for path in workflow_files(directory):
+        workflow = read_workflow(workflow_file_text(path))
+        problems += cache_problems(path.name, workflow)[0]
+        for job_id, job in (workflow.get("jobs") or {}).items():
+            steps = (job or {}).get("steps") or []
+            for at, step in enumerate(steps):
+                uses = action(step)
+                known = uses in CACHE_BY_THEMSELVES or uses in (
+                    "actions/cache/save",
+                    "actions/cache",
+                    "actions/setup-node",
+                    "pnpm/action-setup",
+                )
+                named = "cache" in uses.lower() and uses != "actions/cache/restore"
+                if not known and not named:
+                    continue
+                where = f"{path.name}:{job_id}:{at}"
+                if not known:
+                    problems.append(
+                        f"{where}: {uses} names a cache, and no rule says when it saves"
+                    )
+                rust = uses == "actions/cache/save" and paths(step) == RUST_CACHE
+                key = str((step.get("with") or {}).get("key", ""))
+                keyed = SHAPE_PRIMARY_KEY.fullmatch(key) and shape_resolve(step, steps[:at])
+                if keyed == SHAPE_RELEASE_KEY:
+                    keyed = SHAPE_KEY
+                if rust and keyed != SHAPE_KEY:
+                    problems.append(
+                        f"{where}: a Rust save keys on {key}, not an earlier shared restore's"
+                        " primary key"
+                    )
+                population.append((where, uses, rust))
+    return problems, population
+
+
+def shape_key_census(directory):
+    """Every key of every cache step of every workflow in `directory`, a save's resolved through
+    its restore, and every key that does not hash its inputs (SPEC-430 R7): (problems,
+    [(where, cache, fallback lines)])."""
+    problems, population = [], []
+    for path in workflow_files(directory):
+        workflow = read_workflow(workflow_file_text(path))
+        for job_id, job in (workflow.get("jobs") or {}).items():
+            steps = (job or {}).get("steps") or []
+            for at, step in enumerate(steps):
+                if action(step) not in SHAPE_CACHE_STEPS:
+                    continue
+                where = f"{path.name}:{job_id}:{at}"
+                fallbacks = lines_of((step.get("with") or {}).get("restore-keys"))
+                population.append((where, shape_cache_of(step, steps[:at]), fallbacks))
+                problems += shape_key_problems(where, step, steps[:at])
+    return problems, population
+
+
+def shape_run_unique_census(directory):
+    """Every key and every fallback line of every cache step of every workflow in `directory`,
+    resolved as the key census resolves them, and every one that carries a part that changes from
+    run to run (SPEC-430 R8): (problems, [(where, text)])."""
+    problems, population = [], []
+    for path in workflow_files(directory):
+        workflow = read_workflow(workflow_file_text(path))
+        for job_id, job in (workflow.get("jobs") or {}).items():
+            job = job or {}
+            steps = job.get("steps") or []
+            for at, step in enumerate(steps):
+                if action(step) not in SHAPE_CACHE_STEPS:
+                    continue
+                where = f"{path.name}:{job_id}:{at}"
+                inputs = step.get("with") or {}
+                key = shape_resolve(step, steps[:at])
+                texts = [str(inputs.get("key", "")) if key is None else key]
+                texts += lines_of(inputs.get("restore-keys"))
+                envs = [
+                    step.get("env") or {},
+                    job.get("env") or {},
+                    workflow.get("env") or {},
+                ]
+                for text in texts:
+                    population.append((where, text))
+                    problems += shape_unique_problems(where, text, envs, steps)
+    return problems, population
+
+
+class TheCachesHoldTheirShape(unittest.TestCase):
+    """Every job that runs cargo restores the one shared Rust key as its class requires, only the
+    warm job or a push to dev or main saves it, and every cache key hashes its lock and toolchain
+    inputs and nothing that changes from run to run (SPEC-430, ADR-444). Each tree test judges its
+    control first, a population read by code the census did not build, then counts what it
+    examined; each planted twin writes its workflows under both suffixes, every key and command
+    spelled out, and expects the exact problems, in order, beside a positive control."""
+
+    # A restore of the Rust cache's four paths under the shared key: a planted step's lines after
+    # its first, which each planted job writes itself.
+    RESTORE = (
+        "        uses: actions/cache/restore\n"
+        "        with:\n"
+        "          path: |\n"
+        "            ~/.cargo/registry/index/\n"
+        "            ~/.cargo/registry/cache/\n"
+        "            ~/.cargo/git/db/\n"
+        "            target/\n"
+        "          key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-"
+        "${{ hashFiles('Cargo.lock') }}\n"
+    )
+    # The same four paths, for a save.
+    RUST_PATHS = (
+        "          path: |\n"
+        "            ~/.cargo/registry/index/\n"
+        "            ~/.cargo/registry/cache/\n"
+        "            ~/.cargo/git/db/\n"
+        "            target/\n"
+    )
+    # The dev-push guard of a save keyed on the restore `rust-cache` (SPEC-038 R2).
+    GUARD = (
+        "${{ github.event_name == 'push' && (github.ref == 'refs/heads/dev' || "
+        "github.ref == 'refs/heads/main') && steps.rust-cache.outputs.cache-hit != 'true' }}"
+    )
+
+    def plant(self, root, workflows, scripts=None):
+        """Write each workflow under both suffixes, `{suffix}` in its text naming its own, and each
+        script under `scripts/`: the planted tree a census reads. Returns the workflow directory."""
+        directory = Path(root) / ".github" / "workflows"
+        directory.mkdir(parents=True)
+        for stem, text in workflows.items():
+            for suffix in (".yml", ".yaml"):
+                (directory / (stem + suffix)).write_text(
+                    text.replace("{suffix}", suffix), encoding="utf-8"
+                )
+        (Path(root) / "scripts").mkdir()
+        for name, text in (scripts or {}).items():
+            (Path(root) / "scripts" / name).write_text(text, encoding="utf-8")
+        return directory
+
+    def job(self, name, *steps, runs_on="ubuntu-24.04"):
+        """One planted job of `steps`, each a step's text."""
+        return f"  {name}:\n    runs-on: {runs_on}\n    steps:\n" + "".join(steps)
+
+    def runs(self, script):
+        """A planted run step; a script of more than one line is a block scalar."""
+        if "\n" not in script:
+            return f"      - run: {script}\n"
+        return "      - run: |\n" + textwrap.indent(script, "          ")
+
+    def in_both(self, lines):
+        """Each planted file's expected lines under `.yaml`, then `.yml`, the order the census reads
+        the files in: `lines` maps a file's stem to its lines, and `<f>` in a line names the file."""
+        return [
+            line.replace("<f>", stem + suffix)
+            for stem in sorted(lines)
+            for suffix in (".yaml", ".yml")
+            for line in lines[stem]
+        ]
+
+    def test_every_job_that_runs_cargo_restores_the_one_shared_rust_key(self):
+        reads = []
+        problems, population = shape_cargo_census(WORKFLOWS, REPO, reads)
+        classes = {(name, job): cls for name, job, cls in population}
+        # The control, read by code the census did not build: every ci.yml job whose check.sh
+        # stages compile the cache's profile is shared, and every job that holds a restore of the
+        # shared key that is not a lookup runs cargo.
+        ci = read_workflow(workflow_file_text(WORKFLOWS / "ci.yml"))
+        listed = STAGES.search(workflow_file_text(REPO / "scripts" / "check.sh")).group(1).split()
+        compiling = sorted(
+            {
+                job
+                for job, named in stage_calls(ci)
+                if (COMPILES_RUST - {"test-release"}) & set(named or listed)
+            }
+        )
+        self.assertTrue(
+            compiling,
+            "ci.yml calls no check.sh stage that compiles the cache's profile",
+        )
+        self.assertEqual(
+            {job: classes.get(("ci.yml", job)) for job in compiling},
+            dict.fromkeys(compiling, "shared"),
+        )
+        key = (
+            "rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-"
+            "${{ hashFiles('Cargo.lock') }}"
+        )
+        restoring = []
+        for path in workflow_files(WORKFLOWS):
+            for job_id, job in (read_workflow(workflow_file_text(path)).get("jobs") or {}).items():
+                for step in (job or {}).get("steps") or []:
+                    inputs = step.get("with") or {}
+                    if (
+                        action(step) == "actions/cache/restore"
+                        and paths(step) == RUST_CACHE
+                        and str(inputs.get("key")) == key
+                        and str(inputs.get("lookup-only")) != "true"
+                    ):
+                        restoring.append((path.name, job_id))
+        self.assertTrue(restoring, "no workflow holds a restore of the shared key")
+        self.assertEqual([job for job in restoring if job not in classes], [])
+        examined("jobs that run cargo", population)
+        counts = collections.Counter(cls for _, _, cls in population)
+        order = ("shared", "cache-free", "release", "another runner")
+        print("classes: " + ", ".join(f"{cls} {counts[cls]}" for cls in order))
+        scopes = collections.Counter(read[3] for read in reads)
+        narrowed = [read for read in reads if read[4]]
+        print(
+            f"python calls read {len(reads)}: scoped {scopes['scoped']}, unscoped"
+            f" {scopes['unscoped']}, whole {scopes['whole']}; {len(narrowed)} dropping a list"
+        )
+        for where, script, word, _, dropped in narrowed:
+            print(f"  {where} {script} {word}: drops the lists at lines {dropped}")
+        self.assertEqual(problems, [])
+
+    def test_the_cargo_census_refuses_each_planted_shape(self):
+        self.assertEqual(SHAPE_SUBCOMMAND.pattern, "[a-z][a-z0-9-]*")
+        self.assertEqual(
+            SHAPE_SHELL_CALL.pattern,
+            r"(?m)(?:^|;|&&|\|\||\||\(|\$\(|`)[ \t]*(?:bash|sh)[ \t]+(scripts/\S+)",
+        )
+        self.assertEqual(
+            SHAPE_PYTHON_CALL.pattern,
+            r"\bpython3[ \t]+(scripts/[^\s;&|)`'\"]+\.py)"
+            r"(?:[ \t]+([a-z][a-z0-9-]*)(?=[\s;&|)`]|$))?",
+        )
+        restore = "      - name: restore\n" + self.RESTORE
+        planted = "on:\n  pull_request:\n    branches: [dev]\njobs:\n" + "".join(
+            [
+                self.job("restored", restore, self.runs("cargo test")),
+                self.job("wrapped", self.runs("wrapper -- cargo mutants --in-place")),
+                self.job("assigned", self.runs("NAME=1 cargo test")),
+                self.job("conditional", self.runs("if cargo test; then echo ok; fi")),
+                self.job("continued", self.runs("cargo build \\\n  --release\n")),
+                self.job("shell", self.runs("bash scripts/build.sh")),
+                self.job("python", self.runs("python3 scripts/prove.py")),
+                self.job("clippy", self.runs("bash scripts/check.sh clippy")),
+                self.job("release-stage", self.runs("bash scripts/check.sh test-release")),
+                self.job("python-stage", self.runs("bash scripts/check.sh python")),
+                self.job("absent", self.runs("bash scripts/absent.sh")),
+                self.job("listing", self.runs("cargo mutants --list")),
+                self.job("fmt", self.runs("cargo fmt --all --check")),
+                self.job("fetch", self.runs("cargo fetch --locked")),
+                self.job("deny", self.runs("cargo deny check")),
+                self.job("clean", self.runs("cargo clean --workspace")),
+                self.job("metadata", self.runs("cargo metadata --format-version 1")),
+                self.job("release-build", self.runs("cargo build --release")),
+                self.job("target", self.runs("cargo check --target wasm32-unknown-unknown")),
+                self.job("locked", self.runs("cargo build --locked")),
+                self.job("unknown", self.runs("cargo frobnicate")),
+                self.job("macos", self.runs("cargo build"), runs_on="macos-26"),
+                self.job("late", self.runs("cargo build"), restore),
+                self.job(
+                    "lookup",
+                    restore + "          lookup-only: true\n",
+                    self.runs("cargo test"),
+                ),
+                self.job(
+                    "guarded",
+                    "      - if: ${{ github.event_name == 'push' }}\n" + self.RESTORE,
+                    self.runs("cargo test"),
+                ),
+                self.job("twice", restore, restore, self.runs("cargo test")),
+                self.job(
+                    "drifted",
+                    restore.replace("Cargo.lock') }}\n", "Cargo.lock') }}-v2\n"),
+                    self.runs("cargo test"),
+                ),
+                self.job("assigns", self.runs("cargo = x")),
+                self.job("builds", self.runs("cargo build")),
+                self.job("option-first", self.runs("cargo --locked test")),
+            ]
+        )
+        tagged = (
+            "on:\n  push:\n    tags: [v*]\njobs:\n"
+            + self.job("tagged", restore, self.runs("cargo build"))
+            + "  calls:\n    uses: ./.github/workflows/callee{suffix}\n"
+        )
+        released = "on:\n  release:\n    types: [published]\njobs:\n" + self.job(
+            "released", restore, self.runs("cargo build")
+        )
+        callee = "on:\n  workflow_call:\njobs:\n" + self.job(
+            "called", restore, self.runs("cargo build")
+        )
+        check = textwrap.dedent(
+            """\
+            #!/usr/bin/env bash
+            STAGES_ALL=(clippy test-release python)
+
+            need_cargo() { command -v cargo >/dev/null; }
+
+            stage_clippy() {
+                need_cargo && cargo clippy --workspace
+            }
+
+            stage_test_release() {
+                need_cargo && cargo nextest run --workspace --release
+            }
+
+            stage_python() {
+                need_cargo && python3 -m unittest discover -s scripts/tests
+            }
+            """
+        )
+        build = "#!/usr/bin/env bash\ncargo build --workspace\n"
+        prove = textwrap.dedent(
+            """\
+            import subprocess
+
+
+            def main():
+                return subprocess.call(["cargo", "test", "--workspace"])
+
+
+            if __name__ == "__main__":
+                raise SystemExit(main())
+            """
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            directory = self.plant(
+                scratch,
+                {
+                    "callee": callee,
+                    "planted": planted,
+                    "released": released,
+                    "tagged": tagged,
+                },
+                {"check.sh": check, "build.sh": build, "prove.py": prove},
+            )
+            problems, population = shape_cargo_census(directory, Path(scratch), [])
+        once = "restores the shared Rust key 0 times, not once"
+        release = "a release job reads a cache at step 0, through actions/cache/restore"
+        self.assertEqual(
+            problems,
+            self.in_both(
+                {
+                    "callee": [f"<f>:called: {release}"],
+                    "planted": [
+                        f"<f>:wrapped: {once}",
+                        f"<f>:assigned: {once}",
+                        f"<f>:conditional: {once}",
+                        f"<f>:shell: {once}",
+                        f"<f>:python: {once}",
+                        f"<f>:clippy: {once}",
+                        f"<f>:python-stage: {once}",
+                        "<f>:absent:0: calls scripts/absent.sh, which the tree lacks",
+                        f"<f>:locked: {once}",
+                        f"<f>:unknown: {once}",
+                        "<f>:late: restores the shared Rust key at step 1, after its first build at 0",
+                        f"<f>:lookup: {once}",
+                        "<f>:guarded: restores the shared Rust key under another if than its first"
+                        " build's",
+                        "<f>:twice: restores the shared Rust key 2 times, not once",
+                        f"<f>:drifted: {once}",
+                        f"<f>:builds: {once}",
+                        f"<f>:option-first: {once}",
+                    ],
+                    "released": [f"<f>:released: {release}"],
+                    "tagged": [f"<f>:tagged: {release}"],
+                }
+            ),
+        )
+        self.assertEqual(
+            [f"{name} {job} {cls}" for name, job, cls in population],
+            self.in_both(
+                {
+                    "callee": ["<f> called release"],
+                    "planted": [
+                        "<f> restored shared",
+                        "<f> wrapped shared",
+                        "<f> assigned shared",
+                        "<f> conditional shared",
+                        "<f> continued cache-free",
+                        "<f> shell shared",
+                        "<f> python shared",
+                        "<f> clippy shared",
+                        "<f> release-stage cache-free",
+                        "<f> python-stage shared",
+                        "<f> listing cache-free",
+                        "<f> fmt cache-free",
+                        "<f> fetch cache-free",
+                        "<f> deny cache-free",
+                        "<f> clean cache-free",
+                        "<f> metadata cache-free",
+                        "<f> release-build cache-free",
+                        "<f> target cache-free",
+                        "<f> locked shared",
+                        "<f> unknown shared",
+                        "<f> macos another runner",
+                        "<f> late shared",
+                        "<f> lookup shared",
+                        "<f> guarded shared",
+                        "<f> twice shared",
+                        "<f> drifted shared",
+                        "<f> builds shared",
+                        "<f> option-first shared",
+                    ],
+                    "released": ["<f> released release"],
+                    "tagged": ["<f> tagged release"],
+                }
+            ),
+        )
+
+    def test_only_the_warm_job_or_a_push_to_dev_or_main_saves_the_rust_key(self):
+        problems, population = shape_writer_census(WORKFLOWS)
+        # The control, read by code the census did not build: the saves `action` reads, and those
+        # of them whose `paths` are the Rust cache's.
+        saves, rust = [], []
+        for path in workflow_files(WORKFLOWS):
+            for job_id, job in (read_workflow(workflow_file_text(path)).get("jobs") or {}).items():
+                for at, step in enumerate((job or {}).get("steps") or []):
+                    if action(step) == "actions/cache/save":
+                        saves.append(f"{path.name}:{job_id}:{at}")
+                        if paths(step) == RUST_CACHE:
+                            rust.append(f"{path.name}:{job_id}:{at}")
+        self.assertTrue(saves, "no workflow holds an actions/cache/save step")
+        self.assertEqual(
+            [where for where, uses, _ in population if uses == "actions/cache/save"],
+            saves,
+        )
+        self.assertEqual([where for where, _, rust_save in population if rust_save], rust)
+        examined("steps that can write a cache", population)
+        counts = collections.Counter(uses for _, uses, _ in population)
+        print(
+            f"saves {len(saves)}, Rust saves {len(rust)}; "
+            + ", ".join(f"{uses} {counts[uses]}" for uses in sorted(counts))
+        )
+        self.assertEqual(problems, [])
+
+    def test_the_writer_census_refuses_each_planted_shape(self):
+        save = "      - name: save\n        if: {if}\n        uses: actions/cache/save\n        with:\n"
+        primary = "          key: ${{ steps.rust-cache.outputs.cache-primary-key }}\n"
+        planted = "on:\n  push:\n    branches: [dev, main]\njobs:\n" + "".join(
+            [
+                self.job(
+                    "saved",
+                    "      - id: rust-cache\n" + self.RESTORE,
+                    self.runs("cargo test"),
+                    save.replace("{if}", self.GUARD) + self.RUST_PATHS + primary,
+                ),
+                self.job("named", "      - uses: someone/fast-cache-action\n"),
+                self.job(
+                    "literal",
+                    save.replace(
+                        "{if}",
+                        "${{ github.event_name == 'push' && (github.ref == 'refs/heads/dev' || "
+                        "github.ref == 'refs/heads/main') }}",
+                    )
+                    + self.RUST_PATHS
+                    + "          key: rust-literal\n",
+                ),
+                self.job(
+                    "anypush",
+                    "      - id: rust-cache\n" + self.RESTORE,
+                    self.runs("cargo test"),
+                    save.replace("{if}", "${{ github.event_name == 'push' }}")
+                    + self.RUST_PATHS
+                    + primary,
+                ),
+            ]
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            directory = self.plant(scratch, {"planted": planted})
+            problems, population = shape_writer_census(directory)
+        self.assertEqual(
+            problems,
+            self.in_both(
+                {
+                    "planted": [
+                        "<f>:anypush:save: saves on a push to another branch",
+                        "<f>:anypush:save: saves on a pushed tag",
+                        "<f>:anypush:save: saves on a push to dev that hit its key exactly",
+                        "<f>:named:0: someone/fast-cache-action names a cache, and no rule says"
+                        " when it saves",
+                        "<f>:literal:0: a Rust save keys on rust-literal, not an earlier shared"
+                        " restore's primary key",
+                    ]
+                }
+            ),
+        )
+        self.assertEqual(
+            [f"{where} {uses} {rust}" for where, uses, rust in population],
+            self.in_both(
+                {
+                    "planted": [
+                        "<f>:saved:2 actions/cache/save True",
+                        "<f>:named:0 someone/fast-cache-action False",
+                        "<f>:literal:0 actions/cache/save True",
+                        "<f>:anypush:2 actions/cache/save True",
+                    ]
+                }
+            ),
+        )
+
+    def test_every_cache_key_hashes_its_lock_and_toolchain_inputs(self):
+        problems, population = shape_key_census(WORKFLOWS)
+        # The control, read by code the census did not build: each cache step's class by the paths
+        # `paths` reads, and its fallback lines as `lines_of` reads them.
+        store = re.compile(r"\$\{\{ steps\.[\w-]+\.outputs\.path \}\}")
+        control = []
+        for path in workflow_files(WORKFLOWS):
+            for job_id, job in (read_workflow(workflow_file_text(path)).get("jobs") or {}).items():
+                for at, step in enumerate((job or {}).get("steps") or []):
+                    if action(step) not in (
+                        "actions/cache/restore",
+                        "actions/cache/save",
+                        "actions/cache",
+                    ):
+                        continue
+                    named = paths(step)
+                    if named == RUST_CACHE:
+                        cache = "Rust"
+                    elif named == BROWSERS:
+                        cache = "Playwright"
+                    elif len(named) == 1 and store.fullmatch(named[0]):
+                        cache = "pnpm"
+                    else:
+                        cache = "unknown"
+                    fallbacks = lines_of((step.get("with") or {}).get("restore-keys"))
+                    control.append((f"{path.name}:{job_id}:{at}", cache, fallbacks))
+        self.assertTrue(control, "no workflow holds a cache step")
+        self.assertEqual(population, control)
+        examined("cache keys", population)
+        counts = collections.Counter(cache for _, cache, _ in population)
+        print(
+            f"Rust {counts['Rust']}, pnpm {counts['pnpm']}, Playwright {counts['Playwright']},"
+            f" unknown {counts['unknown']}; fallback lines {sum(len(f) for _, _, f in population)}"
+        )
+        self.assertEqual(problems, [])
+
+    def test_the_key_census_refuses_each_planted_shape(self):
+        self.assertEqual(
+            SHAPE_RUST_FALLBACK,
+            "rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-",
+        )
+        self.assertEqual(SHAPE_PNPM_KEY, "pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}")
+        self.assertEqual(SHAPE_PNPM_FALLBACK, "pnpm-${{ runner.os }}-")
+        self.assertEqual(
+            SHAPE_BROWSER_KEY.pattern,
+            r"playwright-\$\{\{ runner\.os \}\}-\$\{\{ steps\.([\w-]+)\.outputs\.version \}\}"
+            r"-chromium-headless-shell",
+        )
+        self.assertEqual(
+            SHAPE_PRIMARY_KEY.pattern,
+            r"\$\{\{ steps\.([\w-]+)\.outputs\.cache-primary-key \}\}",
+        )
+        self.assertEqual(SHAPE_STORE_PATH.pattern, r"\$\{\{ steps\.([\w-]+)\.outputs\.path \}\}")
+        self.assertEqual(
+            SHAPE_CACHE_STEPS,
+            ("actions/cache/restore", "actions/cache/save", "actions/cache"),
+        )
+        store = (
+            "      - id: pnpm-store\n"
+            '        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"\n'
+        )
+        pnpm = (
+            "      - id: pnpm-cache\n"
+            "        uses: actions/cache/restore\n"
+            "        with:\n"
+            "          path: ${{ steps.pnpm-store.outputs.path }}\n"
+            "          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}\n"
+        )
+        browser = (
+            "        uses: actions/cache/restore\n"
+            "        with:\n"
+            "          path: ~/.cache/ms-playwright\n"
+            "          key: playwright-${{ runner.os }}-${{ steps.{v}.outputs.version }}"
+            "-chromium-headless-shell\n"
+        )
+        save = (
+            "      - name: save\n        uses: actions/cache/save\n        with:\n"
+            + self.RUST_PATHS
+        )
+        planted = "on:\n  push:\n    branches: [dev]\njobs:\n" + "".join(
+            [
+                self.job(
+                    "good",
+                    "      - id: rust-cache\n"
+                    + self.RESTORE
+                    + "          restore-keys: |\n"
+                    + "            rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-\n",
+                    store,
+                    pnpm + "          restore-keys: |\n            pnpm-${{ runner.os }}-\n",
+                    "      - id: playwright-version\n"
+                    '        run: echo "version=$(sed -n 1p pnpm-lock.yaml)" >> "$GITHUB_OUTPUT"\n',
+                    "      - id: playwright-cache\n" + browser.replace("{v}", "playwright-version"),
+                    save + "          key: ${{ steps.rust-cache.outputs.cache-primary-key }}\n",
+                ),
+                self.job(
+                    "drifted",
+                    "      - name: restore\n"
+                    + self.RESTORE.replace("Cargo.lock') }}\n", "Cargo.lock') }}-v2\n"),
+                ),
+                self.job(
+                    "short-fallback",
+                    "      - name: restore\n"
+                    + self.RESTORE
+                    + "          restore-keys: |\n            rust-${{ runner.os }}-\n",
+                ),
+                self.job(
+                    "unhashed",
+                    store,
+                    pnpm.replace(
+                        "pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}",
+                        "pnpm-${{ runner.os }}",
+                    ),
+                ),
+                self.job(
+                    "unlocked",
+                    "      - id: browser-version\n"
+                    '        run: echo "version=1.0" >> "$GITHUB_OUTPUT"\n',
+                    "      - name: browser\n" + browser.replace("{v}", "browser-version"),
+                ),
+                self.job(
+                    "npm",
+                    "      - uses: actions/cache/restore\n"
+                    "        with:\n"
+                    "          path: ~/.npm\n"
+                    "          key: npm-${{ hashFiles('package-lock.json') }}\n",
+                ),
+                self.job(
+                    "crossed",
+                    store,
+                    pnpm,
+                    save + "          key: ${{ steps.pnpm-cache.outputs.cache-primary-key }}\n",
+                ),
+            ]
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            directory = self.plant(scratch, {"planted": planted})
+            problems, population = shape_key_census(directory)
+        self.assertEqual(
+            problems,
+            self.in_both(
+                {
+                    "planted": [
+                        "<f>:drifted:0: the Rust key rust-${{ runner.os }}-${{ hashFiles("
+                        "'rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-v2 is not the"
+                        " shared key",
+                        "<f>:short-fallback:0: the Rust fallback rust-${{ runner.os }}- is not the"
+                        " toolchain's prefix",
+                        "<f>:unhashed:1: the pnpm key pnpm-${{ runner.os }} is not the lockfile's",
+                        "<f>:unlocked:1: the browser key's version step reads no pnpm-lock.yaml",
+                        "<f>:npm:0: caches ~/.npm, which no key rule knows",
+                        "<f>:crossed:2: keys on ${{ steps.pnpm-cache.outputs.cache-primary-key }},"
+                        " which no earlier restore of its paths sets",
+                    ]
+                }
+            ),
+        )
+        rust_fallback = "rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-"
+        self.assertEqual(
+            population,
+            [
+                (where.replace("<f>", f"planted{suffix}"), cache, fallbacks)
+                for suffix in (".yaml", ".yml")
+                for where, cache, fallbacks in [
+                    ("<f>:good:0", "Rust", [rust_fallback]),
+                    ("<f>:good:2", "pnpm", ["pnpm-${{ runner.os }}-"]),
+                    ("<f>:good:4", "Playwright", []),
+                    ("<f>:good:5", "Rust", []),
+                    ("<f>:drifted:0", "Rust", []),
+                    ("<f>:short-fallback:0", "Rust", ["rust-${{ runner.os }}-"]),
+                    ("<f>:unhashed:1", "pnpm", []),
+                    ("<f>:unlocked:1", "Playwright", []),
+                    ("<f>:npm:0", "unknown", []),
+                    ("<f>:crossed:1", "pnpm", []),
+                    ("<f>:crossed:2", "Rust", []),
+                ]
+            ],
+        )
+
+    def test_no_cache_key_carries_a_run_unique_part(self):
+        problems, population = shape_run_unique_census(WORKFLOWS)
+        # The control, read by code the census did not build: each cache step's key, a save's
+        # resolved through the restore whose id it names, then the fallback lines `lines_of` reads.
+        primary = re.compile(r"\$\{\{ steps\.([\w-]+)\.outputs\.cache-primary-key \}\}")
+        control = []
+        for path in workflow_files(WORKFLOWS):
+            for job_id, job in (read_workflow(workflow_file_text(path)).get("jobs") or {}).items():
+                steps = (job or {}).get("steps") or []
+                for at, step in enumerate(steps):
+                    if action(step) not in (
+                        "actions/cache/restore",
+                        "actions/cache/save",
+                        "actions/cache",
+                    ):
+                        continue
+                    inputs = step.get("with") or {}
+                    key = str(inputs.get("key", ""))
+                    restore = primary.fullmatch(key)
+                    if restore:
+                        key = next(
+                            str((s.get("with") or {}).get("key", ""))
+                            for s in steps[:at]
+                            if s.get("id") == restore.group(1)
+                        )
+                    where = f"{path.name}:{job_id}:{at}"
+                    control.append((where, key))
+                    control += [(where, line) for line in lines_of(inputs.get("restore-keys"))]
+        self.assertTrue(control, "no workflow holds a cache step")
+        self.assertEqual(population, control)
+        examined("key and fallback texts", population)
+        self.assertEqual(problems, [])
+
+    def test_the_run_unique_census_refuses_each_planted_shape(self):
+        def restore(key, fallback=None):
+            text = (
+                "      - name: restore\n"
+                "        uses: actions/cache/restore\n"
+                "        with:\n"
+                "          path: build/\n"
+                f"          key: {key}\n"
+            )
+            return text + (
+                f"          restore-keys: |\n            {fallback}\n" if fallback else ""
+            )
+
+        def stamped(name, value):
+            return self.job(
+                name,
+                f'      - id: stamp\n        run: echo "value={value}" >> "$GITHUB_OUTPUT"\n',
+                restore("build-${{ steps.stamp.outputs.value }}"),
+            )
+
+        planted = "on:\n  push:\n    branches: [dev]\njobs:\n" + "".join(
+            [
+                self.job(
+                    "good",
+                    restore(
+                        "build-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}",
+                        "build-${{ runner.os }}-",
+                    ),
+                ),
+                self.job("salted", restore("build-${{ inputs.salt }}")),
+                self.job("run-id", restore("build-${{ github.run_id }}")),
+                self.job("run-number", restore("build-${{ github.run_number }}")),
+                self.job("run-attempt", restore("build-${{ github.run_attempt }}")),
+                self.job(
+                    "sha",
+                    restore("build-${{ github.sha }}", "build-${{ github.sha }}-"),
+                ),
+                "  stamped:\n    runs-on: ubuntu-24.04\n    env:\n      STAMP: ${{ github.run_id }}\n"
+                "    steps:\n" + restore("build-${{ env.STAMP }}"),
+                stamped("run-id-step", "$GITHUB_RUN_ID"),
+                stamped("run-number-step", "$GITHUB_RUN_NUMBER"),
+                stamped("run-attempt-step", "$GITHUB_RUN_ATTEMPT"),
+                stamped("sha-step", "$GITHUB_SHA"),
+                stamped("date-step", "$(date +%s)"),
+                stamped("epoch-step", "$EPOCHSECONDS"),
+                stamped("realtime-step", "$EPOCHREALTIME"),
+                stamped("random-step", "$RANDOM"),
+                stamped("uuid-step", "$(uuidgen)"),
+            ]
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            directory = self.plant(scratch, {"planted": planted})
+            problems, population = shape_run_unique_census(directory)
+        changes = "which changes every run"
+        output = "build-${{ steps.stamp.outputs.value }} reads steps.stamp, whose run names"
+        self.assertEqual(
+            problems,
+            self.in_both(
+                {
+                    "planted": [
+                        "<f>:salted:0: build-${{ inputs.salt }} carries an expression no key rule"
+                        " places: inputs.salt",
+                        "<f>:run-id:0: build-${{ github.run_id }} carries github.run_id, "
+                        + changes,
+                        "<f>:run-number:0: build-${{ github.run_number }} carries github.run_number, "
+                        + changes,
+                        "<f>:run-attempt:0: build-${{ github.run_attempt }} carries github.run_attempt, "
+                        + changes,
+                        "<f>:sha:0: build-${{ github.sha }} carries github.sha, " + changes,
+                        "<f>:sha:0: build-${{ github.sha }}- carries github.sha, " + changes,
+                        "<f>:stamped:0 env.STAMP: ${{ github.run_id }} carries github.run_id, "
+                        + changes,
+                        f"<f>:run-id-step:1: {output} GITHUB_RUN_ID",
+                        f"<f>:run-number-step:1: {output} GITHUB_RUN_NUMBER",
+                        f"<f>:run-attempt-step:1: {output} GITHUB_RUN_ATTEMPT",
+                        f"<f>:sha-step:1: {output} GITHUB_SHA",
+                        f"<f>:date-step:1: {output} date",
+                        f"<f>:epoch-step:1: {output} EPOCHSECONDS",
+                        f"<f>:realtime-step:1: {output} EPOCHREALTIME",
+                        f"<f>:random-step:1: {output} RANDOM",
+                        f"<f>:uuid-step:1: {output} uuidgen",
+                    ]
+                }
+            ),
+        )
+        stamp = "build-${{ steps.stamp.outputs.value }}"
+        self.assertEqual(
+            [f"{where} {text}" for where, text in population],
+            self.in_both(
+                {
+                    "planted": [
+                        "<f>:good:0 build-${{ runner.os }}-${{ hashFiles('Cargo.lock',"
+                        " 'rust-toolchain.toml') }}",
+                        "<f>:good:0 build-${{ runner.os }}-",
+                        "<f>:salted:0 build-${{ inputs.salt }}",
+                        "<f>:run-id:0 build-${{ github.run_id }}",
+                        "<f>:run-number:0 build-${{ github.run_number }}",
+                        "<f>:run-attempt:0 build-${{ github.run_attempt }}",
+                        "<f>:sha:0 build-${{ github.sha }}",
+                        "<f>:sha:0 build-${{ github.sha }}-",
+                        "<f>:stamped:0 build-${{ env.STAMP }}",
+                        *[
+                            f"<f>:{name}:1 {stamp}"
+                            for name in (
+                                "run-id-step",
+                                "run-number-step",
+                                "run-attempt-step",
+                                "sha-step",
+                                "date-step",
+                                "epoch-step",
+                                "realtime-step",
+                                "random-step",
+                                "uuid-step",
+                            )
+                        ],
+                    ]
+                }
+            ),
+        )
+
+    def test_the_python_read_follows_the_subcommand_the_step_names(self):
+        self.assertEqual(
+            SHAPE_RUN_TIME_LOOKUPS,
+            {
+                "getattr",
+                "globals",
+                "vars",
+                "locals",
+                "eval",
+                "exec",
+                "__import__",
+                "importlib",
+            },
+        )
+        verbs = textwrap.dedent(
+            """\
+            import argparse
+            import subprocess
+
+
+            def run_tests(package):
+                return subprocess.call(["cargo", "test", "-p", package])
+
+
+            def prove(args):
+                return run_tests(args.package)
+
+
+            def plan(args):
+                return run_tests(args.package)
+
+
+            def legs(args):
+                return 0
+
+
+            def main():
+                parser = argparse.ArgumentParser()
+                parser.add_argument("verb", nargs="?", default="prove")
+                parser.add_argument("--package")
+                args = parser.parse_args()
+                if args.verb in ("plan", "list"):
+                    return plan(args)
+                if args.verb == "prove":
+                    return prove(args)
+                if args.verb == "legs":
+                    return legs(args)
+                return 2
+
+
+            if __name__ == "__main__":
+                raise SystemExit(main())
+            """
+        )
+        modes = textwrap.dedent(
+            """\
+            import argparse
+            import subprocess
+
+
+            def fast(args):
+                return subprocess.call(["cargo", "build"])
+
+
+            def go(args):
+                return 0
+
+
+            def main():
+                parser = argparse.ArgumentParser()
+                parser.add_argument("verb")
+                parser.add_argument("--mode")
+                args = parser.parse_args()
+                if args.mode == "fast":
+                    fast(args)
+                if args.verb == "go":
+                    return go(args)
+                return 2
+
+
+            if __name__ == "__main__":
+                raise SystemExit(main())
+            """
+        )
+        table = textwrap.dedent(
+            """\
+            import argparse
+            import subprocess
+            import sys
+
+
+            def do_prove(args):
+                return subprocess.call(["cargo", "test"])
+
+
+            def main():
+                parser = argparse.ArgumentParser()
+                parser.add_argument("verb")
+                args = parser.parse_args()
+                if args.verb == "legs":
+                    return 0
+                return getattr(sys.modules[__name__], "do_" + args.verb)(args)
+
+
+            if __name__ == "__main__":
+                raise SystemExit(main())
+            """
+        )
+        planted = "on:\n  pull_request:\n    branches: [dev]\njobs:\n" + "".join(
+            [
+                self.job("prove-unrestored", self.runs("python3 scripts/verbs.py prove")),
+                self.job(
+                    "prove-restored",
+                    "      - name: restore\n" + self.RESTORE,
+                    self.runs("python3 scripts/verbs.py prove"),
+                ),
+                self.job("legs", self.runs("python3 scripts/verbs.py legs")),
+                self.job("unnamed", self.runs("python3 scripts/verbs.py --package core")),
+                self.job("two-subjects", self.runs("python3 scripts/modes.py go --mode fast")),
+                self.job("lookup", self.runs("python3 scripts/table.py prove")),
+            ]
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            directory = self.plant(
+                scratch,
+                {"planted": planted},
+                {"verbs.py": verbs, "modes.py": modes, "table.py": table},
+            )
+            problems, population = shape_cargo_census(directory, Path(scratch), [])
+        once = "restores the shared Rust key 0 times, not once"
+        self.assertEqual(
+            problems,
+            self.in_both(
+                {
+                    "planted": [
+                        f"<f>:prove-unrestored: {once}",
+                        f"<f>:unnamed: {once}",
+                        f"<f>:two-subjects: {once}",
+                        f"<f>:lookup: {once}",
+                    ]
+                }
+            ),
+        )
+        self.assertEqual(
+            [f"{name} {job} {cls}" for name, job, cls in population],
+            self.in_both(
+                {
+                    "planted": [
+                        "<f> prove-unrestored shared",
+                        "<f> prove-restored shared",
+                        "<f> unnamed shared",
+                        "<f> two-subjects shared",
+                        "<f> lookup shared",
+                    ]
+                }
+            ),
+        )
+
+    def test_the_cargo_census_follows_test_discovery_to_the_python_stage(self):
+        restore = "      - name: restore\n" + self.RESTORE
+        discovered = self.job(
+            "discovered", self.runs("python3 -m unittest discover -s scripts/tests -p 'test_*.py'")
+        )
+        planted = "on:\n  pull_request:\n    branches: [dev]\njobs:\n" + "".join(
+            [
+                discovered,
+                self.job(
+                    "covered",
+                    restore,
+                    self.runs(
+                        "for suite in scripts/tests agent/tests; do\n"
+                        '  coverage run -m unittest discover -s "$suite"\n'
+                        "done\n"
+                    ),
+                ),
+                self.job("single", self.runs("python3 -m unittest scripts.tests.test_x")),
+            ]
+        )
+        check = (
+            "#!/usr/bin/env bash\nSTAGES_ALL=(python)\n\nneed_cargo() { command -v cargo; }\n\n"
+            "stage_python() {\n    need_cargo && python3 -m unittest discover -s scripts/tests\n}\n"
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            directory = self.plant(scratch, {"discovery": planted}, {"check.sh": check})
+            problems, population = shape_cargo_census(directory, Path(scratch), [])
+        self.assertEqual(
+            problems,
+            self.in_both(
+                {"discovery": ["<f>:discovered: restores the shared Rust key 0 times, not once"]}
+            ),
+        )
+        self.assertEqual(
+            [f"{name} {job} {cls}" for name, job, cls in population],
+            self.in_both({"discovery": ["<f> discovered shared", "<f> covered shared"]}),
+        )
+        lacking = "on:\n  pull_request:\n    branches: [dev]\njobs:\n" + discovered
+        clippy = (
+            "#!/usr/bin/env bash\nSTAGES_ALL=(clippy)\n\nneed_cargo() { command -v cargo; }\n\n"
+            "stage_clippy() {\n    need_cargo && cargo clippy --workspace\n}\n"
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            directory = self.plant(scratch, {"lacking": lacking}, {"check.sh": clippy})
+            problems, population = shape_cargo_census(directory, Path(scratch), [])
+        self.assertEqual(
+            problems,
+            self.in_both({"lacking": ["<f>:discovered:0: check.sh has no stage python"]}),
+        )
+        self.assertEqual(population, [])
+
+    def test_a_codspeed_build_builds_another_profile(self):
+        restore = "      - name: restore\n" + self.RESTORE
+        keyed = restore.replace("Cargo.lock') }}\n", "Cargo.lock') }}-bench\n")
+        planted = "on:\n  pull_request:\n    branches: [dev]\njobs:\n" + "".join(
+            [
+                self.job("benched", self.runs("cargo codspeed build -p engine")),
+                self.job("bench-keyed", keyed, self.runs("cargo codspeed build -p engine")),
+                self.job("bench-run", self.runs("cargo codspeed run")),
+            ]
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            directory = self.plant(scratch, {"bench": planted})
+            problems, population = shape_cargo_census(directory, Path(scratch), [])
+        self.assertEqual(
+            problems,
+            self.in_both(
+                {
+                    "bench": [
+                        "<f>:bench-keyed: a cache-free job restores the Rust cache under another"
+                        " key at 0",
+                        "<f>:bench-run: restores the shared Rust key 0 times, not once",
+                    ]
+                }
+            ),
+        )
+        self.assertEqual(
+            [f"{name} {job} {cls}" for name, job, cls in population],
+            self.in_both(
+                {
+                    "bench": [
+                        "<f> benched cache-free",
+                        "<f> bench-keyed cache-free",
+                        "<f> bench-run shared",
+                    ]
+                }
+            ),
+        )
+
+    def test_the_release_profile_key_serves_a_job_that_builds_no_cache_profile(self):
+        release = self.RESTORE.replace("key: rust-", "key: rust-release-") + (
+            "          restore-keys: |\n"
+            "            rust-release-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-\n"
+        )
+        drift = "-${{ hashFiles('rust-toolchain.toml') }}-\n"
+        self.assertEqual(release.count(drift), 1)
+        restore = "      - id: release-cache\n" + release
+        drifted = "      - id: release-cache\n" + release.replace(drift, "-\n")
+        save = (
+            "      - name: save\n        if: "
+            + self.GUARD.replace("steps.rust-cache.", "steps.release-cache.")
+            + "\n        uses: actions/cache/save\n        with:\n"
+            + self.RUST_PATHS
+            + "          key: ${{ steps.release-cache.outputs.cache-primary-key }}\n"
+        )
+        planted = "on:\n  push:\n    branches: [dev, main]\njobs:\n" + "".join(
+            [
+                self.job(
+                    "release", restore, self.runs("cargo nextest run --workspace --release"), save
+                ),
+                self.job("drifted", drifted, self.runs("cargo build --release")),
+                self.job("shared", restore, self.runs("cargo test")),
+            ]
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            directory = self.plant(scratch, {"released": planted})
+            problems, population = shape_cargo_census(directory, Path(scratch), [])
+        self.assertEqual(
+            problems,
+            self.in_both(
+                {"released": ["<f>:shared: restores the shared Rust key 0 times, not once"]}
+            ),
+        )
+        self.assertEqual(
+            [f"{name} {job} {cls}" for name, job, cls in population],
+            self.in_both(
+                {
+                    "released": [
+                        "<f> release cache-free",
+                        "<f> drifted cache-free",
+                        "<f> shared shared",
+                    ]
+                }
+            ),
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            directory = self.plant(scratch, {"released": planted})
+            problems, population = shape_writer_census(directory)
+        self.assertEqual(problems, [])
+        self.assertEqual(
+            [f"{where} {uses} {rust}" for where, uses, rust in population],
+            self.in_both({"released": ["<f>:release:2 actions/cache/save True"]}),
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            directory = self.plant(scratch, {"released": planted})
+            problems, population = shape_key_census(directory)
+        self.assertEqual(
+            problems,
+            self.in_both(
+                {
+                    "released": [
+                        "<f>:drifted:0: the release Rust fallback rust-release-${{ runner.os }}- is"
+                        " not the release key's prefix"
+                    ]
+                }
+            ),
+        )
+
+    def test_a_main_that_delegates_its_dispatch_is_read_along_the_subcommand(self):
+        delegated = textwrap.dedent(
+            """\
+            import argparse
+            import contextlib
+            import subprocess
+
+
+            def run_tests(package):
+                return subprocess.call(["cargo", "test", "-p", package])
+
+
+            def legs(args):
+                return 0
+
+
+            @contextlib.contextmanager
+            def ending():
+                yield
+
+
+            def dispatch(argv=None):
+                parser = argparse.ArgumentParser()
+                parser.add_argument("verb", choices=["prove", "legs"])
+                parser.add_argument("--package")
+                args = parser.parse_args(argv)
+                if args.verb == "prove":
+                    return run_tests(args.package)
+                if args.verb == "legs":
+                    return legs(args)
+                return 2
+
+
+            def main(argv=None):
+                with ending():
+                    return dispatch(argv)
+
+
+            if __name__ == "__main__":
+                raise SystemExit(main())
+            """
+        )
+        twice = textwrap.dedent(
+            """\
+            import argparse
+            import subprocess
+
+
+            def first(args):
+                if args.verb == "legs":
+                    return 0
+                return 2
+
+
+            def second(args):
+                if args.verb == "prove":
+                    return subprocess.call(["cargo", "test"])
+                return 0
+
+
+            def main():
+                parser = argparse.ArgumentParser()
+                parser.add_argument("verb")
+                args = parser.parse_args()
+                return first(args) and second(args)
+
+
+            if __name__ == "__main__":
+                raise SystemExit(main())
+            """
+        )
+        planted = "on:\n  pull_request:\n    branches: [dev]\njobs:\n" + "".join(
+            [
+                self.job("legs", self.runs("python3 scripts/delegated.py legs")),
+                self.job("prove-unrestored", self.runs("python3 scripts/delegated.py prove")),
+                self.job(
+                    "prove-restored",
+                    "      - name: restore\n" + self.RESTORE,
+                    self.runs("python3 scripts/delegated.py prove"),
+                ),
+                self.job("either-legs", self.runs("python3 scripts/twice.py legs")),
+            ]
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            directory = self.plant(
+                scratch, {"delegating": planted}, {"delegated.py": delegated, "twice.py": twice}
+            )
+            problems, population = shape_cargo_census(directory, Path(scratch), [])
+        once = "restores the shared Rust key 0 times, not once"
+        self.assertEqual(
+            problems,
+            self.in_both(
+                {"delegating": [f"<f>:prove-unrestored: {once}", f"<f>:either-legs: {once}"]}
+            ),
+        )
+        self.assertEqual(
+            [f"{name} {job} {cls}" for name, job, cls in population],
+            self.in_both(
+                {
+                    "delegating": [
+                        "<f> prove-unrestored shared",
+                        "<f> prove-restored shared",
+                        "<f> either-legs shared",
+                    ]
+                }
+            ),
+        )
+
+    def test_a_first_build_guarded_by_the_restores_conditions_and_more_meets_it(self):
+        rust = "needs.plan.outputs.rust == 'true'"
+        green = "steps.base.outputs.green == 'true'"
+
+        def guarded(name, restore_if, build_if):
+            return self.job(
+                name,
+                "      - if: ${{ " + restore_if + " }}\n" + self.RESTORE,
+                "      - if: ${{ " + build_if + " }}\n        run: cargo test\n",
+            )
+
+        planted = "on:\n  pull_request:\n    branches: [dev]\njobs:\n" + "".join(
+            [
+                guarded("narrowed", rust, f"{rust} && {green}"),
+                guarded("either", rust, f"{rust} && {green} || github.event_name == 'push'"),
+                guarded("unrelated", rust, f"needs.plan.outputs.web == 'true' && {green}"),
+                guarded("widened", f"{rust} && {green}", rust),
+            ]
+        )
+        with tempfile.TemporaryDirectory() as scratch:
+            directory = self.plant(scratch, {"guarded": planted})
+            problems, population = shape_cargo_census(directory, Path(scratch), [])
+        other = "restores the shared Rust key under another if than its first build's"
+        self.assertEqual(
+            problems,
+            self.in_both(
+                {
+                    "guarded": [
+                        f"<f>:either: {other}",
+                        f"<f>:unrelated: {other}",
+                        f"<f>:widened: {other}",
+                    ]
+                }
+            ),
+        )
+        self.assertEqual(
+            [f"{name} {job} {cls}" for name, job, cls in population],
+            self.in_both(
+                {
+                    "guarded": [
+                        f"<f> {job} shared"
+                        for job in ("narrowed", "either", "unrelated", "widened")
+                    ]
+                }
+            ),
+        )
 
 
 class TheEngineBuildsInEveryRustJob(unittest.TestCase):
@@ -3220,7 +5578,7 @@ def engine_job_problems(workflow):
         n
         for n, s in enumerate(steps)
         if action(s) == "taiki-e/install-action"
-        and "cargo-nextest"
+        and ENGINE_NEXTEST_PIN
         in [t.strip() for t in str((s.get("with") or {}).get("tool")).split(",")]
     ]
     if gate is None or not nextest or nextest[0] > gate:
@@ -5584,6 +7942,10 @@ NOT_WORKFLOW_READS = {
         ("test_mutation_workflows", "rows_constant", "ROWS_RUNNER.read_text(encoding='utf-8')", 1),
     ),
     **allowed(
+        "the verdict's own Python source, read for one module constant and never imported; never a workflow file",
+        ("test_mutation_workflows", "verdict_constant", "VERDICT.read_text(encoding='utf-8')", 1),
+    ),
+    **allowed(
         "calls the bash oracle, which runs planted scripts with cargo stubbed and reads the stubs' logs",
         (
             "test_dispatch_shards",
@@ -7732,6 +10094,24 @@ NOT_WORKFLOW_READS = {
             1,
         ),
     ),
+    **allowed(
+        "a Swift package's row file, read for its live row and killer counts (SPEC-397 A8); never handed to the reader",
+        (
+            "test_ci_workflows",
+            "EachSwiftRowFileIsSweptByItsPackagesJob.test_each_sweep_is_bounded_from_its_measured_cost",
+            "path.read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
+        "runs the retired step's one run line under bash with a planted python3 first on PATH, which prints its arguments and exits as planted (SPEC-397 A10); its output is that fake's, never a workflow's text",
+        (
+            "test_mutation_workflows",
+            "TheRowsJobHoldsTheSwiftRows.test_the_rows_job_runs_the_swift_retired_check_on_a_diff",
+            "subprocess.run(['bash', '--noprofile', '--norc', '-eo', 'pipefail', '-c', lines[0]], capture_output=True, text=True, env=dict(os.environ, PATH=path, ROWS_EXIT=str(rows), SWIFT_EXIT=str(swift)), timeout=60, check=False)",
+            1,
+        ),
+    ),
 }
 
 # Every site in the test directory that imports, runs code or reaches a namespace by a name held
@@ -8447,6 +10827,35 @@ DYNAMIC_IMPORTS = {
     **allowed(
         "an import of this repository's own script module by its constant name, `import mutation_rows`, after a sys.path insert of the constant scripts directory; it reads no workflow file",
         ("test_mutation_rows_survivor_kills", "<module>", "import mutation_rows as runner", 1),
+    ),
+    **allowed(
+        "compiles and executes the production path gate script's own source, or a planted copy of its text, in a fresh module the test makes and owns; the code it runs is that one script's text, which imports only the standard library, so it brings in no module of the test directory and reads no workflow file",
+        ("test_path_gate", "load", "compile(source, str(SCRIPT), 'exec')", 1),
+        (
+            "test_path_gate",
+            "load",
+            "exec(compile(source, str(SCRIPT), 'exec'), module.__dict__)",
+            1,
+        ),
+    ),
+    **allowed(
+        "reaches the namespace of the fresh module the loader makes, by a constant name, to run the path gate script's text in it; that namespace holds what the script defines plus the __file__ the loader sets and the __builtins__ exec adds, beside the five entries every new module starts with (__name__, __doc__, __package__, __loader__ and __spec__), so it brings in no module of the test directory",
+        ("test_path_gate", "load", "module.__dict__", 1),
+    ),
+    **allowed(
+        "an import of this repository's own script module by its constant name, `import swift_mutants`, after a sys.path insert of the constant scripts directory, for A6's calls of the verdict function (SPEC-397); it reads no workflow file",
+        ("test_swift_mutants", "runner_module", "import swift_mutants", 1),
+    ),
+    **allowed(
+        "compresses and checksums the chunks of the planted screenshot baselines, to build in memory the PNGs the scrub admits or refuses by their chunks (SPEC-639 A14); bytes in and bytes out, and it imports, runs and reads nothing",
+        (
+            "test_public_scrub",
+            "OnlyAScreenshotBaselineWithNoTextIsAdmitted.test_a_baseline_holding_a_text_chunk_is_refused_by_its_type",
+            "zlib.compress(b'planted')",
+            1,
+        ),
+        ("test_public_scrub", "chunk", "zlib.crc32(kind + body)", 1),
+        ("test_public_scrub", "png", "zlib.compress(bytes(2))", 1),
     ),
 }
 
@@ -10585,7 +12994,7 @@ def card_probe_problems(jobs):
     if not any("swift test --package-path ios/CardIsolation" in r for r in runs):
         problems.append("card-isolation: it runs no swift test of ios/CardIsolation")
     if not any(
-        'pathlib.Path("ios/CardIsolation")' in r and "swift-mutants.json" in r for r in runs
+        "python3 scripts/swift_mutants.py sweep --package ios/CardIsolation " in r for r in runs
     ):
         problems.append("card-isolation: it sweeps no mutant of ios/CardIsolation")
     if not any(
@@ -10615,7 +13024,8 @@ class TheCardViewIsProvedOnBothSimulators(unittest.TestCase):
             "with": {"path": "harness-report/\nharness-results/"},
         }
         sweep = {
-            "run": 'package = pathlib.Path("ios/CardIsolation")\n(package / "swift-mutants.json")'
+            "run": "python3 --version\npython3 scripts/swift_mutants.py sweep --package "
+            'ios/CardIsolation --report "$REPORT" --run-seconds 60\n'
         }
         host = {
             "runs-on": apple_job_runner("card-isolation"),
@@ -10824,6 +13234,106 @@ class TheReportListsThePlantedSuiteOnEachSimulator(unittest.TestCase):
                 text = (report / "report.md").read_text(encoding="utf-8")
                 rows = [line for line in text.splitlines() if line.startswith("| Card probe")]
                 self.assertEqual(rows, CARD_PROBE_ROWS[name])
+
+
+# The Swift row files' sweeps (SPEC-397 R7, R8): each package's own macOS job runs the module's
+# `sweep` over its row file after the package's tests, bounded from the cost one successful run of
+# the change caller measured. Seconds, durations only, each beside the run and job it was read from.
+SWIFT_SWEEP = "python3 scripts/swift_mutants.py sweep --package "
+#: The one `xcframework.yml` job that sweeps each package's row file.
+SWIFT_SWEEP_JOBS = {"ios/CardIsolation": "card-isolation", "ios/HarnessWire": "harness-wire"}
+#: Each sweeping job's seconds outside its sweep step.
+SWIFT_SWEEP_OTHER_SECONDS = {
+    "harness-wire": 74,  # run 42036285042, job 127275210023
+    "card-isolation": 78,  # run 42036285042, job 127275209465
+}
+#: The worse of the two jobs' seconds per killer run, one figure for both, from each sweep step:
+#: harness-wire: 114 s over 29 rows and 6 distinct killers, run 42036285042, job 127275210023
+#: card-isolation: 233 s over 43 rows and 11 distinct killers, run 42036285042, job 127275209465
+SWIFT_SECONDS_PER_RUN = 233 / 54  # run 42036285042, job 127275209465
+
+
+def ceil5(minutes):
+    """`minutes` rounded up to the five."""
+    return 5 * math.ceil(minutes / 5)
+
+
+class EachSwiftRowFileIsSweptByItsPackagesJob(unittest.TestCase):
+    """SPEC-397 R7, R8: each package's row file is swept by its own macOS job, through the module,
+    bounded from that job's measured cost."""
+
+    def test_each_swift_row_file_is_swept_by_one_job_through_the_module(self):
+        """SPEC-397 A7 (R7): each row file is swept by exactly one xcframework.yml job, through the
+        module's sweep step after the package's tests, on its routed runner; that job runs no
+        inline Python program, and its report upload runs whatever the outcome."""
+        jobs = load("xcframework.yml")["jobs"]
+        files = examined("Swift row files", sorted(REPO.glob("ios/*/swift-mutants.json")))
+        packages = [path.parent.relative_to(REPO).as_posix() for path in files]
+        self.assertEqual(packages, sorted(SWIFT_SWEEP_JOBS))
+        for package in packages:
+            with self.subTest(package=package):
+                invocation = f"{SWIFT_SWEEP}{package} "
+                sweeping = [
+                    name
+                    for name, job in sorted(jobs.items())
+                    if any(invocation in str(s.get("run", "")) for s in job.get("steps") or [])
+                ]
+                self.assertEqual(sweeping, [SWIFT_SWEEP_JOBS[package]], package)
+                job = jobs[SWIFT_SWEEP_JOBS[package]]
+                self.assertEqual(job.get("runs-on"), apple_job_runner(SWIFT_SWEEP_JOBS[package]))
+                steps = job.get("steps") or []
+                runs = [str(s.get("run", "")) for s in steps]
+                (sweep,) = [at for at, run in enumerate(runs) if invocation in run]
+                self.assertEqual(runs[sweep].splitlines()[0], "python3 --version", package)
+                self.assertRegex(
+                    runs[sweep],
+                    rf'(?m)^{re.escape(invocation)}--report "\$REPORT" --run-seconds \d+$',
+                )
+                tests = [
+                    at
+                    for at, run in enumerate(runs)
+                    if f"swift test --package-path {package}" in run
+                ]
+                self.assertTrue(tests and tests[0] < sweep, f"{package}: no tests before its sweep")
+                inline = [
+                    run
+                    for run in runs
+                    if "<<" in run or re.search(r"(?m)\bpython3? -(c\b|\s|$)", run)
+                ]
+                self.assertEqual(inline, [], f"{package}: its job runs an inline Python program")
+                self.assertTrue(
+                    any(
+                        action(s) == "actions/upload-artifact" and s.get("if") == "${{ always() }}"
+                        for s in steps[sweep + 1 :]
+                    ),
+                    f"{package}: its report is not uploaded whatever the outcome",
+                )
+
+    def test_each_sweep_is_bounded_from_its_measured_cost(self):
+        """SPEC-397 A8 (R8): each sweeping job's timeout lies between one and a half times and twice
+        its projection, each rounded up to the five, and its run bound is three times the measured
+        seconds per run, rounded up to the minute, from the live row and killer counts."""
+        jobs = load("xcframework.yml")["jobs"]
+        run_seconds = 60 * math.ceil(3 * SWIFT_SECONDS_PER_RUN / 60)
+        for package, name in examined("sweeping jobs", sorted(SWIFT_SWEEP_JOBS.items())):
+            with self.subTest(job=name):
+                path = REPO / package / "swift-mutants.json"
+                rows = json.loads(path.read_text(encoding="utf-8"))["mutants"]
+                live = len(rows) + len({row["killer"] for row in rows})
+                projected = (SWIFT_SWEEP_OTHER_SECONDS[name] + live * SWIFT_SECONDS_PER_RUN) / 60
+                band = range(ceil5(1.5 * projected), ceil5(2 * projected) + 1)
+                minutes = str(jobs[name].get("timeout-minutes"))
+                self.assertTrue(
+                    minutes.isdigit() and int(minutes) in band,
+                    f"{name}: timeout-minutes {minutes}, not {band.start} to {band.stop - 1}",
+                )
+                swept = re.compile(rf"{re.escape(SWIFT_SWEEP + package)} .*--run-seconds (\d+)")
+                bounds = [
+                    found.group(1)
+                    for step in jobs[name].get("steps") or []
+                    if (found := swept.search(str(step.get("run", ""))))
+                ]
+                self.assertEqual(bounds, [str(run_seconds)], name)
 
 
 class TheReleaseJobOutlastsItsSlowestRun(unittest.TestCase):

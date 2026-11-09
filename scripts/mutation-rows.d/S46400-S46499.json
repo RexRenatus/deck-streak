@@ -1,0 +1,24 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S46400-THE-VIDEO-DECISION-DECODES-THE-NAME",
+        "engine-core",
+        "src/media.rs",
+        "        let decoded = decoded_name(written);",
+        "        let decoded = Some(written.to_owned());",
+        "face::an_escaped_dot_presents_as_its_plain_spelling_over_the_whole_type_table",
+        "the video decision reads the name admit reads; with its decode call removed it reads the written name again, so x%2Emp4, x%2Em4v and x%2Emov take the sound path for a reader that asks and the elements after the side's text are lost (SPEC-464 R1, R2, A1)"
+      ],
+      [
+        "S46401-ADMIT-CHECKS-THE-DECODED-NAME-IS-PLAIN",
+        "engine-core",
+        "src/media.rs",
+        "        let name = decoded_name(written)?;\n        if !plain_name(&name) {",
+        "        let name = decoded_name(written)?;\n        if !plain_name(written) {",
+        "face::escaped_names_admit_refuses_stay_refused_under_both_caps_for_both_readers",
+        "admit's name rule reads the decoded name; read on the written name, sub%2Fx.mp4, sub%5Cx.mp4 and x%00.mp4 pass it, the files a separator, a backslash or a NUL decodes to are read and shown, and the reader is asked for them (SPEC-464 R3, A3)"
+      ]
+    ]
+  }
+}

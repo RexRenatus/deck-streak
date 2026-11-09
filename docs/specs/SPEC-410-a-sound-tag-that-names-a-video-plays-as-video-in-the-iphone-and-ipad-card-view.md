@@ -55,6 +55,12 @@ with padding. The replay order is the question's videos on the question side; on
 question's videos then the answer's own, with the question's left out when the preset skips the question on
 replay. The element carries no part of the written name.
 
+Amended by SPEC-464 (ADR-481 D2, #820): the extension R3 reads is that of the name `admit` reads, the sound
+tag's name with its `%XX` escapes decoded by `decoded_name`, so `[sound:clip%2Emp4]` and `[sound:clip.%6Dp4]`
+are shown as `[sound:clip.mp4]` is, and an escaped `m4v` or `mov` spelling as its plain spelling is. A name
+that does not decode is not shown as a video: SPEC-348 R3's rules refuse it on the sound path before any read,
+as on every path.
+
 R4. Such a video is admitted under SPEC-348 R3's rules and both caps, unchanged, under the kind `video/`. A
 refused one adds no element and joins `omitted` once.
 
