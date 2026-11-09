@@ -316,6 +316,7 @@ its examined count and refuses zero.
 | `scripts/mutation-rows.d/S43500-S43599.json` | the mutation rows | added: the rows of section 9 |
 | `docs/specs/SPEC-435-a-destructive-migration-names-its-ruling-and-every-unchecked-money-or-counter-operator-sql-escape-shell-and-environment-read-is-listed.md` | the SPEC | added: this file |
 | `docs/decisions/ADR-449-three-census-tests-hold-todays-destructive-migrations-unchecked-operators-and-escape-hatches-in-registers-and-refuse-any-other.md` | the decision | added |
+| `docs/decisions/ADR-449-three-census-tests-hold-todays-destructive-migrations-unchecked-operators-and-escape-hatches-in-registers-and-refuse-any-other.md` | the decision | changed (section 11, #892): one amendment appended, recording the ruling rule's two decisions |
 | `docs/schematics/data-integrity-ii-checks.md` | the schematic | added: the three censuses, their populations, matchers, counts and sites |
 | `docs/red-first/SPEC-435.md` | the red-first record | added |
 | `changelog.d/data-integrity-ii-435.md` | the changelog fragment | added |
@@ -484,3 +485,60 @@ git ls-tree -r --name-only HEAD -- crates | grep -c -E '^crates/[^/]+/(src/.*\.r
 A12 pins 419, still as an exact count. The register is unchanged: the census finds the same
 twelve listed sites, and the sources dev added hold no SQL escape, shell, configured program or
 environment read. No other section changes.
+
+## 11. Amendment (#892): a destructive migration cites its recorded ruling, its acceptance criteria and its file manifest
+
+This section adds one rule to the migration census. It removes and relaxes nothing above it: the
+census still reads every `.sql` file in `migrations/` (R1), every hit no `ADMITTED` row lists still
+fails, and every row still names its SPEC (R6). SQLite's `ALTER TABLE` renames a table, renames,
+adds or removes a column and does nothing else, so a column's type is narrowed only by a rebuild:
+a new table, a copy, the old table removed and the new one renamed into place. The census finds
+such a rebuild by its parts, removes a table and renames (R4), so the rule below covers it.
+
+R20. Each `ADMITTED` row is either one of the two rows admitted before this rule,
+`BEFORE_THE_RULE` (`004102_notifications_queue_claim.sql`, removes a table and renames, admitted by
+SPEC-041 section 8), or has one `CITED` entry naming its recorded ruling: a file
+`docs/rulings/<file>.md` that the tree holds and whose text names the row's migration file name.
+
+R21. At level `Warn`, a row that cites no ruling, cites a path that is not a file in
+`docs/rulings/`, cites a file the tree does not hold, or cites a ruling that does not name its
+migration prints `WARN destructive-migration-ruling <migration> <class>: <why>` and the census
+passes. At level `Fail` the same row prints `FAIL` in place of `WARN` and the census fails. A
+`BEFORE_THE_RULE` or `CITED` entry that no row matches prints `STALE` and fails at both levels.
+
+R22. The rule lands at `Warn` (`RULING_LEVEL`). It moves to `Fail` by a delivery that changes
+`RULING_LEVEL`, cites this section and shows the rule's live precision over the last 30 merged pull
+requests at 0.8 or more, by ADR-446 D6's measure. Moving to `Fail` tightens the rule; a move back
+from `Fail` is a weakening and needs an owner-signed ruling.
+
+R23. The rule prints `examined <n> admitted row(s): <b> before the ruling rule, <c> citing a
+ruling` and refuses an empty register as VOID.
+
+How a new destructive change cites its ruling: the delivery that adds a destructive migration adds
+its `ADMITTED` row citing its own SPEC (R6), records the ruling as a file under `docs/rulings/`
+whose text names the migration's file name, and adds the `CITED` entry naming that file, all in
+the same pull request.
+
+What the rule cannot see: a destructive change made outside `migrations/` (R1's population), a
+ruling that names the migration only in a form other than its file name, and whether the ruling's
+text admits the change rather than merely naming the file; a reviewer reads the ruling.
+
+| id | criterion | decided by |
+|---|---|---|
+| A14 | over the tree, every `ADMITTED` row is before the rule or cites its recorded ruling, the rule prints its examined counts, the level is `Warn`, and the census passes | `every_destructive_migration_after_the_ruling_rule_cites_its_recorded_ruling` |
+| A15 | over planted rows, a row citing no ruling, an absent ruling, a ruling that names another migration and a path outside `docs/rulings/` are each reported by its reason at `Warn` and refused at `Fail`, while a row before the rule and a row citing a ruling that names it print nothing | `a_destructive_migration_with_no_recorded_ruling_is_reported_at_warn_and_refused_at_fail` |
+| A16 | a `BEFORE_THE_RULE` entry and a `CITED` entry that no row matches are each stale and fail at both levels | `a_ruling_entry_no_admitted_row_matches_is_stale_at_both_levels` |
+
+```acceptance
+A14: cargo test -p deck-streak-kernel --test additive_migrations -- --exact every_destructive_migration_after_the_ruling_rule_cites_its_recorded_ruling
+A15: cargo test -p deck-streak-kernel --test additive_migrations -- --exact a_destructive_migration_with_no_recorded_ruling_is_reported_at_warn_and_refused_at_fail
+A16: cargo test -p deck-streak-kernel --test additive_migrations -- --exact a_ruling_entry_no_admitted_row_matches_is_stale_at_both_levels
+```
+
+| path | part | change |
+|---|---|---|
+| `crates/kernel/tests/additive_migrations.rs` | `deck-streak-kernel`, test code | changed: the ruling rule (R20-R23) and the tests of A14-A16, appended after the census's tests |
+| `scripts/mutation-rows.d/S43500-S43599.json` | the mutation rows | changed: the rows of the ruling rule, appended after the last row |
+| `docs/specs/SPEC-435-a-destructive-migration-names-its-ruling-and-every-unchecked-money-or-counter-operator-sql-escape-shell-and-environment-read-is-listed.md` | the SPEC | changed: this section, appended |
+| `docs/red-first/SPEC-435.md` | the red-first record | changed: the lines of A14-A16, appended |
+| `changelog.d/destructive-migration-rulings-892.md` | the changelog fragment | added |
