@@ -423,3 +423,9 @@ Chosen against:
   the delivery that reads it removes the declaration and the note.
 - The third push's run takes more than two-thirds of the bound: D9 is re-sized from that
   measurement.
+
+## Amendment for #941: SPEC-650 and ADR-672
+
+The browser matrix is unchanged: the card suite runs Chromium as its headless shell, WebKit and
+Firefox in `card-sandbox`. A measurement of the planted links in Chromium's full build, beside the
+headless shell, WebKit and Firefox, runs in a workflow of its own and judges nothing of the suite.
