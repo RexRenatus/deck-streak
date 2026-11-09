@@ -1014,6 +1014,41 @@ fn a_sanctioned_write_gone_or_doubled_is_refused() {
 }
 "#,
         ),
+        (
+            "crates/streaks/src/data_rights.rs",
+            r#"fn erase() -> &'static str {
+    "DELETE FROM freeze_events"
+}
+"#,
+        ),
+        (
+            "crates/ingest/src/data_rights.rs",
+            r#"fn erase() -> &'static str {
+    "DELETE FROM sync_runs"
+}
+"#,
+        ),
+        (
+            "crates/notifications/src/data_rights.rs",
+            r#"fn erase() -> &'static str {
+    "DELETE FROM notification_decisions"
+}
+"#,
+        ),
+        (
+            "crates/agent/src/data_rights.rs",
+            r#"fn erase() -> &'static str {
+    "DELETE FROM agent_runs"
+}
+"#,
+        ),
+        (
+            "crates/agent/src/runs.rs",
+            r#"pub fn prune_before() -> &'static str {
+    "DELETE FROM agent_runs WHERE created_at < ?1"
+}
+"#,
+        ),
         (PLANTED_MIGRATION, PLANTED_READ_SQL),
     ];
     for (path, text) in tree {
@@ -1053,6 +1088,77 @@ fn a_sanctioned_write_gone_or_doubled_is_refused() {
     assert_eq!(
         refused, expected,
         "the unsanctioned rewrite, the doubled sanction and the sanction gone are refused, and \
-         the five kept sanctions are not"
+         the ten kept sanctions are not"
     );
+}
+
+/// The tables SPEC-432's amendment for #895 declares append-only, spelt as the issue names them
+/// and never read from the register.
+const NEWLY_DECLARED: [&str; 4] = [
+    "freeze_events",
+    "sync_runs",
+    "notification_decisions",
+    "agent_runs",
+];
+
+/// The rewrites of a row that a newly declared table refuses, `{}` standing for the table.
+const ROW_REWRITES: [(&str, &str); 2] = [
+    (UPDATE, "UPDATE {} SET created_at = 0 WHERE id = ?1"),
+    (DELETE, "DELETE FROM {} WHERE id = ?1"),
+];
+
+#[test]
+fn an_update_or_delete_of_each_newly_declared_table_is_refused() {
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    let mut source = String::new();
+    let mut migration = String::new();
+    let mut expected = BTreeSet::new();
+    let mut statement_number = 0;
+    for table in NEWLY_DECLARED {
+        for (kind, statement) in ROW_REWRITES {
+            let text = statement.replace("{}", table);
+            let item = format!("{}_{table}", kind.to_lowercase());
+            writeln!(
+                source,
+                "pub fn {item}() -> &'static str {{\n    {}\n}}\n",
+                rust_literal(&text)
+            )
+            .expect("a String takes any text");
+            expected.insert(format!(
+                "planted/src/lib.rs {item} {kind} {table}: 1 rewrite(s) of an append-only table, \
+                 and none is sanctioned"
+            ));
+            migration.push_str(&text);
+            migration.push_str(";\n");
+            statement_number += 1;
+            expected.insert(format!(
+                "{PLANTED_MIGRATION} statement {statement_number} {kind} {table}: 1 rewrite(s) of \
+                 an append-only table, and none is sanctioned"
+            ));
+        }
+    }
+    plant(planted.path(), "crates/planted/src/lib.rs", &source);
+    plant(planted.path(), PLANTED_MIGRATION, &migration);
+    let census = census(planted.path(), &tables());
+    examined_all(&census);
+    let refused: BTreeSet<String> = judge(&census, &[]).into_iter().collect();
+    let mut reached = 0;
+    let mut missing = Vec::new();
+    for want in &expected {
+        reached += 1;
+        if !refused.contains(want) {
+            missing.push(want.as_str());
+        }
+    }
+    println!(
+        "examined {reached} of {} planted rewrite(s) of a newly declared table",
+        expected.len()
+    );
+    assert_eq!(reached, 16, "every planted rewrite reached its check");
+    assert!(
+        missing.is_empty(),
+        "an update or delete of a newly declared table is not refused by file, item, kind and \
+         table: {missing:#?}"
+    );
+    assert_eq!(refused, expected, "only the planted rewrites are refused");
 }
