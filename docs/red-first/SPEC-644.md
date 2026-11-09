@@ -12,3 +12,7 @@ A1 was committed with the scripted form card unchanged, one try and no second (6
 red by its assertion on both simulators in the pull request's own run. The card's five tries came
 in 17239c3, with the test unchanged, and the run at this delivery's head reads it green on both
 simulators. The commits after 17239c3 change only documents.
+
+Correction: the run at 30b3c36 did not read A1. Its `harness` job (job 128944091848) failed at the
+step that runs the tests of the Harness scheme, so the planted suite step was skipped and A1 ran
+on neither simulator in that run.
