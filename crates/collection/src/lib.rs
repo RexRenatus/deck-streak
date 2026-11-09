@@ -8,16 +8,26 @@
 //! retractions, its client record and the notes' field history never change, and leave only while
 //! the erase gate is open, which [`data_rights`] alone opens. [`CollectionRead`] is the read port
 //! the server's contexts read through; the store answers it through [`Snapshot`], and ingest's
-//! schema-18 adapter answers it over Anki's file. Nothing live reads or writes the store yet.
+//! schema-18 adapter answers it over Anki's file. The media store (SPEC-601, ADR-621) keeps each
+//! media file in the user's blob folder under its SHA-256 ([`blob`]), indexes it in three tables
+//! and reads it by name through [`CasReader`] ([`media_store`]). Nothing live reads or writes the
+//! store yet.
 
+pub mod blob;
 pub mod data_rights;
 pub mod error;
+pub mod media_store;
 pub mod migrate;
 pub mod read;
 pub mod sql;
 pub mod store;
 
+#[cfg(kani)]
+mod kani_proofs;
+
+pub use blob::{BlobError, BlobStore, FsBlobStore};
 pub use error::StoreError;
+pub use media_store::{CasReader, MediaError, MediaStore};
 pub use read::{
     CardRead, CollectionRead, FieldRead, LogCounts, NoteRead, ReviewRead, TemplateRead, scope_json,
 };

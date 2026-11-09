@@ -1173,6 +1173,7 @@ dependencies = [
 name = "deck-streak-collection"
 version = "0.3.0"
 dependencies = [
+ "deck-streak-media",
  "rusqlite",
  "serde_json",
  "tempfile",
@@ -1311,11 +1312,14 @@ dependencies = [
  "base64 0.23.1",
  "codspeed-divan-compat",
  "deck-streak-analytics",
+ "deck-streak-collection",
  "deck-streak-fsrs7",
  "deck-streak-ingest",
  "deck-streak-kernel",
+ "deck-streak-media",
  "prost",
  "serde_json",
+ "tempfile",
  "tokio",
  "url",
 ]
@@ -1326,7 +1330,9 @@ version = "0.3.0"
 dependencies = [
  "anki",
  "codspeed-divan-compat",
+ "deck-streak-collection",
  "deck-streak-engine-core",
+ "deck-streak-media",
  "reqwest 0.13.5",
  "tokio",
  "uniffi",
@@ -1639,6 +1645,7 @@ dependencies = [
  "anki_proto",
  "deck-streak-companion",
  "deck-streak-engine-core",
+ "deck-streak-media",
  "js-sys",
  "prost",
  "serde_json",

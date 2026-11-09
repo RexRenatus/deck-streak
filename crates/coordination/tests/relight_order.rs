@@ -1292,9 +1292,10 @@ const ROUTE_STATE: [(&str, &str); 15] = [
 ];
 
 /// Every `static` item and thread-local in the source of every crate coordination links, written
-/// out: two run sequences, the data-rights registry's entries, the migrator, the parsed XP economy,
-/// the parsed per-review XP table and the parsed skip tariff ladder. None is a count per day.
-const STATICS: [(&str, &str); 21] = [
+/// out: two run sequences, the media store's staging-name sequence, the data-rights registry's
+/// entries, the migrator, the parsed XP economy, the parsed per-review XP table and the parsed skip
+/// tariff ladder. None is a count per day.
+const STATICS: [(&str, &str); 22] = [
     (
         "crates/agent/src/gate.rs",
         "static STAGE_SEQUENCE: AtomicU64 = AtomicU64::new(0);",
@@ -1302,6 +1303,10 @@ const STATICS: [(&str, &str); 21] = [
     (
         "crates/agent/src/runner.rs",
         "static RUN_SEQUENCE: AtomicU64 = AtomicU64::new(0);",
+    ),
+    (
+        "crates/collection/src/blob.rs",
+        "static NEXT_STAGED: AtomicU64 = AtomicU64::new(0);",
     ),
     (
         "crates/coordination/src/data_rights_registry.rs",

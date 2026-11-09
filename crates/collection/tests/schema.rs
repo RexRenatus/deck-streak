@@ -11,7 +11,7 @@ use deck_streak_collection::Store;
 use support::{SERVER, base_store, examined, is_refusal, raw};
 
 /// Every table of the store, with its columns in order.
-const TABLES: [(&str, &[&str]); 20] = [
+const TABLES: [(&str, &[&str]); 23] = [
     (
         "store_meta",
         &[
@@ -156,6 +156,23 @@ const TABLES: [(&str, &[&str]); 20] = [
         ],
     ),
     ("device_setting", &["key", "value"]),
+    (
+        "media_file",
+        &[
+            "hash",
+            "size",
+            "kind",
+            "state",
+            "synced",
+            "added_ms",
+            "last_seen_ms",
+        ],
+    ),
+    (
+        "media_name",
+        &["name", "hash", "origin", "bound_ms", "unbound"],
+    ),
+    ("media_pin", &["hash", "reason", "until_ms"]),
 ];
 
 /// One planted row per check: each must be refused by a constraint or a `STRICT` column, against a
@@ -346,7 +363,7 @@ const PLANTED: [(&str, &str); 50] = [
 ];
 
 /// The planted rows of the tables the first list leaves out, so every check is planted once.
-const PLANTED_MORE: [(&str, &str); 12] = [
+const PLANTED_MORE: [(&str, &str); 24] = [
     (
         "review_client.client zero",
         "INSERT INTO review_log (id, origin, seq, card_id, note_id, deck_id, preset_id, kind, ease, duration_ms, study_day, server_seq) VALUES (128, zeroblob(16), 9, 1, 1, 1, 1, 1, 3, 0, 0, 9); INSERT INTO review_client VALUES (128, 0)",
@@ -394,6 +411,54 @@ const PLANTED_MORE: [(&str, &str); 12] = [
     (
         "device_setting.value",
         "INSERT INTO device_setting VALUES ('x', NULL)",
+    ),
+    (
+        "media_file.hash",
+        "INSERT INTO media_file VALUES (zeroblob(31), 0, 0, 0, 0, 0, 0)",
+    ),
+    (
+        "media_file.size",
+        "INSERT INTO media_file VALUES (zeroblob(32), -1, 0, 0, 0, 0, 0)",
+    ),
+    (
+        "media_file.kind",
+        "INSERT INTO media_file VALUES (zeroblob(32), 0, 5, 0, 0, 0, 0)",
+    ),
+    (
+        "media_file.state",
+        "INSERT INTO media_file VALUES (zeroblob(32), 0, 0, 3, 0, 0, 0)",
+    ),
+    (
+        "media_file.synced",
+        "INSERT INTO media_file VALUES (zeroblob(32), 0, 0, 0, 2, 0, 0)",
+    ),
+    (
+        "media_name.name empty",
+        "INSERT INTO media_file VALUES (zeroblob(32), 0, 0, 0, 0, 0, 0); INSERT INTO media_name VALUES ('', zeroblob(32), 1, 0, 0)",
+    ),
+    (
+        "media_name.name long",
+        "INSERT INTO media_file VALUES (zeroblob(32), 0, 0, 0, 0, 0, 0); INSERT INTO media_name VALUES (hex(zeroblob(128)), zeroblob(32), 1, 0, 0)",
+    ),
+    (
+        "media_name.hash",
+        "INSERT INTO media_name VALUES ('a.png', zeroblob(32), 1, 0, 0)",
+    ),
+    (
+        "media_name.origin",
+        "INSERT INTO media_file VALUES (zeroblob(32), 0, 0, 0, 0, 0, 0); INSERT INTO media_name VALUES ('a.png', zeroblob(32), 4, 0, 0)",
+    ),
+    (
+        "media_name.unbound",
+        "INSERT INTO media_file VALUES (zeroblob(32), 0, 0, 0, 0, 0, 0); INSERT INTO media_name VALUES ('a.png', zeroblob(32), 1, 0, 2)",
+    ),
+    (
+        "media_pin.hash",
+        "INSERT INTO media_pin VALUES (zeroblob(32), 1, 0)",
+    ),
+    (
+        "media_pin.reason",
+        "INSERT INTO media_file VALUES (zeroblob(32), 0, 0, 0, 0, 0, 0); INSERT INTO media_pin VALUES (zeroblob(32), 4, 0)",
     ),
 ];
 
