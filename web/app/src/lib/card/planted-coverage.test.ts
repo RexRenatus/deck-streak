@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { BARE, LAYERS, PLANTED, RENDER, UNOBSERVABLE } from '../../../tests-card/planted';
+import { BARE, CARRIAGE, LAYERS, PLANTED, RENDER, UNOBSERVABLE } from '../../../tests-card/planted';
 
 // SPEC-341 R8 to R12, A8 to A12. The planted suite (tests-card/card.spec.ts) runs in Playwright,
 // which the tdd probe does not resolve, so this test proves its coverage instead, as
@@ -358,6 +358,25 @@ describe('the planted card suite', () => {
     expect(text).toMatch(/\.screenshot\(/);
     const proof = text.slice(text.indexOf('render-proof'));
     for (const frame of ["'index.html'", "'open.html'", "'blank'"]) expect(proof).toContain(frame);
+  });
+
+  it('the carriage-return card plants a field reference that the spec reads in every frame', () => {
+    // #939; SPEC-462 R9, A6: a carriage return as its numeric reference, decimal and hexadecimal, and no raw
+    // one, in a card that points nowhere and is no channel
+    expect(CARRIAGE.html).toMatch(/&#13;/);
+    expect(CARRIAGE.html).toMatch(/&#x[dD];/);
+    expect(CARRIAGE.html + CARRIAGE.css).not.toMatch(/\r/);
+    expect(CARRIAGE.html + CARRIAGE.css).not.toMatch(/\b(?:https?|wss?|ftp|mailto|javascript):/);
+    expect(PLANTED.map((card) => card.id)).not.toContain('carriage-return');
+
+    // the spec reads it in the card frame, in the frame W1 off leaves reachable, and against a reference and a blank
+    const text = spec();
+    expect(text).toMatch(/import\s*\{[^}]*\bCARRIAGE\b[^}]*\}\s*from\s*'\.\/planted'/);
+    const at = text.indexOf("test('carriage return:");
+    expect(at, 'card.spec.ts holds no carriage-return case').toBeGreaterThan(-1);
+    const proof = text.slice(at);
+    const frames = ["'index.html'", "'variant.html?off=W1'", "'open.html'", "'blank'", "'carriage-return'"];
+    for (const frame of examined('frames the carriage-return case opens', frames)) expect(proof, frame).toContain(frame);
   });
 
   it('the card config runs the planted suite in Chromium, WebKit and Firefox', () => {

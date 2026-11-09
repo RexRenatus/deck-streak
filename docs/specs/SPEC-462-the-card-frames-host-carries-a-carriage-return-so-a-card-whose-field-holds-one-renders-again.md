@@ -157,3 +157,38 @@ in a face, and the host now carries a carriage return. So the review's test plan
 the face it planted before is kept, by "a face holding a carriage return reference is kept, and the
 status stays quiet". The field test of A2 also reads each field through `frameCard`. No refusal
 the read-back makes is removed.
+
+## 9. Amendment for #939: a planted card carries a field's carriage return reference in every engine
+
+Section 6 named a browser engine's reading of `&#13;` in an attribute value as unmeasured. This
+amendment plants a card for it in the web card suite and changes no production file:
+`frame-host.ts`, `frame-document.ts`, `CardFrame.svelte` and `policy.js` stay as at `dev`.
+
+- R9. `web/app/tests-card/planted.ts` exports `CARRIAGE`, a card whose field holds a carriage return as its numeric reference, `&#13;` in a paragraph's title and `&#xD;` in an image's alternative text, with no raw carriage return and pointing nowhere. It is no channel: `PLANTED`, `UNOBSERVABLE`, `BARE` and the schematic's section 3 stay as they are.
+- R10. In each engine the card suite runs, the shipped card frame carries the card: the frame has a `srcdoc` and no `data-card-refused`, the host's text holds one `&#13;` for each reference, and the engine's own parse of the host reads each back as a carriage return.
+- R11. In each engine, the frame's own parse, read with the sandbox (W1) removed so the harness can reach it, holds each carriage return in the nested frame's `srcdoc`, the card document reads the title's as a line feed (R4), and the card frame's screenshot equals the reference frame's and differs from a blank frame's.
+
+| id | criterion | decided by |
+|---|---|---|
+| A6 | the card holds both references and no raw carriage return, points nowhere and is no planted channel, and the spec imports it and opens it in the card frame, the W1 variant, the reference frame and a blank frame | `web/app/src/lib/card/planted-coverage.test.ts` "the carriage-return card plants a field reference that the spec reads in every frame" |
+
+```acceptance
+A6: pnpm exec vitest run web/app/src/lib/card/planted-coverage.test.ts -t "the carriage-return card plants a field reference that the spec reads in every frame"
+```
+
+A6 is red first: the commit that adds it and the card precedes the spec's case. R10 and R11 are
+decided in `card-sandbox` by `web/app/tests-card/card.spec.ts` "carriage return: a field holding its
+reference is carried, read back and rendered in every engine", a Playwright case the tdd probe does
+not resolve, so A6 reads it as text, as SPEC-407's A6 does. The case is not red: the host's
+carriage-return write is on `dev`, so it is green at the base, and a planted mutant of that write
+shows it can fail (ADR-479 D7). The card suite lists one more test in each engine, 168
+becoming 169, and a run of its three engines lists 507 tests where it listed 504.
+
+| path | change |
+|---|---|
+| `web/app/tests-card/planted.ts` | changed: `CARRIAGE` appended after `RENDER` |
+| `web/app/tests-card/card.spec.ts` | changed: the import names `CARRIAGE`; the case appended after the render proof |
+| `web/app/tests-card/harness/main.ts` | changed: the import names `CARRIAGE`; the card id `carriage-return` mounts it |
+| `web/app/src/lib/card/planted-coverage.test.ts` | changed: the import names `CARRIAGE`; A6 appended after the render-proof census |
+| this SPEC, ADR-479 and `docs/red-first/SPEC-462.md` | changed: a section appended to each |
+| `changelog.d/card-suite-carriage-return-939.md` | added |
