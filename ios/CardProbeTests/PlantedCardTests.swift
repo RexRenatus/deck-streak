@@ -408,7 +408,26 @@ final class Probe {
         label: String, seconds: TimeInterval = Probe.askSeconds,
         _ operation: @escaping @MainActor @Sendable () async throws -> Value
     ) async throws -> Value {
-        try await operation()
+        let probe = probing
+        return try await withCheckedThrowingContinuation {
+            (continuation: CheckedContinuation<Value, any Error>) in
+            let once = AskGuard(continuation)
+            once.timer = Task { @MainActor in
+                try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                guard !Task.isCancelled else {
+                    return
+                }
+                _ = once.take(.failure(ProbeStall(label: label, probe: probe, seconds: seconds)))
+            }
+            Task { @MainActor in
+                do {
+                    let value = try await operation()
+                    _ = once.take(.success(value))
+                } catch {
+                    _ = once.take(.failure(error))
+                }
+            }
+        }
     }
 
     /// The label an ask of `script` carries in a stall: the name of one of the suite's own scripts,
