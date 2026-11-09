@@ -348,3 +348,160 @@ row is then also stale).
 R18 holds again at the dev that this pull request merges when it is checked: the lists gain the
 rows that dev adds over the rebuild's cut, each citing ADR-445 and named in the last part of
 ADR-445's appendix, with no product change and no test changed.
+
+## 11. Amendment: source-level reaches out of a member, their list, and their acceptance criteria
+
+This section amends the requirements above with a fourth census, which closes the reach section 5
+leaves to #880: a member's Rust source that reaches past its own directory by a `path` attribute,
+or by an `include!`, `include_str!` or `include_bytes!` call, which no manifest states and the
+crate census cannot see (ADR-445 D11). Read at `dev` `b9a08e602fc10c9f3ecd88a1544f3f595d55cbda`:
+
+| what | at `dev` |
+|---|---|
+| sites | 265: 181 `#[path]`, each on a `mod <name>;`, and 84 `include_str!`; no `include!`, no `include_bytes!`, no `cfg_attr` path, none inside an inline block, and no argument built by `concat!` |
+| by kind of code | 27 production, 230 test, 1 bench, 7 example, none in a build script |
+| own | 80, each target in its own member's directory |
+| into another member | 5, each a `#[path]` in a test |
+| into files no member owns | 180: 126 into four Rust files under `tools/`, which hold no site, and 54 into data files |
+| reach keys | 96, over 95 `from -> to` pairs |
+| refused | 0 |
+
+The census prints its own counts, and the red-first record holds them at this amendment's cut.
+
+R20. The census's population is every `.rs` file under each workspace member's directory (R2's
+     members), printed as `examined <n> member Rust file(s)`, and 0 is VOID; then each existing
+     file outside every member's directory that a module's `path` attribute or an `include!`
+     names, read in turn until no new file is named, printed as `listed <n> brought-in file(s)`.
+     A site is a `path` attribute, outer or inner, set directly or through `cfg_attr` at any
+     depth, or a call of `include!`, `include_str!` or `include_bytes!` with any path prefix and
+     any of the three brackets. Sites are matched on the source with comments and literal
+     contents blanked by R11's lexer, and each literal is read back from the source at its span.
+R21. A site's target resolves as the compiler resolves it. An include's literal, and a module's
+     `path` outside every inline `mod` block, resolve from the directory of the file that holds
+     the site. A `path` inside inline blocks, and an inline block's own `path`, resolve from that
+     directory, then the file's stem unless the file is a crate root or a `mod.rs`, then each
+     enclosing block's `path`, else its name. `concat!(env!("CARGO_MANIFEST_DIR"), <literals>)`
+     is the member's directory followed by the joined literals, and `concat!(env!("OUT_DIR"),
+     ...)` is the member's build output. Each `..` is taken against the part before it.
+R22. A site whose target sits in its own member's directory, or in its build output, is own: it is
+     counted and printed as `listed <n> own site(s)`, with no row, because the file is the
+     member's own and the crate graph holds no edge from a member to itself. Every other site is
+     a reach, keyed `(from, to, code)`: `from` is the member's name (R2) or a brought-in file's
+     path, `to` is the target's path, and `code` is the kind of code that holds the site:
+     `production` (under `src/`), `test` (under `tests/`, or under `src/` in a module file or an
+     item R12 sets aside as test code), `bench`, `example`, `build` (the member's `build.rs`),
+     `other` (anywhere else in the member) or `outside` (a brought-in file).
+R23. `config/source-reaches.json` holds `{"reaches": [...]}`, each row
+     `{"from", "to", "code", "count", "adr"}`, sorted by `from`, `to` and `code`, with no key
+     twice, no unknown or missing key, `from`, `to` and `code` strings, and `count` a whole number
+     above 0. Each reach key has exactly one row whose `count` equals its sites, and every row has
+     its sites. A finding names the key as `<from> -> <to> [<code>]` and each site as
+     `<path>:<line>`: `<n> site(s) and no row in config/source-reaches.json: <sites>`,
+     `<n> site(s), its row counts <m>: <sites>`, or `a row with no reach`.
+R24. Each row's `adr` is `ADR-<n>`, held by exactly one `docs/decisions/ADR-<n>-*.md` file whose
+     text holds `` `<from> -> <to>` ``, else the row is unadmitted. Each of the 96 rows cites
+     `ADR-445`, whose appendix names its pair.
+R25. A site the census cannot resolve is refused, and no row can admit it: a `path` attribute
+     whose value is not one string literal, an inner `path` attribute, an include whose argument
+     is neither one literal nor R21's `concat!` form, a literal with an escape, an absolute path,
+     a path above the repository root, and an `env!` form in a brought-in file. A refusal reads
+     `<path>:<line>: <form>, <reason>, is refused`.
+
+| id | criterion | decided by |
+|---|---|---|
+| A12 | Every reach out of its member has one row with its exact count and every row its sites; the population is every member's Rust file, printed, and 0 is VOID (R20, R22, R23) | ADR-445 D11 |
+| A13 | Each site form, each kind of code, each inline-block and manifest-relative path and each brought-in file resolves to its key, own sites are not reaches, comments and literals hold no site, and each unresolvable path is refused (R20, R21, R22, R25) | ADR-445 D11 |
+| A14 | Every reach row is admitted by an ADR file that names it (R24) | ADR-445 D11 |
+
+```acceptance
+A12: python3 -m unittest discover -s scripts/tests -p test_source_reaches.py -k test_every_reach_out_of_its_member_has_one_row_and_every_row_its_sites
+A13: python3 -m unittest discover -s scripts/tests -p test_source_reaches.py -k test_each_form_kind_and_path_resolves_and_an_unresolvable_path_is_refused
+A14: python3 -m unittest discover -s scripts/tests -p test_source_reaches.py -k test_every_reach_row_is_admitted_by_an_adr_that_names_it
+```
+
+Each test's planted defects, each refused by name with the finding its fixture spells:
+
+- A12: an unlisted reach; a row whose count differs; a row with no reach; a duplicated row; a row
+  out of order; an unknown key; a missing key; a count that is not a whole number; an absent
+  list; a workspace with no member Rust file (VOID).
+- A13: an outer `path` attribute in test code; a `cfg_attr` path in production code; `include!` in
+  production code; `include_str!` with a path prefix in a bench; `include_bytes!` in brackets in
+  an example; `include_str!` in braces in a build script; a raw string elsewhere in the member; a
+  `#[cfg(test)]` item in production code; a module file declared under `#[cfg(test)]`; a `path`
+  in an inline block of a crate root and of a module file; an inline block's own `path`; a
+  manifest-relative `concat!`; a file outside the members and the reach it brings in; and, as
+  passes, a site inside its own member, a climb back into its own member, the build output, and
+  comments and literals. Refused: a `path` value that is not a literal, an inner `path`, an
+  argument the census cannot resolve, an escape, an absolute path, a path above the repository
+  root, and an environment-relative path in a brought-in file.
+- A14: a row citing an absent ADR; a row citing an ADR whose text lacks the token; a malformed
+  `adr`; an id two files share.
+
+What the census does not see, each named so a reader meets it here: a file a link names, since
+the census reads the tree as stored; a file-reading macro from another crate; a manifest target's
+`path` key and `[package] build`, which name files the crate graph reads; a plain `mod <name>;`
+inside a brought-in file; whether the compiler reads a file a `path` attribute loads as a crate
+root, since the census reads each file by its own name; a file whose test-only `cfg` is an inner
+attribute, which R12 reads as production; and an `include!` target inside another member that is
+not a `.rs` file, which is keyed but not read. A module file one member loads from another
+member's directory is read once, as the other member's file.
+
+File manifest of this amendment (section 4's rows):
+
+| path | part | change |
+|---|---|---|
+| `scripts/tests/test_source_reaches.py` | scripts | added: the source-reach census, A12 to A14 |
+| `config/source-reaches.json` | config | added: the 96 reach rows (R23) |
+| `docs/specs/SPEC-431-three-fitness-tests-hold-the-crate-graph-the-formal-entries-vectors-tests-and-the-production-clock-reads-to-listed-rows.md` | docs | changed: this section |
+| `docs/decisions/ADR-445-each-fitness-test-is-its-own-census-over-a-listed-file-and-every-row-names-the-adr-that-admits-it.md` | docs | changed: D11 and its appendix |
+| `docs/schematics/fitness-tests-crate-edges-formal-vectors-and-clock-reads.md` | docs | changed: section 5 |
+| `docs/red-first/SPEC-431.md` | docs | changed: the record of A12 to A14 |
+| `scripts/mutation-rows.d/S43100-S43199.json` | scripts | changed: rows S43137 to S43164 |
+| `changelog.d/source-reaches-431.md` | changelog | added: the fragment |
+
+No other path changes: no product file, no `Cargo.toml`, no workflow, neither
+`scripts/tests/test_crate_edges.py` nor `config/crate-edges.json`, neither
+`scripts/tests/test_clock_reads.py` nor `scripts/tests/_support.py`, and not
+`scripts/tests/test_ci_workflows.py`, since the census loads no module by a name held in data.
+
+Mutation rows of this amendment, each killed by exactly one test, named by its acceptance
+criterion; rows on the new module anchor on a line its green commit writes:
+
+| id | target | mutant | killer |
+|---|---|---|---|
+| S43137-REACH-ROW-DROPPED | `config/source-reaches.json` | the `daemon -> crates/bot/tests/support/fake_bot_api.rs` row removed | A12 |
+| S43138-REACH-COUNT-LOWERED | `config/source-reaches.json` | `coordination -> tools/parity-oracle/golden.rs` counted 15 | A12 |
+| S43139-STALE-REACH-ROW | `config/source-reaches.json` | a `bot -> crates/streaks/src/lib.rs` row added | A12 |
+| S43140-UNLISTED-SOURCE-REACH | `crates/bot/tests/streak_commands.rs` | the `#[path]` into `streaks` retargeted | A12 |
+| S43141-PATH-ATTRIBUTE-UNREAD | `scripts/tests/test_source_reaches.py` | the `path` attribute never matched | A13 |
+| S43142-CFG-ATTR-PATH-UNREAD | `scripts/tests/test_source_reaches.py` | `cfg_attr` never read | A13 |
+| S43143-INCLUDE-BYTES-UNREAD | `scripts/tests/test_source_reaches.py` | `include_bytes` dropped from the names | A13 |
+| S43144-INCLUDE-MACRO-UNREAD | `scripts/tests/test_source_reaches.py` | `include` dropped from the names | A13 |
+| S43145-REACH-COMMENT-READ | `scripts/tests/test_source_reaches.py` | sites matched on the unlexed text | A13 |
+| S43146-TEST-CODED-PRODUCTION | `scripts/tests/test_source_reaches.py` | test code under `src/` coded as production | A13 |
+| S43147-REACH-TEST-ITEM-UNREAD | `scripts/tests/test_source_reaches.py` | the `#[cfg(test)]` item check removed | A13 |
+| S43148-REACH-TEST-FILE-UNREAD | `scripts/tests/test_source_reaches.py` | the `#[cfg(test)]` module file check removed | A13 |
+| S43149-OWN-SITE-COUNTED-AS-REACH | `scripts/tests/test_source_reaches.py` | own sites keyed as reaches | A13 |
+| S43150-REFUSAL-DROPPED | `scripts/tests/test_source_reaches.py` | refusals dropped | A13 |
+| S43151-ESCAPE-ADMITTED | `scripts/tests/test_source_reaches.py` | the escape check removed | A13 |
+| S43152-ABSOLUTE-PATH-ADMITTED | `scripts/tests/test_source_reaches.py` | the absolute path check removed | A13 |
+| S43153-ROOT-CLIMB-ADMITTED | `scripts/tests/test_source_reaches.py` | a climb above the root kept as spelled | A13 |
+| S43154-INLINE-BLOCK-UNREAD | `scripts/tests/test_source_reaches.py` | the inline block names dropped | A13 |
+| S43155-MODULE-STEM-DROPPED | `scripts/tests/test_source_reaches.py` | the file stem dropped | A13 |
+| S43156-MANIFEST-DIRECTORY-DROPPED | `scripts/tests/test_source_reaches.py` | the member directory dropped | A13 |
+| S43157-BROUGHT-IN-UNREAD | `scripts/tests/test_source_reaches.py` | brought-in files never read | A13 |
+| S43158-BUILD-SCRIPT-UNCODED | `scripts/tests/test_source_reaches.py` | the build kind removed | A13 |
+| S43159-MEMBER-FILES-EMPTY | `scripts/tests/test_source_reaches.py` | the member walk finds nothing | A12 |
+| S43160-REACH-COUNT-UNCHECKED | `scripts/tests/test_source_reaches.py` | the count check removed | A12 |
+| S43161-STALE-REACH-ROW-PASSED | `scripts/tests/test_source_reaches.py` | the stale row check removed | A12 |
+| S43162-REACH-TOKEN-UNREAD | `scripts/tests/test_source_reaches.py` | the ADR token check removed | A14 |
+| S43163-REACH-ADR-ABSENT | `config/source-reaches.json` | one row's `adr` an id no file holds | A14 |
+| S43164-REACH-TOKEN-UNNAMED | `docs/decisions/ADR-445-...md` | the token `` `engine-core -> crates/web-engine/src/study.rs` `` altered | A14 |
+
+Formal model: not applicable, decided by surface (ADR-445 D8). The census is one process that
+reads committed files and compares sets, with no second actor, no shared state written and no
+check followed by an act, and none of the 364 `@phx covers` lines under `formal/` at `dev` names
+a path this amendment adds or changes.
+
+ADR-445 D6's kill criteria hold for `config/source-reaches.json` as a fourth list, with its own
+precision figure over the last 30 merged pull requests.

@@ -102,3 +102,40 @@ flowchart LR
 None of the three changes `scripts/tests/test_context_map_schematic.py`,
 `scripts/tests/test_xp_crate_graph.py`, the fence in `docs/CONTEXT-MAP.md` or
 `config/formal.json`, which keep holding what they hold.
+
+## 5. Source reaches: `scripts/tests/test_source_reaches.py`
+
+SPEC-431 section 11 and ADR-445 D11 decide what this census reads and refuses. It runs where the
+other three run, with its list `config/source-reaches.json`, rows S43137 to S43164 and ADR-445
+D6's kill criteria.
+
+```mermaid
+flowchart LR
+  root["Cargo.toml: workspace members"] --> files
+  files["every .rs file under each member's directory"] --> lexer
+  lexer["comments and literal contents blanked, each literal read back at its span"] --> sites
+  sites["path attributes, cfg_attr paths, include, include_str and include_bytes calls"] --> resolve
+  resolve["each target from its file's directory, its inline blocks or the manifest directory"] --> ownership
+  resolve --> brought["files outside the members that a module path or an include brings in"]
+  brought --> lexer
+  resolve --> refused["refused: a path the census cannot resolve, which no row admits"]
+  ownership{"inside its own member?"} --> own["own sites: counted, no row"]
+  ownership --> reaches["reaches: from, to and kind of code, with a count"]
+  register["config/source-reaches.json rows"] --> compare
+  reaches --> compare
+  compare{"one row per key, its count equal, no stale row"} --> verdict1["unlisted reach, count, stale row, duplicate, order, key"]
+  register --> admit
+  adrs["docs/decisions ADR files"] --> admit
+  admit{"each row's ADR holds its from -> to token"} --> verdict2["findings: unadmitted reach"]
+```
+
+| what | at `dev` | printed as |
+|---|---|---|
+| population | every `.rs` file under the members' directories, and the four Rust files under `tools/` that reaches bring in | `examined <n> member Rust file(s)`, `listed <n> brought-in file(s)` |
+| sites | 265: 181 `#[path]` and 84 `include_str!` | `listed <n> own site(s)`, `listed <n> reach site(s)` |
+| own | 80, each in its own member's directory | `listed <n> own site(s)` |
+| reaches | 185 sites under 96 keys: 5 into another member, 180 into files no member owns | `listed <n> reach key(s)` |
+| rows | 96, each citing ADR-445, whose appendix names each `from -> to` | `listed <n> reach row(s)` |
+| refused | 0 | `listed <n> refused site(s)` |
+| matcher | R11's lexer, each literal read back at its span, each path resolved as the compiler resolves it | the planted controls of A12 to A14 |
+| not seen | a linked file; a file-reading macro from another crate; a manifest target's `path` key and `[package] build`; a plain `mod` inside a brought-in file | SPEC-431 section 11, ADR-445 D11 |
