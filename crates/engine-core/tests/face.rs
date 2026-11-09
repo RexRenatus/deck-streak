@@ -31,7 +31,6 @@ mod support;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use anki::collection::{Collection, CollectionBuilder};
@@ -42,6 +41,7 @@ use anki_proto::collection::OpenCollectionRequest;
 use anki_proto::deck_config::UpdateDeckConfigsMode;
 use anki_proto::deck_config::deck_configs_for_update::current_deck::Limits;
 use anki_proto::decks::deck::filtered::SearchTerm;
+use deck_streak_collection::{MediaStore, Origin, Role, Store};
 use deck_streak_engine_core::dispatch::Dispatcher;
 use deck_streak_engine_core::face::{Clip, Face, Side};
 use deck_streak_engine_core::media::{self, Reader, TYPES, VIDEO_TYPES};
@@ -244,28 +244,59 @@ fn open_at(dir: &Path, collection: &Path) -> Dispatcher {
     dispatcher
 }
 
-/// Reads from the folder the dispatcher kept at the open, at most `limit` bytes; nothing when it
-/// kept none.
+/// Reads from the folder the dispatcher kept at the open, at most `limit` bytes, through
+/// `CasReader` over a temporary media store holding the folder's files, each bound under its file
+/// name (SPEC-601 A5); nothing when it kept none.
 struct Folder(Option<PathBuf>);
 
 impl Reader for Folder {
     fn read(&self, name: &str, limit: u64) -> Option<Vec<u8>> {
-        let file = std::fs::File::open(self.0.as_ref()?.join(name)).ok()?;
-        let mut bytes = Vec::new();
-        file.take(limit).read_to_end(&mut bytes).ok()?;
-        Some(bytes)
+        let mut files = Vec::new();
+        for entry in std::fs::read_dir(self.0.as_ref()?).ok()? {
+            let path = entry.ok()?.path();
+            if path.is_file() {
+                let file_name = path.file_name()?.to_str()?.to_owned();
+                files.push((file_name, std::fs::read(&path).ok()?));
+            }
+        }
+        through_the_store(&files, name, limit)
     }
 }
 
-/// Reads from memory, at most `limit` bytes.
+/// Reads from memory, at most `limit` bytes, through `CasReader` over a temporary media store
+/// holding the map's files, each bound under its map name (SPEC-601 A5).
 struct Memory(HashMap<&'static str, Vec<u8>>);
 
 impl Reader for Memory {
     fn read(&self, name: &str, limit: u64) -> Option<Vec<u8>> {
-        let bytes = self.0.get(name)?;
-        let limit = usize::try_from(limit).unwrap_or(usize::MAX);
-        Some(bytes[..bytes.len().min(limit)].to_vec())
+        let files: Vec<(String, Vec<u8>)> = self
+            .0
+            .iter()
+            .map(|(file_name, bytes)| ((*file_name).to_owned(), bytes.clone()))
+            .collect();
+        through_the_store(&files, name, limit)
     }
+}
+
+/// When a test reader puts its files into a temporary media store.
+const PUT_MS: i64 = 1_700_000_000_000;
+
+/// Reads `name`, at most `limit` bytes, through `CasReader` over a new media store in a temporary
+/// folder holding `files`, each bound under its name.
+fn through_the_store(files: &[(String, Vec<u8>)], name: &str, limit: u64) -> Option<Vec<u8>> {
+    let folder = tempfile::tempdir().expect("a temporary folder");
+    let role = Role::Server {
+        origin: Origin::new([7; 16]),
+    };
+    let store = Store::open(&folder.path().join("collection.db"), role).expect("the store opens");
+    let media =
+        MediaStore::open(store, &folder.path().join("media")).expect("the media store opens");
+    for (file_name, bytes) in files {
+        media
+            .put(file_name, bytes, PUT_MS)
+            .expect("the test reader's file is put");
+    }
+    media.reader().read(name, limit)
 }
 
 fn face(dispatcher: &Dispatcher, card: i64, side: Side, autoplay: bool) -> Face {

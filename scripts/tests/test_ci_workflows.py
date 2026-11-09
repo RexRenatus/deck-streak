@@ -812,6 +812,8 @@ APPLE_PATHS = [
     "crates/ffi/**",
     "crates/engine-core/**",
     "crates/fsrs7/**",
+    "crates/collection/**",
+    "crates/media/**",
     "ios/**",
     "Cargo.lock",
     "Cargo.toml",

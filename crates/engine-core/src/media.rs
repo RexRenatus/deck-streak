@@ -5,9 +5,9 @@
 //! with a type in one closed table, read through the caller's [`Reader`] under two caps. The caps
 //! and the table are public constants: one copy both clients read.
 
-use anki::text::replace_media_refs;
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD;
+use deck_streak_media::rewrite;
 
 /// The largest media file a face inlines or plays: 4 MiB (ADR-359 D1).
 pub const FILE_CAP: u64 = 4 * 1024 * 1024;
@@ -168,8 +168,7 @@ impl<'a> Budget<'a> {
     /// `text` with every media reference the engine finds in it rewritten: to the `data:` URL of
     /// the file's bytes when the rules admit it, else to nothing.
     pub(crate) fn rewrite(&mut self, text: &str) -> String {
-        replace_media_refs(text, |name| Some(self.attribute(name)))
-            .unwrap_or_else(|| text.to_owned())
+        rewrite(text, |name| self.attribute(name))
     }
 
     /// The value a media attribute that wrote `written` takes.

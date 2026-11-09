@@ -36,4 +36,5 @@ pub mod engine;
 pub mod face;
 pub mod health;
 pub mod review_undo;
+pub mod store_media;
 pub mod voices;

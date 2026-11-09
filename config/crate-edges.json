@@ -11,6 +11,7 @@
     {"from": "bot", "to": "identity", "table": "dependencies", "target": null, "adr": "ADR-445"},
     {"from": "bot", "to": "kernel", "table": "dependencies", "target": null, "adr": "ADR-445"},
     {"from": "bot", "to": "notifications", "table": "dependencies", "target": null, "adr": "ADR-445"},
+    {"from": "collection", "to": "media", "table": "dependencies", "target": null, "adr": "ADR-621"},
     {"from": "companion-slot", "to": "companion", "table": "dependencies", "target": null, "adr": "ADR-445"},
     {"from": "coordination", "to": "agent", "table": "dependencies", "target": null, "adr": "ADR-445"},
     {"from": "coordination", "to": "analytics", "table": "dependencies", "target": null, "adr": "ADR-445"},
@@ -62,10 +63,14 @@
     {"from": "discipline", "to": "kernel", "table": "dependencies", "target": null, "adr": "ADR-445"},
     {"from": "economy", "to": "kernel", "table": "dependencies", "target": null, "adr": "ADR-445"},
     {"from": "engine-core", "to": "analytics", "table": "dev-dependencies", "target": null, "adr": "ADR-445"},
+    {"from": "engine-core", "to": "collection", "table": "dev-dependencies", "target": null, "adr": "ADR-621"},
     {"from": "engine-core", "to": "fsrs7", "table": "dependencies", "target": null, "adr": "ADR-445"},
     {"from": "engine-core", "to": "ingest", "table": "dev-dependencies", "target": null, "adr": "ADR-445"},
     {"from": "engine-core", "to": "kernel", "table": "dev-dependencies", "target": null, "adr": "ADR-445"},
+    {"from": "engine-core", "to": "media", "table": "dependencies", "target": null, "adr": "ADR-621"},
+    {"from": "ffi", "to": "collection", "table": "dependencies", "target": null, "adr": "ADR-621"},
     {"from": "ffi", "to": "engine-core", "table": "dependencies", "target": null, "adr": "ADR-445"},
+    {"from": "ffi", "to": "media", "table": "dependencies", "target": null, "adr": "ADR-621"},
     {"from": "focus", "to": "kernel", "table": "dependencies", "target": null, "adr": "ADR-445"},
     {"from": "habits", "to": "kernel", "table": "dependencies", "target": null, "adr": "ADR-445"},
     {"from": "identity", "to": "kernel", "table": "dependencies", "target": null, "adr": "ADR-445"},
@@ -94,6 +99,7 @@
     {"from": "streaks", "to": "kernel", "table": "dependencies", "target": null, "adr": "ADR-445"},
     {"from": "vault", "to": "kernel", "table": "dependencies", "target": null, "adr": "ADR-445"},
     {"from": "web-engine", "to": "companion", "table": "dependencies", "target": null, "adr": "ADR-445"},
-    {"from": "web-engine", "to": "engine-core", "table": "dependencies", "target": "cfg(target_arch = \"wasm32\")", "adr": "ADR-445"}
+    {"from": "web-engine", "to": "engine-core", "table": "dependencies", "target": "cfg(target_arch = \"wasm32\")", "adr": "ADR-445"},
+    {"from": "web-engine", "to": "media", "table": "dependencies", "target": null, "adr": "ADR-621"}
   ]
 }
