@@ -1550,9 +1550,12 @@ runpy.run_path(sys.argv[0], run_name="__main__")
     )
     REFUSAL = "for name in ${!DECKSTREAK_DEPLOY_@}"
     # Exec argv with exactly the entries given, in order, through libc's execve: a mapping, as
-    # subprocess and os.execve take, cannot hold a name twice or an entry without "=".
+    # subprocess and os.execve take, cannot hold a name twice or an entry without "=". Each entry is
+    # one word, "x" and then its hex, so an empty entry is the word "x" and reaches the step as
+    # itself, a block of no entry is no word, and a word spelt without its "x" is hex of odd length,
+    # which fails before the exec.
     EXEC_ENTRIES = r"""import ctypes, shutil, sys
-entries = [bytes.fromhex(entry) for entry in sys.argv[1].split()]
+entries = [bytes.fromhex(word[1:]) for word in sys.argv[1].split()]
 argv = [shutil.which("bash").encode(), *(arg.encode() for arg in sys.argv[2:])]
 libc = ctypes.CDLL(None, use_errno=True)
 libc.execve(
@@ -1788,7 +1791,7 @@ sys.exit(f"execve failed: errno {ctypes.get_errno()}")
                         sys.executable,
                         "-c",
                         self.EXEC_ENTRIES,
-                        " ".join(entry.hex() for entry in entries),
+                        " ".join("x" + entry.hex() for entry in entries),
                         *lead,
                         str(DEPLOY),
                         *args,
@@ -1927,7 +1930,7 @@ sys.exit(f"execve failed: errno {ctypes.get_errno()}")
                             sys.executable,
                             "-c",
                             self.EXEC_ENTRIES,
-                            " ".join(entry.hex() for entry in entries),
+                            " ".join("x" + entry.hex() for entry in entries),
                             *lead,
                         ],
                         entries,
