@@ -743,6 +743,100 @@ pub async fn from_file(db: &sqlx::SqlitePool) {
 /// A planted migration that reads only.
 const PLANTED_READ_SQL: &str = "SELECT 1;\n";
 
+/// A planted tree, each file with its text: the kept sanctions at their files and items, one
+/// sanctioned update written twice, the badges erase gone, an update no sanction names, and a
+/// migration that reads only.
+const PLANTED_SANCTION_TREE: [(&str, &str); 13] = [
+    (
+        "crates/economy/src/wallet.rs",
+        r#"pub fn settle_mint_on() -> [&'static str; 2] {
+    [
+        "UPDATE coin_ledger SET delta = ?1 WHERE id = ?2",
+        "UPDATE coin_ledger SET delta = ?1 WHERE id = ?3",
+    ]
+}
+"#,
+    ),
+    (
+        "crates/economy/src/data_rights.rs",
+        r#"fn erase() -> &'static str {
+    "DELETE FROM coin_ledger"
+}
+"#,
+    ),
+    (
+        "crates/economy/src/rogue.rs",
+        r#"pub fn rewrite_a_grant() -> &'static str {
+    "UPDATE xp_ledger SET amount = 0 WHERE id = ?1"
+}
+"#,
+    ),
+    (
+        "crates/progression/src/data_rights.rs",
+        r#"fn erase() -> &'static str {
+    "DELETE FROM xp_ledger"
+}
+"#,
+    ),
+    (
+        "crates/curriculum/src/data_rights.rs",
+        r#"fn erase() -> &'static str {
+    "DELETE FROM band_milestones"
+}
+"#,
+    ),
+    (
+        "crates/curriculum/src/store.rs",
+        r#"pub fn mark_band_up() -> &'static str {
+    "UPDATE band_milestones SET celebrated_at = ?3 WHERE course = ?1 AND band = ?2"
+}
+"#,
+    ),
+    (
+        "crates/coordination/src/recompute/badges.rs",
+        r#"pub fn offer_badges() -> &'static str {
+    "UPDATE badges_earned SET celebrated_at = ?1 WHERE badge = ?2"
+}
+"#,
+    ),
+    (
+        "crates/streaks/src/data_rights.rs",
+        r#"fn erase() -> &'static str {
+    "DELETE FROM freeze_events"
+}
+"#,
+    ),
+    (
+        "crates/ingest/src/data_rights.rs",
+        r#"fn erase() -> &'static str {
+    "DELETE FROM sync_runs"
+}
+"#,
+    ),
+    (
+        "crates/notifications/src/data_rights.rs",
+        r#"fn erase() -> &'static str {
+    "DELETE FROM notification_decisions"
+}
+"#,
+    ),
+    (
+        "crates/agent/src/data_rights.rs",
+        r#"fn erase() -> &'static str {
+    "DELETE FROM agent_runs"
+}
+"#,
+    ),
+    (
+        "crates/agent/src/runs.rs",
+        r#"pub fn prune_before() -> &'static str {
+    "DELETE FROM agent_runs WHERE created_at < ?1"
+}
+"#,
+    ),
+    (PLANTED_MIGRATION, PLANTED_READ_SQL),
+];
+
 #[test]
 fn the_append_only_tables_take_only_their_sanctioned_writes() {
     let root = root();
@@ -961,97 +1055,7 @@ fn a_write_the_check_cannot_read_fails_closed() {
 #[test]
 fn a_sanctioned_write_gone_or_doubled_is_refused() {
     let planted = tempfile::tempdir().expect("a temporary directory");
-    let tree = [
-        (
-            "crates/economy/src/wallet.rs",
-            r#"pub fn settle_mint_on() -> [&'static str; 2] {
-    [
-        "UPDATE coin_ledger SET delta = ?1 WHERE id = ?2",
-        "UPDATE coin_ledger SET delta = ?1 WHERE id = ?3",
-    ]
-}
-"#,
-        ),
-        (
-            "crates/economy/src/data_rights.rs",
-            r#"fn erase() -> &'static str {
-    "DELETE FROM coin_ledger"
-}
-"#,
-        ),
-        (
-            "crates/economy/src/rogue.rs",
-            r#"pub fn rewrite_a_grant() -> &'static str {
-    "UPDATE xp_ledger SET amount = 0 WHERE id = ?1"
-}
-"#,
-        ),
-        (
-            "crates/progression/src/data_rights.rs",
-            r#"fn erase() -> &'static str {
-    "DELETE FROM xp_ledger"
-}
-"#,
-        ),
-        (
-            "crates/curriculum/src/data_rights.rs",
-            r#"fn erase() -> &'static str {
-    "DELETE FROM band_milestones"
-}
-"#,
-        ),
-        (
-            "crates/curriculum/src/store.rs",
-            r#"pub fn mark_band_up() -> &'static str {
-    "UPDATE band_milestones SET celebrated_at = ?3 WHERE course = ?1 AND band = ?2"
-}
-"#,
-        ),
-        (
-            "crates/coordination/src/recompute/badges.rs",
-            r#"pub fn offer_badges() -> &'static str {
-    "UPDATE badges_earned SET celebrated_at = ?1 WHERE badge = ?2"
-}
-"#,
-        ),
-        (
-            "crates/streaks/src/data_rights.rs",
-            r#"fn erase() -> &'static str {
-    "DELETE FROM freeze_events"
-}
-"#,
-        ),
-        (
-            "crates/ingest/src/data_rights.rs",
-            r#"fn erase() -> &'static str {
-    "DELETE FROM sync_runs"
-}
-"#,
-        ),
-        (
-            "crates/notifications/src/data_rights.rs",
-            r#"fn erase() -> &'static str {
-    "DELETE FROM notification_decisions"
-}
-"#,
-        ),
-        (
-            "crates/agent/src/data_rights.rs",
-            r#"fn erase() -> &'static str {
-    "DELETE FROM agent_runs"
-}
-"#,
-        ),
-        (
-            "crates/agent/src/runs.rs",
-            r#"pub fn prune_before() -> &'static str {
-    "DELETE FROM agent_runs WHERE created_at < ?1"
-}
-"#,
-        ),
-        (PLANTED_MIGRATION, PLANTED_READ_SQL),
-    ];
-    for (path, text) in tree {
+    for (path, text) in PLANTED_SANCTION_TREE {
         plant(planted.path(), path, text);
     }
     let census = census(planted.path(), &tables());
