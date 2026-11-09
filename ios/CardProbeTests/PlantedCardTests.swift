@@ -27,11 +27,25 @@ final class Recorder: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMess
     private(set) var granted = 0
     /// Every dialog or capture request this recorder was asked.
     private(set) var asked = 0
+    /// SPEC-644 R2: a text the next refused try's request URL holds; nil, the default, refuses
+    /// nothing. The first navigation a recorder is asked about whose URL holds it is refused, the
+    /// stand-in for a card's try that fails before it is sent, and the text is cleared.
+    static var refusesFirstTry: String?
+    /// How many tries a recorder refused under `refusesFirstTry` since a test last reset it.
+    static var refusedTries = 0
 
     func webView(
         _ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
         decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void
     ) {
+        if let text = Recorder.refusesFirstTry,
+            navigationAction.request.url?.absoluteString.contains(text) == true
+        {
+            Recorder.refusesFirstTry = nil
+            Recorder.refusedTries += 1
+            decisionHandler(.cancel)
+            return
+        }
         allowed += 1
         decisionHandler(.allow)
     }
@@ -1187,6 +1201,24 @@ final class PlantedCardTests: XCTestCase {
         print("blind scripted references: \(blind.count) \(blind.sorted()), pinned \(BLIND_SCRIPTED.count) \(BLIND_SCRIPTED.sorted())")
         XCTAssertEqual(Set(blind), BLIND_SCRIPTED, "scripted cards whose reference reached nothing, against the pinned BLIND_SCRIPTED")
         XCTAssertTrue(absentCards.isSubset(of: ABSENT_ALLOWED), "cards whose reference reads the interface absent: \(absentCards.sorted())")
+    }
+
+    /// SPEC-644 A1 (R1, R2): the scripted form's reference still reaches when its first try is
+    /// refused, the stand-in for a try that fails before it is sent: the card tries again.
+    @MainActor
+    func test_a_scripted_form_reaches_its_reference_when_its_first_try_fails() async throws {
+        let probe = try await Probe.make()
+        let scripted = try XCTUnwrap(SCRIPTED.first { $0.id == "script-form" }, "script-form is not planted")
+        Recorder.refusedTries = 0
+        Recorder.refusesFirstTry = "/script-form/"
+        defer { Recorder.refusesFirstTry = nil }
+        let (reading, _) = try await probe.show(
+            scripted.card, in: .scriptedReference(scripted.held), window: nil)
+        let refused = Recorder.refusedTries
+        let reached = reading.reached(scripted.card)
+        print("scripted reference script-form, its first try refused: refused=\(refused) reached=\(reached) \(reading.summary)")
+        XCTAssertEqual(refused, 1, "A1: no try of the scripted form was refused, so the plant measured nothing")
+        XCTAssertTrue(reached, "A1: the scripted form reached nothing from its reference after its first try was refused")
     }
 
     @MainActor
