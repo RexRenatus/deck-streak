@@ -3304,8 +3304,14 @@ class TheCardSandboxRunsInBothEngines(unittest.TestCase):
         self.assertEqual(runs.count(CARD_INSTALL), 1, "the job does not install both engines once")
         self.assertEqual(runs.count(CARD_SUITE), 1, "the job does not run the planted suite once")
         self.assertLess(runs.index(CARD_INSTALL), runs.index(CARD_SUITE))
-        # one upload of the suite's results after it, whatever its verdict
-        uploads = [at for at, step in enumerate(steps) if action(step) == "actions/upload-artifact"]
+        # one upload of the suite's results after it, whatever its verdict; the job's JUnit
+        # upload is the JUnit census's (SPEC-038 R21)
+        uploads = [
+            at
+            for at, step in enumerate(steps)
+            if action(step) == "actions/upload-artifact"
+            and (step.get("with") or {}).get("name") != JUNIT_ARTIFACTS[CARD_JOB]
+        ]
         self.assertEqual(len(uploads), 1, "the job does not upload the suite's results once")
         upload = steps[uploads[0]]
         self.assertGreater(uploads[0], runs.index(CARD_SUITE))
@@ -3550,7 +3556,13 @@ class OnlyAPushSavesACache(unittest.TestCase):
             env = dict(job.get("env") or {}, **(steps[at].get("env") or {}))
             logs = str(env.get("CHECK_LOG_DIR", "")).rstrip("/")
             self.assertTrue(logs, f"{job_id} writes its logs to a temporary directory nobody reads")
-            uploads = [s for s in steps[at + 1 :] if action(s) == "actions/upload-artifact"]
+            # The job's JUnit upload is the JUnit census's (SPEC-038 R21).
+            uploads = [
+                s
+                for s in steps[at + 1 :]
+                if action(s) == "actions/upload-artifact"
+                and (s.get("with") or {}).get("name") != JUNIT_ARTIFACTS.get(job_id, "")
+            ]
             self.assertEqual(len(uploads), 1, f"{job_id} uploads no stage logs")
             inputs = uploads[0]["with"]
             hidden = [part for part in logs.split("/") if part.startswith(".")]
@@ -7503,6 +7515,27 @@ def allowed(reason, *sites):
 # name and its text, which holds its receiver, with how many times it occurs and why no
 # workflow's text reaches the reader through it, the loader's own read among them.
 NOT_WORKFLOW_READS = {
+    **allowed(
+        "a file the JUnit census reads for its settings; never handed to the reader",
+        (
+            "test_ci_workflows",
+            "EveryTestJobUploadsItsJUnit.test_every_job_that_runs_tests_uploads_its_junit_results",
+            "(REPO / path).read_text(encoding='utf-8')",
+            1,
+        ),
+        (
+            "test_ci_workflows",
+            "EveryTestJobUploadsItsJUnit.test_the_default_profile_retries_and_a_pass_on_retry_still_fails",
+            "(REPO / '.config' / 'nextest.toml').read_text(encoding='utf-8')",
+            1,
+        ),
+        (
+            "test_ci_workflows",
+            "EveryTestJobUploadsItsJUnit.test_the_default_profile_retries_and_a_pass_on_retry_still_fails",
+            "(REPO / 'scripts' / 'check.sh').read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
     **allowed(
         "the pnpm lockfile, which a pattern reads for the locked playwright version; never handed to the reader",
         (
@@ -14654,3 +14687,483 @@ class TheBenchLanes(unittest.TestCase):
             for applicable in ("true", "false"):
                 context = bench_plan_context(event, applicable, applicable)
                 self.assertEqual(bool(condition(step["if"], context)), runs, (event, applicable))
+
+
+# --------------------------------------------------------------------------- SPEC-038 R21 to R23
+
+# Each ci.yml job that runs tests and the artifact its JUnit results upload as (SPEC-038 R21); a
+# matrix job's artifact names its slice, as its stage logs do. No job that runs tests is left out.
+JUNIT_ARTIFACTS = {
+    "card-sandbox": "junit-card-sandbox",
+    "engine": "junit-engine-${{ matrix.slice }}",
+    "hygiene": "junit-hygiene",
+    "release": "junit-release",
+    "rust": "junit-rust",
+    "web": "junit-web",
+    "web-engine": "junit-web-engine",
+}
+# The gate's stages that run tests, and a test runner a step calls by itself.
+TEST_STAGES = frozenset({"test", "test-engine", "test-release", "doctest", "web", "python"})
+NEXTEST_STAGES = frozenset({"test", "test-engine", "test-release"})
+TEST_RUNNER = re.compile(
+    r"\b(?:nextest run|vitest run|playwright test|unittest)\b|\btest:(?:card|engine|study|e2e)\b"
+)
+BROWSER_RUNNER = re.compile(r"\bplaywright test\b|\btest:(?:card|engine|study|e2e)\b")
+JUNIT_DIR = "${{ runner.temp }}/junit/"
+NEXTEST_JUNIT = "target/nextest/default/junit.xml"
+# The variable each runner reads the file its JUnit results go to from: Vitest's and the browser
+# suites' through their configurations, the python stage's through scripts/python_stage.py.
+VITEST_FILE = "VITEST_JUNIT_FILE"
+BROWSER_FILE = "PLAYWRIGHT_JUNIT_OUTPUT_FILE"
+PYTHON_FILE = "PYTHON_STAGE_JUNIT_FILE"
+# Each configuration that adds a JUnit reporter, and the text it holds once: the variable it reads,
+# and the reporter it adds only when that variable names a file.
+JUNIT_REPORTERS = {
+    "web/app/vite.config.ts": (
+        f"const junit = process.env.{VITEST_FILE};",
+        "reporters: [...configDefaults.reporters, ['junit', { outputFile: junit }]]",
+    ),
+    **{
+        f"web/app/playwright.{suite}config.ts": (
+            f"const JUNIT = process.env.{BROWSER_FILE};",
+            f"reporter: JUNIT ? [[{kept}], ['junit', {{ outputFile: JUNIT }}]] : {kept},",
+        )
+        for suite, kept in (
+            ("", "REPORTER"),
+            ("card.", "'list'"),
+            ("engine.", "'list'"),
+            ("study.", "'list'"),
+        )
+    },
+}
+UPLOAD_ARTIFACT = "actions/upload-artifact@"
+ALWAYS = "${{ always() }}"
+# nextest's switches that override its profiles' retries and flaky result and disable every
+# per-test override (nexte.st, "Failing flaky tests").
+RETRY_SWITCH = re.compile(r"\bNEXTEST_(?:FLAKY_RESULT|RETRIES)\b|--(?:flaky-result|retries)\b")
+
+
+def step_stages(step):
+    """[[stage, ...]] for each `bash scripts/check.sh` call a step runs, comments dropped."""
+    run = re.sub(r"(?m)#.*$", "", str(step.get("run", "")))
+    return [call.group(1).split() for call in GATE_CALL.finditer(run)]
+
+
+def gate_stages_of(step):
+    """The gate's stages a step's check.sh calls run, a call with no stage running every stage that
+    runs tests."""
+    return {stage for call in step_stages(step) for stage in (call or TEST_STAGES)}
+
+
+def runs_tests(job):
+    """Whether a job's steps run tests: a check.sh call with no stage, which runs every stage, or
+    one naming a stage that runs tests, or a step that calls a test runner itself."""
+    for step in (job or {}).get("steps") or []:
+        run = re.sub(r"(?m)#.*$", "", str(step.get("run", "")))
+        if TEST_STAGES.intersection(gate_stages_of(step)) or TEST_RUNNER.search(run):
+            return True
+    return False
+
+
+def junit_variables(step):
+    """The variables a step names its runners' JUnit files in: the web stage runs Vitest and the
+    browser suite, a browser suite's own script runs the browser suite, and the python stage runs
+    the unittest modules."""
+    run = re.sub(r"(?m)#.*$", "", str(step.get("run", "")))
+    stages = gate_stages_of(step)
+    wanted = {VITEST_FILE, BROWSER_FILE} if "web" in stages else set()
+    if BROWSER_RUNNER.search(run):
+        wanted.add(BROWSER_FILE)
+    if "python" in stages:
+        wanted.add(PYTHON_FILE)
+    return wanted
+
+
+def junit_problems(job_id, job):
+    """What keeps a job's JUnit results from an artifact on every run, each named by the job
+    (SPEC-038 R21, R23). One upload step names the job's artifact, uploads JUNIT_DIR with
+    `if: ${{ always() }}`, warns when no file was written, and follows every step that runs tests.
+    A nextest job first moves nextest's file there in a step that always runs, after its tests and
+    before its upload and any cache save; every other runner a step runs is named its own file
+    under JUNIT_DIR in that step's env. No step of the job continues on an error, so no failure is
+    admitted and no upload decides the verdict."""
+    steps = (job or {}).get("steps") or []
+    name = JUNIT_ARTIFACTS.get(job_id)
+    problems = [
+        f"{job_id}: step {n} continues on an error"
+        for n, step in enumerate(steps)
+        if "continue-on-error" in step
+    ]
+    tests = [n for n, step in enumerate(steps) if runs_tests({"steps": [step]})]
+    uploads = [
+        n
+        for n, step in enumerate(steps)
+        if str(step.get("uses", "")).startswith(UPLOAD_ARTIFACT)
+        and (step.get("with") or {}).get("name") == name
+    ]
+    if len(uploads) != 1:
+        return problems + [f"{job_id}: {len(uploads)} steps upload {name}, not one"]
+    at = uploads[0]
+    given = steps[at].get("with") or {}
+    if steps[at].get("if") != ALWAYS:
+        problems.append(f"{job_id}: the JUnit upload runs only when the steps before it passed")
+    if given.get("path") != JUNIT_DIR or given.get("if-no-files-found") != "warn":
+        problems.append(f"{job_id}: the JUnit upload does not upload {JUNIT_DIR}, warning on none")
+    if not tests or at < max(tests):
+        problems.append(f"{job_id}: the JUnit upload does not follow every step that runs tests")
+    stages = {stage for step in steps for stage in gate_stages_of(step)}
+    if stages & NEXTEST_STAGES:
+        moves = [n for n, step in enumerate(steps) if NEXTEST_JUNIT in str(step.get("run", ""))]
+        saves = [n for n, step in enumerate(steps) if "/cache/save@" in str(step.get("uses", ""))]
+        if (
+            len(moves) != 1
+            or steps[moves[0]].get("if") != ALWAYS
+            or "$RUNNER_TEMP/junit/" not in str(steps[moves[0]].get("run", ""))
+            or moves[0] < max(tests or [0])
+            or moves[0] > at
+            or any(save < moves[0] for save in saves)
+        ):
+            problems.append(f"{job_id}: nextest's JUnit file is not moved out of target/ in time")
+    files = []
+    for n, step in enumerate(steps):
+        env = step.get("env") or {}
+        for variable in sorted(junit_variables(step)):
+            file = str(env.get(variable, ""))
+            if not (
+                file.startswith(JUNIT_DIR) and re.fullmatch(r"[\w.-]+\.xml", file[len(JUNIT_DIR) :])
+            ):
+                problems.append(f"{job_id}: step {n} names no file under {JUNIT_DIR} in {variable}")
+            files.append(file)
+    if len(files) != len(set(files)):
+        problems.append(f"{job_id}: two of its runners name one JUnit file")
+    return problems
+
+
+def reporter_problems(path, text):
+    """What keeps a configuration from adding its runner's JUnit reporter only when its variable
+    names a file (SPEC-038 R21): each text JUNIT_REPORTERS gives it, held exactly once."""
+    return [
+        f"{path} does not hold {held!r} once"
+        for held in JUNIT_REPORTERS[path]
+        if text.count(held) != 1
+    ]
+
+
+def profile_problems(profiles):
+    """What keeps nextest's profiles from writing JUnit results and failing a pass on retry
+    (SPEC-038 R22): the default profile writes `junit.xml`, retries a failing test at least once
+    and fails a test that passes on a retry; every other profile, which inherits the default one,
+    sets its own retries to 0, so no mutant's failing test runs twice, and passes no pass on a
+    retry; and no override of any profile retries a test or passes a pass on a retry, since an
+    override wins over a profile's own settings and the default profile's overrides reach every
+    profile (nexte.st, "Override precedence")."""
+    default = profiles.get("default") or {}
+    problems = []
+    if (default.get("junit") or {}).get("path") != "junit.xml":
+        problems.append("the default profile writes no junit.xml")
+    retries = default.get("retries")
+    if not isinstance(retries, int) or isinstance(retries, bool) or retries < 1:
+        problems.append("the default profile retries no failing test")
+    if default.get("flaky-result") != "fail":
+        problems.append("a test that passes on a retry passes the default profile")
+    for name in sorted(profiles):
+        profile = profiles[name] or {}
+        if name != "default" and profile.get("retries") != 0:
+            problems.append(f"the {name} profile inherits a retry")
+        if name != "default" and profile.get("flaky-result", "fail") != "fail":
+            problems.append(f"the {name} profile passes a test that passes on a retry")
+        for n, override in enumerate(profile.get("overrides") or []):
+            if override.get("flaky-result", "fail") != "fail":
+                problems.append(
+                    f"override {n} of the {name} profile passes a test that passes on a retry"
+                )
+            if override.get("retries", 0) != 0:
+                problems.append(f"override {n} of the {name} profile retries a test")
+    return problems
+
+
+def env_text(env):
+    """A step's, a job's or a workflow's env as `NAME=value` lines."""
+    return "\n".join(f"{key}={value}" for key, value in (env or {}).items())
+
+
+def retry_switch_problems(workflow, gate):
+    """Each place that sets one of nextest's switches over its profiles (SPEC-038 R22): the
+    workflow's env, each job that runs tests by its env and each step's env and run, and the gate's
+    script, `gate` its text."""
+    places = [("ci.yml env", env_text(workflow.get("env")))]
+    for job_id, job in sorted((workflow.get("jobs") or {}).items()):
+        if runs_tests(job):
+            places.append((f"{job_id} env", env_text(job.get("env"))))
+            for n, step in enumerate(job.get("steps") or []):
+                text = env_text(step.get("env")) + "\n" + str(step.get("run", ""))
+                places.append((f"{job_id} step {n}", text))
+    places.append(("scripts/check.sh", gate))
+    return [
+        f"{where} sets {switch}"
+        for where, text in places
+        for switch in sorted(set(RETRY_SWITCH.findall(text)))
+    ]
+
+
+# A nextest job the planted cases start from: its tests, the move, the upload and a cache save.
+PLANTED_JUNIT_JOB = {
+    "steps": [
+        {"run": "bash scripts/check.sh fmt test"},
+        {
+            "if": ALWAYS,
+            "run": 'mkdir -p "$RUNNER_TEMP/junit"\n' + f'mv {NEXTEST_JUNIT} "$RUNNER_TEMP/junit/"',
+        },
+        {
+            "if": ALWAYS,
+            "uses": UPLOAD_ARTIFACT + "planted",
+            "with": {"name": "junit-rust", "path": JUNIT_DIR, "if-no-files-found": "warn"},
+        },
+        {"uses": "actions/cache/save@planted"},
+    ]
+}
+PLANTED_PROFILES = {
+    "default": {"retries": 1, "flaky-result": "fail", "junit": {"path": "junit.xml"}},
+    "mutants": {"retries": 0},
+}
+
+
+def planted_browser(script, file):
+    """A step that runs a browser suite's own script and names its JUnit file."""
+    return {"run": f"pnpm --dir web/app test:{script}", "env": {BROWSER_FILE: JUNIT_DIR + file}}
+
+
+class EveryTestJobUploadsItsJUnit(unittest.TestCase):
+    """SPEC-038 R21 to R23: every ci.yml job that runs tests uploads its JUnit results whatever its
+    tests concluded, nextest retries a failing test once and a pass on that retry still fails, and
+    every other profile, the mutants profile among them, retries nothing."""
+
+    def test_every_job_that_runs_tests_uploads_its_junit_results(self):
+        jobs = load("ci.yml")["jobs"]
+        testing = sorted(job for job, body in jobs.items() if runs_tests(body))
+        self.assertEqual(testing, sorted(JUNIT_ARTIFACTS))
+        for job in examined("ci.yml jobs whose JUnit results upload", sorted(JUNIT_ARTIFACTS)):
+            self.assertEqual(junit_problems(job, jobs[job]), [])
+        for path in examined("configurations that add a JUnit reporter", sorted(JUNIT_REPORTERS)):
+            text = (REPO / path).read_text(encoding="utf-8")
+            self.assertEqual(reporter_problems(path, text), [])
+
+    def test_the_default_profile_retries_and_a_pass_on_retry_still_fails(self):
+        text = (REPO / ".config" / "nextest.toml").read_text(encoding="utf-8")
+        profiles = tomllib.loads(text).get("profile", {})
+        for name in examined("nextest profiles", sorted(profiles)):
+            self.assertIsInstance(profiles[name], dict, name)
+        self.assertIn("mutants", profiles)
+        self.assertEqual(profile_problems(profiles), [])
+        workflow = load("ci.yml")
+        examined(
+            "ci.yml jobs read for nextest's switches",
+            [job for job, body in workflow["jobs"].items() if runs_tests(body)],
+        )
+        gate = (REPO / "scripts" / "check.sh").read_text(encoding="utf-8")
+        self.assertEqual(retry_switch_problems(workflow, gate), [])
+
+    def test_each_planted_weakening_is_refused_by_name(self):
+        self.assertEqual(junit_problems("rust", PLANTED_JUNIT_JOB), [])
+        self.assertEqual(profile_problems(PLANTED_PROFILES), [])
+        self.assertEqual(retry_switch_problems({"jobs": {"rust": PLANTED_JUNIT_JOB}}, ""), [])
+
+        def job(edit):
+            body = json.loads(json.dumps(PLANTED_JUNIT_JOB))
+            edit(body["steps"])
+            return junit_problems("rust", body)
+
+        def profiles(edit):
+            body = json.loads(json.dumps(PLANTED_PROFILES))
+            edit(body)
+            return profile_problems(body)
+
+        def switches(edit, gate=""):
+            body = {"jobs": {"rust": json.loads(json.dumps(PLANTED_JUNIT_JOB))}}
+            edit(body)
+            return retry_switch_problems(body, gate)
+
+        def browsers(first, second):
+            return lambda s: s.__setitem__(
+                slice(0, 1), [planted_browser("engine", first), planted_browser("study", second)]
+            )
+
+        self.assertEqual(job(browsers("engine.xml", "study.xml")), [])
+        self.assertEqual(
+            profiles(
+                lambda p: p["default"].update(
+                    {"overrides": [{"filter": "all()", "flaky-result": "fail"}]}
+                )
+            ),
+            [],
+        )
+        good = {path: "\n".join(held) for path, held in JUNIT_REPORTERS.items()}
+        for path in sorted(good):
+            self.assertEqual(reporter_problems(path, good[path]), [])
+        missing = f"{JUNIT_DIR} in"
+        plants = [
+            (job(lambda s: s.pop(2)), "rust: 0 steps upload junit-rust, not one"),
+            (
+                job(lambda s: s[2].pop("if")),
+                "rust: the JUnit upload runs only when the steps before it passed",
+            ),
+            (
+                job(lambda s: s[2].update({"continue-on-error": True})),
+                "rust: step 2 continues on an error",
+            ),
+            (
+                job(lambda s: s[2]["with"].update({"if-no-files-found": "error"})),
+                f"rust: the JUnit upload does not upload {JUNIT_DIR}, warning on none",
+            ),
+            (
+                job(lambda s: s.insert(0, s.pop(2))),
+                "rust: the JUnit upload does not follow every step that runs tests",
+            ),
+            (
+                job(lambda s: s.append(s.pop(1))),
+                "rust: nextest's JUnit file is not moved out of target/ in time",
+            ),
+            (
+                job(lambda s: s[0].update({"run": "bash scripts/check.sh web"})),
+                f"rust: step 0 names no file under {missing} {VITEST_FILE}",
+            ),
+            (
+                job(lambda s: s[0].update({"run": "bash scripts/check.sh web"})),
+                f"rust: step 0 names no file under {missing} {BROWSER_FILE}",
+            ),
+            (
+                job(lambda s: s[0].update({"run": "pnpm --dir web/app test:card"})),
+                f"rust: step 0 names no file under {missing} {BROWSER_FILE}",
+            ),
+            (
+                job(lambda s: s[0].update({"run": "bash scripts/check.sh python"})),
+                f"rust: step 0 names no file under {missing} {PYTHON_FILE}",
+            ),
+            (
+                job(lambda s: s[0].update({"run": "bash scripts/check.sh"})),
+                f"rust: step 0 names no file under {missing} {PYTHON_FILE}",
+            ),
+            (
+                job(
+                    lambda s: s[0].update(
+                        {"run": "bash scripts/check.sh python", "env": {PYTHON_FILE: "python.xml"}}
+                    )
+                ),
+                f"rust: step 0 names no file under {missing} {PYTHON_FILE}",
+            ),
+            (job(browsers("one.xml", "one.xml")), "rust: two of its runners name one JUnit file"),
+            (
+                profiles(lambda p: p["default"].pop("junit")),
+                "the default profile writes no junit.xml",
+            ),
+            (
+                profiles(lambda p: p["default"].update({"retries": 0})),
+                "the default profile retries no failing test",
+            ),
+            (
+                profiles(lambda p: p["default"].update({"flaky-result": "pass"})),
+                "a test that passes on a retry passes the default profile",
+            ),
+            (
+                profiles(lambda p: p["mutants"].pop("retries")),
+                "the mutants profile inherits a retry",
+            ),
+            (profiles(lambda p: p.update({"ci": {}})), "the ci profile inherits a retry"),
+            (
+                profiles(lambda p: p["mutants"].update({"flaky-result": "pass"})),
+                "the mutants profile passes a test that passes on a retry",
+            ),
+            (
+                profiles(
+                    lambda p: p["default"].update(
+                        {"overrides": [{"filter": "test(x)", "flaky-result": "pass"}]}
+                    )
+                ),
+                "override 0 of the default profile passes a test that passes on a retry",
+            ),
+            (
+                profiles(
+                    lambda p: p["mutants"].update(
+                        {"overrides": [{"filter": "all()", "flaky-result": "pass"}]}
+                    )
+                ),
+                "override 0 of the mutants profile passes a test that passes on a retry",
+            ),
+            (
+                profiles(
+                    lambda p: p["mutants"].update(
+                        {"overrides": [{"filter": "all()", "retries": 2}]}
+                    )
+                ),
+                "override 0 of the mutants profile retries a test",
+            ),
+            (
+                profiles(
+                    lambda p: p["default"].update(
+                        {
+                            "overrides": [
+                                {"filter": "all()", "retries": {"backoff": "fixed", "count": 2}}
+                            ]
+                        }
+                    )
+                ),
+                "override 0 of the default profile retries a test",
+            ),
+            (
+                switches(lambda w: w.update({"env": {"NEXTEST_RETRIES": "2"}})),
+                "ci.yml env sets NEXTEST_RETRIES",
+            ),
+            (
+                switches(
+                    lambda w: w["jobs"]["rust"].update({"env": {"NEXTEST_FLAKY_RESULT": "pass"}})
+                ),
+                "rust env sets NEXTEST_FLAKY_RESULT",
+            ),
+            (
+                switches(
+                    lambda w: w["jobs"]["rust"]["steps"][0].update(
+                        {"env": {"NEXTEST_RETRIES": "1"}}
+                    )
+                ),
+                "rust step 0 sets NEXTEST_RETRIES",
+            ),
+            (
+                switches(
+                    lambda w: w["jobs"]["rust"]["steps"][0].update(
+                        {"run": "cargo nextest run --flaky-result pass"}
+                    )
+                ),
+                "rust step 0 sets --flaky-result",
+            ),
+            (
+                switches(lambda w: None, "cargo nextest run --workspace --retries 3"),
+                "scripts/check.sh sets --retries",
+            ),
+        ]
+        for path in sorted(good):
+            for held in JUNIT_REPORTERS[path]:
+                plants.append(
+                    (
+                        reporter_problems(path, good[path].replace(held, "")),
+                        f"{path} does not hold {held!r} once",
+                    )
+                )
+                plants.append(
+                    (
+                        reporter_problems(path, good[path] + "\n" + held),
+                        f"{path} does not hold {held!r} once",
+                    )
+                )
+        for found, wanted in examined("planted weakenings", plants):
+            self.assertIn(wanted, found)
+        runners = [
+            ("bash scripts/check.sh", True),
+            ("bash scripts/check.sh python scrub", True),
+            ("cargo nextest run --workspace", True),
+            ("pnpm --dir web/app test:study", True),
+            ("pnpm exec vitest bench --run --config vitest.bench.config.ts", False),
+            ("cargo mutants --no-shuffle --list --json", False),
+            ("bash scripts/check.sh scrub secrets", False),
+        ]
+        for run, wanted in examined("planted run steps", runners):
+            self.assertEqual(runs_tests({"steps": [{"run": run}]}), wanted, run)
