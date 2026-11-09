@@ -1,12 +1,13 @@
 //! The append-only tables take only their sanctioned writes (SPEC-432 R3 to R6; ADR-446 D2).
 //!
-//! The register names each table a migration's header declares written once. The census reads
-//! every string literal of every `.rs` file under `crates/*/src/`, decoded by the shared lexer,
-//! and every `migrations/*.sql` file, its SQL comments dropped, and finds each `UPDATE` (with or
-//! without `OR <action>`), `DELETE FROM`, `REPLACE INTO`, `INSERT OR REPLACE INTO` and upsert of
-//! a registered table, written bare, quoted, bracketed or `main.`-qualified, in any case and as a
-//! whole word. A write it cannot read fails closed. The found rewrites equal the sanctioned list,
-//! counts included. Every walk prints how many it examined and refuses zero (R9).
+//! The register names each table declared written once, by its migration's header or by
+//! SPEC-432's amendment for #895. The census reads every string literal of every `.rs` file under
+//! `crates/*/src/`, decoded by the shared lexer, and every `migrations/*.sql` file, its SQL
+//! comments dropped, and finds each `UPDATE` (with or without `OR <action>`), `DELETE FROM`,
+//! `REPLACE INTO`, `INSERT OR REPLACE INTO` and upsert of a registered table, written bare, quoted,
+//! bracketed or `main.`-qualified, in any case and as a whole word. A write it cannot read fails
+//! closed. The found rewrites equal the sanctioned list, counts included. Every walk prints how
+//! many it examined and refuses zero (R9).
 
 // An integration test is test code: its helpers panic on an unreadable tree, and it prints the
 // examined count on purpose.
@@ -24,8 +25,9 @@ mod table_census;
 use table_census::Token;
 
 /// The register (SPEC-432 R3): each append-only table, the context that owns it and the migration
-/// whose header declares it written once.
-const REGISTER: [(&str, &str, &str); 4] = [
+/// whose header declares it written once, or, for a table SPEC-432's amendment for #895 declares,
+/// the migration that creates it.
+const REGISTER: [(&str, &str, &str); 8] = [
     (
         "coin_ledger",
         "economy",
@@ -46,11 +48,27 @@ const REGISTER: [(&str, &str, &str); 4] = [
         "curriculum",
         "migrations/007701_curriculum_road_to_c2_and_law.sql",
     ),
+    (
+        "freeze_events",
+        "streaks",
+        "migrations/007601_streaks_state_and_governor.sql",
+    ),
+    (
+        "sync_runs",
+        "ingest",
+        "migrations/002201_ingest_sync_runs.sql",
+    ),
+    (
+        "notification_decisions",
+        "notifications",
+        "migrations/004101_notifications_router.sql",
+    ),
+    ("agent_runs", "agent", "migrations/004301_agent_runs.sql"),
 ];
 
 /// The sanctioned rewrites (SPEC-432 R6): the file under `crates/`, the item, the kind, the table
 /// and how many statements write it, each the sanction its migration names.
-const SANCTIONED: [(&str, &str, &str, &str, usize); 7] = [
+const SANCTIONED: [(&str, &str, &str, &str, usize); 12] = [
     (
         "economy/src/wallet.rs",
         "settle_mint_on",
@@ -100,6 +118,27 @@ const SANCTIONED: [(&str, &str, &str, &str, usize); 7] = [
         "band_milestones",
         1,
     ),
+    // The owner's erase of each table SPEC-432's amendment for #895 declares, which its migration's
+    // header names: the table is exported and erased.
+    (
+        "streaks/src/data_rights.rs",
+        "erase",
+        DELETE,
+        "freeze_events",
+        1,
+    ),
+    ("ingest/src/data_rights.rs", "erase", DELETE, "sync_runs", 1),
+    (
+        "notifications/src/data_rights.rs",
+        "erase",
+        DELETE,
+        "notification_decisions",
+        1,
+    ),
+    ("agent/src/data_rights.rs", "erase", DELETE, "agent_runs", 1),
+    // The agent's retention prune, whose statement the header of
+    // `migrations/004302_agent_runs_created_at_index.sql` names.
+    ("agent/src/runs.rs", "prune_before", DELETE, "agent_runs", 1),
 ];
 
 /// A rewrite by `UPDATE`.
