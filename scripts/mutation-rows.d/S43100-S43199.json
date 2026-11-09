@@ -124,7 +124,7 @@
       [
         "S43115-OWED-ROW-DROPPED",
         "config/vectors-parity.json",
-        ",\n    {\"entry\": \"lean/TableCensusReach\", \"adr\": \"ADR-445\"}",
+        ",\n    {\"entry\": \"lean/RetiredListShape\", \"adr\": \"ADR-445\"}",
         "",
         "an implemented entry with no vectors test and no owed row is refused (SPEC-431 R7, A4)",
         "test_formal_parity.EachFormalEntryMeetsItsVectorsTest.test_every_implemented_lean_entry_has_its_vectors_test_or_a_row"
