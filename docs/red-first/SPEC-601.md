@@ -126,3 +126,14 @@ Two side reds at 817b416c are not criteria of this record and carry no green lin
 test `every_arm_site_on_the_tree_is_listed_with_its_reason`, the source-count pin, cured in 468654c5; and the
 progression crate's `xp_census` test `only_progression_writes_xp_settlement_and_only_coordination_settles`, whose
 cure a later commit owes.
+
+## Section 10's criteria
+
+The three criteria are not red at the base: they pin behaviour the base already has. Each row's red is its killer
+failing with its mutant installed, read KILLED by name in `mutation-rows`.
+
+```red-first
+A10: not red: pins the export, erase, register and migrations the base already holds; each row's mutant is its red, read KILLED in mutation-rows
+A11: not red: pins the put's and the bind's columns the base already writes; each row's mutant is its red, read KILLED in mutation-rows
+A12: not red: pins the crate roots' declarations as written; each row's mutant is its red, read KILLED in mutation-rows
+```

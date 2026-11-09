@@ -79,3 +79,16 @@ fn the_reader_inlines_fonts_and_shows_video() {
     assert!(reader.inlines_fonts());
     assert!(reader.shows_video());
 }
+
+/// The crate root, as the compiler reads it.
+const CRATE_ROOT: &str = include_str!("../src/lib.rs");
+
+/// A source-text guard: the crate root declares `store_media` among the adapter's modules, as
+/// written. The row of SPEC-601 A12 on that line mutates it, a change no behaviour test can see.
+#[test]
+fn the_crate_root_declares_the_store_media_module_as_written() {
+    assert!(
+        CRATE_ROOT.contains("pub mod review_undo;\npub mod store_media;\npub mod voices;\n"),
+        "the crate root declares store_media between review_undo and voices, with no attribute"
+    );
+}
