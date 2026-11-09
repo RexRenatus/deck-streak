@@ -74,3 +74,27 @@ A13: green at d58bd8445472c4f1a321355fc932b9523168db1f
 A14: red at ce91da21514fd24bbab2dd5a0f8f67ee59e8e615: assertion `left == right` failed, left: None (an empty population not refused)
 A14: green at d58bd8445472c4f1a321355fc932b9523168db1f
 ```
+
+## Section 10: the agent's gate and runner remove their staged files through tokio's file removal
+
+The order of work: section 10 of SPEC-436 (9a0b5ef2); the red commit (2f96a6cf), which carried
+A15 in `crates/daemon/tests/blocking_census.rs`, A16 in `crates/agent/tests/gate.rs` and `LISTED`
+without the four agent entries, over the product code as it was, so the four removals still ran on a
+runtime worker; the green commit (ba815c9f), which removed the four files through tokio's file
+removal and gave the agent's `tokio` the `fs` feature; the rows S43691 to S43694 (1cb59f77); this
+record, the schematic's line and the changelog fragment.
+
+At the red commit A15 failed by its own assertion when run alone: the census found the four agent
+removals where the test expects none. The repository test of section 3 that holds `LISTED` failed by
+its assertion too, finding four keys its listing no longer holds; it is a changed criterion, recorded
+here and not fenced. A16 passed at the red commit: the gate already removed each file it staged, so
+the test guards the cure and proves no new behaviour. The whole suites of `deck-streak-daemon` and
+`deck-streak-agent` failed those two tests and no other. The green commit changed no line of any test
+file, and the tests and the code they exercise are byte-identical between it and the pull request's
+head. Each quote below stops before the values its assertion prints.
+
+```red-first
+A15: red at 2f96a6cf: assertion `left == right` failed: the agent's sources hold no blocking site
+A15: green at ba815c9f
+A16: not red: the gate removed each file it staged before the cure; the test guards the cure and proves no new behaviour
+```
