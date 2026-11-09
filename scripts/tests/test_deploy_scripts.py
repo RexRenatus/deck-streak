@@ -1827,8 +1827,8 @@ sys.exit(f"execve failed: errno {ctypes.get_errno()}")
 
     def test_a_caddy_step_agrees_with_every_vector_of_its_lean_proof(self):
         # The Lean entry that proves the settings check writes one vector per block: its entries,
-        # the names a start-up file makes as variables, and the port's answer (SPEC-473 A2). Each
-        # block that holds no empty entry reaches the step exactly, through execve, so the
+        # the names a start-up file makes as variables, and the port's answer (SPEC-473 A2 and A4).
+        # Each block reaches the step exactly, through execve, an empty entry included, so the
         # environment it reads holds the vector's entries and nothing else.
         first, *lines = self.VECTORS.read_text(encoding="utf-8").splitlines()
         header = json.loads(first)
@@ -1862,11 +1862,10 @@ sys.exit(f"execve failed: errno {ctypes.get_errno()}")
                 )
         if not collation_locale_available("en_US.UTF-8"):
             self.fail("the en_US.UTF-8 locale every non-empty block also runs under is installed")
-        # EXEC_ENTRIES, the route that hands a step its entries exactly, reads them as hex words
-        # split at spaces, so an empty entry never reaches the step by it. The vectors whose block
-        # holds one are these 3, each by its number in the file and its block: they are named here
-        # and not run, and every other vector is.
-        not_run = [
+        # EXEC_ENTRIES, the route that hands a step its entries exactly, hands it an empty entry as
+        # itself. The vectors whose block holds one are these 3, each by its number in the file and
+        # its block, and each runs as every other vector does.
+        empty = [
             (1, [b""]),
             (2, [b"", b""]),
             (27, [b"DECKSTREAK_DEPLOY_CADDY_DIR=/x", b"", b"A=1", b"NOEQ"]),
@@ -1878,15 +1877,16 @@ sys.exit(f"execve failed: errno {ctypes.get_errno()}")
                 for block in [[bytes.fromhex(entry) for entry in vector["entries"]]]
                 if b"" in block
             ],
-            not_run,
+            empty,
             "the vectors whose block holds an empty entry are not the 3 named",
         )
-        to_run = [(i, vector) for i, vector in enumerate(vectors, 1) if i not in dict(not_run)]
+        to_run = list(enumerate(vectors, 1))
         self.assertEqual(
             (len(to_run), len(vectors)),
-            (60, 63),
-            "examined 60 of 63 deploy entry vectors: every vector runs but the 3 named",
+            (63, 63),
+            "examined 63 of 63 deploy entry vectors: every vector runs, the 3 named among them",
         )
+        ran = []
         with tempfile.TemporaryDirectory() as tmp:
             work = Path(tmp) / "work"
             work.mkdir()
@@ -1943,6 +1943,14 @@ sys.exit(f"execve failed: errno {ctypes.get_errno()}")
                     self.assertEqual(
                         list(work.iterdir()), [], f"vector {i}: a step wrote where it ran"
                     )
+                    ran.append(i)
+        # Each of the 3 ran under every locale, and every run of every vector reached its
+        # comparison.
+        self.assertEqual(
+            ([ran.count(i) for i, _block in empty], len(ran)),
+            ([3, 3, 3], sum(3 if vector["entries"] else 1 for _i, vector in to_run)),
+            "the 3 vectors whose block holds an empty entry did not each run under every locale",
+        )
         # The single-entry blocks that proceed name exactly SETTINGS' words, so the entry's listed
         # settings are the ones the script lists. Both sides are bytes, so no key is decoded.
         proceeding = {
