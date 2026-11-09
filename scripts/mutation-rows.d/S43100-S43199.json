@@ -296,6 +296,102 @@
         "        refused = None",
         "an as-found row whose ADR does not hold its path is unadmitted (SPEC-431 R19, A11)",
         "test_formal_parity.EachFormalEntryMeetsItsVectorsTest.test_every_as_found_row_admits_a_vectors_finding_of_its_path"
+      ],
+      [
+        "S43137-SWIFT-ROW-PATH-MOVED",
+        "config/clock-reads-swift.json",
+        "\"ios/App/Sources/ReviewSession.swift\"",
+        "\"ios/App/Sources/ReviewSessions.swift\"",
+        "a Swift read with no row and a row with no read are each refused (SPEC-431 R25, A12)",
+        "test_swift_clock_reads.TheSwiftClockReadsAreTheListedSites.test_every_production_swift_files_clock_reads_equal_its_row"
+      ],
+      [
+        "S43138-SWIFT-HARNESS-COUNT-LOWERED",
+        "config/clock-reads-swift.json",
+        "\"count\": 2",
+        "\"count\": 1",
+        "a Swift row whose count is off its file's reads is refused (SPEC-431 R25, A12)",
+        "test_swift_clock_reads.TheSwiftClockReadsAreTheListedSites.test_every_production_swift_files_clock_reads_equal_its_row"
+      ],
+      [
+        "S43139-SWIFT-NEW-READ-UNLISTED",
+        "ios/App/Sources/AnswerClock.swift",
+        "        shownAt = instant",
+        "        shownAt = Date()",
+        "a new production Swift read with no row is refused (SPEC-431 R21, R25, A12)",
+        "test_swift_clock_reads.TheSwiftClockReadsAreTheListedSites.test_every_production_swift_files_clock_reads_equal_its_row"
+      ],
+      [
+        "S43140-SWIFT-POPULATION-EMPTY",
+        "scripts/tests/test_swift_clock_reads.py",
+        "    swift = sorted(path for path in paths if path.startswith(\"ios/\") and path.endswith(\".swift\"))",
+        "    swift = sorted(path for path in paths if path.startswith(\"ios/\") and path.endswith(\".swift!\"))",
+        "an empty Swift population is VOID (SPEC-431 R20, R27, A12)",
+        "test_swift_clock_reads.TheSwiftClockReadsAreTheListedSites.test_every_production_swift_files_clock_reads_equal_its_row"
+      ],
+      [
+        "S43141-SWIFT-TEST-ROLE-READ",
+        "scripts/tests/test_swift_clock_reads.py",
+        "        if roles.get(path) == SET_ASIDE:",
+        "        if roles.get(path) == \"none\":",
+        "a test file is set aside, never read (SPEC-431 R20, A14)",
+        "test_swift_clock_reads.TheSwiftClockReadsAreTheListedSites.test_test_files_comments_and_literals_hold_no_read"
+      ],
+      [
+        "S43142-SWIFT-LINE-COMMENT-READ",
+        "scripts/tests/test_swift_clock_reads.py",
+        "            elif token == \"//\":",
+        "            elif token == \"\":",
+        "a read in a line comment is no read (SPEC-431 R22, A14)",
+        "test_swift_clock_reads.TheSwiftClockReadsAreTheListedSites.test_test_files_comments_and_literals_hold_no_read"
+      ],
+      [
+        "S43143-SWIFT-INTERPOLATION-BLANKED",
+        "scripts/tests/test_swift_clock_reads.py",
+        "                if text.startswith(\"(\", after):",
+        "                if text.startswith(\"(!\", after):",
+        "a read in an interpolation is a read (SPEC-431 R22, A14)",
+        "test_swift_clock_reads.TheSwiftClockReadsAreTheListedSites.test_test_files_comments_and_literals_hold_no_read"
+      ],
+      [
+        "S43144-SWIFT-RAW-STRING-UNOPENED",
+        "scripts/tests/test_swift_clock_reads.py",
+        "TOKEN = re.compile(r'//|/\\*|(#*)(\"\"\"|\")|#+/|[()]')",
+        "TOKEN = re.compile(r'//|/\\*|()(\"\"\"|\")|#+/|[()]')",
+        "a raw string's text is blanked by its own delimiter (SPEC-431 R22, A14)",
+        "test_swift_clock_reads.TheSwiftClockReadsAreTheListedSites.test_test_files_comments_and_literals_hold_no_read"
+      ],
+      [
+        "S43145-SWIFT-NOW-RULE-REMOVED",
+        "scripts/tests/test_swift_clock_reads.py",
+        "    r\"(?:(?<!\\w)(?P<receiver>\\w+)\\s*)?\\.\\s*now(?!\\w)\"",
+        "    r\"(?:(?<!\\w)(?P<receiver>\\w+)\\s*)?\\.\\s*now_(?!\\w)\"",
+        "a .now member or implicit member is a read (SPEC-431 R21, A13)",
+        "test_swift_clock_reads.TheSwiftClockReadsAreTheListedSites.test_each_swift_clock_spelling_and_alias_is_a_read"
+      ],
+      [
+        "S43146-SWIFT-ALIAS-UNCOLLECTED",
+        "scripts/tests/test_swift_clock_reads.py",
+        "            if base is not None and name not in kinds:",
+        "            if base is not None and name in ():",
+        "a typealias of a clock type is collected (SPEC-431 R21, A13)",
+        "test_swift_clock_reads.TheSwiftClockReadsAreTheListedSites.test_each_swift_clock_spelling_and_alias_is_a_read"
+      ],
+      [
+        "S43147-SWIFT-OWN-RECEIVER-COUNTED",
+        "scripts/tests/test_swift_clock_reads.py",
+        "            if match.group(\"receiver\") in OWN:",
+        "            if match.group(\"receiver\") in ():",
+        "a .now on self or Self is no read (SPEC-431 R21, A13)",
+        "test_swift_clock_reads.TheSwiftClockReadsAreTheListedSites.test_each_swift_clock_spelling_and_alias_is_a_read"
+      ],
+      [
+        "S43148-SWIFT-TOKEN-UNNAMED",
+        "docs/decisions/ADR-445-each-fitness-test-is-its-own-census-over-a-listed-file-and-every-row-names-the-adr-that-admits-it.md",
+        "`ios/Harness/Sources/EngineSession.swift`",
+        "`ios/Harness/Sources/Engine-Session.swift`",
+        "a Swift row whose ADR does not name its path is unadmitted (SPEC-431 R26, A15)",
+        "test_swift_clock_reads.TheSwiftClockReadsAreTheListedSites.test_every_swift_file_with_reads_is_admitted_by_an_adr_that_names_it"
       ]
     ]
   }

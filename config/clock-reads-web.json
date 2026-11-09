@@ -1,0 +1,7 @@
+{
+  "sites": [
+    {"path": "web/app/scripts/record-docs-mermaid-fences.js", "count": 2, "adr": "ADR-445", "why": "the pace between recorded diagram fences, a build tool's timer"},
+    {"path": "web/app/src/lib/study/ReviewScreen.svelte", "count": 1, "adr": "ADR-445", "why": "the review's answer clock, a monotonic performance.now the review screen hands to the review"},
+    {"path": "web/app/src/routes/remote/+page.svelte", "count": 1, "adr": "ADR-445", "why": "the time of each event in the remote page's on-screen log, monotonic"}
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "sites": [
+    {"path": "ios/App/Sources/ReviewSession.swift", "count": 1, "adr": "ADR-445", "why": "the answer clock's default instant source, the wall clock, which the app's tests replace by injection"},
+    {"path": "ios/Harness/Sources/EngineSession.swift", "count": 2, "adr": "ADR-445", "why": "the harness's show time and answer time, monotonic ContinuousClock instants"}
+  ]
+}
