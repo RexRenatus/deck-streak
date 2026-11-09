@@ -67,22 +67,34 @@ async function settled(page: Page): Promise<Pick<Step, 'reading' | 'sockets' | '
 }
 
 /**
- * The state of the feature a project's metadata names, as the browser reports it over a browser
- * session of the Chrome DevTools Protocol, or the error that call returned; nothing when the project
- * names none. It is recorded, never judged.
+ * The state of each feature a project's metadata names (one name, or a list of names), as the
+ * browser reports it over a browser session of the Chrome DevTools Protocol, or the error that call
+ * returned for that name; nothing when the project names none. It is recorded, never judged.
  */
 async function featureState(browser: Browser, feature: unknown): Promise<Record<string, boolean | string>> {
-  if (typeof feature !== 'string') return {};
+  const names =
+    typeof feature === 'string'
+      ? [feature]
+      : Array.isArray(feature)
+        ? feature.filter((name): name is string => typeof name === 'string')
+        : [];
+  if (names.length === 0) return {};
   const session = await browser.newBrowserCDPSession();
   const send = session.send.bind(session) as unknown as (method: string, params: object) => Promise<FeatureState>;
+  const states: Record<string, boolean | string> = {};
   try {
-    const { featureEnabled } = await send('SystemInfo.getFeatureState', { featureState: feature });
-    return { [feature]: featureEnabled ?? 'no state in the answer' };
-  } catch (error) {
-    return { [feature]: error instanceof Error ? error.message : String(error) };
+    for (const name of names) {
+      try {
+        const { featureEnabled } = await send('SystemInfo.getFeatureState', { featureState: name });
+        states[name] = featureEnabled ?? 'no state in the answer';
+      } catch (error) {
+        states[name] = error instanceof Error ? error.message : String(error);
+      }
+    }
   } finally {
     await session.detach();
   }
+  return states;
 }
 
 test('the measurement examines every planted card a link predictor could act on', ({}, info) => {
@@ -141,7 +153,10 @@ for (const card of MEASURED) {
     for (const { frame, step, reading } of steps) {
       console.log(`speculative ${info.project.name} ${card.id} ${frame} ${step}: ${JSON.stringify(reading)}`);
     }
-    const features = await featureState(browser, info.project.metadata.feature);
+    const features = await featureState(browser, info.project.metadata.features ?? info.project.metadata.feature);
+    if (Object.keys(features).length > 0) {
+      console.log(`feature state ${info.project.name} ${card.id}: ${JSON.stringify(features)}`);
+    }
     const file = info.outputPath('measurement.json');
     mkdirSync(dirname(file), { recursive: true });
     const record = { engine: info.project.name, build: browser.version(), card: card.id, features, steps };
