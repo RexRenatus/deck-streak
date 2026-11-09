@@ -205,8 +205,8 @@ importers:
         specifier: ^4.5.6
         version: 4.5.6
       '@lucide/svelte':
-        specifier: ^1.62.0
-        version: 1.62.0(svelte@5.57.3)
+        specifier: ^1.66.0
+        version: 1.66.0(svelte@5.57.3)
       '@playwright/test':
         specifier: ^1.64.1
         version: 1.64.1
@@ -864,8 +864,8 @@ packages:
   '@lix-js/sdk@0.20.1':
     resolution: {integrity: sha512-oscOFP8Cr1My6Wh2KVYC9+aJ1mHs+d7vnD+7PPJaA4L+Y1FR37Sm99SrFGfvUizaj/XtRi2GlDF2IOFt9iXMNQ==}
 
-  '@lucide/svelte@1.62.0':
-    resolution: {integrity: sha512-GPnNiUlc29piQn+noy/YAwP3Bfgqs9JxbLPIVbb+T4u2vGxUHeCWdZx0dw0EphP9juWbcLLMsellifhGrLw5yg==}
+  '@lucide/svelte@1.66.0':
+    resolution: {integrity: sha512-G2qFyutQpgk9TY0QYgqXk9rQtUt8p509mFpQzmTpyc894hfRSFhGNcGAVAUgB8znAyVsp5WTF/2vmCwprnNQ/w==}
     peerDependencies:
       svelte: ^5
 
@@ -3493,7 +3493,7 @@ snapshots:
       binaryen: 130.0.0
       fflate: 0.8.3
 
-  '@lucide/svelte@1.62.0(svelte@5.57.3)':
+  '@lucide/svelte@1.66.0(svelte@5.57.3)':
     dependencies:
       svelte: 5.57.3
 
