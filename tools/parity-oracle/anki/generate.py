@@ -63,7 +63,7 @@ GENERATOR = "tools/parity-oracle/anki/generate.py"
 #: Where a registry module is published, whichever directory the driver loaded it from.
 PUBLISHED_REGISTRY = "tools/parity-oracle/anki/registry"
 #: The engine commit DeckStreak's root manifest pins: the engine every golden records.
-ENGINE_COMMIT = "2d8e3150f5e392f5cfaa7bfe8485c479186307a9"
+ENGINE_COMMIT = "c1241180ae457c71ed4ca963f5673e74d1a9bf7c"
 #: The harness's package name. Its manifest has an empty `[workspace]` table, so no lock but its
 #: own ever names it.
 HARNESS_PACKAGE = "parity-oracle-anki-harness"
