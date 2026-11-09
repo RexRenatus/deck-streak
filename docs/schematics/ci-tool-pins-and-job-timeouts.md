@@ -109,3 +109,32 @@ workflow files and `.github/dependabot.yml`, 18 inputs. One site joins section 3
 
 The `cargo-nextest` and `zizmor` entries of section 3 take the versions their own jobs install
 over this base (SPEC-428 R10, the note in ADR-442).
+
+## 7. The routes outside the install action, and the form of an action pin (SPEC-428 section 11)
+
+```mermaid
+flowchart LR
+    W["workflow files, .yml and .yaml"] --> R["read_workflow"]
+    W --> X["the file's own text"]
+    N[".nvmrc"] --> I["install_route_problems: R11 to R16"]
+    C["rust-toolchain.toml"] --> I
+    R --> I
+    X --> L["spelled_lines: the reader's control"]
+    L --> I
+    X --> P["action_pin_problems: R17, R18"]
+    R --> M["marked_uses: the reader's count"]
+    M --> P
+```
+
+| check | population at the base | matcher | refuses |
+|---|---|---|---|
+| downloads (R11) | 27 in 9 files | `DOWNLOAD`, `DOWNLOAD_OUTPUT`, `DIGEST_CHECK` | no file written; a file not checked against a full digest the step sees; a pipe to a shell |
+| cargo installs (R12) | 2 | `CARGO_INSTALL` | not `--locked`; no exact `--version` and no `--git` source at a `--rev`; a `--branch` or `--tag` |
+| pip installs (R13) | 1 | `PIP_INSTALL` | no `--require-hashes` |
+| setup-node steps (R14) | 12 in 6 files | `SETUP_NODE_USES` | a version from anywhere but `.nvmrc`; an `.nvmrc` that is not three numbers |
+| toolchain (R15) | the one channel | `OTHER_TOOLCHAIN` | a channel that is not three numbers; a line that installs or selects another toolchain |
+| routes with no rule (R16) | 0 | `UNRULED_ROUTES`, a job's `container` or `services`, `docker://` | each by name |
+| action pins (R17, R18) | 184 references, 10 repositories, 4 local calls | `USES_LINE`, `SHA_REF`, `VERSION_COMMENT` | no version comment; two commits, or two comments at one commit, for one repository |
+
+Each count is printed by `examined` and refused at 0, and each route's count equals the lines of
+the file's own text that name it, so a route the reader cannot see reads as a problem.
