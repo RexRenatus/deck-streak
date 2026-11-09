@@ -218,6 +218,8 @@ R22. Ruling 461: the internal lane also starts on a push to `dev`, filtered to t
 | A23 | the app's property list declares `UILaunchScreen` and the four iPad orientations, and the project names the asset catalog among the target's sources and its app icon | `test_ios_icon.py`, `test_the_app_declares_what_an_upload_requires` |
 | A24 | the icon `scripts/ios_icon.py` writes decodes to a 1024 by 1024 RGB image with no alpha channel and no text chunk, every unfiltered pixel one opaque colour | `test_ios_icon.py`, `test_the_generated_icon_is_an_opaque_square_with_no_text` |
 | A25 | the internal lane's push filter watches exactly the crates the XCFramework links, read from the packages its cargo commands build and the workspace's manifests; a filter missing one linked crate, and a filter naming a crate the XCFramework does not link, are each refused by name | `test_testflight_workflows.py`, `test_the_internal_push_filter_watches_every_crate_the_xcframework_links` |
+| A29 | with a second identity listed first whose certificate the profile does not hold, signing reads `security find-certificate -a -Z` on the job keychain before `find-identity`, and the include file and the signing record carry the identity the keychain pairs with the profile's certificate | `test_ios_lane.py`, `test_the_identity_is_the_one_the_keychain_pairs_with_the_profiles_certificate` |
+| A30 | no `hashlib` call in the lane, its test or the fake tools' program names a digest outside the strong set the weak-hashing query reads, whether reached by the module, an alias or an imported name; each planted weak spelling is refused by name | `test_ios_lane.py`, `LaneDigests`, its census and its planted control |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_the_internal_plan_refuses_any_event_or_ref_but_a_dispatch_on_dev
@@ -245,6 +247,8 @@ A22: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k te
 A23: python3 -m unittest discover -s scripts/tests -p test_ios_icon.py -k test_the_app_declares_what_an_upload_requires
 A24: python3 -m unittest discover -s scripts/tests -p test_ios_icon.py -k test_the_generated_icon_is_an_opaque_square_with_no_text
 A25: python3 -m unittest discover -s scripts/tests -p test_testflight_workflows.py -k test_the_internal_push_filter_watches_every_crate_the_xcframework_links
+A29: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_the_identity_is_the_one_the_keychain_pairs_with_the_profiles_certificate
+A30: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k LaneDigests
 ```
 
 Every criterion runs on Linux in the hygiene job's `python` stage, with no credential, no macOS
@@ -380,3 +384,24 @@ dispatch with no input. The plan refuses a run that a workflow's own token start
 - A5's refused dispatch moves from the tag's own ref to a branch named like it, `refs/heads/v0.2.0`,
   with the new message (ADR-419 D6); no assertion is removed.
 - The second path's criteria are SPEC-405 A1 to A7, and its rows are S40500 to S40515.
+
+### The identity is matched by the SHA-256 the keychain prints
+
+Code scanning's weak-hashing query read the signing step's SHA-1 of each developer certificate in the profile, and the test's SHA-1 that mirrored it, as a weak hash of sensitive data. The lane now computes no SHA-1. Before it lists the identities, it reads `security find-certificate -a -Z` on the job keychain, which prints each certificate's SHA-256 beside the SHA-1 that `security find-identity` names its identity by, and it hands signing an identity only when the keychain's SHA-256 for that identity's certificate is the SHA-256 of one of the profile's developer certificates. The identity still reaches `CODE_SIGN_IDENTITY` and the export options as the SHA-1 Apple's tools print.
+
+R8's parenthetical now reads: (the SHA-256 that `security find-certificate -Z` prints for an identity's certificate equals the SHA-256 of one of its developer certificates; the lane computes no SHA-1 of its own).
+
+- A8: the refusal of another certificate's profile is unchanged and now reads the keychain's pairing; no assertion is removed.
+- The exact call list that holds every signing tool's arguments gains `security find-certificate -a -Z` on the job keychain, before `find-identity`.
+- A29: new, R8 as amended.
+- A30: new, R8 as amended.
+
+| file | context | change |
+|---|---|---|
+| `scripts/ios_lane.py` | scripts | changed: the identity matched by the SHA-256 the keychain prints (R8 as amended) |
+| `scripts/tests/test_ios_lane.py` | tests | changed: the fake `security` prints `find-certificate -Z`, the fixture's identity is the keychain's, the exact call list, and A29 and A30 added |
+| `scripts/mutation-rows.d/S35200-S35299.json` | mutation | changed: rows for the new match, appended |
+| `changelog.d/testflight-identity-digest-352.md` | docs | added |
+| `docs/specs/SPEC-352-testflight-lane.md`, `docs/decisions/ADR-363-testflight-lane.md`, `docs/red-first/SPEC-352.md` | docs | changed: insert-only amendments |
+
+The amendment changes no workflow, trigger, secret, environment or code-scanning setting.
