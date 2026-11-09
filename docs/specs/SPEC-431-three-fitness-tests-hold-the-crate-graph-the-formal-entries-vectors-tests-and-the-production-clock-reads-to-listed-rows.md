@@ -406,6 +406,7 @@ File manifest of this amendment:
 | `config/vectors-parity.json` | config | changed: the two `owed` rows removed (R22) |
 | `scripts/mutation-rows.d/S43100-S43199.json` | scripts | changed: S43115 re-anchored, and rows S43137 to S43141 added |
 | `docs/specs/SPEC-431-three-fitness-tests-hold-the-crate-graph-the-formal-entries-vectors-tests-and-the-production-clock-reads-to-listed-rows.md` | docs | changed: this section appended |
+| `docs/schematics/fitness-tests-crate-edges-formal-vectors-and-clock-reads.md` | docs | changed: the rows line restated from `config/vectors-parity.json` (the owed and unimplemented rows and their count) |
 | `docs/red-first/SPEC-431.md` | docs | changed: A12 and A13 recorded |
 | `changelog.d/formal-vectors-tests-878.md` | changelog | added: the fragment |
 
