@@ -44,7 +44,7 @@ fn engine(collection: &Path) -> Collection {
 }
 
 /// Answers `card` Good, as the engine's own reviewer does: one review-log row.
-fn answer(collection: &Path, card: i64) {
+fn answer(collection: &Path, card: i64, clock: support::clock::Clock) {
     let mut col = engine(collection);
     let states = col
         .get_scheduling_states(CardId(card))
@@ -54,7 +54,7 @@ fn answer(collection: &Path, card: i64) {
         current_state: states.current,
         new_state: states.good,
         rating: Rating::Good,
-        answered_at: TimestampMillis::now(),
+        answered_at: TimestampMillis(clock.at_millis()),
         milliseconds_taken: 1000,
         custom_data: None,
         from_queue: false,
@@ -105,8 +105,8 @@ fn open(synthetic: &support::Synthetic) -> Dispatcher {
 fn back_up_now_writes_every_device_id_into_its_new_file() {
     let device = support::synthetic("backup-now-every-id");
     let [first, second] = device.cards;
-    answer(&device.collection, first);
-    answer(&device.collection, second);
+    answer(&device.collection, first, device.clock);
+    answer(&device.collection, second, device.clock);
     let device_ids = held(&device.collection);
     let [reviews, cards, notes] = &device_ids;
     support::examined("review(s) of the device", reviews.iter().collect());
@@ -139,7 +139,7 @@ fn back_up_now_writes_every_device_id_into_its_new_file() {
 fn back_up_now_refuses_the_open_collection() {
     let device = support::synthetic("backup-now-open-collection");
     let [first, _] = device.cards;
-    answer(&device.collection, first);
+    answer(&device.collection, first, device.clock);
     let before = held(&device.collection);
     let dispatcher = open(&device);
 
@@ -225,7 +225,7 @@ fn back_up_now_refuses_a_backup_that_lacks_a_review_the_device_held() {
     let twin = device.dir.join("twin.anki2");
     std::fs::copy(&device.collection, &twin).expect("the twin is the device before its answer");
     let [first, _] = device.cards;
-    answer(&device.collection, first);
+    answer(&device.collection, first, device.clock);
     let [reviews, cards, notes] = held(&device.collection);
     support::examined("review(s) of the device", reviews.iter().collect());
     assert_eq!(

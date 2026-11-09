@@ -14,8 +14,6 @@
 
 mod support;
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
 use anki_proto::collection::UndoStatus;
 use anki_proto::scheduler::bury_or_suspend_cards_request::Mode;
 use anki_proto::scheduler::card_answer::Rating;
@@ -75,17 +73,10 @@ fn first_row(dispatcher: &Dispatcher, read: Read) -> Value {
         .unwrap_or(Value::Null)
 }
 
-fn now_millis() -> i64 {
-    let millis = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("the clock reads after the epoch")
-        .as_millis();
-    i64::try_from(millis).expect("the clock's milliseconds fit an i64")
-}
-
-/// Answers the queue's head Good through the owner's press, and returns its card and the record
-/// the review keeps: the engine's undo status right after, and the newest review row's id.
-fn answer_head(dispatcher: &Dispatcher) -> (i64, Recorded) {
+/// Answers the queue's head Good through the owner's press at `at`, the clock's instant, and
+/// returns its card and the record the review keeps: the engine's undo status right after, and the
+/// newest review row's id.
+fn answer_head(dispatcher: &Dispatcher, at: i64) -> (i64, Recorded) {
     let request = GetQueuedCardsRequest {
         fetch_limit: 1,
         intraday_learning_only: false,
@@ -110,7 +101,7 @@ fn answer_head(dispatcher: &Dispatcher) -> (i64, Recorded) {
         current_state: states.current,
         new_state: states.good,
         rating: Rating::Good as i32,
-        answered_at_millis: now_millis(),
+        answered_at_millis: at,
         milliseconds_taken: 1000,
     };
     dispatcher
@@ -183,7 +174,7 @@ fn admitted() -> (Recorded, UndoStatus, Review, i64) {
 
 #[test]
 fn an_undo_reverts_the_offered_answer() {
-    let (_synthetic, dispatcher) = opened("undo-reverts");
+    let (synthetic, dispatcher) = opened("undo-reverts");
     let request = GetQueuedCardsRequest {
         fetch_limit: 1,
         intraday_learning_only: false,
@@ -198,7 +189,7 @@ fn an_undo_reverts_the_offered_answer() {
         .expect("the queue is admitted");
     let first = head.cards[0].card.as_ref().expect("a queued card").id;
     let before = first_row(&dispatcher, Read::CardSnapshot(first));
-    let (card, recorded) = answer_head(&dispatcher);
+    let (card, recorded) = answer_head(&dispatcher, synthetic.clock.at_millis());
     let answered = first_row(&dispatcher, Read::CardSnapshot(card));
     let undone = undo(&dispatcher, card, &recorded.encode_to_vec());
     assert_eq!(
@@ -220,7 +211,7 @@ fn an_undo_reverts_the_offered_answer() {
 #[test]
 fn an_undo_after_a_later_change_is_refused_and_changes_nothing() {
     let (synthetic, dispatcher) = opened("undo-after-bury");
-    let (card, recorded) = answer_head(&dispatcher);
+    let (card, recorded) = answer_head(&dispatcher, synthetic.clock.at_millis());
     let buried = other(&synthetic, card);
     let bury = BuryOrSuspendCardsRequest {
         card_ids: vec![buried],
@@ -254,7 +245,7 @@ fn an_undo_after_a_later_change_is_refused_and_changes_nothing() {
 #[test]
 fn an_undo_aimed_at_another_card_is_refused() {
     let (synthetic, dispatcher) = opened("undo-another-card");
-    let (card, recorded) = answer_head(&dispatcher);
+    let (card, recorded) = answer_head(&dispatcher, synthetic.clock.at_millis());
     let aimed = other(&synthetic, card);
     let undone = undo(&dispatcher, aimed, &recorded.encode_to_vec());
     let answered = first_row(&dispatcher, Read::CardSnapshot(card));
@@ -359,8 +350,8 @@ fn another_undo_label_is_refused() {
 
 #[test]
 fn a_record_that_is_not_one_is_refused() {
-    let (_synthetic, dispatcher) = opened("undo-not-a-record");
-    let (card, _recorded) = answer_head(&dispatcher);
+    let (synthetic, dispatcher) = opened("undo-not-a-record");
+    let (card, _recorded) = answer_head(&dispatcher, synthetic.clock.at_millis());
     let undone = undo(&dispatcher, card, &NO_MESSAGE);
     let answered = first_row(&dispatcher, Read::CardSnapshot(card));
     assert_eq!(

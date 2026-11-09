@@ -411,7 +411,7 @@ fn the_cards_reps_and_lapses_equal_the_counts_of_its_review_rows() {
             current_state: states.current,
             new_state,
             rating,
-            answered_at: TimestampMillis::now(),
+            answered_at: TimestampMillis(synthetic.clock.at_millis()),
             milliseconds_taken: 4_000,
             custom_data: None,
             from_queue: true,

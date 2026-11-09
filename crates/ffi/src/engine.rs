@@ -79,6 +79,9 @@ pub struct Engine {
     stage: Mutex<Option<Stage>>,
     /// The review's undo slot: its last recorded answer, bury or flag (SPEC-515 R2).
     slot: Mutex<Slot>,
+    /// The instant every answer records as its time, in milliseconds since the epoch, when the
+    /// engine was started with one; unset, an answer records the adapter's clock (SPEC-443 R4).
+    answered_at_millis: Option<i64>,
 }
 
 #[uniffi::export]
@@ -100,6 +103,7 @@ impl Engine {
                     dispatcher,
                     stage: Mutex::new(None),
                     slot: Mutex::new(Slot::default()),
+                    answered_at_millis: None,
                 })
             })
             .map_err(|reason| EngineRefusal::Start { reason })
@@ -188,9 +192,10 @@ impl Engine {
     /// encoded `SchedulingStates` in `states`, after `milliseconds_taken` (SPEC-365 R6). This is
     /// the adapter's one answer entry, and the only place it builds an owner's answer: the request
     /// names the press's card, its grade's rating and the next state its grade picks out of the
-    /// states the card was shown with, at the time the adapter's clock reads. Once the engine has
-    /// recorded it, the answer is kept as the review's own last answer for its undo, when the
-    /// newest review is the pressed card's (SPEC-515 R2).
+    /// states the card was shown with, at the instant the engine was started with, or else at the
+    /// time the adapter's clock reads. Once the engine has recorded it, the answer is kept as the
+    /// review's own last answer for its undo, when the newest review is the pressed card's
+    /// (SPEC-515 R2).
     ///
     /// # Errors
     ///
@@ -216,7 +221,7 @@ impl Engine {
             states.current,
             next,
             grade,
-            now_millis(),
+            self.answered_at_millis.unwrap_or_else(now_millis),
             milliseconds_taken,
         );
         let answer = OwnerAnswer::from_press(card, grade);
@@ -702,6 +707,33 @@ pub(crate) fn choice_file(folder: &str, kind: &str) -> PathBuf {
         .duration_since(UNIX_EPOCH)
         .map_or(0, |since| since.as_nanos());
     Path::new(folder).join(format!("{kind}-{stamp}-{}.anki2", std::process::id()))
+}
+
+/// The adapter's tests' constructor, which the bindings do not export: no native client can call
+/// it, so the answer's time stays the adapter's own for every client.
+impl Engine {
+    /// Starts an engine from its encoded `BackendInit` message, as [`Engine::new`] does, whose
+    /// every answer records `answered_at_millis`, in milliseconds since the epoch, as its time in
+    /// place of the adapter's clock (SPEC-443 R4). [`Engine::answer`] stays the one answer entry.
+    ///
+    /// # Errors
+    ///
+    /// [`EngineRefusal::Start`] when the engine cannot decode the message.
+    pub fn at_answer_time(
+        message: &[u8],
+        answered_at_millis: i64,
+    ) -> Result<Arc<Self>, EngineRefusal> {
+        Dispatcher::start(Transport::Native, message)
+            .map(|dispatcher| {
+                Arc::new(Self {
+                    dispatcher,
+                    stage: Mutex::new(None),
+                    slot: Mutex::new(Slot::default()),
+                    answered_at_millis: Some(answered_at_millis),
+                })
+            })
+            .map_err(|reason| EngineRefusal::Start { reason })
+    }
 }
 
 /// The engine's number for the red flag, which the app reads once and compares a card's flag with,
