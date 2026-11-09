@@ -648,10 +648,6 @@ const CITED: [(&str, &str, &str); 0] = [];
 /// names the row's migration file name. An uncited row prints `WARN <rule> <migration> <class>:
 /// <why>` and passes at `Warn`, or prints `FAIL` in its place and fails at `Fail`; an entry no row
 /// matches prints `STALE` and fails at both. `Ok` holds the printed lines when it passes.
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "the red-first stub keeps every input and drops the behaviour"
-)]
 fn rulings(
     root: &Path,
     register: &[Admitted],
@@ -659,18 +655,80 @@ fn rulings(
     cited: &[(&str, &str, &str)],
     level: Level,
 ) -> Result<Vec<String>, Vec<String>> {
-    let _ = (root, register, before, cited, level, recorded, RULING_RULE);
-    Ok(Vec::new())
+    let fails = level == Level::Fail;
+    let mut failed = false;
+    let mut lines = Vec::new();
+    for row in register {
+        let key = (row.migration, row.class);
+        if before
+            .iter()
+            .any(|(migration, class, _)| (*migration, *class) == key)
+        {
+            continue;
+        }
+        let entry = cited
+            .iter()
+            .find(|(migration, class, _)| (*migration, *class) == key);
+        let why = match entry {
+            None => "cites no recorded ruling under docs/rulings/".to_owned(),
+            Some((_, _, ruling)) => match recorded(root, ruling, row.migration) {
+                Ok(()) => continue,
+                Err(why) => why,
+            },
+        };
+        lines.push(format!(
+            "{} {RULING_RULE} {} {}: {why}",
+            if fails { "FAIL" } else { "WARN" },
+            row.migration,
+            row.class
+        ));
+        failed |= fails;
+    }
+    for (migration, class, _) in before {
+        let held = register
+            .iter()
+            .any(|row| (row.migration, row.class) == (*migration, *class));
+        if !held {
+            lines.push(format!(
+                "STALE {RULING_RULE} {migration} {class}: before the rule, and no row lists it"
+            ));
+            failed = true;
+        }
+    }
+    for (migration, class, ruling) in cited {
+        let matched = register
+            .iter()
+            .any(|row| (row.migration, row.class) == (*migration, *class));
+        if !matched {
+            lines.push(format!(
+                "STALE {RULING_RULE} {migration} {class}: cites {ruling}, and no row lists it"
+            ));
+            failed = true;
+        }
+    }
+    for line in &lines {
+        println!("{line}");
+    }
+    if failed { Err(lines) } else { Ok(lines) }
 }
 
 /// Whether `ruling` is a recorded ruling the tree at `root` holds, one file
 /// `docs/rulings/<file>.md`, whose text names `migration` (SPEC-435 R20).
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "the red-first stub keeps every input and drops the behaviour"
-)]
 fn recorded(root: &Path, ruling: &str, migration: &str) -> Result<(), String> {
-    let _ = (root, ruling, migration);
+    let shaped = ruling.strip_prefix("docs/rulings/").is_some_and(|file| {
+        !file.contains('/') && Path::new(file).extension().is_some_and(|ext| ext == "md")
+    });
+    if !shaped {
+        return Err(format!(
+            "cites {ruling}, which is not a file docs/rulings/<file>.md"
+        ));
+    }
+    let Ok(text) = fs::read_to_string(root.join(ruling)) else {
+        return Err(format!("cites {ruling}, which the tree does not hold"));
+    };
+    if !text.contains(migration) {
+        return Err(format!("cites {ruling}, which does not name {migration}"));
+    }
     Ok(())
 }
 
