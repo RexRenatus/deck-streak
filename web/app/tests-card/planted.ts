@@ -276,3 +276,17 @@ export const RENDER: RenderCard | null = {
     '<table><tbody><tr><td>der</td><td>Hund</td></tr><tr><td>die</td><td>Katze</td></tr></tbody></table>',
   css: 'body { font: 16px sans-serif; color: #123; background: #fefae0; } td { border: 1px solid #333; padding: 4px; }'
 };
+
+/**
+ * The carriage-return card (#939; SPEC-462 R9; ADR-479 D7): a field holding a carriage return as its
+ * numeric reference, decimal in a paragraph's title and hexadecimal in an image's alternative text,
+ * where neither is painted. The frame document writes each as a raw carriage return, the host writes
+ * that as `&#13;` in its frame's `srcdoc`, and an engine whose parser reads the reference back as the
+ * carriage return lets the host carry the card. It points nowhere, so it proves a render alone.
+ */
+export const CARRIAGE: RenderCard = {
+  html:
+    '<p title="Der&#13;Hund">Der Hund: the dog</p>' +
+    '<img alt="a red&#xD;square" width="40" height="40" src="data:image/gif;base64,R0lGODlhAQABAIABAP8AAP///ywAAAAAAQABAAACAkQBADs=">',
+  css: 'body { font: 16px sans-serif; color: #123; background: #fefae0; }'
+};

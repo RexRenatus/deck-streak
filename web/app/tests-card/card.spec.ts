@@ -7,7 +7,7 @@
 // frame renders the card. Arrivals are read from listeners.ts, never from the browser's own events.
 import { expect, test, type Browser, type BrowserContext, type Page, type TestInfo } from '@playwright/test';
 import { Listeners, type Reading } from './listeners';
-import { BARE, LAYERS, PLANTED, RENDER, UNOBSERVABLE, type Engine } from './planted';
+import { BARE, CARRIAGE, LAYERS, PLANTED, RENDER, UNOBSERVABLE, type Engine } from './planted';
 
 /** A settle window is never shorter than this, in milliseconds. */
 const SETTLE_FLOOR = 1500;
@@ -212,4 +212,49 @@ test('render-proof: the card frame shows the card as the reference frame does, u
   expect(shipped.equals(reference), 'the card frame renders the card unlike the reference frame').toBe(true);
   expect(shipped.equals(blank), 'the card frame renders a blank frame').toBe(false);
   expect(reference.equals(blank)).toBe(false);
+});
+
+/** The carriage-return card's references, decimal and hexadecimal: each is one carriage return in the frame document. */
+const CARRIAGE_RETURNS = (CARRIAGE.html.match(/&#(?:13|x[dD]);/g) ?? []).length;
+
+// #939; SPEC-462 R10, R11; ADR-479 D7: a field's carriage return reference, carried to every engine's frame
+test('carriage return: a field holding its reference is carried, read back and rendered in every engine', async ({ browser }, info) => {
+  const engine = engineOf(info);
+  expect(CARRIAGE_RETURNS, 'the carriage-return card plants no reference').toBeGreaterThan(0);
+
+  // the card frame, every layer on: the host carries the card, so the frame has a document and no refusal mark
+  const shipped = await visit(browser, 'index.html', 'carriage-return', false);
+  const frame = shipped.page.locator('#card iframe');
+  expect(await frame.getAttribute('data-card-refused'), `the host refused the card in ${engine}`).toBeNull();
+  const host = (await frame.getAttribute('srcdoc')) ?? '';
+  expect(host.split('&#13;').length - 1, `the host wrote another count of references in ${engine}`).toBe(CARRIAGE_RETURNS);
+  // this engine's own parse of the host reads each reference in the attribute value as a carriage return
+  const carried = await shipped.page.evaluate(
+    (text) => new DOMParser().parseFromString(text, 'text/html').body.children[0]?.getAttribute('srcdoc') ?? '',
+    host
+  );
+  expect(carried.split('\r').length - 1, `the engine read a reference otherwise in ${engine}`).toBe(CARRIAGE_RETURNS);
+  expect(carried, `a reference stayed unread in ${engine}`).not.toContain('&#13;');
+  await shipped.context.close();
+
+  // the frame's own parse, where the harness can reach it with W1 off: the nested frame holds each carriage
+  // return, and the card document reads it as a line feed (SPEC-462 R4)
+  const reached = await visit(browser, 'variant.html?off=W1', 'carriage-return', false);
+  const read = await reached.page.evaluate(() => {
+    const nested = document.querySelector<HTMLIFrameElement>('#card iframe')?.contentDocument?.querySelector('iframe');
+    return {
+      srcdoc: nested?.getAttribute('srcdoc') ?? '',
+      title: nested?.contentDocument?.querySelector('p')?.getAttribute('title') ?? null
+    };
+  });
+  expect(read.srcdoc.split('\r').length - 1, `the frame read a reference otherwise in ${engine}`).toBe(CARRIAGE_RETURNS);
+  expect(read.title, `the card document read the carriage return otherwise in ${engine}`).toBe('Der\nHund');
+  await reached.context.close();
+
+  // and the card renders: the card frame shows it as the reference frame does, unlike a blank frame
+  const card = await shot(browser, 'index.html', 'carriage-return');
+  const reference = await shot(browser, 'open.html', 'carriage-return');
+  const blank = await shot(browser, 'open.html', 'blank');
+  expect(card.equals(reference), `the card frame renders the card unlike the reference frame in ${engine}`).toBe(true);
+  expect(card.equals(blank), `the card frame renders a blank frame in ${engine}`).toBe(false);
 });

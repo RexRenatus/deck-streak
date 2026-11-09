@@ -36,3 +36,19 @@ That merge (6118295d) read red by name in the pull request run 42050736979, and 
 dev (7140a485) met this change only in the schematic, where dev had appended its own section 13
 first, so the schematic section this record's opening names as section 13 is now section 14; the
 commit after that merge changes only documents.
+
+## Amendment for #939
+
+A6 is red at the commit that adds the card and the census, before the spec's case exists, by its
+import assertion, and green once the case is added. The browser case R10 and R11 name is green at
+the base and carries no fence line: the first push's last commit plants the mutant of `attribute()`
+that drops its carriage-return write, whose `card-sandbox` run reads the case red in each engine,
+and the second push reverts it; that run is named here by its id. Each value below is the build's
+measurement at its commit.
+
+```red-first
+A6: red at dacbcc94e2348c191811b5363084166e0d65582b: AssertionError: expected '// The planted card suite (SPEC-341 R…' to match /import\s*\{[^}]*\bCARRIAGE\b[…/planted'
+A6: green at 2829ead65db1d7c446b64721ffdc029e066dcfb8
+```
+
+The card and the census are dacbcc94, the case and the harness line are 5b755487, between the red and the green, the planted mutant is 47a32349 and its removal is 2829ead6. In the first push's pull request run 42531846095, the `card-sandbox` job 128887540309 read the case red in each engine, and the `web` job read SPEC-462's A1 to A4 and the review's carriage-return face test red under the mutant.

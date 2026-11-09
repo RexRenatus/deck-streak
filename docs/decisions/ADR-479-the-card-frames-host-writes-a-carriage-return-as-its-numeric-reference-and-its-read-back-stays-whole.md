@@ -191,3 +191,26 @@ engine, unchanged.
 - Issue #798; #792, SPEC-407 and ADR-421 (the host and its read-back); SPEC-341 and ADR-352 (the card frame's layers).
 - The HTML standard's input-stream preprocessing (newline normalisation), its double-quoted attribute value state, its numeric character reference rules and its HTML fragment serialisation algorithm are the rules this ADR's mechanism cites.
 - Rebuilt onto `dev` at `0ef74a05`: SPEC-505 and ADR-523 have since named the host's refusal `host-readback` and moved the study screen's status onto `frameCard`, so the status now names a host refusal and the consequence above that leaves it quiet no longer holds; after this decision no face reaches that refusal, and the tests that planted it through a carriage return now plant a NUL in the frame title (SPEC-462 section 8).
+
+## Amendment for #939
+
+### D7. A planted render-proof card carries a field's carriage return reference, and a planted mutant of the host's write shows its case can fail
+
+The card is `CARRIAGE` in `planted.ts`, beside the render-proof card and outside `PLANTED`: it
+opens no channel, so the coverage test's equality of the planted cards with the schematic's web
+channels holds as it is, and the per-engine tables are unchanged. Its references sit in a title and
+in an image's alternative text, which neither frame paints, so the card frame's screenshot can
+equal the reference frame's in every engine, while the card document reads each carriage return as
+a line feed (SPEC-462 R4). The case reads the host's text and the engine's own parse of it in the
+shipped frame, and the frame's own parse with the sandbox removed, where the harness can reach it.
+
+The case is green at the base, since D2's write is on `dev`. Its power to fail is shown on the pull
+request: the first push carries, as its last commit, `attribute()` without its carriage-return
+write, and `card-sandbox` reads the case red in each engine by the refusal mark `host-readback`;
+the second push reverts that commit and reads green. The pull request changes no production file.
+
+Chosen against:
+- A card in `PLANTED`: rejected because every planted card is a channel the schematic names, and a row for a card that opens none, or a relaxed equality, would narrow the census.
+- The reference in the card's visible text: rejected because the reference frame would paint a carriage return where the card frame paints a line feed, and no engine's painting of the two is measured here.
+- A red by reverting D2 on `dev`: rejected because it edits committed production code on `dev`.
+- The case with no mutant: rejected because a case green at its first run shows nothing of its power to fail.
