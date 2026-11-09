@@ -27,10 +27,9 @@ const ENGINE: &str = "crates/ingest/src/engine.rs";
 /// CLOSED and holds files, never a crate: admitting a whole crate would let any file in it name the
 /// engine's crate, and narrowing the census to the server crates would let a new one fall out
 /// silently. Every listed path is asserted present in the census's sources.
-const ENGINE_PORTS: [(&str, &str); 3] = [
+const ENGINE_PORTS: [(&str, &str); 2] = [
     ("crates/engine-core/src/dispatch.rs", "SPEC-345"),
     ("crates/engine-core/src/face.rs", "SPEC-348"),
-    ("crates/engine-core/src/media.rs", "SPEC-348"),
 ];
 /// The skip's write module: beside the port, the one file that may name the write port.
 const SKIP_WRITE: &str = "crates/ingest/src/skip_write.rs";
@@ -342,6 +341,8 @@ fn only_the_skip_write_reaches_an_engine_write_or_a_push() {
              crates/ingest/src/engine.rs and crates/ingest/src/skip_write.rs may",
             "crates/engine-core/src/dispatch.rs:3 calls .update_card, and the engine port of \
              SPEC-345 may not write a card or push",
+            "crates/engine-core/src/media.rs:1 names anki::, and only \
+             crates/ingest/src/engine.rs may",
             "crates/ffi/src/lib.rs:1 names anki::, and only crates/ingest/src/engine.rs may",
             "crates/ingest/src/engine.rs:18 calls .update_card outside impl CollectionWrite for \
              RslibEngine",

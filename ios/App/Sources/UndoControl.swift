@@ -18,6 +18,7 @@ struct UndoControl: View {
         .accessibilityIdentifier("undo")
         .accessibilityValue(undo.label)
         .disabled(undo.label.isEmpty || !idle)
+        .tint(Color.tideAccent)
         .sheet(
             item: $undo.offer,
             onDismiss: {

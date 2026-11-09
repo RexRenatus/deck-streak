@@ -54,6 +54,8 @@
 //!   writes nothing (SPEC-414 R1 to R6).
 //! - [`backup_now`]: back up now, the open collection written into one new file on the owner's
 //!   word by the core's fixed statement and read back from it (SPEC-516 R4, R5).
+//! - [`occlusion`]: whether a card's question is an image occlusion question whose masks this
+//!   app does not draw, which both reviews withhold (SPEC-380 R1).
 //!
 //! The core depends on the engine and on one crate of this workspace, the isolated FSRS-7
 //! scheduler, which [`replay`] alone names; only the two client adapters depend on it (ADR-356 D4
@@ -76,6 +78,7 @@ pub mod login_guard;
 pub mod media;
 pub mod native_sync;
 pub mod native_undo;
+pub mod occlusion;
 pub mod one_way;
 pub mod reorder;
 pub mod replay;

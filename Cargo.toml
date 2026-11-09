@@ -205,9 +205,13 @@ divan = { package = "codspeed-divan-compat", version = "=6.0.0" }
 # hold guards, the sync server's move to block-buffer 0.12.1 and digest 0.11, and pulldown-cmark
 # 0.13.5; that last commit is tagged `deckstreak-pin-26.09.3-wasm32-blockbuf` (ADR-058's note,
 # ADR-583).
+# The engine's six unmaintained notices (the unic crates and rustls-pemfile) moved it to the merge
+# of RexRenatus/anki#1, which drops both crates from the engine, and one commit over it, which
+# drops their ignore entries from the fork's own deny list; that commit is tagged
+# `deckstreak-pin-26.09.3-wasm32-unmaint` (ADR-058's note).
 [patch."https://github.com/ankitects/anki.git"]
-anki = { git = "https://github.com/RexRenatus/anki.git", rev = "dca72f352730abb4222389cc148e46387c17f97f" }
-anki_proto = { git = "https://github.com/RexRenatus/anki.git", rev = "dca72f352730abb4222389cc148e46387c17f97f" }
+anki = { git = "https://github.com/RexRenatus/anki.git", rev = "2d8e3150f5e392f5cfaa7bfe8485c479186307a9" }
+anki_proto = { git = "https://github.com/RexRenatus/anki.git", rev = "2d8e3150f5e392f5cfaa7bfe8485c479186307a9" }
 
 # ADR-513: web-push-native from the maintainer's fork, at the upstream change that moves it to
 # p256 0.14, so crypto-bigint 0.5.5 and RUSTSEC-2026-0387 leave the lock. Pinned by `rev`; the
@@ -227,6 +231,31 @@ sqlx-macros-core = { git = "https://github.com/RexRenatus/sqlx.git", rev = "9e82
 sqlx-mysql = { git = "https://github.com/RexRenatus/sqlx.git", rev = "9e8282470fd7a1d7d57cd20cad526e0996875012" }
 sqlx-postgres = { git = "https://github.com/RexRenatus/sqlx.git", rev = "9e8282470fd7a1d7d57cd20cad526e0996875012" }
 sqlx-sqlite = { git = "https://github.com/RexRenatus/sqlx.git", rev = "9e8282470fd7a1d7d57cd20cad526e0996875012" }
+# ADR-657: the seven uniffi crates from the maintainer's fork, at the published 0.29.1 with
+# uniffi_bindgen's unused paste dropped, so RUSTSEC-2024-0436 loses this parent. Pinned by `rev`;
+# the fork's branch `deckstreak-no-paste` keeps the commit fetchable. uniffi_internal_macros comes
+# from the same commit at 0.29.1, the version the release names. The entries go when a uniffi
+# release that ADR-345 admits drops paste.
+uniffi = { git = "https://github.com/RexRenatus/uniffi-rs.git", rev = "bfb6dd9eb92b9febcfe00583ed57bec2ee056c34" }
+uniffi_bindgen = { git = "https://github.com/RexRenatus/uniffi-rs.git", rev = "bfb6dd9eb92b9febcfe00583ed57bec2ee056c34" }
+uniffi_core = { git = "https://github.com/RexRenatus/uniffi-rs.git", rev = "bfb6dd9eb92b9febcfe00583ed57bec2ee056c34" }
+uniffi_internal_macros = { git = "https://github.com/RexRenatus/uniffi-rs.git", rev = "bfb6dd9eb92b9febcfe00583ed57bec2ee056c34" }
+uniffi_macros = { git = "https://github.com/RexRenatus/uniffi-rs.git", rev = "bfb6dd9eb92b9febcfe00583ed57bec2ee056c34" }
+uniffi_meta = { git = "https://github.com/RexRenatus/uniffi-rs.git", rev = "bfb6dd9eb92b9febcfe00583ed57bec2ee056c34" }
+uniffi_udl = { git = "https://github.com/RexRenatus/uniffi-rs.git", rev = "bfb6dd9eb92b9febcfe00583ed57bec2ee056c34" }
+# ADR-657: rinja, rinja_derive and rinja_parser from the maintainer's fork of askama, at the
+# published rinja 0.3.5 with its config parsed by toml 0.5, so basic-toml and RUSTSEC-2026-0374
+# leave the lock. Pinned by `rev`; the fork's branch `deckstreak-rinja-toml` keeps the commit
+# fetchable. The entries go when a rinja or askama release that the bindings generator takes drops
+# basic-toml.
+rinja = { git = "https://github.com/RexRenatus/askama.git", rev = "efef71d57c2f9195da6f4c128f742b8ac865d26c" }
+rinja_derive = { git = "https://github.com/RexRenatus/askama.git", rev = "efef71d57c2f9195da6f4c128f742b8ac865d26c" }
+rinja_parser = { git = "https://github.com/RexRenatus/askama.git", rev = "efef71d57c2f9195da6f4c128f742b8ac865d26c" }
+# ADR-657: frankenstein from the maintainer's fork, at the published 0.52.1 with paste replaced by
+# pastey 0.2.3, so paste and RUSTSEC-2024-0436 leave the lock. Pinned by `rev`; the fork's branch
+# `deckstreak-pastey` keeps the commit fetchable. The entry goes when a frankenstein release drops
+# paste.
+frankenstein = { git = "https://github.com/RexRenatus/frankenstein.git", rev = "c757cbb994829a00b4fadb0c662fdf16ccd8c2a1" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
@@ -247,6 +276,9 @@ unwrap_used = "warn"
 expect_used = "warn"
 dbg_macro = "warn"
 print_stdout = "warn"
+# SPEC-436 R1: a lock guard held across an await is denied by name, not only through `all`.
+await_holding_lock = "deny"
+await_holding_refcell_ref = "deny"
 # Pedantic lints this workspace allows, each for a reason.
 # A context's types are named for the context (readings::ReadingNote): the repetition is the
 # ubiquitous language, not noise.

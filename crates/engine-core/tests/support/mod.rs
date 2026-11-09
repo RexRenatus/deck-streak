@@ -1,12 +1,14 @@
 //! Support for the engine core's integration tests (SPEC-345): the examined count every
-//! enumerating test reports, a synthetic collection the engine itself builds, and the engine's own
-//! sync server on a loopback port (SPEC-364).
+//! enumerating test reports, a synthetic collection the engine itself builds, its cutoff pinned by
+//! the tests' one clock (SPEC-443 R2), and the engine's own sync server on a loopback port
+//! (SPEC-364).
 
 #![allow(
     dead_code,
     reason = "each test target includes this module and calls the part it needs"
 )]
 
+pub mod clock;
 pub mod sync_server;
 
 use std::path::{Path, PathBuf};
@@ -50,7 +52,7 @@ pub fn scratch(area: &str, test: &str) -> PathBuf {
     dir
 }
 
-/// A collection built for one test, closed, and ready for a dispatcher to open.
+/// A collection built for one test, closed, its cutoff pinned, and ready for a dispatcher to open.
 pub struct Synthetic {
     /// The test's own directory.
     pub dir: PathBuf,
@@ -58,10 +60,39 @@ pub struct Synthetic {
     pub collection: PathBuf,
     /// The two cards, in the order their notes were added.
     pub cards: [i64; 2],
+    /// The clock the collection was pinned at: every time the test hands the engine.
+    pub clock: clock::Clock,
 }
 
-/// Builds two Basic notes in the default deck, so two cards, with the engine's own API.
+/// Builds two Basic notes in the default deck, so two cards, with the engine's own API, and pins
+/// the collection's cutoff before any engine opens it (SPEC-443 R2).
 pub fn synthetic(test: &str) -> Synthetic {
+    let (dir, collection, cards) = built(test);
+    let clock = clock::pin(&collection);
+    Synthetic {
+        dir,
+        collection,
+        cards,
+        clock,
+    }
+}
+
+/// The same collection, its cutoff first placed `start` after the clock's instant, then pinned
+/// (SPEC-443 R5).
+pub fn synthetic_placed(test: &str, start: i64) -> Synthetic {
+    let (dir, collection, cards) = built(test);
+    clock::place(&collection, start);
+    let clock = clock::pin(&collection);
+    Synthetic {
+        dir,
+        collection,
+        cards,
+        clock,
+    }
+}
+
+/// The synthetic collection's directory, file and two cards, built and closed.
+fn built(test: &str) -> (PathBuf, PathBuf, [i64; 2]) {
     let dir = scratch("engine-core-dispatch", test);
     std::fs::create_dir_all(dir.join("collection.media")).expect("a media directory");
     let collection = dir.join("collection.anki2");
@@ -90,11 +121,7 @@ pub fn synthetic(test: &str) -> Synthetic {
             .expect("the note has one card");
     }
     col.close(None).expect("the engine closes the collection");
-    Synthetic {
-        dir,
-        collection,
-        cards,
-    }
+    (dir, collection, cards)
 }
 
 fn text(path: &Path) -> String {

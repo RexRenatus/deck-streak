@@ -5,15 +5,21 @@ that carries the rebuild fix (SPEC-055 A1, A2, A3 and A5; ADR-058).
   tag, the root manifest's `[patch]` entry on the upstream URL takes `anki` from the fork by a full
   commit id, and `anki_proto` from the same commit when it is patched too (SPEC-338 A14, ADR-348),
   every engine package in the lockfile comes from that commit, and `allow-git` names exactly the
-  fork, `ankitects/rust-url`, fsrs-rs, the web-push-native fork and the sqlx fork (ADR-338;
-  SPEC-342 A2; ADR-513; ADR-583).
+  fork, `ankitects/rust-url`, fsrs-rs, the web-push-native fork, the sqlx fork, the uniffi-rs
+  fork, the askama fork and the frankenstein fork (ADR-338; SPEC-342 A2; ADR-513; ADR-583;
+  ADR-657).
 - A2 builds `deck-streak-ingest` twice in the workspace's own target directory and reads the second
   build's `Compiling`, `Dirty`, `Fresh` and `Finished` lines. With the fix, nothing is compiled or
   judged dirty, and cargo's own time stays inside R2's bound. Unpatched, the second build recompiles
   `anki_proto` and `anki` (#228).
 - A3 runs `cargo deny` over the advisories and the sources, and reads the notes it prints at the
-  info level. Every advisory exception in `deny.toml` is one it still encounters, and every allowed
-  git source is one a crate of the graph comes from.
+  info level. It refuses any advisory exception in `deny.toml` and any ignore cargo deny applies,
+  and every allowed git source is one a crate of the graph comes from.
+- A24 reads `deny.toml`'s `[advisories]` table. It holds no ignore entry in either form, and its
+  `unmaintained` scope is `"all"`, written out so that no later default narrows it (SPEC-055 R15).
+- A25 reads the lockfile's packages. No unmaintained crate that SPEC-055's amendments retire
+  (`paste` and `basic-toml`, ADR-657; the five `unic` crates and `rustls-pemfile`, ADR-058's
+  latest note) is one of them, at any version and from any source.
 - A5 reads ADR-058's Confirmation: the pinned commit and its one-file difference from the upstream
   tag, the no-op build before and after the pin, CI's runs, and a final status. When a note
   appended to ADR-058 moved the pin (SPEC-338 A15), the Confirmation is judged at the fix's own
@@ -58,6 +64,17 @@ WEB_PUSH = "https://github.com/RexRenatus/web-push-native.git"
 #: The maintainer's fork of sqlx, at the published 0.9.0 with sha2 moved to 0.11; all seven sqlx
 #: crates come from it until a sqlx release moves to sha2 0.11 (ADR-583).
 SQLX = "https://github.com/RexRenatus/sqlx.git"
+#: The maintainer's fork of uniffi-rs, at the published 0.29.1 without uniffi_bindgen's unused
+#: paste; all seven uniffi crates come from it until a uniffi release ADR-345 admits drops paste
+#: (ADR-657).
+UNIFFI_RS = "https://github.com/RexRenatus/uniffi-rs.git"
+#: The maintainer's fork of askama, at the published rinja 0.3.5 with its config parsed by toml 0.5;
+#: rinja, rinja_derive and rinja_parser come from it until a release the bindings generator takes
+#: drops basic-toml (ADR-657).
+ASKAMA = "https://github.com/RexRenatus/askama.git"
+#: The maintainer's fork of frankenstein, at the published 0.52.1 with paste replaced by pastey;
+#: frankenstein comes from it until a frankenstein release drops paste (ADR-657).
+FRANKENSTEIN = "https://github.com/RexRenatus/frankenstein.git"
 #: The upstream release the engine runs (SPEC-055 R1).
 TAG = "26.09.3"
 #: The dependency line, in the one form its two readers parse: SPEC-022's A1 check and the report
@@ -100,7 +117,8 @@ def patched_rev(manifest):
 
 def pin_findings(manifest, lock, deny):
     """Why the engine is not the upstream tag patched by rev to a commit of the fork, with exactly
-    the fork, rust-url, fsrs-rs, web-push-native and sqlx allowed; empty when it is."""
+    the fork, rust-url, fsrs-rs, web-push-native, sqlx, uniffi-rs, askama and frankenstein
+    allowed; empty when it is."""
     found = []
     dependency = tomllib.loads(manifest).get("workspace", {}).get("dependencies", {}).get("anki")
     if DEPENDENCY not in manifest.splitlines():
@@ -154,10 +172,12 @@ def pin_findings(manifest, lock, deny):
         found.append(f"the lockfile records the patch as unused: {[p['name'] for p in unused]}")
     sources = tomllib.loads(deny).get("sources", {})
     allowed = sources.get("allow-git", [])
-    if sorted(allowed) != sorted([FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX]):
+    if sorted(allowed) != sorted(
+        [FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, UNIFFI_RS, ASKAMA, FRANKENSTEIN]
+    ):
         found.append(
-            f"allow-git is {allowed}, not exactly the fork, rust-url, fsrs-rs, web-push-native "
-            "and sqlx"
+            f"allow-git is {allowed}, not exactly the fork, rust-url, fsrs-rs, web-push-native, "
+            "sqlx, uniffi-rs, askama and frankenstein"
         )
     if sources.get("unknown-git") != "deny":
         found.append(f"unknown-git is {sources.get('unknown-git')!r}, not 'deny'")
@@ -198,7 +218,9 @@ def planted_lock(sources=None, unused=""):
     return body + unused
 
 
-def planted_deny(allowed=(FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX)):
+def planted_deny(
+    allowed=(FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, UNIFFI_RS, ASKAMA, FRANKENSTEIN),
+):
     listed = ", ".join(f'"{url}"' for url in allowed)
     return f'[sources]\nunknown-git = "deny"\nallow-git = [{listed}]\n'
 
@@ -399,6 +421,122 @@ PLANTED_LIVE = [
     note("advisory-ignored", ("advisory ignored here", "RUSTSEC-0000-0002")),
     note("allowed-source", ("source", f"git+{RUST_URL}"), ("source allowance", RUST_URL)),
 ]
+
+# ----------------------------------------------------------------------------------------- A24
+
+#: The `unmaintained` scope `deny.toml` sets: every crate of the graph, cargo-deny's default,
+#: written out so that no later default narrows it (SPEC-055 R15).
+UNMAINTAINED = "all"
+
+
+def exception_findings(deny):
+    """Why `deny.toml` admits an advisory exception or a narrowed unmaintained scope; empty when it
+    admits neither."""
+    advisories = tomllib.loads(deny).get("advisories", {})
+    found = []
+    for entry in advisories.get("ignore", []):
+        if isinstance(entry, dict):
+            named = entry["id"] if "id" in entry else entry.get("crate")
+        else:
+            named = entry
+        found.append(f"deny.toml ignores {named}: an advisory exception is not a fix")
+    scope = advisories.get("unmaintained")
+    if scope is None:
+        found.append("deny.toml sets no unmaintained scope, so a later default can narrow it")
+    elif scope != UNMAINTAINED:
+        found.append(f"deny.toml narrows the unmaintained scope to {scope!r}, not {UNMAINTAINED!r}")
+    return found
+
+
+def planted_advisories(*lines):
+    """A planted `deny.toml` whose `[advisories]` table holds the given lines."""
+    return "[advisories]\n" + "".join(f"{line}\n" for line in lines)
+
+
+PLANTED_CLEAN_DENY = planted_advisories('unmaintained = "all"')
+#: One defect apiece, each file otherwise clean: (name, file, the one finding it reads).
+PLANTED_DENY_DEFECTS = (
+    (
+        "an ignore entry by id",
+        planted_advisories(
+            'unmaintained = "all"', 'ignore = [{ id = "RUSTSEC-0000-0001", reason = "planted" }]'
+        ),
+        "deny.toml ignores RUSTSEC-0000-0001: an advisory exception is not a fix",
+    ),
+    (
+        "a bare ignore string",
+        planted_advisories('unmaintained = "all"', 'ignore = ["RUSTSEC-0000-0002"]'),
+        "deny.toml ignores RUSTSEC-0000-0002: an advisory exception is not a fix",
+    ),
+    (
+        "an ignore entry by crate",
+        planted_advisories(
+            'unmaintained = "all"', 'ignore = [{ crate = "planted@0.1.0", reason = "planted" }]'
+        ),
+        "deny.toml ignores planted@0.1.0: an advisory exception is not a fix",
+    ),
+    (
+        "the workspace scope",
+        planted_advisories('unmaintained = "workspace"'),
+        "deny.toml narrows the unmaintained scope to 'workspace', not 'all'",
+    ),
+    (
+        "the transitive scope",
+        planted_advisories('unmaintained = "transitive"'),
+        "deny.toml narrows the unmaintained scope to 'transitive', not 'all'",
+    ),
+    (
+        "the none scope",
+        planted_advisories('unmaintained = "none"'),
+        "deny.toml narrows the unmaintained scope to 'none', not 'all'",
+    ),
+    (
+        "no unmaintained key",
+        planted_advisories(),
+        "deny.toml sets no unmaintained scope, so a later default can narrow it",
+    ),
+)
+
+# ----------------------------------------------------------------------------------------- A25
+
+#: The unmaintained crates SPEC-055's amendments retire, each with its notice: the lockfile names
+#: none of them as a package, at any version and from any source (SPEC-055 §9 and §10: `paste` and
+#: `basic-toml`, ADR-657; the five `unic` crates and `rustls-pemfile`, ADR-058's latest note). A
+#: later amendment widens this by insertion only.
+RETIRED = (
+    ("paste", "RUSTSEC-2024-0436"),
+    ("basic-toml", "RUSTSEC-2026-0374"),
+    ("unic-char-range", "RUSTSEC-2025-0075"),
+    ("unic-common", "RUSTSEC-2025-0080"),
+    ("unic-char-property", "RUSTSEC-2025-0081"),
+    ("unic-ucd-category", "RUSTSEC-2025-0094"),
+    ("unic-ucd-version", "RUSTSEC-2025-0098"),
+    ("rustls-pemfile", "RUSTSEC-2025-0134"),
+)
+#: The maintained successors already in the lock, which a clean planted lock holds.
+SUCCESSORS = (("pastey", "0.2.3"), ("toml", "0.5.11"))
+
+
+def lock_findings(lock):
+    """Why a crate SPEC-055's amendments retire is still in the lockfile; empty when none is."""
+    names = {package.get("name") for package in tomllib.loads(lock).get("package", [])}
+    return [
+        f"{crate} ({advisory}) is a package of Cargo.lock"
+        for crate, advisory in RETIRED
+        if crate in names
+    ]
+
+
+def planted_packages(*packages):
+    """A planted lockfile of the given (name, version) registry packages."""
+    body = "version = 4\n"
+    for name, version in packages:
+        body += (
+            f'\n[[package]]\nname = "{name}"\nversion = "{version}"\n'
+            'source = "registry+https://github.com/rust-lang/crates.io-index"\n'
+        )
+    return body
+
 
 # ------------------------------------------------------------------------------------------ A5
 
@@ -636,37 +774,89 @@ class TheEngineIsPatchedByRev(unittest.TestCase):
             "upstream still allowed": (
                 planted_manifest(),
                 planted_lock(),
-                planted_deny((UPSTREAM, FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX)),
+                planted_deny(
+                    (
+                        UPSTREAM,
+                        FORK,
+                        RUST_URL,
+                        FSRS_RS,
+                        WEB_PUSH,
+                        SQLX,
+                        UNIFFI_RS,
+                        ASKAMA,
+                        FRANKENSTEIN,
+                    )
+                ),
                 [
-                    f"allow-git is {[UPSTREAM, FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX]}, "
-                    "not exactly the fork, rust-url, fsrs-rs, web-push-native and sqlx"
+                    "allow-git is "
+                    f"{[UPSTREAM, FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, UNIFFI_RS, ASKAMA, FRANKENSTEIN]}, "
+                    "not exactly the fork, rust-url, fsrs-rs, web-push-native, sqlx, uniffi-rs, "
+                    "askama and frankenstein"
                 ],
             ),
             "fsrs-rs not allowed": (
                 planted_manifest(),
                 planted_lock(),
-                planted_deny((FORK, RUST_URL, WEB_PUSH, SQLX)),
+                planted_deny((FORK, RUST_URL, WEB_PUSH, SQLX, UNIFFI_RS, ASKAMA, FRANKENSTEIN)),
                 [
-                    f"allow-git is {[FORK, RUST_URL, WEB_PUSH, SQLX]}, "
-                    "not exactly the fork, rust-url, fsrs-rs, web-push-native and sqlx"
+                    "allow-git is "
+                    f"{[FORK, RUST_URL, WEB_PUSH, SQLX, UNIFFI_RS, ASKAMA, FRANKENSTEIN]}, "
+                    "not exactly the fork, rust-url, fsrs-rs, web-push-native, sqlx, uniffi-rs, "
+                    "askama and frankenstein"
                 ],
             ),
             "web-push-native's fork not allowed": (
                 planted_manifest(),
                 planted_lock(),
-                planted_deny((FORK, RUST_URL, FSRS_RS, SQLX)),
+                planted_deny((FORK, RUST_URL, FSRS_RS, SQLX, UNIFFI_RS, ASKAMA, FRANKENSTEIN)),
                 [
-                    f"allow-git is {[FORK, RUST_URL, FSRS_RS, SQLX]}, "
-                    "not exactly the fork, rust-url, fsrs-rs, web-push-native and sqlx"
+                    "allow-git is "
+                    f"{[FORK, RUST_URL, FSRS_RS, SQLX, UNIFFI_RS, ASKAMA, FRANKENSTEIN]}, "
+                    "not exactly the fork, rust-url, fsrs-rs, web-push-native, sqlx, uniffi-rs, "
+                    "askama and frankenstein"
                 ],
             ),
             "sqlx's fork not allowed": (
                 planted_manifest(),
                 planted_lock(),
-                planted_deny((FORK, RUST_URL, FSRS_RS, WEB_PUSH)),
+                planted_deny((FORK, RUST_URL, FSRS_RS, WEB_PUSH, UNIFFI_RS, ASKAMA, FRANKENSTEIN)),
                 [
-                    f"allow-git is {[FORK, RUST_URL, FSRS_RS, WEB_PUSH]}, "
-                    "not exactly the fork, rust-url, fsrs-rs, web-push-native and sqlx"
+                    "allow-git is "
+                    f"{[FORK, RUST_URL, FSRS_RS, WEB_PUSH, UNIFFI_RS, ASKAMA, FRANKENSTEIN]}, "
+                    "not exactly the fork, rust-url, fsrs-rs, web-push-native, sqlx, uniffi-rs, "
+                    "askama and frankenstein"
+                ],
+            ),
+            "uniffi-rs's fork not allowed": (
+                planted_manifest(),
+                planted_lock(),
+                planted_deny((FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, ASKAMA, FRANKENSTEIN)),
+                [
+                    "allow-git is "
+                    f"{[FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, ASKAMA, FRANKENSTEIN]}, "
+                    "not exactly the fork, rust-url, fsrs-rs, web-push-native, sqlx, uniffi-rs, "
+                    "askama and frankenstein"
+                ],
+            ),
+            "askama's fork not allowed": (
+                planted_manifest(),
+                planted_lock(),
+                planted_deny((FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, UNIFFI_RS, FRANKENSTEIN)),
+                [
+                    "allow-git is "
+                    f"{[FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, UNIFFI_RS, FRANKENSTEIN]}, "
+                    "not exactly the fork, rust-url, fsrs-rs, web-push-native, sqlx, uniffi-rs, "
+                    "askama and frankenstein"
+                ],
+            ),
+            "frankenstein's fork not allowed": (
+                planted_manifest(),
+                planted_lock(),
+                planted_deny((FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, UNIFFI_RS, ASKAMA)),
+                [
+                    f"allow-git is {[FORK, RUST_URL, FSRS_RS, WEB_PUSH, SQLX, UNIFFI_RS, ASKAMA]}, "
+                    "not exactly the fork, rust-url, fsrs-rs, web-push-native, sqlx, uniffi-rs, "
+                    "askama and frankenstein"
                 ],
             ),
             "a comment that names neither": (
@@ -740,7 +930,7 @@ class DenyTomlIsLive(unittest.TestCase):
             )
         deny = DENY.read_text(encoding="utf-8")
         ids, urls = exceptions_of(deny)
-        examined("advisory exception(s) in deny.toml", ids)
+        self.assertEqual(ids, [], "deny.toml ignores an advisory: an exception is not a fix")
         examined("allowed git source(s) in deny.toml", urls)
         try:
             done = subprocess.run(
@@ -754,6 +944,32 @@ class DenyTomlIsLive(unittest.TestCase):
         summaries = [d for d in diagnostics if d.get("type") == "summary"]
         self.assertEqual(len(summaries), 1, f"cargo deny ran no check: {done.stderr[-2000:]}")
         self.assertEqual(audit_findings(deny, diagnostics), [])
+        self.assertEqual(spans(diagnostics, "advisory-ignored", "advisory ignored here"), set())
+
+
+class DenyTomlAdmitsNoException(unittest.TestCase):
+    def test_deny_toml_admits_no_advisory_exception_and_no_narrowed_scope(self):
+        self.assertEqual(exception_findings(PLANTED_CLEAN_DENY), [])
+        for name, planted, finding in examined("planted deny.toml defect(s)", PLANTED_DENY_DEFECTS):
+            with self.subTest(name):
+                self.assertEqual(exception_findings(planted), [finding])
+        live = DENY.read_text(encoding="utf-8")
+        examined("[advisories] key(s) in deny.toml", tomllib.loads(live).get("advisories", {}))
+        self.assertEqual(exception_findings(live), [])
+
+
+class RetiredCratesAreGone(unittest.TestCase):
+    def test_the_retired_unmaintained_crates_are_absent_from_the_lockfile(self):
+        self.assertEqual(lock_findings(planted_packages(*SUCCESSORS)), [])
+        for crate, advisory in examined("retired crate(s)", RETIRED):
+            with self.subTest(crate):
+                self.assertEqual(
+                    lock_findings(planted_packages(*SUCCESSORS, (crate, "1.0.0"))),
+                    [f"{crate} ({advisory}) is a package of Cargo.lock"],
+                )
+        live = LOCKFILE.read_text(encoding="utf-8")
+        examined("package(s) in Cargo.lock", tomllib.loads(live).get("package", []))
+        self.assertEqual(lock_findings(live), [])
 
 
 class Adr058RecordsThePin(unittest.TestCase):

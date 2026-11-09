@@ -13,7 +13,7 @@ export type Layer = 'W1' | 'W2' | 'W3' | 'W4';
 
 /** Where a planted card's markup points: the listeners' addresses, from the test. */
 export interface Listener {
-  /** The HTTP listener's origin, counting requests by path. */
+  /** The HTTP listener's origin, counting requests by path: the harness's sentinel names it, and no planted card does (SPEC-641). */
   http: string;
   /** The TCP listener's origin, counting every connection and each request by its path (SPEC-461). */
   tcp: string;
@@ -72,9 +72,9 @@ const COVER = '.cover { position: fixed; inset: 0; display: block; margin: 0; }'
 
 const none = (): string => '';
 
-/** A card that loads from the HTTP listener under its own path, with no click. */
-function loads(id: string, alone: Layer | null, html: (http: string) => string, css: (http: string) => string = none): PlantedCard {
-  return { id, alone, click: false, html: (l) => html(`${l.http}/${id}`), css: (l) => css(`${l.http}/${id}`), paths: [`/${id}/`] };
+/** A card that loads from the TCP listener under its own path, with no click (SPEC-641). */
+function loads(id: string, alone: Layer | null, html: (tcp: string) => string, css: (tcp: string) => string = none): PlantedCard {
+  return { id, alone, click: false, html: (l) => html(`${l.tcp}/${id}`), css: (l) => css(`${l.tcp}/${id}`), paths: ['tcp', `/${id}/`] };
 }
 
 /** A card whose full-frame link or button acts when clicked, toward the TCP listener (SPEC-461). */
@@ -118,7 +118,7 @@ export const PLANTED: readonly PlantedCard[] = [
       null,
       (h) => `<img alt="" srcset="${h}/1 1x"><picture><source srcset="${h}/2"><img alt=""></picture>`
     ),
-    paths: ['/srcset/1', '/srcset/2']
+    paths: ['tcp', '/srcset/1', '/srcset/2']
   },
   loads(
     'css-url',
@@ -275,4 +275,18 @@ export const RENDER: RenderCard | null = {
     '<img alt="a red square" width="40" height="40" src="data:image/gif;base64,R0lGODlhAQABAIABAP8AAP///ywAAAAAAQABAAACAkQBADs=">' +
     '<table><tbody><tr><td>der</td><td>Hund</td></tr><tr><td>die</td><td>Katze</td></tr></tbody></table>',
   css: 'body { font: 16px sans-serif; color: #123; background: #fefae0; } td { border: 1px solid #333; padding: 4px; }'
+};
+
+/**
+ * The carriage-return card (#939; SPEC-462 R9; ADR-479 D7): a field holding a carriage return as its
+ * numeric reference, decimal in a paragraph's title and hexadecimal in an image's alternative text,
+ * where neither is painted. The frame document writes each as a raw carriage return, the host writes
+ * that as `&#13;` in its frame's `srcdoc`, and an engine whose parser reads the reference back as the
+ * carriage return lets the host carry the card. It points nowhere, so it proves a render alone.
+ */
+export const CARRIAGE: RenderCard = {
+  html:
+    '<p title="Der&#13;Hund">Der Hund: the dog</p>' +
+    '<img alt="a red&#xD;square" width="40" height="40" src="data:image/gif;base64,R0lGODlhAQABAIABAP8AAP///ywAAAAAAQABAAACAkQBADs=">',
+  css: 'body { font: 16px sans-serif; color: #123; background: #fefae0; }'
 };

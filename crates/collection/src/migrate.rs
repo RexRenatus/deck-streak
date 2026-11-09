@@ -18,14 +18,21 @@ pub struct Migration {
 }
 
 /// Every migration, oldest first.
-pub const MIGRATIONS: &[Migration] = &[Migration {
-    version: 1,
-    description: "collection_base",
-    sql: include_str!("../migrations/000001_collection_base.sql"),
-}];
+pub const MIGRATIONS: &[Migration] = &[
+    Migration {
+        version: 1,
+        description: "collection_base",
+        sql: include_str!("../migrations/000001_collection_base.sql"),
+    },
+    Migration {
+        version: 2,
+        description: "media_store",
+        sql: include_str!("../migrations/000002_media_store.sql"),
+    },
+];
 
 /// The newest migration's version: a store at head reads it as its `user_version`.
-pub const HEAD: i64 = 1;
+pub const HEAD: i64 = 2;
 
 /// Runs every migration above the file's `user_version`, each in its own `BEGIN IMMEDIATE`
 /// transaction. The version is read again inside each transaction, so two openers racing on one

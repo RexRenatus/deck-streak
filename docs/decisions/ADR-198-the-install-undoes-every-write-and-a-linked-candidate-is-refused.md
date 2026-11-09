@@ -103,3 +103,14 @@ ADR-364 decides how the set-apart layout serves the site:
 This record's decisions are unchanged. The candidate keeps its fixed name, and the four-name guard
 and the directory checks read its new place through the same variables. SPEC-353 delivers
 #452, and #451 stays out of scope. The rest of this record stands.
+
+## Amendment (SPEC-473): the refusal is one function, proved in Lean
+
+The refusal this record decides, each Caddy step's check of the deploy settings it received and of
+its own deploy variables, is now one shell function of `deploy.sh`, `refuse_unlisted_settings`,
+which the Caddy arm calls before anything else; its body is unchanged, and so is every verdict.
+ADR-490 decides why the check is a function (a Lean entry's cover names a shell function, never
+top-level lines), what the entry ports and proves over every environment block, and how its vectors
+are run against the step. The limit this record leaves open stands: a name outside the prefix
+that the shell reads as code when it starts is outside the check and outside the proof (#423).
+This record's decisions are unchanged. The rest of this record stands.

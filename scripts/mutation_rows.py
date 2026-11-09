@@ -126,6 +126,12 @@ class KillerUnresolved(ValueError):
     """A killer that does not name exactly one test the tree holds."""
 
 
+class PlanRefused(ValueError):
+    """A `--rows-from` plan of a shape no plan has: its sentence names the file and the shape
+    the plan needed, and `dispatch` prints it as `mutation_rows: REFUSED: ...` on stderr
+    (SPEC-645 R1 to R4)."""
+
+
 # --------------------------------------------------------------------------- the reader
 
 
@@ -150,6 +156,17 @@ def _row_id(row: object) -> str | None:
     return None
 
 
+def _refuse_misshapen_rows(where: str, table: str, rows: list) -> None:
+    """Refuse the first row of `table` in `where` that is not an array of strings, by its index
+    from 0. Every reader of a row indexes it and reads each cell as text, so a row of another
+    shape would end there in a traceback (SPEC-646 R2, R3)."""
+    for index, cells in enumerate(rows):
+        if not isinstance(cells, list):
+            raise PopulationRefused(f"{where}: {table}[{index}] is not an array of cells")
+        if not all(isinstance(cell, str) for cell in cells):
+            raise PopulationRefused(f"{where}: {table}[{index}] holds a cell that is not a string")
+
+
 def assemble(monolith: object, fragments: list[tuple[str, object]]) -> object:
     """The population: the header's document with each fragment's rows appended, table by table,
     fragments in band order. Raises `PopulationRefused` naming the file for every refusal the
@@ -170,6 +187,10 @@ def assemble(monolith: object, fragments: list[tuple[str, object]]) -> object:
     for (earlier, first, _), (later, second, _) in zip(banded, banded[1:]):
         if later[0] <= earlier[1]:
             raise PopulationRefused(f"{FRAGMENTS}/{first} and {FRAGMENTS}/{second} overlap")
+    for table, header_rows in tables.items():
+        if not isinstance(header_rows, list):
+            raise PopulationRefused(f"{MONOLITH}: {table} is not an array of rows")
+        _refuse_misshapen_rows(MONOLITH, table, header_rows)
     held: dict[str, str] = {}
     merged = {name: list(rows) for name, rows in tables.items()}
     for rows in tables.values():
@@ -191,6 +212,7 @@ def assemble(monolith: object, fragments: list[tuple[str, object]]) -> object:
                 raise PopulationRefused(f"{where} holds the table {table}, which {MONOLITH} lacks")
             if not isinstance(rows, list):
                 raise PopulationRefused(f"{where}: {table} is not an array of rows")
+            _refuse_misshapen_rows(where, table, rows)
             for row in rows:
                 identifier = _row_id(row)
                 if identifier is None:
@@ -1191,6 +1213,28 @@ def prove_row(root: pathlib.Path, row: Row, scratch: pathlib.Path) -> dict:
             raise RestoreFailed(f"{row.target} was not restored byte for byte after {row.id}")
 
 
+def plan_rows(path: str, plan: object) -> list[str]:
+    """The row ids a `--rows-from` plan selects, from its parsed text (SPEC-645 R1 to R3).
+
+    The plan is an object, its `rows` (an absent key, no row) an array and each of its entries a
+    string; anything else is refused by the sentence naming the file and the shape it needed,
+    the first wrong entry by its index from 0, where the base's `plan.get` crashed with a
+    traceback or read an object's keys as row ids (#950).
+
+    Raises:
+        PlanRefused: The plan, its `rows` value or one of its entries is of another shape.
+    """
+    if not isinstance(plan, dict):
+        raise PlanRefused(f"{path} must hold a top-level object")
+    planned = plan.get("rows", [])
+    if not isinstance(planned, list):
+        raise PlanRefused(f"{path}: `rows` is not an array of row ids")
+    for index, identifier in enumerate(planned):
+        if not isinstance(identifier, str):
+            raise PlanRefused(f"{path}: rows[{index}] is not a string")
+    return planned
+
+
 def chosen(rows: list[Row], args: argparse.Namespace) -> list[Row]:
     """Every row the selectors name together, each once: `--all`, or a band's, each `--row` and a
     plan's `--rows-from`. No selector drops another's rows."""
@@ -1205,7 +1249,7 @@ def chosen(rows: list[Row], args: argparse.Namespace) -> list[Row]:
     wanted += list(args.row)
     if args.rows_from:
         plan = json.loads(pathlib.Path(args.rows_from).read_text(encoding="utf-8"))
-        wanted += plan.get("rows", [])
+        wanted += plan_rows(args.rows_from, plan)
     by_id = {row.id: row for row in rows}
     missing = [identifier for identifier in wanted if identifier not in by_id]
     if missing:
@@ -1461,12 +1505,14 @@ def retired(root: pathlib.Path, base: str) -> int:
 @dataclass
 class RunSignals:
     """One run of `main()`'s signal state: the signal ending it, once one arrived, and whether a
-    killer is being started (SPEC-465 R6 to R8).
+    killer is being started (SPEC-465 R6 to R8, SPEC-647 R1 to R4).
 
-    `handle` is the run's one handler for SIGTERM and SIGHUP. A signal after the first is ignored,
-    so a cleanup the first began runs to its end. The first is recorded and ends the run at once,
-    `SystemExit(128 + signum)` unwinding every `finally`, unless a killer is being started: then it
-    waits for `released`, inside the `try` whose `finally` ends the killer's group.
+    `handle` is the run's one handler for SIGTERM, SIGHUP and SIGINT. A signal after the first
+    is ignored, whichever it is, so a cleanup the first began runs to its end. The first is
+    recorded and ends the run at once, by `SystemExit(128 + signum)` or, for SIGINT, by the
+    interpreter's own `KeyboardInterrupt`, unwinding every `finally`, unless a killer is being
+    started: then it waits for `released`, inside the `try` whose `finally` ends the killer's
+    group.
     """
 
     signum: int | None = None
@@ -1477,6 +1523,8 @@ class RunSignals:
             return
         self.signum = signum
         if not self.holding:
+            if signum == signal.SIGINT:
+                raise KeyboardInterrupt
             raise SystemExit(128 + signum)
 
 
@@ -1492,38 +1540,48 @@ def hold_signals() -> None:
 
 def released(process: subprocess.Popen[str]) -> subprocess.Popen[str]:
     """`process`, with the hold its start began ended; a signal held meanwhile ends the run here,
-    inside the `try` whose `finally` ends the killer's group (SPEC-465 R7)."""
+    inside the `try` whose `finally` ends the killer's group (SPEC-465 R7, SPEC-647 R2)."""
     run = RUN_SIGNALS
     if run is not None:
         run.holding = False
         if run.signum is not None:
+            if run.signum == signal.SIGINT:
+                raise KeyboardInterrupt
             raise SystemExit(128 + run.signum)
     return process
 
 
 @contextlib.contextmanager
 def ending_on_signals():
-    """A run of `main()`, ended by SIGTERM or SIGHUP through every cleanup, that leaves the
-    process as it found it (SPEC-465 R6 to R9).
+    """A run of `main()`, ended by SIGTERM, SIGHUP or SIGINT through every cleanup, that leaves
+    the process as it found it (SPEC-465 R6 to R9, SPEC-647 R1 to R5).
 
     The killer leads a group of its own, so a signal to the runner, or to the runner's group as
     `timeout -s TERM`, a job cancel and a closed terminal send it, never reaches the killer, and a
     default action would end the runner with no cleanup and leave the killer's group running
-    (#409, #432). The run's own handler takes SIGTERM, and SIGHUP unless SIGHUP was ignored when
-    the run began, as `nohup` leaves it. A signal still held when the command returns, after a
-    killer that failed to start, ends the run there. On every way out each handler found is
-    reinstalled, the default action for one set outside Python, and so is the run state before.
+    (#409, #432). The run's own handler takes SIGTERM, SIGHUP unless SIGHUP was ignored when the
+    run began, as `nohup` leaves it, and SIGINT unless SIGINT was ignored, as a shell leaves it
+    for a job it starts in the background (#952). A signal still held when the command returns,
+    after a killer that failed to start, ends the run there. On every way out each handler found
+    is reinstalled, the default action for one set outside Python, and so is the run state before.
     """
     global RUN_SIGNALS
-    found = {signum: signal.getsignal(signum) for signum in (signal.SIGTERM, signal.SIGHUP)}
+    found = {
+        signum: signal.getsignal(signum)
+        for signum in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT)
+    }
     outer, state = RUN_SIGNALS, RunSignals()
     RUN_SIGNALS = state
     try:
         signal.signal(signal.SIGTERM, state.handle)
         if found[signal.SIGHUP] is not signal.SIG_IGN:
             signal.signal(signal.SIGHUP, state.handle)
+        if found[signal.SIGINT] is not signal.SIG_IGN:
+            signal.signal(signal.SIGINT, state.handle)
         yield
         if state.signum is not None:
+            if state.signum == signal.SIGINT:
+                raise KeyboardInterrupt
             raise SystemExit(128 + state.signum)
     finally:
         for signum, handler in found.items():
@@ -1577,14 +1635,25 @@ def dispatch(argv: list[str] | None = None) -> int:
         except ToolMissing as refusal:
             print(f"prove: REFUSED: {refusal}")
             return EXIT_REFUSED
+        except PlanRefused as refusal:
+            print(f"mutation_rows: REFUSED: {refusal}", file=sys.stderr)
+            return EXIT_REFUSED
     if args.verb == "legs":
         if not args.rows_from:
             parser.error("legs needs --rows-from")
-        return legs(root, args)
+        try:
+            return legs(root, args)
+        except PlanRefused as refusal:
+            print(f"mutation_rows: REFUSED: {refusal}", file=sys.stderr)
+            return EXIT_REFUSED
     if args.verb == "merge":
         if not (args.rows_from and args.legs is not None and args.source and args.report):
             parser.error("merge needs --rows-from, --legs, --from and --report")
-        return merge(root, args)
+        try:
+            return merge(root, args)
+        except PlanRefused as refusal:
+            print(f"mutation_rows: REFUSED: {refusal}", file=sys.stderr)
+            return EXIT_REFUSED
     if not args.base:
         parser.error("retired needs --base")
     try:
@@ -1598,8 +1667,8 @@ def dispatch(argv: list[str] | None = None) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """The command line, `dispatch`, run with SIGTERM and SIGHUP ending it through every cleanup
-    and the process's handlers left as they were found (SPEC-465 R6 to R9)."""
+    """The command line, `dispatch`, run with SIGTERM, SIGHUP and SIGINT ending it through every
+    cleanup and the process's handlers left as they were found (SPEC-465 R6 to R9, SPEC-647)."""
     with ending_on_signals():
         return dispatch(argv)
 

@@ -17,8 +17,10 @@ struct UndoDialogView: View {
             Text(verbatim: offer.title)
                 .font(.headline)
                 .accessibilityAddTraits(.isHeader)
+                .foregroundStyle(Color.tideInk)
             ForEach(Array(offer.lines.enumerated()), id: \.offset) { _, line in
                 Text(verbatim: line)
+                    .foregroundStyle(Color.tideInk)
             }
             HStack(spacing: 12) {
                 Button(action: keep) {
@@ -36,11 +38,13 @@ struct UndoDialogView: View {
             }
         }
         .padding()
+        .tint(Color.tideAccent)
         .defaultFocus($keyboardOnKeep, true)
         .onAppear {
             keyboardOnKeep = true
             readerOnKeep = true
         }
         .presentationDetents([.medium])
+        .presentationBackground(Color.tideBackground)
     }
 }

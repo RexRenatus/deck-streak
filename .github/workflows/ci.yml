@@ -48,7 +48,7 @@ jobs:
           persist-credentials: false
       - name: the pinned Rust toolchain (rust-toolchain.toml)
         run: rustup show
-      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-nextest@0.9.149,cargo-deny@0.20.2
       - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
@@ -118,7 +118,7 @@ jobs:
           persist-credentials: false
       - name: the pinned Rust toolchain (rust-toolchain.toml)
         run: rustup show
-      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-nextest@0.9.149
       - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
@@ -156,9 +156,11 @@ jobs:
 
   # The workspace's tests in the profile the daemon ships from (SPEC-330, ADR-330, #473): the
   # tests run with debug assertions on and the shipped build runs with them off, so code the build
-  # selects is proved here in the build it ships in. It restores the Rust cache and saves none: rust
-  # alone saves it, because two jobs saving one key race. The release build lands under
-  # target/release, which the cache does not hold, so this job compiles its own.
+  # selects is proved here in the build it ships in. The debug key holds target/debug, which the
+  # release profile never reads, so this job keeps a release-profile key of its own (SPEC-631):
+  # it restores that key on every run, and it is the key's only writer. A push to dev or main that
+  # missed the key cleans the workspace's release artifacts out of target/ and saves it. Neither
+  # restore prefix matches the other key.
   release:
     runs-on: ubuntu-24.04
     timeout-minutes: 100
@@ -170,7 +172,7 @@ jobs:
           persist-credentials: false
       - name: the pinned Rust toolchain (rust-toolchain.toml)
         run: rustup show
-      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-nextest@0.9.149
       - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
@@ -181,8 +183,10 @@ jobs:
           echo "$PROTOC_SHA256  /tmp/protoc.zip" | sha256sum -c -
           mkdir -p "$HOME/.local/protoc" && unzip -q /tmp/protoc.zip -d "$HOME/.local/protoc"
           echo "$HOME/.local/protoc/bin" >> "$GITHUB_PATH"
-      - name: restore the Rust cache, keyed on the toolchain pin and Cargo.lock
-        id: rust-cache
+      - name: free space before the restore
+        run: df -h /
+      - name: restore the release-profile Rust cache, keyed on the toolchain pin and Cargo.lock
+        id: release-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
@@ -190,15 +194,30 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
+          key: rust-release-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
-            rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
+            rust-release-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-
       - name: the locked dependency graph, every target's packages (the censuses read it offline)
         run: cargo fetch --locked --manifest-path Cargo.toml
       - name: test-release, the workspace's tests in the release profile
         env:
           CHECK_LOG_DIR: ${{ runner.temp }}/check-logs
         run: bash scripts/check.sh test-release
+      - name: free space after the stage
+        run: df -h /
+      - name: keep only the dependencies' release artifacts in the cache
+        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main') && steps.release-cache.outputs.cache-hit != 'true' }}
+        run: cargo clean --workspace --release
+      - name: save the release-profile Rust cache
+        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main') && steps.release-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ steps.release-cache.outputs.cache-primary-key }}
       - name: upload stage logs
         if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -322,7 +341,7 @@ jobs:
         run: rustup show
       # SPEC-055 A3 runs cargo deny from the python stage: every advisory exception and allowed
       # git source in deny.toml must still be live in the graph.
-      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-deny@0.20.2
       - name: restore the Rust cache, keyed on the toolchain pin and Cargo.lock
@@ -425,14 +444,14 @@ jobs:
       - name: the pinned Rust toolchain (rust-toolchain.toml)
         if: ${{ steps.plan.outputs.rust == 'true' }}
         run: rustup show
-      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         if: ${{ steps.plan.outputs.rust == 'true' }}
         with:
           tool: cargo-mutants@27.1.0
           fallback: none
       # cargo-mutants reads .cargo/mutants.toml, whose test tool is nextest; the listing runs no
       # test and builds nothing, but it carries the same tool and bounds as every other command.
-      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         if: ${{ steps.plan.outputs.rust == 'true' }}
         with:
           tool: cargo-nextest@0.9.149
@@ -583,12 +602,12 @@ jobs:
       - name: the locked dependency graph, every target's packages (the census reads it offline at the baseline)
         if: ${{ needs.mutation-plan.outputs.rust == 'true' }}
         run: cargo fetch --locked --manifest-path Cargo.toml
-      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         if: ${{ needs.mutation-plan.outputs.rust == 'true' }}
         with:
           tool: cargo-mutants@27.1.0
           fallback: none
-      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         if: ${{ needs.mutation-plan.outputs.rust == 'true' }}
         with:
           tool: cargo-nextest@0.9.149
@@ -622,6 +641,7 @@ jobs:
           python3 scripts/memory_scope.py --report "$out" -- cargo mutants --no-shuffle -vV --in-place --in-diff "$RUNNER_TEMP/mutation/git.diff" --baseline=skip --sharding round-robin --shard "$SHARD/$SHARDS" --timeout 2300 --build-timeout 600 --output "$out" || rc=$?
           echo "$rc" > "$out/cargo-mutants.exit"
           echo "cargo-mutants exited $rc"
+          case "$rc" in 0|2|3) ;; *) echo "mutation-rust: shard $SHARD left no whole report (cargo-mutants exited $rc); the verdict reads it VOID"; exit "$rc" ;; esac
       - name: keep the shard's report
         if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -629,6 +649,16 @@ jobs:
           name: mutation-rust-shard-${{ matrix.shard }}
           path: ${{ runner.temp }}/shards/
           if-no-files-found: warn
+      # A leg whose own baseline is not green ran no mutant and left no whole report: it fails its
+      # job here, after its report is kept, so its colour agrees with the verdict, which reads that
+      # record VOID by name (SPEC-458 R17, ADR-475 D10).
+      - name: a leg whose own baseline is not green fails its job, after its report is kept
+        if: ${{ needs.mutation-plan.outputs.rust == 'true' && steps.baseline.outputs.green != 'true' }}
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: |
+          echo "mutation-rust: shard $SHARD left no whole report (its baseline recorded exit $(cat "$RUNNER_TEMP/shards/mutation-rust-shard-$SHARD/baseline/baseline.exit")); the verdict reads it VOID"
+          exit 1
 
   # One job per shard of the plan's Python matrix: the runner over the diff's Python mutants, each
   # shard's mutants round-robin as the plan sized them, stopping a file at its first survivor. It
@@ -795,7 +825,7 @@ jobs:
           echo "the rows runner exited $rc"
       - name: no row leaves while its target stays, unless the maintainer approved it
         if: ${{ needs.mutation-plan.outputs.scope == 'diff' && matrix.leg == 0 }}
-        run: python3 scripts/mutation_rows.py retired --base HEAD^1
+        run: rc=0; python3 scripts/mutation_rows.py retired --base HEAD^1 || rc=1; python3 scripts/swift_mutants.py retired --base HEAD^1 || rc=1; exit "$rc"
       - name: keep the rows leg's report
         if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -1232,7 +1262,7 @@ jobs:
         run: echo "$GITHUB_WORKSPACE/codspeed-tool/bin" >> "$GITHUB_PATH"
       # The action's own instrument cache would save on a pull request too; it stays off, so only a
       # push saves a cache, as the header says.
-      - uses: CodSpeedHQ/action@78102a468f96d8e0ccb92d0ec49425753fc42062 # v5.6.0
+      - uses: CodSpeedHQ/action@61efe07e57e55bedeab750c434504de272a56e8c # v5.6.1
         if: ${{ needs.bench-rust-build.outputs.upload == 'true' }}
         with:
           mode: simulation
@@ -1319,7 +1349,7 @@ jobs:
         if: ${{ needs.bench-web-build.outputs.upload == 'true' }}
         run: tar -xf "$RUNNER_TEMP/bench-web.tar"
       # The action's own instrument cache stays off here too.
-      - uses: CodSpeedHQ/action@78102a468f96d8e0ccb92d0ec49425753fc42062 # v5.6.0
+      - uses: CodSpeedHQ/action@61efe07e57e55bedeab750c434504de272a56e8c # v5.6.1
         if: ${{ needs.bench-web-build.outputs.upload == 'true' }}
         with:
           mode: simulation
@@ -1333,7 +1363,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: zizmor@1.31.1
       - name: zizmor audits the workflows themselves

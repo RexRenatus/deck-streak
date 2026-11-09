@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { BARE, LAYERS, PLANTED, RENDER, UNOBSERVABLE } from '../../../tests-card/planted';
+import { BARE, CARRIAGE, LAYERS, PLANTED, RENDER, UNOBSERVABLE } from '../../../tests-card/planted';
 
 // SPEC-341 R8 to R12, A8 to A12. The planted suite (tests-card/card.spec.ts) runs in Playwright,
 // which the tdd probe does not resolve, so this test proves its coverage instead, as
@@ -360,6 +360,25 @@ describe('the planted card suite', () => {
     for (const frame of ["'index.html'", "'open.html'", "'blank'"]) expect(proof).toContain(frame);
   });
 
+  it('the carriage-return card plants a field reference that the spec reads in every frame', () => {
+    // #939; SPEC-462 R9, A6: a carriage return as its numeric reference, decimal and hexadecimal, and no raw
+    // one, in a card that points nowhere and is no channel
+    expect(CARRIAGE.html).toMatch(/&#13;/);
+    expect(CARRIAGE.html).toMatch(/&#x[dD];/);
+    expect(CARRIAGE.html + CARRIAGE.css).not.toMatch(/\r/);
+    expect(CARRIAGE.html + CARRIAGE.css).not.toMatch(/\b(?:https?|wss?|ftp|mailto|javascript):/);
+    expect(PLANTED.map((card) => card.id)).not.toContain('carriage-return');
+
+    // the spec reads it in the card frame, in the frame W1 off leaves reachable, and against a reference and a blank
+    const text = spec();
+    expect(text).toMatch(/import\s*\{[^}]*\bCARRIAGE\b[^}]*\}\s*from\s*'\.\/planted'/);
+    const at = text.indexOf("test('carriage return:");
+    expect(at, 'card.spec.ts holds no carriage-return case').toBeGreaterThan(-1);
+    const proof = text.slice(at);
+    const frames = ["'index.html'", "'variant.html?off=W1'", "'open.html'", "'blank'", "'carriage-return'"];
+    for (const frame of examined('frames the carriage-return case opens', frames)) expect(proof, frame).toContain(frame);
+  });
+
   it('the card config runs the planted suite in Chromium, WebKit and Firefox', () => {
     // SPEC-398 A1: the card configuration's projects are the suite's engines, in this order
     const config = readFileSync(PLAYWRIGHT_CARD, 'utf8');
@@ -557,6 +576,65 @@ describe('the planted card suite', () => {
     }
     expect(configuredEngines('export default defineConfig({ workers: 1 });').refused).toEqual(['no projects array']);
     examined('unclosed projects arrays', plants);
+  });
+
+  it('every planted card that loads points at the TCP listener, which counts every connection', () => {
+    // SPEC-641 R1, R2, A1; ADR-664 D1, D2: a loading card's markup and CSS name the TCP listener,
+    // which counts every connection with or without a request and reads each request's path, and
+    // never the HTTP listener, which the sentinel shares and which counts no connection; a card that
+    // requests a path there declares `tcp` and its own paths, and a card that only connects (a
+    // preconnect) declares `tcp` alone
+    type Card = (typeof PLANTED)[number];
+    const listener = { http: 'http://requests.invalid', tcp: 'http://connections.invalid', udp: 3 };
+    const named = (card: Card): string => card.html(listener) + card.css(listener);
+    const misaimed = (cards: readonly Card[]): string[] =>
+      cards
+        .filter((card) => {
+          const text = named(card);
+          if (text.includes(listener.http)) return true;
+          if (text.includes(`${listener.tcp}/`)) {
+            const [first, ...rest] = card.paths;
+            return first !== 'tcp' || rest.length === 0 || !rest.every((path) => path.startsWith(`/${card.id}/`));
+          }
+          if (text.includes(listener.tcp)) return JSON.stringify(card.paths) !== JSON.stringify(['tcp']);
+          return false;
+        })
+        .map((card) => card.id);
+    const loading = PLANTED.filter((card) => !card.click);
+    const aimed = loading.filter((card) => named(card).includes(listener.tcp));
+
+    // the behaviour first: no loading card names the HTTP listener, and each one aimed at the TCP
+    // listener declares `tcp` beside its own paths, or `tcp` alone when it only connects
+    expect(misaimed(loading), 'loading cards not aimed at the TCP listener').toEqual([]);
+
+    // the controls, each refused by name: a loading card aimed at the HTTP listener, as every loading
+    // card once was; one aimed at the TCP listener that declares its path and not `tcp`, whose control
+    // would never read the connection count above zero; and one that declares `tcp` alone while it
+    // requests a path, whose control would read a bare connection as the request
+    const old: Card = {
+      id: 'loads-from-requests',
+      alone: null,
+      click: false,
+      html: (l) => `<img alt="" src="${l.http}/loads-from-requests/1">`,
+      css: () => '',
+      paths: ['/loads-from-requests/']
+    };
+    const uncounted: Card = {
+      ...old,
+      id: 'loads-uncounted',
+      html: (l) => `<img alt="" src="${l.tcp}/loads-uncounted/1">`,
+      paths: ['/loads-uncounted/']
+    };
+    const bare: Card = {
+      ...old,
+      id: 'loads-bare',
+      html: (l) => `<img alt="" src="${l.tcp}/loads-bare/1">`,
+      paths: ['tcp']
+    };
+    expect(misaimed([old, uncounted, bare])).toEqual(['loads-from-requests', 'loads-uncounted', 'loads-bare']);
+
+    examined('planted cards that load', loading);
+    examined('loading cards aimed at the TCP listener', aimed);
   });
 
   it('every planted card that acts on a click points at the TCP listener, which counts every connection', () => {

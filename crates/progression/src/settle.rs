@@ -35,8 +35,14 @@ pub const DERIVED_PREFIXES: [&str; 3] = [
     "write:",    // SPEC-078 R7
 ];
 
-/// Whether `source` is a derived one: one of [`DERIVED_SOURCES`], or one of [`DERIVED_PREFIXES`]
-/// followed by a valid course code (SPEC-078 R3).
+/// The double-XP token's prefix (SPEC-411 R1; SPEC-081 T1): a token window's bonus is settled
+/// under `2x:<id>`, where the id is the token row's own, so it is followed by a token id rather
+/// than by a course code and is kept out of [`DERIVED_PREFIXES`].
+pub const DOUBLE_XP_PREFIX: &str = "2x:";
+
+/// Whether `source` is a derived one: one of [`DERIVED_SOURCES`], one of [`DERIVED_PREFIXES`]
+/// followed by a valid course code (SPEC-078 R3), or [`DOUBLE_XP_PREFIX`] followed by a token id
+/// (SPEC-411 R1).
 #[must_use]
 pub fn is_derived(source: &str) -> bool {
     DERIVED_SOURCES.contains(&source)
@@ -45,6 +51,17 @@ pub fn is_derived(source: &str) -> bool {
                 .strip_prefix(prefix)
                 .is_some_and(|code| CourseCode::new(code).is_some())
         })
+        || source
+            .strip_prefix(DOUBLE_XP_PREFIX)
+            .is_some_and(is_token_id)
+}
+
+/// Whether `id` names a token row: a positive decimal integer with no sign and no leading zero
+/// that fits `i64` (SPEC-411 R1), so one token has one spelling of its source.
+fn is_token_id(id: &str) -> bool {
+    id.bytes().all(|byte| byte.is_ascii_digit())
+        && !id.starts_with('0')
+        && id.parse::<i64>().is_ok()
 }
 
 /// Why a settlement was asked for.

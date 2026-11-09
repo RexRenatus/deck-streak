@@ -1,4 +1,4 @@
-"""The web app's message catalogs are whole in all seven locales (SPEC-571 A1 to A12; ADR-590).
+"""The web app's message catalogs are whole in all seven locales (SPEC-571 A1 to A12; ADR-590; SPEC-629 A1 to A5; ADR-651).
 
 `scripts/locale_census.py` reads `web/app/project.inlang/settings.json` and the catalogs it names,
 and prints one line per finding, then `examined <n> locales, <m> keys`; it exits 0 when green, 1 on
@@ -51,7 +51,7 @@ PLANTED = {
     },
     "ja": {
         "title": "学習デッキ",
-        "progress": "{total} 枚中 {done} 枚",
+        "progress": "{total}枚中{done}枚",
         "summary": "概要",
         "close": "閉じる",
     },
@@ -63,13 +63,13 @@ PLANTED = {
     },
     "zh-Hans": {
         "title": "学习卡组",
-        "progress": "{total} 张中的 {done} 张",
+        "progress": "{total}张中的{done}张",
         "summary": "摘要",
         "close": "关闭",
     },
     "zh-Hant": {
         "title": "學習卡組",
-        "progress": "{total} 張中的 {done} 張",
+        "progress": "{total}張中的{done}張",
         "summary": "摘要",
         "close": "關閉",
     },
@@ -180,7 +180,7 @@ class TheWebCensus(unittest.TestCase):
             ),
             "dropped": (planted(ko={"progress": "{done}장"}), ["placeholder ko progress"]),
             "added": (
-                planted(zh_Hant={"close": "關閉 {name}"}),
+                planted(zh_Hant={"close": "關閉{name}"}),
                 ["placeholder zh-Hant close"],
             ),
             "counted twice": (
@@ -339,6 +339,73 @@ class TheWebCensus(unittest.TestCase):
                 tree = Tree(self, settings=text)
                 self.assertCensus(tree, 3, [finding, "examined 0 locales, 0 keys"])
 
+    def test_a_space_typed_between_a_cjk_letter_and_a_latin_letter_digit_or_percent_is_refused(
+        self,
+    ):
+        """SPEC-629 A1"""
+        cases = {
+            "a Latin letter": (planted(ja={"title": "学習デッキ XP"}), ["spaced ja title 1"]),
+            "a digit": (planted(zh_Hans={"summary": "3 个摘要"}), ["spaced zh-Hans summary 1"]),
+            "a percent sign": (
+                planted(zh_Hant={"summary": "摘要 50% 完成"}),
+                ["spaced zh-Hant summary 2"],
+            ),
+            "a no-break space": (
+                planted(ja={"close": "閉じる" + chr(0xA0) + "OK"}),
+                ["spaced ja close 1"],
+            ),
+            "an edge run before a boundary run": (
+                planted(ja={"title": " 学習デッキ XP"}),
+                ["spaced ja title 1"],
+            ),
+        }
+        for name, (catalogs, lines) in cases.items():
+            with self.subTest(name):
+                self.assertCensus(Tree(self, catalogs), 1, [*lines, GREEN])
+        lows = (0x3005, 0x3041, 0x309D, 0x30A1, 0x30FC, 0x31F0, 0x3400, 0x4E00, 0xF900, 0x20000)
+        for code in lows:
+            with self.subTest(f"the low code point {code:X}"):
+                lines = ["spaced ja title 1"]
+                if code == 0xF900:
+                    lines = ["not-nfc ja title", *lines]
+                catalogs = planted(ja={"title": chr(code) + " XP"})
+                self.assertCensus(Tree(self, catalogs), 1, [*lines, GREEN])
+
+    def test_a_space_typed_between_a_cjk_letter_and_a_placeholder_is_refused(self):
+        """SPEC-629 A2"""
+        cases = {
+            "after a closing brace": (
+                planted(ja={"progress": "{total} 枚中{done}枚"}),
+                ["spaced ja progress 1"],
+            ),
+            "before an opening brace": (
+                planted(zh_Hant={"progress": "{total}張中的 {done}張"}),
+                ["spaced zh-Hant progress 1"],
+            ),
+        }
+        for name, (catalogs, lines) in cases.items():
+            with self.subTest(name):
+                self.assertCensus(Tree(self, catalogs), 1, [*lines, GREEN])
+
+    def test_a_space_outside_a_cjk_and_latin_boundary_is_not_refused(self):
+        """SPEC-629 A3"""
+        cases = {
+            "Korean": planted(ko={"title": "학습 덱 XP"}),
+            "French": planted(fr={"title": "Paquet 学习 d’étude"}),
+            "after full-width punctuation": planted(ja={"title": "学習デッキ： XP"}),
+            "between two Latin words": planted(zh_Hans={"title": "学习Deck Streak卡组"}),
+            "a leading space": planted(ja={"title": " 学習デッキXP"}),
+            "a trailing space": planted(ja={"title": "XP学習デッキ "}),
+        }
+        for name, catalogs in cases.items():
+            with self.subTest(name):
+                self.assertCensus(Tree(self, catalogs), 0, [GREEN])
+        highs = (0x3008, 0x3097, 0x30A0, 0x30FB, 0x3100, 0x3200, 0x4DC0, 0xA000, 0xFB00, 0x323B0)
+        for code in highs:
+            with self.subTest(f"the high code point plus one {code:X}"):
+                catalogs = planted(ja={"title": chr(code) + " XP"})
+                self.assertCensus(Tree(self, catalogs), 0, [GREEN])
+
 
 class TheWebTree(unittest.TestCase):
     def test_the_web_apps_catalogs_are_whole(self):
@@ -354,6 +421,27 @@ class TheWebTree(unittest.TestCase):
         self.assertEqual(code, 0)
         counted = EXAMINED.fullmatch(last)
         self.assertIsNotNone(counted, last)
+        self.assertGreater(int(counted.group(1)), 0)
+
+    def test_the_japanese_and_chinese_catalogs_hold_no_typed_space_at_a_boundary(self):
+        """SPEC-629 A5"""
+
+        def typed(found):
+            return sum(int(line.rsplit(" ", 1)[1]) for line in found if line.startswith("spaced "))
+
+        control = census(Tree(self, planted(ja={"title": "学習デッキ XP"})).root)
+        self.assertEqual(control, (1, ["spaced ja title 1", GREEN], ""))
+        _, lines, err = census()
+        spaced = [line for line in lines if line.startswith("spaced ")]
+        print(
+            f"typed spaces at a CJK and Latin boundary: {typed(spaced)} in ja, zh-Hans, zh-Hant;"
+            f" planted control counted {typed(control[1])}"
+        )
+        self.assertEqual(spaced, [], f"{len(spaced)} spaced lines, the first three: {spaced[:3]}")
+        self.assertEqual(err, "")
+        self.assertGreater(len(lines), 0, "the census printed nothing")
+        counted = EXAMINED.fullmatch(lines[-1])
+        self.assertIsNotNone(counted, lines[-1])
         self.assertGreater(int(counted.group(1)), 0)
 
 

@@ -44,6 +44,8 @@ A11: green at 790ceb5d
 A12: green at 790ceb5d
 A13: green at 3ccf2769
 A14: green at 790ceb5d
+A15: red at 039ac97e: assertion `left == right` failed: each tree is judged as its case expects: left: 11 right: 14 (the tree with a quiet library and the tree whose member's only `path` attribute sits in a test of its own each read the media crate's 4 witnesses past the limit, and the tree beside features the list does not name read 8 features) (a local run)
+A15: green at 9394447d
 ```
 
 Two plants, never committed, show the tests can tell a wrong adapter apart (the same command, at
@@ -74,6 +76,22 @@ file at the change, before the expectation moved: 47 run, 46 passed, 1 failed, `
 C configuration: a feature gates the call | accepted`, members escaping 0). So that control's
 expectation and the population's pinned digest changed in the change's commit (790ceb5d); the
 member beside it, whose call reaches `settle`, is still refused.
+
+A15 came with ADR-345's second amendment. Its test was committed alone over the census's rule as
+it stood, and it names no new item of the census, so it compiles against that rule. At that commit
+it fails by assertion on a local run (`cargo test --locked --offline -p deck-streak-progression
+--test xp_census -- --exact` and its name: 1 run, 0 passed, 1 failed), 11 of its 14 planted trees
+judged as expected: the reach guard alone counts the media crate's four witnesses, so the tree
+whose member holds a quiet library and the tree whose member's only `path` attribute sits in a test
+of its own are each refused past the limit, and the tree beside features the list does not name
+reads 8 features where 4 are expected. The rule follows in its own commit, and A15's red and green
+lines are recorded with it.
+
+The rule was committed next (9394447d), and at it A15 passes on a local run, as do the old
+witness test and A12. Between A15's red and its green no other commit changes a test file, and
+9394447d changes only the census's rule: the witness filter's second disjunct, the three
+functions it reads, `BODY_GATES`, and four comments reworded in place, the old witness test's
+among them; no assertion and no planted case of any test changed.
 
 ## Mutation coverage
 

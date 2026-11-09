@@ -34,19 +34,19 @@ deck-streak-coordination  (use cases and scheduled jobs across contexts)  depend
 deck-streak-api           (axum HTTPS adapter for the Mini App)  depends on: kernel, identity, notifications, coordination
 deck-streak-bot           (Telegram Bot API adapter)  depends on: kernel, identity, notifications, coordination
 deck-streak-mcp           (MCP adapter: the bearer guard, the server and its tools)  depends on: kernel, coordination
-deck-streak-engine-core   (the engine core: Anki's engine for both clients behind one per-transport table; ADR-356)  depends on: fsrs7
-deck-streak-ffi           (the umbrella FFI crate, the app's one Rust static library: the engine's backend behind an allow-list; ADR-345, ADR-357)  depends on: engine-core
+deck-streak-engine-core   (the engine core: Anki's engine for both clients behind one per-transport table; ADR-356)  depends on: fsrs7, media
+deck-streak-ffi           (the umbrella FFI crate, the app's one Rust static library: the engine's backend behind an allow-list; ADR-345, ADR-357)  depends on: engine-core, collection, media
 deck-streak-fsrs7         (the isolated FSRS-7 scheduler: review history replayed into memory state; ADR-338)  depends on: nothing
 deck-streak-daemon        (composition root: the deckstreakd binary)  depends on: kernel, ingest, identity, analytics, progression, streaks, curriculum, economy, quests, habits, focus, discipline, markets, notifications, readings, vault, agent, insights, publishing, privacy, coordination, api, bot, mcp
 deck-streak-migration     (one-off import of v9's schema 24, planned)  depends on: kernel, analytics, progression, streaks, curriculum, economy, quests, habits, focus, discipline, markets, notifications, readings, vault
-deck-streak-web-engine    (Anki's engine on wasm32 in the web client's Worker: the study calls over OPFS)  depends on: companion, engine-core
+deck-streak-web-engine    (Anki's engine on wasm32 in the web client's Worker: the study calls over OPFS)  depends on: companion, engine-core, media
 deck-streak-push          (APNs and web push senders for a native or web client: provider and VAPID tokens, RFC 8291; ADR-354)  depends on: kernel
 deck-streak-xp            (the per-review XP rule, with no I/O, for the server and both clients; ADR-371)  depends on: nothing
 deck-streak-study-day     (the study day, its instant and its date error, with no I/O, for the server and both clients; ADR-515)  depends on: nothing
 deck-streak-search        (the product's own search: one typed query, a closed grammar and its profiles, an evaluator over rows, with no I/O; ADR-532)  depends on: study-day
 deck-streak-companion     (the scheduling companion's documented interface: schema v1, its codec, the handshake, the decision that fails closed, the Absent default; ADR-519)  depends on: nothing
 deck-streak-companion-slot  (the one substitutable companion body; the public body opens Absent; ADR-519)  depends on: companion
-deck-streak-collection    (the collection store, dormant: one file per user, its one opener, schema and migrations, the append-only review log and its erase gate, the read port and the store's data-rights port; ADR-530)  depends on: nothing
+deck-streak-collection    (the collection store, dormant: one file per user, its one opener, schema and migrations, the append-only review log and its erase gate, the read port and the store's data-rights port; ADR-530)  depends on: media
 deck-streak-anki-format   (anti-corruption layer for Anki's file formats: the defensive opener of every foreign schema-18 file, the read-only row readers and blob views, the schema-18 statements and the wire walk; ADR-622)  depends on: nothing
 deck-streak-media         (a media file known by its SHA-256, certified and imported names, write-once bindings, the one grammar of media names, the sweep plan, with no I/O; ADR-531)  depends on: nothing
 deck-streak-render        (the card renderer: note types, templates, fields, sections and filters drawn into a card's two faces, with DeckStreak's own text for each template problem, with no I/O; ADR-624)  depends on: nothing
@@ -58,13 +58,16 @@ landing   web/site/src    (the Astro landing page, planned)  depends on: nothing
 
 `deck-streak-engine-core` holds Anki's engine, an external crate and not a context, for both
 clients behind one table with a column per transport, and it reaches no DeckStreak table or use
-case (SPEC-345, ADR-356 D1). `deck-streak-ffi` depends on the core alone: it keeps a constant
-allow-list for a native client, checked first, and reaches the engine only through the core's
+case (SPEC-345, ADR-356 D1). `deck-streak-ffi` depends on the core, and on the collection store and
+the media core for the face reader over the media store it holds switched off (SPEC-601,
+ADR-621 D6 and D7): it keeps a constant allow-list for a native client, checked first, and reaches the engine only through the core's
 dispatcher on the native transport (SPEC-336, ADR-345 D1; ADR-356 D3). `deck-streak-web-engine`
 reaches it the same way on the web transport, from its `wasm32` table only. The daemon composes
-none of the three: a native client links the adapter into its own binary. The core's one edge
-inside the workspace is `deck-streak-fsrs7`, named by its `replay` module alone: the replay of a
-deck set's review history into stock-field values, which writes nothing (SPEC-386, ADR-400 D1).
+none of the three: a native client links the adapter into its own binary. The core's edges
+inside the workspace are `deck-streak-fsrs7`, named by its `replay` module alone: the replay of a
+deck set's review history into stock-field values, which writes nothing (SPEC-386, ADR-400 D1),
+and the media core, whose one grammar rewrites a face's media references (SPEC-601, ADR-621 D6
+and D8).
 
 `deck-streak-fsrs7` is the isolated FSRS-7 scheduler (ADR-338): it replays a card's review history
 into FSRS-7 memory state, and it depends on no context and never on the engine. Its one external
@@ -106,8 +109,9 @@ pragmas follow the role and which refuses another application's file by its `app
 review log is append-only behind one erase gate, which only its data-rights port opens, and every
 statement it runs is a registered constant its census prepares. It declares `CollectionRead`, the
 read port the server's contexts read a collection through: the store answers it, and ingest's
-schema-18 adapter answers it over Anki's file. It depends on nothing and reads no clock, so both
-clients can link it. It is dormant: nothing live reads or writes the store, and ingest's live
+schema-18 adapter answers it over Anki's file. It depends only on the media core, for the media
+store's hashes and names (SPEC-601, ADR-621 D6), and reads no clock, so both clients can link it.
+It is dormant: nothing live reads or writes the store, and ingest's live
 readers keep their drivers until the cut-over switches them to the port.
 
 `deck-streak-anki-format` is the anti-corruption layer for Anki's file formats (SPEC-602, ADR-622):
@@ -370,6 +374,9 @@ server an erase empties every table but the store's record, and on a device it r
 | `review_log`, `review_retraction` | `collection` | the same | exported and erased, through the open gate |
 | `review_client` | `collection` | the same | exported and erased, through the open gate; its own erase keeps every review |
 | `outbox`, `applied_ops`, `undo_journal`, `schedule`, `device_setting` | `collection` | the same | exported and erased |
+| `media_file` | `collection` | `crates/collection/migrations/000002_media_store.sql` (SPEC-601) | exported and erased |
+| `media_name` | `collection` | the same | exported and erased |
+| `media_pin` | `collection` | the same | exported and erased |
 
 ## Overloaded words, held apart
 

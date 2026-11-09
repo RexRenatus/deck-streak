@@ -4,6 +4,7 @@
 // (SPEC-371 R10). SPEC-505 R5, R6; ADR-523 D3: a card the frame refused is announced by its reason,
 // each reason with its own message in every locale. A speech clip the device has no local voice for
 // names its language (SPEC-506).
+// The card the engine withheld is announced by its own line (SPEC-380 R6).
 import { m } from '#lib/paraglide/messages.js';
 import type { Status } from './review';
 
@@ -21,6 +22,7 @@ type StatusKey =
   | 'study_card_refused_reparse_target'
   | 'study_card_refused_body_attributes'
   | 'study_card_refused_host_readback'
+  | 'study_card_withheld'
   | 'study_done'
   | 'undo_synced'
   | 'undo_gone';
@@ -42,6 +44,7 @@ export const STATUS_KEYS: Record<Status, StatusKey> = {
   'reparse-target': 'study_card_refused_reparse_target',
   'body-attributes': 'study_card_refused_body_attributes',
   'host-readback': 'study_card_refused_host_readback',
+  withheld: 'study_card_withheld',
   done: 'study_done'
 };
 

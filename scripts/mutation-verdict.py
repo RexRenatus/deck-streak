@@ -116,6 +116,8 @@ EXIT_OK, EXIT_FAIL, EXIT_USAGE, EXIT_VOID = 0, 1, 2, 3
 RUST = re.compile(r"crates/[^/]+/src/.+\.rs")
 WEB = re.compile(r"web/app/src/.+\.(?:ts|js|svelte)")
 WEB_NOT_PRODUCTION = re.compile(r"\.(?:test|spec)\.[^/]+$|\.d\.ts$|^web/app/src/lib/paraglide/")
+#: The token compiler every web build runs, web production code by its exact path (SPEC-636 R1).
+WEB_SCRIPTS = ("web/app/scripts/build-tokens.ts",)
 ORACLE = frozenset({"tools/parity-oracle/generate.py"})
 #: A guard script: one path segment under `scripts/`, so nothing under `scripts/tests/` (SPEC-087 R1).
 SCRIPTS = re.compile(r"scripts/[^/]+\.py")
@@ -267,6 +269,9 @@ def classify(path: str) -> str:
     if RUST.fullmatch(path):
         return "rust"
     if WEB.fullmatch(path) and not WEB_NOT_PRODUCTION.search(path):
+        return "web"
+    # SPEC-636 R1: the token compiler joins the web class by its exact path, never by a glob.
+    if path in WEB_SCRIPTS:
         return "web"
     if path in ORACLE:
         return "oracle"
@@ -1575,7 +1580,36 @@ def judge_rows(verdict: Verdict, plan: dict, rows: object, klass: str) -> int:
             path = plan["row_overlaps"].get(identifier)
             if path is not None and classify(path) == klass:
                 carried += 1
+    leave_rows_to_the_leg_report(verdict, plan, proved, klass)
     return carried
+
+
+#: The classes whose verdict credits a KILLED row to its examined count (`klass_rows`): a row of any
+#: other path, or of no changed line, is counted by none of them (SPEC-625 R1).
+ROW_CREDITING = frozenset({"rust", "oracle", "scripts"})
+
+
+def leave_rows_to_the_leg_report(verdict: Verdict, plan: dict, proved: dict, klass: str) -> None:
+    """SPEC-625 R1, R2: the scripts class names, in plan order, each selected row the leg killed
+    that no class credits, with the path of its changed line or the words that it covers none. It
+    returns nothing, so no row it names reaches a count (R3)."""
+    if klass != "scripts":
+        return
+    uncredited = []
+    for ident in plan["rows"]:
+        overlap = plan["row_overlaps"].get(ident)
+        killed = proved.get(ident, {}).get("verdict") == "KILLED"
+        if killed and (overlap is None or classify(overlap) not in ROW_CREDITING):
+            uncredited.append((ident, overlap))
+    if uncredited:
+        verdict.say(
+            f"rows left to the leg report: {len(uncredited)} of {len(plan['rows'])} selected"
+        )
+    for ident, overlap in uncredited:
+        reason = (
+            "it covers no changed line" if overlap is None else f"its changed line is in {overlap}"
+        )
+        verdict.say(f"row left to the leg report: {ident}: {reason}")
 
 
 def partial_reason(report: object, code: int | None, source: str) -> str | None:
@@ -2688,6 +2722,8 @@ STRYKER_MUTATE = (
     "!src/**/*.spec.*",
     "!src/**/*.d.ts",
     "!src/lib/paraglide/**",
+    # SPEC-636 R1: the token compiler, by its exact path.
+    "scripts/build-tokens.ts",
 )
 
 
@@ -2843,7 +2879,9 @@ def exclusions(root: pathlib.Path) -> int:
                     "from cargo-mutants' listing (SPEC-057 R11)"
                 )
     web = root / "web" / "app" / "src"
-    for path in sorted(web.rglob("*")) if web.is_dir() else []:
+    # SPEC-636 R1: the walk reads the token compiler beside `web/app/src`, by its exact path.
+    web_scripts = [root / path for path in WEB_SCRIPTS]
+    for path in [*(sorted(web.rglob("*")) if web.is_dir() else []), *web_scripts]:
         if path.suffix not in WEB_SOURCES or not path.is_file():
             continue
         examined += 1

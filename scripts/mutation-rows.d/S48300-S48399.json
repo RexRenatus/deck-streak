@@ -1,0 +1,30 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S48301-THE-REFUND-PROPERTY-BLOCKS",
+        "formal/tla/WalletFloor/WalletFloor.tla",
+        "RefundWritesItsOwnMovement ramp=block",
+        "RefundWritesItsOwnMovement ramp=report",
+        "the wallet model's later-day refund property is declared at ramp=block; read back at report, a violation of it would be printed and fail no landing (SPEC-483 A1)",
+        "test_wallet_refund_ramp.WalletRefundRamp.test_the_refund_property_is_declared_once_at_block"
+      ],
+      [
+        "S48302-A-DOUBLED-RAMP-LINE-IS-REFUSED",
+        "scripts/tests/test_wallet_refund_ramp.py",
+        "    if len(found) != 1:",
+        "    if len(found) == 0:",
+        "the pin refuses an entry that declares the refund property on two lines; reading only the first, a report line beside a block line would pass (SPEC-483 A2)",
+        "test_wallet_refund_ramp.WalletRefundRamp.test_the_reader_refuses_each_planted_ramp"
+      ],
+      [
+        "S48303-A-REPORT-RAMP-IS-REFUSED",
+        "scripts/tests/test_wallet_refund_ramp.py",
+        "    if found[0] != WANTED:",
+        "    if found[0] == \"\":",
+        "the pin refuses a refund property line that does not read ramp=block; without that arm, a report ramp would pass A1 (SPEC-483 A2)",
+        "test_wallet_refund_ramp.WalletRefundRamp.test_the_reader_refuses_each_planted_ramp"
+      ]
+    ]
+  }
+}

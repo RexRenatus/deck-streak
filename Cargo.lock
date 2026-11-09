@@ -94,7 +94,7 @@ dependencies = [
 [[package]]
 name = "anki"
 version = "0.0.0"
-source = "git+https://github.com/RexRenatus/anki.git?rev=dca72f352730abb4222389cc148e46387c17f97f#dca72f352730abb4222389cc148e46387c17f97f"
+source = "git+https://github.com/RexRenatus/anki.git?rev=2d8e3150f5e392f5cfaa7bfe8485c479186307a9#2d8e3150f5e392f5cfaa7bfe8485c479186307a9"
 dependencies = [
  "ammonia",
  "anki_i18n",
@@ -150,7 +150,7 @@ dependencies = [
  "regex",
  "reqwest 0.12.28",
  "rusqlite",
- "rustls-pemfile",
+ "rustls-pki-types",
  "same-file",
  "scopeguard",
  "serde",
@@ -170,7 +170,6 @@ dependencies = [
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
- "unic-ucd-category",
  "unicase",
  "unicode-normalization",
  "web-sys",
@@ -182,7 +181,7 @@ dependencies = [
 [[package]]
 name = "anki_i18n"
 version = "0.0.0"
-source = "git+https://github.com/RexRenatus/anki.git?rev=dca72f352730abb4222389cc148e46387c17f97f#dca72f352730abb4222389cc148e46387c17f97f"
+source = "git+https://github.com/RexRenatus/anki.git?rev=2d8e3150f5e392f5cfaa7bfe8485c479186307a9#2d8e3150f5e392f5cfaa7bfe8485c479186307a9"
 dependencies = [
  "anki_io",
  "anyhow",
@@ -203,7 +202,7 @@ dependencies = [
 [[package]]
 name = "anki_io"
 version = "0.0.0"
-source = "git+https://github.com/RexRenatus/anki.git?rev=dca72f352730abb4222389cc148e46387c17f97f#dca72f352730abb4222389cc148e46387c17f97f"
+source = "git+https://github.com/RexRenatus/anki.git?rev=2d8e3150f5e392f5cfaa7bfe8485c479186307a9#2d8e3150f5e392f5cfaa7bfe8485c479186307a9"
 dependencies = [
  "camino",
  "rand 0.9.5",
@@ -214,7 +213,7 @@ dependencies = [
 [[package]]
 name = "anki_proto"
 version = "0.0.0"
-source = "git+https://github.com/RexRenatus/anki.git?rev=dca72f352730abb4222389cc148e46387c17f97f#dca72f352730abb4222389cc148e46387c17f97f"
+source = "git+https://github.com/RexRenatus/anki.git?rev=2d8e3150f5e392f5cfaa7bfe8485c479186307a9#2d8e3150f5e392f5cfaa7bfe8485c479186307a9"
 dependencies = [
  "anki_io",
  "anki_proto_gen",
@@ -233,7 +232,7 @@ dependencies = [
 [[package]]
 name = "anki_proto_gen"
 version = "0.0.0"
-source = "git+https://github.com/RexRenatus/anki.git?rev=dca72f352730abb4222389cc148e46387c17f97f#dca72f352730abb4222389cc148e46387c17f97f"
+source = "git+https://github.com/RexRenatus/anki.git?rev=2d8e3150f5e392f5cfaa7bfe8485c479186307a9#2d8e3150f5e392f5cfaa7bfe8485c479186307a9"
 dependencies = [
  "anki_io",
  "anyhow",
@@ -493,15 +492,6 @@ checksum = "b08e33815c87d8cadcddb1e74ac307368a3751fbe40c961538afa21a1899f21c"
 dependencies = [
  "base64 0.21.7",
  "pastey 0.1.1",
- "serde",
-]
-
-[[package]]
-name = "basic-toml"
-version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba62675e8242a4c4e806d12f11d136e626e6c8361d6b829310732241652a178a"
-dependencies = [
  "serde",
 ]
 
@@ -1183,6 +1173,7 @@ dependencies = [
 name = "deck-streak-collection"
 version = "0.3.0"
 dependencies = [
+ "deck-streak-media",
  "rusqlite",
  "serde_json",
  "tempfile",
@@ -1227,6 +1218,7 @@ dependencies = [
  "deck-streak-readings",
  "deck-streak-streaks",
  "deck-streak-vault",
+ "getrandom 0.4.3",
  "serde",
  "serde_json",
  "sqlx",
@@ -1279,6 +1271,7 @@ dependencies = [
  "deck-streak-readings",
  "deck-streak-streaks",
  "deck-streak-vault",
+ "proc-macro2",
  "serde",
  "serde_json",
  "sqlx",
@@ -1319,11 +1312,14 @@ dependencies = [
  "base64 0.23.1",
  "codspeed-divan-compat",
  "deck-streak-analytics",
+ "deck-streak-collection",
  "deck-streak-fsrs7",
  "deck-streak-ingest",
  "deck-streak-kernel",
+ "deck-streak-media",
  "prost",
  "serde_json",
+ "tempfile",
  "tokio",
  "url",
 ]
@@ -1334,7 +1330,9 @@ version = "0.3.0"
 dependencies = [
  "anki",
  "codspeed-divan-compat",
+ "deck-streak-collection",
  "deck-streak-engine-core",
+ "deck-streak-media",
  "reqwest 0.13.5",
  "tokio",
  "uniffi",
@@ -1647,6 +1645,7 @@ dependencies = [
  "anki_proto",
  "deck-streak-companion",
  "deck-streak-engine-core",
+ "deck-streak-media",
  "js-sys",
  "prost",
  "serde_json",
@@ -2098,13 +2097,12 @@ dependencies = [
 [[package]]
 name = "frankenstein"
 version = "0.52.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ac41b3efdf616c36be9e544f1e6866cb4df69651b3c76ca2ab852fe57154885"
+source = "git+https://github.com/RexRenatus/frankenstein.git?rev=c757cbb994829a00b4fadb0c662fdf16ccd8c2a1#c757cbb994829a00b4fadb0c662fdf16ccd8c2a1"
 dependencies = [
  "async-trait",
  "bon",
  "macro_rules_attribute",
- "paste",
+ "pastey 0.2.3",
  "reqwest 0.13.5",
  "serde",
  "serde_json",
@@ -3134,12 +3132,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "matches"
-version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2532096657941c2fea9c289d370a250971c689d4f143798ff67113ec042024a5"
-
-[[package]]
 name = "matchit"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3513,12 +3505,6 @@ checksum = "aab41826031698d6ffcd9cff78ef56ef998e39dc7e5067cdfebe373842d4723b"
 dependencies = [
  "phc",
 ]
-
-[[package]]
-name = "paste"
-version = "1.0.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
 
 [[package]]
 name = "pastey"
@@ -4306,8 +4292,7 @@ dependencies = [
 [[package]]
 name = "rinja"
 version = "0.3.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3dc4940d00595430b3d7d5a01f6222b5e5b51395d1120bdb28d854bb8abb17a5"
+source = "git+https://github.com/RexRenatus/askama.git?rev=efef71d57c2f9195da6f4c128f742b8ac865d26c#efef71d57c2f9195da6f4c128f742b8ac865d26c"
 dependencies = [
  "itoa",
  "rinja_derive",
@@ -4316,10 +4301,8 @@ dependencies = [
 [[package]]
 name = "rinja_derive"
 version = "0.3.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08d9ed0146aef6e2825f1b1515f074510549efba38d71f4554eec32eb36ba18b"
+source = "git+https://github.com/RexRenatus/askama.git?rev=efef71d57c2f9195da6f4c128f742b8ac865d26c#efef71d57c2f9195da6f4c128f742b8ac865d26c"
 dependencies = [
- "basic-toml",
  "memchr",
  "mime",
  "mime_guess",
@@ -4329,13 +4312,13 @@ dependencies = [
  "rustc-hash",
  "serde",
  "syn 2.0.119",
+ "toml 0.5.11",
 ]
 
 [[package]]
 name = "rinja_parser"
 version = "0.3.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93f9a866e2e00a7a1fb27e46e9e324a6f7c0e7edc4543cae1d38f4e4a100c610"
+source = "git+https://github.com/RexRenatus/askama.git?rev=efef71d57c2f9195da6f4c128f742b8ac865d26c#efef71d57c2f9195da6f4c128f742b8ac865d26c"
 dependencies = [
  "memchr",
  "nom 7.1.3",
@@ -4481,15 +4464,6 @@ dependencies = [
  "rustls-pki-types",
  "schannel",
  "security-framework",
-]
-
-[[package]]
-name = "rustls-pemfile"
-version = "2.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dce314e5fee3f39953d46bb63bb8a46d40c2f8fb7cc5a3b6cab2bde9721d6e50"
-dependencies = [
- "rustls-pki-types",
 ]
 
 [[package]]
@@ -5927,27 +5901,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
 
 [[package]]
-name = "unic-char-property"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8c57a407d9b6fa02b4795eb81c5b6652060a15a7903ea981f3d723e6c0be221"
-dependencies = [
- "unic-char-range",
-]
-
-[[package]]
-name = "unic-char-range"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0398022d5f700414f6b899e10b8348231abf9173fa93144cbc1a43b9793c1fbc"
-
-[[package]]
-name = "unic-common"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "80d7ff825a6a654ee85a63e80f92f054f904f21e7d12da4e22f9834a4aaa35bc"
-
-[[package]]
 name = "unic-langid"
 version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5988,27 +5941,6 @@ dependencies = [
  "quote",
  "syn 2.0.119",
  "unic-langid-impl",
-]
-
-[[package]]
-name = "unic-ucd-category"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b8d4591f5fcfe1bd4453baaf803c40e1b1e69ff8455c47620440b46efef91c0"
-dependencies = [
- "matches",
- "unic-char-property",
- "unic-char-range",
- "unic-ucd-version",
-]
-
-[[package]]
-name = "unic-ucd-version"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96bd2f2237fe450fcd0a1d2f5f4e91711124f7857ba2e964247776ebeeb7b0c4"
-dependencies = [
- "unic-common",
 ]
 
 [[package]]
@@ -6068,8 +6000,7 @@ checksum = "ebc1c04c71510c7f702b52b7c350734c9ff1295c464a03335b00bb84fc54f853"
 [[package]]
 name = "uniffi"
 version = "0.29.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe34585ac0275accf6c284d0080cc2840f3898c551cda869ec291b5a4218712c"
+source = "git+https://github.com/RexRenatus/uniffi-rs.git?rev=bfb6dd9eb92b9febcfe00583ed57bec2ee056c34#bfb6dd9eb92b9febcfe00583ed57bec2ee056c34"
 dependencies = [
  "anyhow",
  "camino",
@@ -6083,8 +6014,7 @@ dependencies = [
 [[package]]
 name = "uniffi_bindgen"
 version = "0.29.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a792af1424cc8b3c43b44c1a6cb7935ed1fbe5584a74f70e8bab9799740266d"
+source = "git+https://github.com/RexRenatus/uniffi-rs.git?rev=bfb6dd9eb92b9febcfe00583ed57bec2ee056c34#bfb6dd9eb92b9febcfe00583ed57bec2ee056c34"
 dependencies = [
  "anyhow",
  "camino",
@@ -6094,7 +6024,6 @@ dependencies = [
  "goblin",
  "heck",
  "once_cell",
- "paste",
  "rinja",
  "serde",
  "textwrap",
@@ -6106,8 +6035,7 @@ dependencies = [
 [[package]]
 name = "uniffi_core"
 version = "0.29.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c18baace68a52666d33d12d73ca335ecf27a302202cefb53b1f974512bb72417"
+source = "git+https://github.com/RexRenatus/uniffi-rs.git?rev=bfb6dd9eb92b9febcfe00583ed57bec2ee056c34#bfb6dd9eb92b9febcfe00583ed57bec2ee056c34"
 dependencies = [
  "anyhow",
  "bytes",
@@ -6117,13 +6045,9 @@ dependencies = [
 
 [[package]]
 name = "uniffi_internal_macros"
-version = "0.29.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09acd2ce09c777dd65ee97c251d33c8a972afc04873f1e3b21eb3492ade16933"
+version = "0.29.1"
+source = "git+https://github.com/RexRenatus/uniffi-rs.git?rev=bfb6dd9eb92b9febcfe00583ed57bec2ee056c34#bfb6dd9eb92b9febcfe00583ed57bec2ee056c34"
 dependencies = [
- "anyhow",
- "indexmap",
- "proc-macro2",
  "quote",
  "syn 2.0.119",
 ]
@@ -6131,8 +6055,7 @@ dependencies = [
 [[package]]
 name = "uniffi_macros"
 version = "0.29.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d82c82ef945c51082d8763635334b994e63e77650f09d0fae6d28dd08b1de83"
+source = "git+https://github.com/RexRenatus/uniffi-rs.git?rev=bfb6dd9eb92b9febcfe00583ed57bec2ee056c34#bfb6dd9eb92b9febcfe00583ed57bec2ee056c34"
 dependencies = [
  "camino",
  "fs-err",
@@ -6148,8 +6071,7 @@ dependencies = [
 [[package]]
 name = "uniffi_meta"
 version = "0.29.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d6027b971c2aa86350dd180aee9819729c7b99bacd381534511ff29d2c09cea"
+source = "git+https://github.com/RexRenatus/uniffi-rs.git?rev=bfb6dd9eb92b9febcfe00583ed57bec2ee056c34#bfb6dd9eb92b9febcfe00583ed57bec2ee056c34"
 dependencies = [
  "anyhow",
  "siphasher 0.3.11",
@@ -6159,8 +6081,7 @@ dependencies = [
 [[package]]
 name = "uniffi_udl"
 version = "0.29.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52300b7a4ab02dc159a038a13d5bfe27aefbad300d91b0b501b3dda094c1e0a2"
+source = "git+https://github.com/RexRenatus/uniffi-rs.git?rev=bfb6dd9eb92b9febcfe00583ed57bec2ee056c34#bfb6dd9eb92b9febcfe00583ed57bec2ee056c34"
 dependencies = [
  "anyhow",
  "textwrap",

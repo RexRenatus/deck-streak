@@ -10,6 +10,8 @@
 //! `xcframework` job runs it and uploads what it wrote beside the harness's fixture. It includes the
 //! tests' builders and their day pin alone, so the Swift tests read the collections the Rust tests
 //! read.
+//! Beside them it writes a second collection in `occlusion/`, whose deck `Occlusion` holds one
+//! image occlusion card, with its own `collection.media/` holding the card's image (SPEC-380 R10).
 //!
 //! ```text
 //! review-fixture <output directory>
@@ -25,6 +27,8 @@ use std::process::ExitCode;
 
 // The example writes the fixture and reads none of the ids the tests compare against; the
 // builder's own module allows what its includers leave unread.
+#[path = "../tests/support/occlusion.rs"]
+mod occlusion;
 #[path = "../tests/support/review.rs"]
 mod review;
 
@@ -49,7 +53,9 @@ fn main() -> ExitCode {
         return ExitCode::from(2);
     };
     let output = Path::new(&output);
-    if let Err(error) = review::build(output) {
+    let written =
+        review::build(output).and_then(|_| occlusion::build(&output.join(occlusion::DIRECTORY)));
+    if let Err(error) = written {
         eprintln!("review-fixture: the review fixture was not written: {error}");
         return ExitCode::from(2);
     }

@@ -9,6 +9,7 @@ use deck_streak_kernel::{Db, KernelError, StudyDay, UtcMillis};
 use deck_streak_streaks::freeze::{FreezeReason, Refusal, admit};
 use deck_streak_streaks::store;
 use deck_streak_streaks::streak::StreakState;
+use sqlx::SqliteConnection;
 
 /// What a freeze grant came to.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -31,16 +32,49 @@ pub async fn grant_freeze(
     at: UtcMillis,
 ) -> Result<FreezeGrant, KernelError> {
     let mut write = db.write().await?;
-    let held = store::state(&mut write, "language")
+    let grant = grant_freeze_on(&mut write, day, reason, at).await?;
+    match grant {
+        FreezeGrant::Granted => write.commit().await?,
+        FreezeGrant::Refused(_) => write.rollback().await?,
+    }
+    Ok(grant)
+}
+
+/// Grants one freeze for `reason` on `day` inside the caller's `write` (SPEC-411 R9), judging the
+/// caps first, so a use case that pays a freeze writes it in the write that earned it.
+///
+/// # Errors
+///
+/// [`KernelError`] when a read or the write fails.
+pub async fn grant_freeze_on(
+    write: &mut SqliteConnection,
+    day: StudyDay,
+    reason: FreezeReason,
+    at: UtcMillis,
+) -> Result<FreezeGrant, KernelError> {
+    if let Err(refusal) = admission(write, reason, day).await? {
+        return Ok(FreezeGrant::Refused(refusal));
+    }
+    store::add_freeze(write, day, reason, at).await?;
+    Ok(FreezeGrant::Granted)
+}
+
+/// The streaks' own judgement of one more freeze for `reason` on `day`, read inside the caller's
+/// `write` (SPEC-411 R8): the freezes held and the freeze events, judged by [`admit`]. An Epic's
+/// pick reads its cap here, so the cap it settles with is the one the grant would meet.
+///
+/// # Errors
+///
+/// [`KernelError`] when a read fails.
+pub(crate) async fn admission(
+    write: &mut SqliteConnection,
+    reason: FreezeReason,
+    day: StudyDay,
+) -> Result<Result<(), Refusal>, KernelError> {
+    let held = store::state(write, "language")
         .await?
         .unwrap_or_else(StreakState::start)
         .freezes;
-    let events = store::events(&mut write).await?;
-    if let Err(refusal) = admit(held, reason, day, &events) {
-        write.rollback().await?;
-        return Ok(FreezeGrant::Refused(refusal));
-    }
-    store::add_freeze(&mut write, day, reason, at).await?;
-    write.commit().await?;
-    Ok(FreezeGrant::Granted)
+    let events = store::events(write).await?;
+    Ok(admit(held, reason, day, &events))
 }

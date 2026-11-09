@@ -19,15 +19,21 @@ struct VoicePickerView: View {
                     if language.options.isEmpty {
                         Text("No \(language.language) voice is installed.")
                             .accessibilityIdentifier("no-voice-\(language.language)")
+                            .foregroundStyle(Color.tideMuted)
                     }
                 }
+                .listRowBackground(Color.tideCard)
+                .listRowSeparatorTint(Color.tideBorder)
             }
+            .scrollContentBackground(.hidden)
+            .background(Color.tideBackground)
             .navigationTitle("Voices")
             .toolbar {
                 Button("Done") { dismiss() }
             }
             .task { await model.readVoices() }
         }
+        .tint(Color.tideAccent)
     }
 
     /// One choice: a button named by its title alone, which records `identifier` for the
@@ -42,7 +48,7 @@ struct VoicePickerView: View {
             HStack {
                 Text(title)
                 Spacer()
-                Text(mark).foregroundStyle(.secondary).accessibilityHidden(true)
+                Text(mark).foregroundStyle(Color.tideMuted).accessibilityHidden(true)
             }
         }
         .accessibilityValue(mark)
