@@ -3,11 +3,13 @@
 // by its path at either server; the TCP listener, which the sentinel never reaches, also counts each
 // connection it accepts as `tcp`, with a request or without one (a preconnect); and a datagram (a
 // STUN request) counts on the socket. The suite reads every arrival here and never from the browser's
-// own request events, which a channel outside the page's fetch machinery would not raise.
+// own request events, which a channel outside the page's fetch machinery would not raise. The TCP
+// listener also keeps each connection it accepts by its two addresses (SPEC-650's amendment): the
+// speculative-connection measurement records them beside what each step reads, and no reading carries them.
 import { createSocket, type Socket as Datagrams } from 'node:dgram';
 import { once } from 'node:events';
 import { createServer as createHttpServer, type Server as HttpServer } from 'node:http';
-import type { AddressInfo } from 'node:net';
+import type { AddressInfo, Socket } from 'node:net';
 import type { Page } from '@playwright/test';
 import type { Listener } from './planted';
 
@@ -31,11 +33,26 @@ export interface BridgeCounts {
   fromFrame: boolean[];
 }
 
+/** One connection the TCP listener accepted, by its two addresses, as the measurement records it. */
+export interface Accepted {
+  /** The connecting socket's address and port, `address:port`. */
+  peer: string;
+  /** The listener's own address and port, the one the connection reached, `address:port`. */
+  target: string;
+  /** Milliseconds from the last reset to the accept. */
+  at: number;
+  /** Each request path read on the connection, in order: none for a bare connection. */
+  paths: string[];
+}
+
 export class Listeners {
   private requests = new Map<string, number>();
   private connections = 0;
   private datagrams = 0;
   private sentinels = 0;
+  private accepted: Accepted[] = [];
+  private readonly entries = new WeakMap<Socket, Accepted>();
+  private since = Date.now();
 
   private constructor(
     private readonly http: HttpServer,
@@ -49,13 +66,22 @@ export class Listeners {
       response.writeHead(200, { 'content-type': 'text/plain', 'cache-control': 'no-store', connection: 'close' });
       response.end();
     });
-    tcp.on('connection', () => {
+    tcp.on('connection', (socket) => {
       this.connections += 1;
+      const entry: Accepted = {
+        peer: `${socket.remoteAddress ?? ''}:${socket.remotePort ?? 0}`,
+        target: `${socket.localAddress ?? ''}:${socket.localPort ?? 0}`,
+        at: Date.now() - this.since,
+        paths: []
+      };
+      this.accepted.push(entry);
+      this.entries.set(socket, entry);
     });
     // every request by its path, with no sentinel branch: the sentinel is the HTTP listener's alone
     tcp.on('request', (request, response) => {
       const path = new URL(request.url ?? '/', 'http://listener').pathname;
       this.requests.set(path, (this.requests.get(path) ?? 0) + 1);
+      this.entries.get(request.socket)?.paths.push(path);
       response.writeHead(200, { 'content-type': 'text/plain', 'cache-control': 'no-store', connection: 'close' });
       response.end();
     });
@@ -97,6 +123,8 @@ export class Listeners {
     this.connections = 0;
     this.datagrams = 0;
     this.sentinels = 0;
+    this.accepted = [];
+    this.since = Date.now();
   }
 
   /**
@@ -112,6 +140,11 @@ export class Listeners {
       if ((bridge?.[key] ?? 0) > 0) found[`bridge:${key}`] = bridge?.[key] ?? 0;
     }
     return found;
+  }
+
+  /** Every connection the TCP listener accepted since the last reset, in order, as a copy. */
+  get sockets(): Accepted[] {
+    return this.accepted.map((entry) => ({ ...entry, paths: [...entry.paths] }));
   }
 
   /** Whether `reading` holds every one of `paths`: a request path by prefix, any other key exactly. */

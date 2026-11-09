@@ -7,12 +7,16 @@
 // read. What each step reads is the measurement: it is printed and written to the test's output, and
 // never judged. The controls are judged: a bare connection this file opens reads `tcp` in the same run,
 // the sentinel arrives after every settle window, and nav-self's followed link reads its connection.
+// SPEC-650's amendment: the test's output also keeps, for each step, every connection the TCP listener
+// accepted by its two addresses and the time of the reading, and, in a project whose metadata names a
+// feature, that feature's state as the browser reports it; the bare connection's control also reads
+// its own two addresses in that record.
 import { once } from 'node:events';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { connect } from 'node:net';
 import { dirname } from 'node:path';
-import { expect, test, type Page } from '@playwright/test';
-import { Listeners, type Reading } from './listeners';
+import { expect, test, type Browser, type Page } from '@playwright/test';
+import { Listeners, type Accepted, type Reading } from './listeners';
 import { PLANTED, type Listener } from './planted';
 
 /** How long each step waits for what a predictor may open, in milliseconds. */
@@ -34,6 +38,15 @@ interface Step {
   frame: string;
   step: 'load' | 'hover' | 'click';
   reading: Reading;
+  /** Every connection the TCP listener accepted since the frame was opened, by its two addresses. */
+  sockets: Accepted[];
+  /** When the reading was taken, in milliseconds since the epoch. */
+  at: number;
+}
+
+/** What the browser answers when asked for a feature's state. */
+interface FeatureState {
+  featureEnabled?: boolean;
 }
 
 let listeners: Listeners;
@@ -47,10 +60,29 @@ test.afterAll(async () => {
 });
 
 /** Waits the settle window, proves the listener still counts with the sentinel, and returns what arrived. */
-async function settled(page: Page): Promise<Reading> {
+async function settled(page: Page): Promise<Pick<Step, 'reading' | 'sockets' | 'at'>> {
   await page.waitForTimeout(SETTLE);
   await listeners.sentinel(page, REACH_TIMEOUT);
-  return listeners.reading(page);
+  return { reading: await listeners.reading(page), sockets: listeners.sockets, at: Date.now() };
+}
+
+/**
+ * The state of the feature a project's metadata names, as the browser reports it over a browser
+ * session of the Chrome DevTools Protocol, or the error that call returned; nothing when the project
+ * names none. It is recorded, never judged.
+ */
+async function featureState(browser: Browser, feature: unknown): Promise<Record<string, boolean | string>> {
+  if (typeof feature !== 'string') return {};
+  const session = await browser.newBrowserCDPSession();
+  const send = session.send.bind(session) as unknown as (method: string, params: object) => Promise<FeatureState>;
+  try {
+    const { featureEnabled } = await send('SystemInfo.getFeatureState', { featureState: feature });
+    return { [feature]: featureEnabled ?? 'no state in the answer' };
+  } catch (error) {
+    return { [feature]: error instanceof Error ? error.message : String(error) };
+  } finally {
+    await session.detach();
+  }
 }
 
 test('the measurement examines every planted card a link predictor could act on', ({}, info) => {
@@ -75,6 +107,9 @@ test('control: a bare connection to the TCP listener reads tcp in this run', asy
   socket.on('error', () => undefined);
   await once(socket, 'connect');
   await expect.poll(async () => (await listeners.reading(page)).tcp ?? 0, { timeout: REACH_TIMEOUT }).toBe(1);
+  // the connection record names this connection: the socket's own address, and the listener's
+  const own = `${socket.localAddress ?? ''}:${socket.localPort ?? 0}`;
+  expect(listeners.sockets.map(({ peer, target }) => [peer, target])).toEqual([[own, `${hostname}:${port}`]]);
   socket.destroy();
 });
 
@@ -90,15 +125,15 @@ for (const card of MEASURED) {
       await element.waitFor();
       const content = await (await element.elementHandle())?.contentFrame();
       await content?.waitForLoadState('load');
-      steps.push({ frame, step: 'load', reading: await settled(page) });
+      steps.push({ frame, step: 'load', ...(await settled(page)) });
       const box = await element.boundingBox();
       expect(box, 'the frame has no box to hover').not.toBeNull();
       if (box !== null) {
         await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-        steps.push({ frame, step: 'hover', reading: await settled(page) });
+        steps.push({ frame, step: 'hover', ...(await settled(page)) });
         if (card.click) {
           await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-          steps.push({ frame, step: 'click', reading: await settled(page) });
+          steps.push({ frame, step: 'click', ...(await settled(page)) });
         }
       }
       await context.close();
@@ -106,9 +141,11 @@ for (const card of MEASURED) {
     for (const { frame, step, reading } of steps) {
       console.log(`speculative ${info.project.name} ${card.id} ${frame} ${step}: ${JSON.stringify(reading)}`);
     }
+    const features = await featureState(browser, info.project.metadata.feature);
     const file = info.outputPath('measurement.json');
     mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(file, `${JSON.stringify({ engine: info.project.name, build: browser.version(), card: card.id, steps }, null, 2)}\n`);
+    const record = { engine: info.project.name, build: browser.version(), card: card.id, features, steps };
+    writeFileSync(file, `${JSON.stringify(record, null, 2)}\n`);
 
     // the control: a followed link's connection is counted in this build
     if (card.id === 'nav-self') {
