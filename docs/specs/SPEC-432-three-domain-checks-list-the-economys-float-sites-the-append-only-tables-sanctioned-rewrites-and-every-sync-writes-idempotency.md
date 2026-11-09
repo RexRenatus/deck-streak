@@ -156,6 +156,22 @@ nothing at the red commit, so each is recorded `not red` and is held by the rows
 | `docs/schematics/domain-integrity-checks.md` | the schematic | added |
 | `docs/red-first/SPEC-432.md` | the record | added |
 | `changelog.d/domain-integrity-432.md` | the fragment | added |
+| `crates/economy/src/rules.rs` | `deck-streak-economy` | changed by section 10: the two shares in whole coins |
+| `crates/economy/src/constants.rs` | `deck-streak-economy` | changed by section 10: the three float constants replaced by whole percents |
+| `crates/economy/tests/integer_money.rs` | `deck-streak-economy`, test code | changed by section 10: the listing emptied, and the planted economy judged against its own listing |
+| `crates/economy/tests/wallet_goldens.rs` | `deck-streak-economy`, test code | changed by section 10: the golden's fractions read from the percents |
+| `crates/economy/tests/bounded_arithmetic.rs` | `deck-streak-economy`, test code | changed by section 10: the two rules' register rows |
+| `crates/economy/tests/formal_vectors_coin_shares.rs` | `deck-streak-economy`, test code | added by section 10: A16 and A17 |
+| `formal/lean/Formal/CoinShares.lean` | `formal` | added by section 10: the entry `lean/CoinShares` |
+| `formal/lean/Formal/CoinSharesVectors.lean` | `formal` | added by section 10: its vectors writer |
+| `formal/lean/Formal/Vectors.lean` | `formal` | changed by section 10: the writer's arm |
+| `formal/vectors/coin-shares.jsonl` | `formal` | added by section 10: written by the writer, never by hand |
+| `formal/obligations.json` | `formal` | changed by section 10: the row of `lean/CoinShares` |
+| `scripts/mutation-rows.d/S08200-S08299.json` | the rows | changed by section 10: S08204 and S08205 re-anchored |
+| `scripts/mutation-rows.d/S43200-S43299.json` | the rows | changed by section 10: S43208 re-pointed, S43211 re-anchored, S43237 added |
+| `scripts/tests/test_formal_obligations.py` | the formal census | changed by section 10: `lean/CoinShares` among the new entries |
+| `docs/decisions/ADR-446-the-domain-checks-are-rust-tests-in-economy-the-composition-root-and-ingest-each-listing-todays-sites-at-fail.md` | the decision | changed by section 10: D10 appended |
+| `changelog.d/integer-coin-shares-890.md` | the fragment | added by section 10 |
 
 `tools/table-census/table_census.rs` is included by path and unchanged.
 
@@ -245,3 +261,70 @@ S43236, one per matcher rule, guard and judge arm, each killed by the test named
 | S43234 | `tests/sync_write_idempotency.rs` | the unreadable arm disabled | A11 |
 | S43235 | `tests/sync_write_idempotency.rs` | `state.rs` dropped from the sync modules | A10 |
 | S43236 | `tests/sync_write_idempotency.rs` | the PLAIN judge's gone arm disabled | A13 |
+
+## 10. Amendment (#890): the two shares in whole coins
+
+This amendment cures the five sites section 5 left listed. Its pull request closes #890. Every figure
+was read at `b9a08e60`.
+
+- **The rules.** `daily_loss_cap` took `(wallet_at_rollover as f64 * DAILY_LOSS_CAP_WALLET_FRAC) as
+  i64` (`rules.rs:32`) and `scaled_fine` took `(wallet as f64 * FINE_WALLET_FRAC).ceil() as i64`
+  (`rules.rs:47`). `daily_loss_cap` is called by `wallet.rs::debit_capped_on` and
+  `crates/coordination/src/wallet_view.rs::wallet_view`; `scaled_fine` is called by tests alone.
+- **R11. The cap's share rounds down in integers.** For a positive wallet `w` the share is
+  `w / 100 * 30 + w % 100 * 30 / 100`, the greatest whole number at most 30 percent of `w`, and the
+  cap is the lesser of 100 and it. `DAILY_LOSS_CAP_WALLET_PERCENT` (30) replaces
+  `DAILY_LOSS_CAP_WALLET_FRAC`.
+- **R12. The fine's share rounds up in integers.** For a positive wallet the share is
+  `w / 100 * 2 + (w % 100 * 2 + 99) / 100`, the least whole number at least 2 percent of `w`, and
+  the fine is the greater of the configured fine and it. `FINE_WALLET_PERCENT` (2) replaces
+  `FINE_WALLET_FRAC`.
+- **R13. No step leaves the coin type.** Each share is taken over the wallet's whole hundreds and
+  its remainder apart, so for every wallet from 1 to `i64::MAX` each operator's value lies from 0
+  to `i64::MAX`. `PASS_SURCHARGE_PERCENT` (150) replaces `PASS_SURCHARGE_MULT`, so the crate holds
+  no float and the listing of R2 is empty.
+- **The goldens.** `tools/parity-oracle/goldens/daily_loss_cap.json` holds 142 records, wallets
+  from -500 to 1,000,000,000, and `scaled_fine.json` holds 99, configured fines from -10 to 78 and
+  wallets from -7 to 50,001. Both integer forms read every record equal, and no golden changes.
+  The float form and the integer forms agree for every wallet up to 2^53; above it the float form
+  rounds the wallet itself, and the first wallet where its fine differs is 9,007,199,254,741,001.
+  The cap agrees for every `i64` wallet, since only wallets below 334 fall under its 100 coins.
+- **The listing.** A1 now reads the head's float sites equal to an empty listing. A4 judges its
+  planted economy against `PLANTED_LISTED`, the five sites listed before this amendment, so the
+  unlisted, grown, shrunk and gone refusals each keep a site to refuse.
+- **The register of SPEC-435.** `tests/bounded_arithmetic.rs` lists `daily_loss_cap` with 3
+  unchecked sites and `scaled_fine` with 4, each bounded by the wallet's range and proved in
+  `formal/lean/Formal/CoinShares.lean`, in place of one float site each.
+- **The formal entry.** `lean/CoinShares` ports both rules over `Int` and proves three theorems at
+  `ramp=report`: the cap is the wallet's share rounded down and at most 100; the fine is the
+  wallet's share rounded up and at least the configured fine; and every operator of either share
+  stays from 0 to `i64::MAX` for every wallet from 1 to `i64::MAX`. Its witnesses are a cap that
+  rounds up, a fine that rounds down and a share taken as one product of the wallet and its
+  percent. `formal/vectors/coin-shares.jsonl` carries 112 inputs to the Rust test, the coin type's
+  two ends among them.
+- **Rows.** S08204 and S08205 are re-anchored on the two percent constants, killed by the same
+  goldens test. S43211 is re-anchored on the empty listing, killed by A1. S43208's killer moves to
+  A2, since the head holds no float left to name. S43237 pins the surcharge's 150 percent, killed
+  by the constants test.
+
+| id | criterion | decided by |
+|---|---|---|
+| A14 | the cap and the fine equal every record of their parity goldens in whole coins | `the_cap_the_fine_and_the_clip_match_the_parity_goldens` |
+| A15 | the golden's three fractions and `economy.json`'s two equal the engine's whole percents | `the_coin_constants_and_economy_json_match_the_predecessors` |
+| A16 | both rules answer every vector the Lean port writes, the coin type's two ends among them | `the_share_rules_answer_every_lean_vector` |
+| A17 | each recorded counterexample answers as proved, the largest wallet fined its exact share | `the_recorded_counterexamples_answer_as_proved` |
+
+```acceptance
+A14: cargo test -p deck-streak-economy --test wallet_goldens -- --exact the_cap_the_fine_and_the_clip_match_the_parity_goldens
+A15: cargo test -p deck-streak-economy --test wallet_goldens -- --exact the_coin_constants_and_economy_json_match_the_predecessors
+A16: cargo test -p deck-streak-economy --test formal_vectors_coin_shares -- --exact the_share_rules_answer_every_lean_vector
+A17: cargo test -p deck-streak-economy --test formal_vectors_coin_shares -- --exact the_recorded_counterexamples_answer_as_proved
+```
+
+The formal check of `lean/CoinShares` runs outside CI, as section 8 of SPEC-389 describes: the
+builder runs it at its head, the verifier re-runs it and the orchestrator re-runs it at land. It
+must read no `HOLE`, `MODEL_ERROR`, `DERIVED_DRIFT`, `STALE` or `WITNESS_SURVIVED`, and `clean` true
+on each theorem. A theorem moves to `ramp=block` only by the streak the checker counts.
+
+This amendment does not cover a CI job for the Lean proofs (#806), money outside
+`crates/economy/src/` (#893), or the pass surcharge's use, which no source file reads yet (#890).

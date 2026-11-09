@@ -4,8 +4,10 @@
 //! that holds it.
 //!
 //! The found map of file and item to count equals the listed map of today's sites, so an unlisted
-//! item, a grown count, a shrunk count and a listed item gone are each refused by name. Every walk
-//! prints how many it examined and refuses zero (R9). The planted trees are temporary directories.
+//! item, a grown count, a shrunk count and a listed item gone are each refused by name. The listing
+//! is empty since #890 cured its five sites; a planted economy keeps those five as its own listing,
+//! so every refusal still has a site to refuse. Every walk prints how many it examined and refuses
+//! zero (R9). The planted trees are temporary directories.
 
 // An integration test is test code: its helpers panic on an unreadable tree, and it prints the
 // examined count on purpose.
@@ -22,8 +24,12 @@ mod table_census;
 use table_census::Token;
 
 /// Today's float sites (SPEC-432 R2): the file under `crates/economy/src/`, the item and its
-/// float tokens. Each constant holds a type word and a decimal literal; each rule an `as f64`.
-const LISTED: [(&str, &str, usize); 5] = [
+/// float tokens. None is left: the two share rules and the three constants are whole coins (#890).
+const LISTED: [(&str, &str, usize); 0] = [];
+
+/// The listing the planted economy is judged against: the five sites the census listed before
+/// #890, each constant a type word and a decimal literal and each rule an `as f64`.
+const PLANTED_LISTED: [(&str, &str, usize); 5] = [
     ("constants.rs", "DAILY_LOSS_CAP_WALLET_FRAC", 2),
     ("constants.rs", "FINE_WALLET_FRAC", 2),
     ("constants.rs", "PASS_SURCHARGE_MULT", 2),
@@ -468,7 +474,7 @@ fn a_listed_float_site_gone_or_grown_is_refused() {
     let census = census(planted.path());
     examined("source file(s)", census.files.len());
     examined("token(s)", census.tokens);
-    let refused: BTreeSet<String> = judge(&census.found, &LISTED).into_iter().collect();
+    let refused: BTreeSet<String> = judge(&census.found, &PLANTED_LISTED).into_iter().collect();
     let expected: BTreeSet<String> = [
         "constants.rs UNLISTED_SHARE: 2 float token(s) by F1, F3, and the item is not listed",
         "constants.rs DAILY_LOSS_CAP_WALLET_FRAC: 3 float token(s) by F1, F3, F3, listed 2",

@@ -562,6 +562,7 @@
     {"entry": "tla/WalletFloor", "disposition": "keep", "act": "unaffected by the engine's replacement; nothing, unless a delivery's covers check shows a moved span", "obligations": []},
     {"entry": "lean/AgentPinGroups", "disposition": "keep", "act": "new with the token groups proof of the agent pins (SPEC-469): re-stamped when a pin span it covers moves, with no weakening", "obligations": []},
     {"entry": "lean/Chest", "disposition": "keep", "act": "unaffected by the engine's replacement", "obligations": []},
+    {"entry": "lean/CoinShares", "disposition": "keep", "act": "new with the loss cap's and the fine's shares in whole coins (SPEC-432 section 10, #890); re-stamped when a rule it covers moves, with no weakening", "obligations": []},
     {"entry": "lean/CompanionDecide", "disposition": "keep", "act": "new with the scheduling companion's interface (SPEC-501); re-stamped when the decision or the handshake it covers moves, with no weakening", "obligations": ["O6"]},
     {"entry": "lean/DeployEntryRefusal", "disposition": "keep", "act": "new with the Caddy steps' settings check (SPEC-473); re-stamped when the function it covers moves, with no weakening", "obligations": []},
     {"entry": "lean/DocsMermaidRead", "disposition": "keep", "act": "new with the docs reader's formal path (SPEC-474); a pure function of a docs text, unaffected by the engine's replacement", "obligations": []},
