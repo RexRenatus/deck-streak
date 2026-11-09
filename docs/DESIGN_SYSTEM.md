@@ -1,9 +1,13 @@
 # Design System
 
+Amended below (ADR-589): DeckStreak's surfaces are the web app and the universal iPhone and iPad app; the Mini App this page names is deprecated.
+
 How the Mini App looks and behaves. The ui-styles, vibecode-polish, ux-laws, accessibility and
 cjk-typography packs judge it.
 
 ## Principles
+
+Amended below (ADR-589): the first principle describes the deprecated Mini App.
 
 - Native to Telegram: the Mini App takes Telegram's theme, its BackButton and MainButton, and its
   haptics, so it feels part of the chat it opens from.
@@ -11,6 +15,8 @@ cjk-typography packs judge it.
 - Readable in every script the owner studies.
 
 ## Tokens
+
+Amended below (ADR-589): the Telegram mapping this section describes is the deprecated Mini App's, and stays in the web app until its removal delivery.
 
 The design tokens are one DTCG file (format 2025.10), `web/app/src/lib/design/tokens.json`, in two
 tiers (ADR-028):
@@ -58,10 +64,14 @@ shadcn-svelte components on Bits UI, restyled by the tokens. Each screen has one
 
 ## Accessibility
 
+Amended below (ADR-589): the Telegram themes named here are the deprecated Mini App's.
+
 WCAG 2.2 level AA: every control reachable by keyboard and named, focus visible, motion reduced on
 request, orientation never locked, and an axe audit of every route in both Telegram themes.
 
 ## Theming
+
+Amended below (ADR-589): the Telegram theming this section describes is the deprecated Mini App's; outside Telegram the web app keeps the colour-mode rule (ADR-616) in the amendments below.
 
 The theme follows Telegram at run time; nothing is hard-coded to a colour. Telegram's script sets
 the `--tg-theme-*` variables and resets them when the chat's theme changes, so the page repaints
@@ -127,3 +137,8 @@ is stored, the stylesheet alone sets the mode: a `prefers-color-scheme` rule in 
 Tide fallback unless the browser reports light or the root element carries the `light` class, so a browser with no preference
 shows the dark mode. Once the app mounts, a stored `light` or `dark` sets that class on the root element, and `system` clears
 it. No script enters the page, and inside Telegram the chat theme and its scheme still paint every role.
+
+Amendment (2026-10-29, ADR-589): DeckStreak's surfaces are the web app (`web/app`) and the universal iPhone and iPad
+app (`ios/`), and the Telegram Mini App and the bot are deprecated. The Telegram text of the sections above, each marked
+under its heading, describes the deprecated Mini App, whose Telegram mapping stays in the web app until its own removal
+delivery (ADR-589); that text is kept as it was.
