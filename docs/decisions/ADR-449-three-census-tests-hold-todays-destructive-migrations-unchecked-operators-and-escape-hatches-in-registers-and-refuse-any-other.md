@@ -281,3 +281,34 @@ counts at the build's cut equal SPEC-435 section 1's.
 SPEC-020 R10, R17 and R18; SPEC-023 R1; SPEC-041 section 8; SPEC-083; SPEC-330 (#473); ADR-043;
 `crates/kernel/tests/schema.rs`; `crates/agent/tests/deck_gate_census.rs`; `clippy.toml`;
 `formal/tla/WalletFloor`, the wallet floor model whose invariant bounds `purchase_on`'s subtraction.
+
+## Amendment 1: the bounded sums become checked or saturating, one delivery at a time (#903)
+
+Decides SPEC-435 section 11. D2's register stands, and so does its rejection of converting every
+listed site at once. This amendment decides how the register's `Domain` and `Count` integer sums
+are converted, and amends D7 and D9: D7's "cures no listed site" and D9's "no amendment" held for
+the census's own delivery, and the deliveries of SPEC-435 section 11 are the cures they name.
+
+**D10. One function's sums at a time, a row leaving only with its cure.** A delivery converts the
+integer sums of related functions, one crate or one file where it can, each site with a test at
+its bound and a row whose mutant restores the wrap. A function's register row leaves only in the
+delivery that converts its last site; a row that keeps a float sum stays, with the count of the
+sums left and the class that bounds them. No refusal, examined count, operator or crate of the
+census changes.
+
+**D11. Saturating where every value past the bound answers alike, checked where a clamp would be a
+wrong amount.** A counter whose every value past a guarantee answers the same roll saturates. A
+coin, price or XP amount that a clamp would turn into a different amount paid takes the `checked_`
+form and the caller's existing error.
+
+**D12. The first delivery saturates the chest pity counters.** `Pity::after`, `roll_rarity` and
+`epic_odds_pts` read the counters through saturating sums, and the register loses `after`'s row and
+lists the two chest rules' float sums as `Float`. The Lean chest model reads integers with no
+bound, so the saturating sums answer as it does at every input; its two covers are re-stamped.
+
+### What amendment 1 was chosen against
+
+- Converting all 44 integer sums in one delivery: rejected because D2's reason stands, one review over 24 functions in six crates hides each function's bound behind the others.
+- Overflow checks on in the shipped build's profile: rejected because it turns a wrap into a panic in the shipped daemon, a build change outside the register, and it names no value that broke.
+- A `checked_add` with a new error for the pity counters: rejected because `Pity::after` is a `const fn` that answers a value, and every counter past its guarantee answers the same roll, so an error path would add a failure with no different answer.
+- Leaving the sums unchecked with their rows: rejected because a broken invariant would still wrap without a sign in the shipped build.
