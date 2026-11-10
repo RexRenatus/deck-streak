@@ -162,6 +162,27 @@ R22. The blocking census's `LEVEL` is `Level::Warn` and its `LISTED` holds exact
 R23. The handler panic census's `LEVEL` is `Level::Warn` and its `LISTED` is empty.
 R24. Moving a `LEVEL` to `Fail` is its own delivery, under ADR-450 D6.
 
+Cookie flags (amendment 1, ADR-450 D10, #912):
+
+R25. A pair is a parenthesised group of a shipped source whose first item is a path ending in
+    `SET_COOKIE`, or the string literal `"set-cookie"` in any case, followed by a comma and a
+    value; a trailing comma is dropped. The census reads every member's shipped sources as R5 and
+    R6 read them, and reads a `const` item and a `const { }` block as it reads every other item.
+R26. A pair passes when its value is a string literal, or a `format!` whose format string is one,
+    and that text, split at `;`, holds `Secure`, `HttpOnly` and an attribute starting `SameSite=`,
+    each in any case. Any other pair is a site, a value the census does not read included.
+R27. A site's key is its file, its enclosing function's name, the form `set-cookie` and its
+    ordinal among that function's sites, as R12 keys a blocking site. Outside any function, a
+    pair in a `const` item keys the const's name, as the shared reader's `opens_const_item`
+    finds the item, and any other pair keys an empty function name; a `const { }` block keeps
+    its function's name.
+R28. The census is `crates/daemon/tests/cookie_flags_census.rs`, including the shared reader by
+    `mod shipped_sources;`. Its `LEVEL` is `Level::Warn` and its `LISTED` holds exactly the two
+    keys of section 10, in that order; R24 holds for it.
+R29. It prints `examined <n> shipped files` and `examined <n> set-cookie pairs`, and fails naming
+    `examined 0 shipped files` on an empty population and `examined 0 set-cookie pairs` when no
+    pair is found, each VOID, never a pass.
+
 ## 3. Acceptance criteria of SPEC-436
 
 | id | criterion | decided by |
@@ -180,6 +201,10 @@ R24. Moving a `LEVEL` to `Fail` is its own delivery, under ADR-450 D6.
 | A12 | R16: the three `debug_assert` forms, a site in a `const` item and in a `const { }` block, test code, `unwrap_or`, `unwrap_or_else`, `unwrap_or_default`, and a form in a comment or a string are not found | `handler_panic_census::test_code_debug_assertions_const_contexts_and_lookalikes_are_not_handler_panics` |
 | A13 | R13, R14, R23: over the repository, the examined crates are exactly `api`, `bot`, `daemon` and `mcp`, the found keys equal the empty `LISTED`, `LEVEL` is `Warn`, and the count prints above zero | `handler_panic_census::the_handler_crates_hold_exactly_todays_listing` |
 | A14 | R13: an empty population, and a named crate with no `src` directory, each fail naming it | `handler_panic_census::the_panic_census_refuses_an_empty_population` |
+| A15 | R25, R26, R27: a constant, a qualified and a literal header name, a literal and a `format!` value, a trailing comma and lower-case attributes are judged; a value missing `Secure`, `HttpOnly` or `SameSite`, a value the census does not read, and a `format!` whose flags sit outside its format string are sites, keyed as R27 says | `cookie_flags_census::every_set_cookie_pair_is_judged_by_its_three_flags` |
+| A16 | R25, R27: a `use` group, a header list, another header's pair, a suffixed name, a comment, a string and test code hold no pair; a pair in a `const` item and one in a `const { }` block are judged like any other and listed on their missing flags, the first keyed by the const's name; one control pair passes | `cookie_flags_census::a_const_item_pair_is_judged_and_test_code_and_other_headers_are_not_pairs` |
+| A17 | R28: over the repository, the found keys equal `LISTED`, `LEVEL` is `Warn`, and both counts print above zero | `cookie_flags_census::the_repository_lists_exactly_todays_cookie_sites` |
+| A18 | R29: an empty file list fails naming `examined 0 shipped files`, and files with no pair fail naming `examined 0 set-cookie pairs` | `cookie_flags_census::the_cookie_census_refuses_an_empty_population` |
 
 ```acceptance
 A1: cargo test -p deck-streak-daemon --test await_lints -- --exact the_workspace_denies_both_await_lints
@@ -196,6 +221,10 @@ A11: cargo test -p deck-streak-daemon --test handler_panic_census -- --exact eve
 A12: cargo test -p deck-streak-daemon --test handler_panic_census -- --exact test_code_debug_assertions_const_contexts_and_lookalikes_are_not_handler_panics
 A13: cargo test -p deck-streak-daemon --test handler_panic_census -- --exact the_handler_crates_hold_exactly_todays_listing
 A14: cargo test -p deck-streak-daemon --test handler_panic_census -- --exact the_panic_census_refuses_an_empty_population
+A15: cargo test -p deck-streak-daemon --test cookie_flags_census -- --exact every_set_cookie_pair_is_judged_by_its_three_flags
+A16: cargo test -p deck-streak-daemon --test cookie_flags_census -- --exact a_const_item_pair_is_judged_and_test_code_and_other_headers_are_not_pairs
+A17: cargo test -p deck-streak-daemon --test cookie_flags_census -- --exact the_repository_lists_exactly_todays_cookie_sites
+A18: cargo test -p deck-streak-daemon --test cookie_flags_census -- --exact the_cookie_census_refuses_an_empty_population
 ```
 
 Every planted control is text the test spells literally, and every expected key, line and count is
@@ -220,6 +249,12 @@ refused.
 | `docs/schematics/async-robustness-checks.md` | the schematic | added |
 | `docs/red-first/SPEC-436.md` | the record | added |
 | `changelog.d/async-robustness-436.md` | the fragment | added |
+| `crates/daemon/tests/cookie_flags_census.rs` | the cookie flag census | added by amendment 1: R25 to R29, A15 to A18 |
+| `scripts/mutation-rows.d/S43600-S43699.json` | the rows | changed by amendment 1: S43691 to S43699 (section 9) |
+| `docs/specs/SPEC-436-no-lock-guard-is-held-across-an-await-no-async-body-blocks-and-no-request-handler-panics.md` | the spec | changed by amendment 1: R25 to R29, A15 to A18, sections 4, 5, 9 and 10 |
+| `docs/decisions/ADR-450-the-await-lints-are-denied-by-name-and-blocking-calls-and-handler-panics-are-token-censuses-that-start-at-warn.md` | the decision | changed by amendment 1: D10 |
+| `docs/red-first/SPEC-436.md` | the record | changed by amendment 1: A15 to A18 |
+| `changelog.d/cookie-flags-436.md` | the fragment | added by amendment 1 |
 
 ## 5. What this does NOT cover
 
@@ -234,7 +269,8 @@ refused.
   member it does not name (ADR-450 D2's false negatives), #910.
 - It does not read indexing, slicing, arithmetic or a borrow that can panic in the handler
   crates, or a panic in a crate they call (ADR-450 D3's false negatives), #911.
-- It does not check cookie flags, response security headers or outbound fetches, #912.
+- It does not check response security headers or outbound fetches, #912; amendment 1 checks
+  cookie flags.
 - It does not add any other lint rule, and lowers no rule in force, #913.
 - It does not sweep clippy's other lints that hold zero hits today, #914.
 
@@ -308,3 +344,28 @@ occurs exactly once in its file. Each mutant compiles under `-D warnings`.
 | S43685-S43688 | `tests/handler_panic_census.rs` | one handler crate: `api`, `bot`, `daemon`, `mcp` | A13 |
 | S43689 | `tests/handler_panic_census.rs` | `LEVEL`'s `Warn` | A13 |
 | S43690 | `tests/handler_panic_census.rs` | the empty-population refusal | A14 |
+| S43691-S43693 | `tests/cookie_flags_census.rs` | one attribute: `Secure`, `HttpOnly`, `SameSite` | A15 |
+| S43694 | `tests/cookie_flags_census.rs` | the `SET_COOKIE` path arm | A15 |
+| S43695 | `tests/cookie_flags_census.rs` | the `"set-cookie"` literal arm | A15 |
+| S43696 | `tests/cookie_flags_census.rs` | the `format!` value arm | A15 |
+| S43697 | `tests/cookie_flags_census.rs` | `LEVEL`'s `Warn` | A17 |
+| S43698-S43699 | `tests/cookie_flags_census.rs` | the empty-files refusal, the no-pair refusal | A18 |
+
+## 10. Amendment 1: every Set-Cookie pair carries Secure, HttpOnly and SameSite (#912)
+
+The cookie flag census reads every member's shipped sources for a `Set-Cookie` pair. Four pairs
+are found, counted by `cargo test -p deck-streak-daemon --test cookie_flags_census -- --exact
+the_repository_lists_exactly_todays_cookie_sites` (A17), which prints both counts: two in
+`crates/identity/src/session.rs` (`opening_cookie`, `ended_cookie`), whose literal values carry
+all three attributes and pass, and two in `crates/api/src/linking_routes.rs`, whose values are
+names the census does not read, so they are its listed sites:
+
+| file | function | form | ordinal |
+|---|---|---|---|
+| `crates/api/src/linking_routes.rs` | `ceremony_started` | `set-cookie` | 1 |
+| `crates/api/src/linking_routes.rs` | `ceremony_ended` | `set-cookie` | 1 |
+
+The amendment lists them, never cures them: moving their attributes into the literal the census
+reads is product code, its own delivery. The census starts at `Level::Warn` as R24 says. It does
+not judge a cookie a dependency sets, a header a proxy adds, or a value built across calls; those
+stay with #912.

@@ -214,6 +214,17 @@ tests and the reader, each killed by a test of its own binary.
 SPEC-020 and SPEC-041 state nothing this delivery changes, so none is amended. A new schematic,
 `docs/schematics/async-robustness-checks.md`, draws the three checks.
 
+**D10. Cookie flags are a token census over every member (SPEC-436 amendment 1, #912).** A
+`Set-Cookie` pair is a parenthesised group whose first item names the header, by a path ending in
+`SET_COOKIE` or the literal `"set-cookie"`, and whose second is its value. It passes only when the
+value is a literal, or a `format!` of one, whose attributes hold `Secure`, `HttpOnly` and
+`SameSite`: default-deny, so a value the census cannot read is a site, listed, never assumed
+safe. The census is `crates/daemon/tests/cookie_flags_census.rs` on D4's shared reader, prints
+`examined <n> shipped files` and `examined <n> set-cookie pairs`, fails each at 0 as VOID, and
+starts at warn with today's two sites listed; D5 and D6 hold for it as for D3. Outside any
+function, a pair in a `const` item keys the const's name, found by the shared reader's
+`opens_const_item`, and a `const { }` block keeps its function's name.
+
 ## What it was chosen against
 
 ### D1
@@ -258,6 +269,14 @@ SPEC-020 and SPEC-041 state nothing this delivery changes, so none is amended. A
 ### D9
 
 - Amending SPEC-002 to name the await lints: rejected because SPEC-002 states the table's inheritance, not its entries, and SPEC-436 holds the entries.
+
+### D10
+
+- Reading only the session crate's two builders: rejected because a cookie set anywhere else would pass unread.
+- Treating a value the census cannot read as passing: rejected because it would pass the very sites whose attributes it never saw.
+- A web-security probe run on the box: rejected because the repository's own test is what each pull request's CI runs.
+- Skipping a pair in a `const` item or a `const { }` block, as the panic census skips const contexts: rejected because a const panic fails the compile while a const cookie is set at run time like any other, and the census is default-deny.
+- Keying a pair in a top-level `const` item with an empty function name: rejected because the const's name says where the pair is, and the shared reader's `opens_const_item` would then go unused in this census's test target, which the lint run at `-D warnings` refuses; no lint allow is proposed.
 
 ## Consequences
 
