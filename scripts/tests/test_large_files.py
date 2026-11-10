@@ -70,13 +70,38 @@ def planted(name):
 def judge(entries, bound, listed):
     """The sites, the stale entries and the undecided entries of one population, each as the line
     it prints (R4 to R7)."""
-    return [], [], []
+    sites, undecided, present = [], [], {}
+    for mode, kind, size, path in entries:
+        if size is None:
+            undecided.append(
+                f"UNDECIDED large-file {path} ({kind} entry, mode {mode}: no blob size)"
+            )
+            continue
+        present[path] = size
+        if path in listed:
+            if size > listed[path][0]:
+                sites.append(
+                    f"WARN large-file {path} {size} (listed at {listed[path][0]}, grown past it)"
+                )
+        elif size > bound:
+            sites.append(f"WARN large-file {path} {size} (unlisted, past the bound {bound})")
+    gone = sorted(path for path in listed if path not in present)
+    back = sorted(path for path in listed if path in present and present[path] <= bound)
+    stale = [
+        f"STALE large-file {path} {listed[path][0]} (no tracked file at this path)" for path in gone
+    ]
+    stale += [f"STALE large-file {path} {listed[path][0]} (at or under the bound)" for path in back]
+    return sites, stale, undecided
 
 
 def verdict(entries, bound=BOUND, listed=LISTED, level=LEVEL):
     """Print the examined count and each line, and return the lines that fail at `level` (R9,
     R10): a stale entry fails at both levels, a site and an undecided entry at `fail` only."""
-    return []
+    entries = examined("file(s)", entries)
+    sites, stale, undecided = judge(entries, bound, listed)
+    for line in sites + stale + undecided:
+        print(line)
+    return (sites + undecided if level == "fail" else []) + stale
 
 
 class PlantedListings(unittest.TestCase):
