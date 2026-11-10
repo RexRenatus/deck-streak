@@ -27,8 +27,8 @@ import subprocess
 import unittest
 from pathlib import Path, PurePosixPath
 
-from _mutants_finder import Refused
-from _support import REPO
+from _mutants_finder import SHELLS, Refused, run_texts
+from _support import REPO, examined
 
 LEVEL = "warn"
 RULE = "process-waiter"
@@ -201,7 +201,30 @@ def shell_lookups(text, context, own_args, base=1):
     line `context`. A command's program is the first of its words that names a lookup or a shell,
     so a wrapper (`timeout`, `sudo`, `env`) and a keyword (`until`, `if`, `!`) are read through,
     and a shell's `-c` script is read with the shell's own command line as its context."""
-    return []
+    found = []
+    for line, chunk in chunks(text):
+        at = base + line - 1
+        for pipeline in pipelines(chunk):
+            for k, command in enumerate(pipeline):
+                for word in command:
+                    for inner in SUBSTITUTION.findall(word):
+                        found += shell_lookups(inner, context, own_args, at)
+                names = [PurePosixPath(word).name for word in command]
+                first = next(
+                    (n for n, name in enumerate(names) if name in LOOKUPS + SHELLS),
+                    None,
+                )
+                if first is None:
+                    continue
+                words = command[first:]
+                if names[first] in SHELLS:
+                    script = shell_script(words)
+                    if script is not None:
+                        found += shell_lookups(script, " ".join(words), True, at)
+                    continue
+                form, site = classify(words, pipeline[k + 1 :], context, own_args)
+                found.append((at, names[first], form, site))
+    return found
 
 
 def argv_word(node):
@@ -216,25 +239,70 @@ def argv_word(node):
 def python_lookups(path, text):
     """(where, program, form, site) for each process lookup in Python `text`: a command string
     or an argument list handed to a process call, and a psutil process listing."""
-    return []
+    found = []
+    for node in ast.walk(ast.parse(text, path)):
+        if not isinstance(node, ast.Call) or not isinstance(node.func, (ast.Attribute, ast.Name)):
+            continue
+        name = node.func.attr if isinstance(node.func, ast.Attribute) else node.func.id
+        if name in LISTINGS and ast.unparse(node.func) == f"psutil.{name}":
+            found.append((node.lineno, "psutil", f"psutil-{name}", False))
+        if name not in RUNNERS or not node.args:
+            continue
+        first = node.args[0]
+        if isinstance(first, ast.Constant) and isinstance(first.value, str):
+            nested = shell_lookups(first.value, f"sh -c {first.value}", True)
+            found += [(node.lineno, *each[1:]) for each in nested]
+        elif isinstance(first, (ast.List, ast.Tuple)) and first.elts:
+            words = [argv_word(each) for each in first.elts]
+            if PurePosixPath(words[0]).name in LOOKUPS:
+                form, site = classify(words, [], f"python3 {path}", True)
+                found.append((node.lineno, PurePosixPath(words[0]).name, form, site))
+    return [(f"line {line}", *rest) for line, *rest in sorted(found)]
 
 
 def population(root, paths):
     """(kind, path) for each member, in path order: a shell script, a workflow or a Python file."""
-    return [("shell", path) for path in sorted(paths) if PurePosixPath(path).suffix == ".sh"]
+    members = []
+    for path in sorted(paths):
+        file, name = root / path, PurePosixPath(path)
+        if not file.is_file():
+            continue
+        if name.suffix == ".sh":
+            members.append(("shell", path))
+        elif name.suffix in (".yml", ".yaml") and str(name.parent) == WORKFLOWS:
+            members.append(("workflow", path))
+        elif name.suffix == ".py":
+            members.append(("python", path))
+        elif not name.suffix and SHEBANG.match(file.read_bytes()[:128]):
+            members.append(("shell", path))
+    return members
 
 
 def member(kind, path, data):
     """(where, program, form, site) for each lookup one member's bytes hold. A member the census
     cannot read is one `unread` site: reported, never passed."""
-    return []
+    try:
+        text = data.decode("utf-8")
+        if kind == "workflow":
+            return [
+                (f"step {step} line {line}", *rest)
+                for step, run in enumerate(run_texts(text), 1)
+                for line, *rest in shell_lookups(run, STEP_SHELL, False)
+            ]
+        if kind == "python":
+            return python_lookups(path, text)
+        return [
+            (f"line {line}", *rest) for line, *rest in shell_lookups(text, f"bash {path}", True)
+        ]
+    except UNREADABLE:
+        return [("whole file", "-", "unread", True)]
 
 
 def census(root, paths):
     """(path, where, program, form, site) for each lookup the population holds; an empty
     population is refused, never passed."""
     found = []
-    for kind, path in population(root, paths):
+    for kind, path in examined("file(s)", population(root, paths)):
         data = (root / path).read_bytes()
         found += [(path, *each) for each in member(kind, path, data)]
     print(f"found {len(found)} lookup(s)")
@@ -255,8 +323,10 @@ def site_keys(found):
 def verdict(keys, listed, level):
     """(lines, failed): `WARN` for each unlisted site, failing only at fail, and `STALE` for each
     listed entry no site matches, failing at both levels."""
+    lines = [f"WARN {RULE} {key}" for key in keys if key not in listed]
     stale = [f"STALE {RULE} {key}" for key in listed if key not in keys]
-    return stale, bool(stale)
+    failed = bool(stale) or (level == "fail" and bool(lines))
+    return lines + stale, failed
 
 
 def planted(name):
