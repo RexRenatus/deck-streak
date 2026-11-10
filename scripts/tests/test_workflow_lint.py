@@ -62,13 +62,42 @@ def saved_findings(output):
     output and the exit beside it (`actionlint.exit`). VOID, by AssertionError, when either file is
     missing, the exit is not 0 or 1, the output does not read as a list of findings each holding
     every key of FINDING_KEYS, or the exit and the findings disagree."""
-    return []
+    output = Path(output)
+    text, code = saved_text(output), saved_text(output.with_suffix(".exit"))
+    if text is None or code is None:
+        raise AssertionError(f"VOID: no saved actionlint output or exit beside {output.name}")
+    code = code.strip()
+    if code not in ("0", "1"):
+        raise AssertionError(f"VOID: actionlint exited {code!r}, not 0 or 1")
+    read = json.loads(text) if text.strip() else []
+    read = [] if read is None else read
+    if not isinstance(read, list) or not all(
+        isinstance(each, dict) and all(key in each for key in FINDING_KEYS) for each in read
+    ):
+        raise AssertionError("VOID: the saved output is not a list of actionlint findings")
+    found = [(each["filepath"], each["line"], each["column"], each["kind"]) for each in read]
+    if code == "0" and found:
+        raise AssertionError(f"VOID: actionlint exited 0 beside {len(found)} finding(s)")
+    if code == "1" and not found:
+        raise AssertionError("VOID: actionlint exited 1 beside no finding")
+    return found
 
 
 def finding_problems(found, names, listed):
     """The warning lines for `found` against `listed`: each finding no listing holds, and each
     listed finding no longer reported. A finding outside the workflow files `names` is VOID."""
-    return []
+    warnings, keys = [], set()
+    for filepath, line, column, kind in found:
+        name = Path(filepath).name
+        if Path(filepath).parent.as_posix() != ".github/workflows" or name not in names:
+            raise AssertionError(f"VOID: a finding names {filepath}, outside the workflows read")
+        key = (name, line, kind)
+        keys.add(key)
+        if key not in listed:
+            warnings.append(f"warn: {name}:{line}:{column}: {kind}: no listing holds this finding")
+    for key in sorted(set(listed) - keys):
+        warnings.append(f"warn: {key[0]}:{key[1]}: {key[2]}: listed and no longer reported")
+    return warnings
 
 
 def gate_jobs(directory):
@@ -135,7 +164,19 @@ def installs(job):
 def parity_sites(jobs):
     """The tools held at two versions or by two routes across `jobs`, as (tool, [(version, route,
     file, job)]), sorted by tool. A tool only one job installs, once or more, is never a site."""
-    return []
+    held = {}
+    for name, job_id, job in jobs:
+        for tool, version, route in installs(job):
+            held.setdefault(tool, []).append((version, route, name, job_id))
+    sites = []
+    for tool, uses in sorted(held.items()):
+        if len({(name, job_id) for _version, _route, name, job_id in uses}) < 2:
+            continue
+        versions = {version for version, *_rest in uses}
+        routes = {route for _version, route, *_rest in uses}
+        if len(versions) > 1 or len(routes) > 1:
+            sites.append((tool, sorted(uses)))
+    return sites
 
 
 def site_problems(sites, listed):
