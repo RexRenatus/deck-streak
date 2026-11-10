@@ -58,22 +58,39 @@ def read_lists(text):
             raise AssertionError(f"line {number} is not a line of the lists")
     if len(stamps) != 1 or len(repositories) != 1:
         raise AssertionError("the lists hold no single read stamp and repository")
+    unmatched = sorted(set(protected) ^ set(committed))
+    if unmatched:
+        raise AssertionError(f"the two branch reads disagree on {len(unmatched)} branch(es)")
     branches = {name: (protected[name], committed[name]) for name in protected if name in committed}
     return Lists(stamps[0], repositories[0], branches, pulls)
 
 
 def stale(lists, window_days=WINDOW_DAYS):
     """The sorted names of the stale branches (R2, R3)."""
-    return []
+    cutoff = lists.read_at - window_days * DAY
+    heads = {head for head, repository in lists.pulls if repository == lists.repository}
+    return sorted(
+        name
+        for name, (protected, committed) in lists.branches.items()
+        if name not in heads and name not in KEPT and not protected and committed < cutoff
+    )
 
 
 def verdict(count, record, level):
     """(passes, line) for a stale count against the record (R6, R7)."""
-    return True, ""
+    recorded = record[0]
+    if count < recorded:
+        line = f"STALE-RECORD stale-branches: recorded {recorded}, a count no longer reached; "
+        return False, line + f"the count is {count}, so the record moves down"
+    if count > recorded:
+        line = f"WARN stale-branches: {count} stale branch(es), past the recorded {recorded}"
+        return level == "warn", line
+    return True, f"stale branches {count}, recorded {recorded}"
 
 
 def census(lists, record=RECORD, level=LEVEL):
     """The stale names, the verdict and its line, over every branch the lists hold (R5)."""
+    examined("branch(es)", sorted(lists.branches))
     found = stale(lists)
     passes, line = verdict(len(found), record, level)
     return found, passes, line
