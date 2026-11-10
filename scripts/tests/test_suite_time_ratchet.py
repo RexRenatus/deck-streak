@@ -100,7 +100,50 @@ def times(logs):
     """Each suite's time from CI's stage logs, {(runner, unit): seconds}; `logs` maps a stage
     log's file name to its lines. A Rust binary's figure is the sum of its tests' own durations; a
     crate's doc tests take their result lines' sum, or the merged form's `all doctests ran` line."""
-    return {}
+    figures = {}
+    for name, lines in sorted(logs.items()):
+        runner = NEXTEST_LOGS.get(name)
+        if runner:
+            for line in lines:
+                m = NEXTEST.match(ANSI.sub("", line))
+                if m:
+                    key = (runner, m.group(2))
+                    figures[key] = figures.get(key, 0.0) + float(m.group(1))
+        elif name == "python.log":
+            last = None
+            for line in lines:
+                text = ANSI.sub("", line).rstrip("\n")
+                r = RAN.match(text)
+                if r:
+                    last = (int(r.group(1)), float(r.group(2)))
+                    continue
+                m = MODULE.match(text)
+                if m:
+                    if last is not None and last[0] == int(m.group(2)):
+                        figures[("unittest", m.group(1))] = last[1]
+                    last = None
+        elif name == "doctest.log":
+            crate = None
+            for line in lines:
+                text = ANSI.sub("", line).strip()
+                d = DOCTESTS.match(text)
+                if d:
+                    crate = d.group(1)
+                    continue
+                r = DOC_RESULT.match(text)
+                a = DOC_ALL.match(text)
+                if crate is not None and r:
+                    key = ("rustdoc", crate)
+                    figures[key] = figures.get(key, 0.0) + float(r.group(1))
+                elif crate is not None and a:
+                    figures[("rustdoc", crate)] = float(a.group(1))
+        elif name == "web.log":
+            for line in lines:
+                m = VITEST.match(ANSI.sub("", line))
+                if m:
+                    scale = 1000.0 if m.group(3) == "ms" else 1.0
+                    figures[("vitest", m.group(1))] = float(m.group(2)) / scale
+    return figures
 
 
 def census(suites, figures, listing):
@@ -109,7 +152,50 @@ def census(suites, figures, listing):
     Returns (verdicts, lines, failures): a verdict per suite (clean, site, faster, untimed or
     unlisted), one report line per suite that is not clean, and the listing entries that name no
     current suite, which fail."""
-    return {key: "clean" for key in suites}, [], []
+    suites = examined("suite(s)", suites)
+    default = listing.get("margin", {"ratio": 1.0, "floor_seconds": 30.0})
+    entries = {(e["runner"], e["suite"]): e for e in listing.get("suites", [])}
+    present = set(suites)
+    failures = sorted(key for key in entries if key not in present)
+    verdicts = {}
+    lines = []
+    for key in suites:
+        runner, unit = key
+        figure = figures.get(key)
+        entry = entries.get(key)
+        if figure is None:
+            verdicts[key] = "untimed"
+            where = " in ci" if runner in NO_TIME_IN_CI else ""
+            lines.append(f"warn untimed: {runner} {unit}: no time recorded{where}, not passed")
+            continue
+        if entry is None:
+            verdicts[key] = "unlisted"
+            lines.append(f"warn unlisted: {runner} {unit}: {figure:.3f}s, no bound listed")
+            continue
+        margin = entry.get("margin", default)
+        ratio, floor = float(margin["ratio"]), float(margin["floor_seconds"])
+        bound = float(entry["bound_seconds"])
+        limit = bound + max(ratio * bound, floor)
+        refreshed = figure + max(ratio * figure, floor)
+        if figure > limit:
+            verdicts[key] = "site"
+            lines.append(
+                f"warn site: {runner} {unit}: {figure:.3f}s is over its bound {bound:.3f}s"
+                f" by more than its margin (limit {limit:.3f}s): {entry['reason']}"
+            )
+        elif bound > refreshed:
+            verdicts[key] = "faster"
+            lines.append(
+                f"note faster: {runner} {unit}: {figure:.3f}s under its bound {bound:.3f}s;"
+                " a delivery may list the lower figure"
+            )
+        else:
+            verdicts[key] = "clean"
+    for key in sorted(set(figures) - present):
+        lines.append(f"warn unknown: {key[0]} {key[1]}: timed in ci, not in the population")
+    for key in failures:
+        lines.append(f"FAIL stale: {key[0]} {key[1]}: the listing names no current suite")
+    return verdicts, lines, failures
 
 
 def tree_files(root):

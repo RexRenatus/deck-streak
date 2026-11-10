@@ -1356,6 +1356,29 @@ jobs:
           run: pnpm exec vitest bench --run --config vitest.bench.config.ts
           cache-instruments: false
 
+  # Each test suite's run time against its recorded bound, at warn (SPEC-669 R7): the census reads
+  # the stage logs the gate jobs uploaded in this run, so it waits on them, and it runs when one of
+  # them failed too, since each uploads its logs always. A site prints and passes; a listing entry
+  # that names no current suite fails the job, and `ci` needs it.
+  suite-times:
+    needs: [rust, engine, release, web, hygiene]
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # One pattern, never merged: the two engine slices each upload a `test-engine.log`, and a
+      # merge keeps one of them. Two or more artifacts land in a directory each, and the census
+      # reads every stage log under the path by its file name.
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: check-stage-logs-*
+          path: ${{ runner.temp }}/stage-logs
+      - name: each suite's time against its recorded bound (at warn; a stale listing entry fails)
+        run: python3 scripts/tests/test_suite_time_ratchet.py --logs "$RUNNER_TEMP/stage-logs"
+
   workflow-lint:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -1412,7 +1435,7 @@ jobs:
   ci:
     name: ${{ github.event_name == 'pull_request' && 'ci' || 'ci (push)' }}
     if: ${{ always() }}
-    needs: [rust, engine, release, web, card-sandbox, hygiene, mutation-plan, mutation-rust, mutation-python, mutation-python-release, mutation-rows, mutation-verdict, mutation-web-shard, mutation-web, web-engine, bench-rust-build, bench-rust, bench-web-build, bench-web, workflow-lint, base-is-dev]
+    needs: [rust, engine, release, web, card-sandbox, hygiene, suite-times, mutation-plan, mutation-rust, mutation-python, mutation-python-release, mutation-rows, mutation-verdict, mutation-web-shard, mutation-web, web-engine, bench-rust-build, bench-rust, bench-web-build, bench-web, workflow-lint, base-is-dev]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
