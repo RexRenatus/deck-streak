@@ -25,6 +25,7 @@ import unittest
 
 from _support import REPO, examined
 from test_ci_workflows import (
+    LOCAL_CALL,
     WORKFLOWS,
     read_workflow,
     workflow_file_text,
@@ -110,7 +111,7 @@ def started(on):
     on = on if isinstance(on, dict) else {}
     found = []
     for event in EVENTS:
-        if event in on:
+        if event in on and starts(on[event] if isinstance(on[event], dict) else {}):
             found.append(event)
     return found
 
@@ -120,7 +121,25 @@ def combinations(strategy):
     `exclude` entry dropping each combination it matches and every `include` entry that extends no
     combination adding one; (1, the expression) for a matrix computed at run time; (1, None) for a
     job with no matrix (SPEC-662 R2)."""
-    return 1, None
+    matrix = strategy.get("matrix") if isinstance(strategy, dict) else None
+    if matrix is None:
+        return 1, None
+    if not isinstance(matrix, dict):
+        return 1, f"matrix: {matrix}"
+    for key, value in matrix.items():
+        if not isinstance(value, list):
+            return 1, f"{key}: {value}"
+    axes = {key: value for key, value in matrix.items() if key not in NOT_AXES}
+    combos = [{}] if axes else []
+    for key, values in axes.items():
+        combos = [{**combo, key: value} for combo in combos for value in values]
+    for entry in matrix.get("exclude", []):
+        combos = [c for c in combos if not all(c.get(k) == v for k, v in entry.items())]
+    added = 0
+    for entry in matrix.get("include", []):
+        if not any(all(c[k] == v for k, v in entry.items() if k in axes) for c in combos):
+            added += 1
+    return len(combos) + added, None
 
 
 def run_count(name, workflows):
@@ -132,7 +151,15 @@ def run_count(name, workflows):
         count, source = combinations(job.get("strategy"))
         if source is not None:
             undecided.append((name, job_id, source))
-        jobs += count
+        each = 1
+        if "uses" in job:
+            call = LOCAL_CALL.fullmatch(str(job["uses"]))
+            if call and call.group(1) in workflows:
+                each, inner = run_count(call.group(1), workflows)
+                undecided += inner
+            else:
+                undecided.append((name, job_id, f"uses: {job['uses']}"))
+        jobs += count * each
     return jobs, undecided
 
 
@@ -154,10 +181,29 @@ def verdict(found, budget, undecided, level):
     its budget, each undecided job `undecided` does not list and each entry with no reason, and a
     STALE line for each entry nothing matches. At `Level.WARN` each STALE line fails and no WARN
     line does; at `Level.FAIL` every WARN and STALE line is a failure (SPEC-662 R8, R9)."""
-    lines = []
+    lines, problems = [], []
+    seen = set()
     for (name, event), (jobs, sites) in sorted(found.items()):
         lines.append(f"RUN {name} {event}: {jobs} job(s), {len(sites)} undecided")
-    return lines, []
+        held = budget.get((name, event))
+        if held is None:
+            problems.append(f"WARN job-budget {name} {event}: {jobs} job(s), no budget")
+        elif jobs > held[0]:
+            problems.append(f"WARN job-budget {name} {event}: {jobs} job(s), past {held[0]}")
+        for file, job, source in sites:
+            if (file, job) not in undecided and (file, job) not in seen:
+                problems.append(f"WARN job-budget-undecided {file} {job}: {source}")
+            seen.add((file, job))
+    for key, (_most, why) in sorted(budget.items()):
+        if not why.strip():
+            problems.append(f"WARN job-budget {key[0]} {key[1]}: no reason")
+        if key not in found:
+            problems.append(f"STALE job-budget {key[0]} {key[1]}")
+    for key in sorted(set(undecided) - seen):
+        problems.append(f"STALE job-budget-undecided {key[0]} {key[1]}")
+    if level is Level.FAIL:
+        return lines + problems, problems
+    return lines + problems, [line for line in problems if line.startswith("STALE ")]
 
 
 class TheRunsAreCountedByOneRule(unittest.TestCase):
