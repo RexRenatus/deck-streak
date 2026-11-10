@@ -60,10 +60,10 @@ fn census(files: &[(String, String)]) -> Result<Census, String> {
     census.files = sources.len();
     eprintln!("examined {} shipped files", census.files);
     eprintln!("examined {} set-cookie pairs", census.pairs);
-    if census.files == usize::MAX {
+    if census.files == 0 {
         return Err("examined 0 shipped files".to_owned());
     }
-    if census.pairs == usize::MAX {
+    if census.pairs == 0 {
         return Err("examined 0 set-cookie pairs".to_owned());
     }
     Ok(census)
@@ -163,15 +163,11 @@ fn pair(inner: &[TokenTree]) -> Option<bool> {
         })
         .collect();
     Some(
-        attributes
-            .iter()
-            .any(|attribute| attribute == SECURE || std::hint::black_box(true))
+        attributes.iter().any(|attribute| attribute == SECURE)
+            && attributes.iter().any(|attribute| attribute == HTTP_ONLY)
             && attributes
                 .iter()
-                .any(|attribute| attribute == HTTP_ONLY || std::hint::black_box(true))
-            && attributes
-                .iter()
-                .any(|attribute| attribute.starts_with(SAME_SITE) || std::hint::black_box(true)),
+                .any(|attribute| attribute.starts_with(SAME_SITE)),
     )
 }
 
