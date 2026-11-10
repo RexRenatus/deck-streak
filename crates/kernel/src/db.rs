@@ -10,6 +10,7 @@
 //! read-only, without touching its journal mode. No other file of the workspace constructs
 //! connect options or a pool (the ledger-sqlite pack's `connect-options-in-one-place`).
 
+use std::cmp::Ordering;
 use std::path::Path;
 use std::time::Duration;
 
@@ -79,12 +80,38 @@ impl Db {
     ///
     /// [`KernelError::Database`] when the file does not exist or cannot be opened.
     pub async fn open_foreign_read_only(path: &Path) -> Result<ForeignDb, KernelError> {
+        Self::connect_foreign(Self::foreign_options(path)).await
+    }
+
+    /// Opens another program's `SQLite` file at `path` as [`Db::open_foreign_read_only`] does,
+    /// read-only and `query_only`, with `compare` registered on every connection as the collation
+    /// `name`: a file whose indexes name a collation `SQLite` does not ship needs it before any
+    /// statement over those tables can be planned.
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError::Database`] when the file does not exist or cannot be opened.
+    pub async fn open_foreign_read_only_with(
+        path: &Path,
+        name: &str,
+        compare: fn(&str, &str) -> Ordering,
+    ) -> Result<ForeignDb, KernelError> {
+        let options = Self::foreign_options(path).collation(name, compare);
+        Self::connect_foreign(options).await
+    }
+
+    /// The options of every foreign open: `mode=ro` and `query_only`.
+    fn foreign_options(path: &Path) -> SqliteConnectOptions {
         // No journal mode is set, so the file keeps the one its own program chose.
-        let options = SqliteConnectOptions::new()
+        SqliteConnectOptions::new()
             .filename(path)
             .read_only(true)
             .pragma("query_only", "ON")
-            .busy_timeout(Duration::from_millis(DB_BUSY_TIMEOUT_MS));
+            .busy_timeout(Duration::from_millis(DB_BUSY_TIMEOUT_MS))
+    }
+
+    /// Connects a foreign file's pool with `options`.
+    async fn connect_foreign(options: SqliteConnectOptions) -> Result<ForeignDb, KernelError> {
         let pool = SqlitePoolOptions::new()
             .max_connections(MAX_CONNECTIONS)
             .connect_with(options)

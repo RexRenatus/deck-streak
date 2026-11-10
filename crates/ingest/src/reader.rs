@@ -1,10 +1,11 @@
 //! The read (SPEC-023 R1 to R5, R7): the private copy of the collection, read-only, inside the
 //! owner's deck scope, as this workspace's own types.
 //!
-//! [`CollectionReader`] opens the copy with the kernel's [`Db::open_foreign_read_only`] (`mode=ro`
-//! and `query_only`) under the shared collection lock, on the kernel's [`Offload`]. So a read never
-//! sees the copy mid-swap, never stalls the async runtime, never runs beside another collection read
-//! on a small host, and never writes the copy: any write through it is refused by `SQLite` itself.
+//! [`CollectionReader`] opens the copy with the kernel's [`Db::open_foreign_read_only_with`]
+//! (`mode=ro`, `query_only` and the engine's `unicase` collation) under the shared collection lock,
+//! on the kernel's [`Offload`]. So a read never sees the copy mid-swap, never stalls the async
+//! runtime, never runs beside another collection read on a small host, and never writes the copy:
+//! any write through it is refused by `SQLite` itself.
 //!
 //! It ports the predecessor's `anki_reader.py:read_collection` and `deck_filter.py` (predecessor
 //! `27ee2bc`): a card is read when its ORIGINAL deck's top-level name starts with an included prefix
@@ -17,6 +18,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::future::Future;
 use std::path::PathBuf;
 
+use deck_streak_anki_format::opener::{COLLATION, unicase_order};
 use deck_streak_kernel::{
     CourseCode, Courses, Db, ForeignDb, KernelError, Offload, Track, UtcMillis,
 };
@@ -383,7 +385,7 @@ impl CollectionReader {
             offload
                 .run(operation, move || {
                     on_this_thread(&runtime, async move {
-                        let db = Db::open_foreign_read_only(&copy)
+                        let db = Db::open_foreign_read_only_with(&copy, COLLATION, unicase_order)
                             .await
                             .map_err(ReadError::Copy)?;
                         let read = work(db.clone()).await;
