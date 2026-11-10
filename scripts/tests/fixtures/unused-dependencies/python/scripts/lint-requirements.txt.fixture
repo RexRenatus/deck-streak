@@ -1,0 +1,3 @@
+# planted requirements in a folder outside the root and tools/*/
+used-lint
+unused-lint

@@ -1,0 +1,11 @@
+import { value } from 'uses-from';
+import 'uses-side-effect';
+import { deep } from '@scope/pkg/sub/deep';
+import { page } from '$app/state';
+import { t } from 'thing';
+import local from './local';
+
+export async function load() {
+  const lazy = await import('uses-dynamic');
+  return [value, deep, page, t, local, lazy];
+}

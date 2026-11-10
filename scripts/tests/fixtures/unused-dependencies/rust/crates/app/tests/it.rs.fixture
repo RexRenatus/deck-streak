@@ -1,0 +1,10 @@
+use testkit::Harness;
+
+#[path = "../../../shared/helper.rs"]
+mod helper;
+
+#[test]
+fn planted() {
+    helper::help();
+    let _harness = Harness::new();
+}
