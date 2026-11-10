@@ -15,7 +15,7 @@ import re
 import subprocess
 import unittest
 
-from _support import REPO
+from _support import REPO, examined
 
 FIXTURES = REPO / "scripts" / "tests" / "fixtures" / "build-output"
 RULE = "build-output"
@@ -128,19 +128,52 @@ def holders(paths):
 def site(path, held):
     """(tool, form) when `path` is a site, else None. Its directories are read from the root
     down and the first that a tool writes decides (R2, R4, R5); then its own name (R3)."""
+    parts = path.split("/")
+    for depth, name in enumerate(parts[:-1]):
+        directory = "/".join(parts[: depth + 1])
+        for pattern, tool in CONFIGURED:
+            if pattern.search(directory):
+                return tool, directory + "/"
+        if name in TOOL_DIRS:
+            return TOOL_DIRS[name], name + "/"
+        for suffix, tool in TOOL_SUFFIXES.items():
+            if name.endswith(suffix):
+                return tool, "*" + suffix + "/"
+        if name in SHARED:
+            tool, manifest = SHARED[name]
+            if manifest in held.get("/".join(parts[:depth]), set()):
+                return tool, name + "/"
+    for pattern, tool, form in CACHE_FILES:
+        if pattern.search(parts[-1]):
+            return tool, form
     return None
 
 
 def sites(paths):
     """{path: (tool, form)} for every site among `paths`; an empty one is refused (R1, R9)."""
-    return {}
+    paths = examined("tracked path(s)", paths)
+    held = holders(paths)
+    found = {}
+    for path in paths:
+        hit = site(path, held)
+        if hit is not None:
+            found[path] = hit
+    return found
 
 
 def verdict(found, listed, level):
     """(printed lines, failures) for the sites `found` against the paths `listed` at `level`: an
     unlisted site is a line at warn and a failure at fail, and a listed path that is no longer a
     site is a failure at both (R6 to R8)."""
-    return [], []
+    lines, failures = [], []
+    for path, (tool, form) in sorted(found.items()):
+        if path in listed:
+            continue
+        line = f"{level.upper()} {RULE} {path} ({tool}, {form})"
+        (lines if level == "warn" else failures).append(line)
+    for path in sorted(set(listed) - set(found)):
+        failures.append(f"STALE {RULE} {path}: listed, but it is no site")
+    return lines, failures
 
 
 class PlantedPathListsAreJudged(unittest.TestCase):
