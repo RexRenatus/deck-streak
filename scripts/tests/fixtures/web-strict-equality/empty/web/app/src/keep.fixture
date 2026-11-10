@@ -1,0 +1,2 @@
+A planted empty population for scripts/tests/test_web_strict_equality.py (SPEC-656): this tree
+holds no `.ts` file and no `.svelte` component, so the census examines 0 files and is VOID.

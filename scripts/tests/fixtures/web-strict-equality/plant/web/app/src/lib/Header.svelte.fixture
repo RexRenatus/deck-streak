@@ -1,0 +1,15 @@
+<!-- A planted component for scripts/tests/test_web_strict_equality.py (SPEC-656). -->
+<script lang="ts">
+  import type { Answer } from '#lib/api.js';
+  import type { View } from '#lib/views.js';
+
+  let {
+    view,
+    title
+  }: {
+    view: Answer<View> | undefined; // planted: absent-spelling
+    title?: string; // planted: absent-spelling
+  } = $props();
+</script>
+
+<p>{title}{view === undefined ? '' : '.'}</p>
