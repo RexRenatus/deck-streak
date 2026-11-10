@@ -1,0 +1,42 @@
+== gh-merge 2 planted-bot[bot]
+Merge pull request #1 from planted/branch
+
+ci: a title with no scope
+
+== gh-long 2 planted-person
+Merge pull request #2 from planted/a-branch-whose-name-carries-the-subject-past-its-limit
+
+The title of the pull request.
+
+== merge-ref 2 planted-bot[bot]
+Merge b53be0e0ba0b39f24b491c57db5b5fbfd8a092aa into 0756b82ffb59e06bd515dbfe6c4a74e3372a3136
+
+== git-merge 2 planted-person
+Merge branch 'dev' into planted-branch
+
+== git-remote 2 planted-person
+Merge remote-tracking branch 'origin/dev' into planted-branch
+
+== merge-credit 2 planted-person
+Merge pull request #3 from planted/branch
+
+Co-authored-by: Planted Person <planted@example.invalid>
+
+== git-revert 1 planted-person
+Revert "feat(census): read each commit subject of the range"
+
+This reverts commit 0756b82ffb59e06bd515dbfe6c4a74e3372a3136.
+
+== git-reapply 1 planted-person
+Reapply "feat(census): read each commit subject of the range"
+
+This reverts commit 0756b82ffb59e06bd515dbfe6c4a74e3372a3136.
+
+== one-parent 1 planted-person
+Merge pull request #4 from planted/branch
+
+== own-merge 2 planted-person
+Merge the release branch back
+
+== bare-revert 1 planted-person
+Revert "feat(census): read each commit subject of the range"
