@@ -10095,6 +10095,15 @@ NOT_WORKFLOW_READS = {
         ),
     ),
     **allowed(
+        "the saved actionlint output and its exit, and their planted copies, read by the workflow lint census (SPEC-663 R4); never handed to the reader",
+        (
+            "test_workflow_lint",
+            "saved_text",
+            "Path(path).read_text(encoding='utf-8')",
+            1,
+        ),
+    ),
+    **allowed(
         "a Swift package's row file, read for its live row and killer counts (SPEC-397 A8); never handed to the reader",
         (
             "test_ci_workflows",

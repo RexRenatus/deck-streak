@@ -1,0 +1,29 @@
+name: ci
+on:
+  pull_request:
+    branches: [dev]
+permissions:
+  contents: read
+jobs:
+  a:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: taiki-e/install-action@0000000000000000000000000000000000000000
+        with:
+          tool: protoc@1.0.0
+  b:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - env:
+          PROTOC_SHA256: 0000000000000000000000000000000000000000000000000000000000000000
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/protoc.zip" https://github.com/planted/protoc/releases/download/1.0.0/protoc.zip
+          echo "$PROTOC_SHA256  $RUNNER_TEMP/protoc.zip" | sha256sum -c -
+  ci:
+    needs: [a, b]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - run: echo ok
