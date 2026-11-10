@@ -450,7 +450,7 @@ impl Tripwire {
     fn comparator(&self) -> impl Fn(&str, &str) -> Ordering + Send + Sync + 'static {
         let calls = Arc::clone(&self.calls);
         move |a: &str, b: &str| {
-            let _ = calls.fetch_add(0, atomic::Ordering::SeqCst);
+            let _ = calls.fetch_add(1, atomic::Ordering::SeqCst);
             unicase_order(a, b)
         }
     }

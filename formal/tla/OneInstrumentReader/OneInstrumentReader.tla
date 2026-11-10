@@ -50,7 +50,7 @@
 \* @phx covers crates/api/src/insights_routes.rs anchor=run digest=sha256:5bb86aa9e35cae2d1a3f471913c014075a1f820ab68bc63ce5ceb90c3e2f42f8
 \* @phx covers crates/ingest/src/lock.rs anchor=try_exclusive digest=sha256:b1da026e6f5852c4ace61f2de705f7991c9401c15aa9e9d1a52dad8b929e6787
 \* @phx covers crates/ingest/src/lock.rs anchor=hold_to_end digest=sha256:899a64a80497994057fbeb497e43159d4f44d4834224a2884761ac88f038cbd6
-\* @phx covers crates/ingest/src/reader.rs anchor=with_copy digest=sha256:8cef46d122899dad8cd49a4b487e4b274211b13218c27dc0385b76b6bf9074e7
+\* @phx covers crates/ingest/src/reader.rs anchor=with_copy digest=sha256:39264f902c1b2d9922b313afac7a41450331328c56ed8d4e459799fc8360e613
 \* @phx cites #476
 \* @phx cites #142
 \* @phx property AtMostOneReader ramp=report
