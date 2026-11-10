@@ -1,0 +1,3 @@
+#!/bin/sh
+name="a planted value"
+echo $name
