@@ -1,0 +1,44 @@
+{
+  "searched": {
+    "migrations/000001_events.sql": "CREATE TABLE events (id INTEGER PRIMARY KEY, day INTEGER NOT NULL, kind TEXT NOT NULL);\nCREATE INDEX events_by_day ON events (day);\n",
+    "crates/events/src/lib.rs": "pub const ON_DAY: &str = \"SELECT id FROM events WHERE day = ?1 AND kind = ?2\";\npub const ANY_DAY: &str = \"SELECT id FROM events WHERE day = ?\";\n"
+  },
+  "scanned": {
+    "migrations/000001_events.sql": "CREATE TABLE events (id INTEGER PRIMARY KEY, day INTEGER NOT NULL, kind TEXT NOT NULL);\nCREATE TABLE kinds (name TEXT NOT NULL, label TEXT NOT NULL);\n",
+    "crates/events/src/lib.rs": "pub const OF_KIND: &str = \"SELECT id FROM events WHERE kind = ?1\";\npub const LABELLED: &str =\n    \"SELECT events.id, kinds.label FROM events JOIN kinds ON kinds.name = events.kind\";\n"
+  },
+  "small": {
+    "migrations/000001_settings.sql": "CREATE TABLE settings (id INTEGER PRIMARY KEY CHECK (id = 1), hour INTEGER NOT NULL);\nCREATE TABLE switches (key TEXT PRIMARY KEY, value TEXT NOT NULL);\n",
+    "crates/settings/src/lib.rs": "pub const LATE: &str = \"SELECT hour FROM settings WHERE hour > ?1\";\npub const ON: &str = \"SELECT key FROM switches WHERE value = ?1\";\n"
+  },
+  "empty": {
+    "migrations/000001_events.sql": "CREATE TABLE events (id INTEGER PRIMARY KEY, day INTEGER NOT NULL, kind TEXT NOT NULL);\nCREATE INDEX events_by_day ON events (day);\n",
+    "crates/events/src/lib.rs": "pub fn none() {}\n"
+  },
+  "whole": {
+    "migrations/000001_events.sql": "CREATE TABLE events (id INTEGER PRIMARY KEY, day INTEGER NOT NULL, kind TEXT NOT NULL);\nCREATE INDEX events_by_day ON events (day);\n",
+    "crates/events/src/lib.rs": "pub const ALL: &str = \"SELECT id, kind FROM events ORDER BY id\";\npub const WORDS: &str = \"SELECT id, 'WHERE' AS word FROM events\";\n"
+  },
+  "unread": {
+    "migrations/000001_events.sql": "CREATE TABLE events (id INTEGER PRIMARY KEY, day INTEGER NOT NULL, kind TEXT NOT NULL);\nCREATE INDEX events_by_day ON events (day);\n",
+    "crates/events/src/lib.rs": "//! \"SELECT id FROM events WHERE kind = 'inner'\"\n// \"SELECT id FROM events WHERE kind = 'line'\"\n/* \"SELECT id FROM events WHERE kind = 'block'\" */\npub const PROSE: &str = \"select the events you want\";\npub const SHIPPED: &str = \"SELECT id FROM events WHERE day = ?1\";\n\n#[cfg(test)]\nmod tests {\n    const PLANTED: &str = \"SELECT id FROM events WHERE kind = ?1\";\n}\n\n#[test]\nfn reads() {\n    let _ = \"SELECT id FROM events WHERE kind = ?1\";\n}\n\n#[cfg(test)]\nmod outside;\n",
+    "crates/events/src/outside.rs": "pub const OUTSIDE: &str = \"SELECT id FROM events WHERE kind = ?1\";\n"
+  },
+  "foreign": {
+    "migrations/000001_events.sql": "CREATE TABLE events (id INTEGER PRIMARY KEY, day INTEGER NOT NULL, kind TEXT NOT NULL);\nCREATE INDEX events_by_day ON events (day);\n",
+    "crates/events/src/lib.rs": "pub const SHIPPED: &str = \"SELECT id FROM events WHERE day = ?1\";\n",
+    "crates/reader/src/lib.rs": "pub const NOTES: &str = \"SELECT id FROM notes WHERE flds = ?1\";\n"
+  },
+  "unprepared": {
+    "migrations/000001_events.sql": "CREATE TABLE events (id INTEGER PRIMARY KEY, day INTEGER NOT NULL, kind TEXT NOT NULL);\nCREATE INDEX events_by_day ON events (day);\n",
+    "crates/events/src/lib.rs": "pub const LOST: &str = \"SELECT id FROM gone WHERE id = ?1\";\n"
+  },
+  "aliased": {
+    "migrations/000001_events.sql": "CREATE TABLE events (id INTEGER PRIMARY KEY, day INTEGER NOT NULL, kind TEXT NOT NULL);\n",
+    "crates/events/src/lib.rs": "pub const OF_KIND: &str = \"SELECT a.id FROM events AS a WHERE a.kind = ?1\";\npub const ON_DAY: &str = \"SELECT e.kind FROM events e WHERE e.day = ?1\";\n"
+  },
+  "unmapped": {
+    "migrations/000001_events.sql": "CREATE TABLE events (id INTEGER PRIMARY KEY, day INTEGER NOT NULL, kind TEXT NOT NULL);\nCREATE TABLE kinds (name TEXT NOT NULL, label TEXT NOT NULL);\n",
+    "crates/events/src/lib.rs": "pub const QUALIFIED: &str = \"SELECT e.id FROM main.events AS e WHERE e.kind = ?1\";\npub const EITHER: &str = \"SELECT a.id FROM events AS a WHERE a.day = ?1 UNION SELECT a.rowid FROM kinds AS a WHERE a.label = ?2\";\n"
+  }
+}
