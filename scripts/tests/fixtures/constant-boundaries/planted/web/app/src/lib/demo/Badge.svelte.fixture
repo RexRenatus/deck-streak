@@ -1,0 +1,17 @@
+<script lang="ts">
+  import { MIN_QUERY, PAGE_SIZE, SOFT_WIDTH } from './limits';
+  export let count: number;
+</script>
+
+{#if count < PAGE_SIZE}
+  <span>room</span>
+{/if}
+{#if count >= MIN_QUERY}
+  <span>search</span>
+{/if}
+{#if count <= SOFT_WIDTH}
+  <span>narrow</span>
+{/if}
+{#if count == 1}
+  <span>one</span>
+{/if}

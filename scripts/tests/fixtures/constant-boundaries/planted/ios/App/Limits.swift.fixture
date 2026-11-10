@@ -1,0 +1,22 @@
+// Planted: three comparisons against named constants and one against a literal.
+enum Limits {
+    static let maxCards = 50
+    static let minCards = 5
+    static let softCards = 40
+}
+
+func overLimit(_ count: Int) -> Bool {
+    count > Limits.maxCards
+}
+
+func enoughCards(_ count: Int) -> Bool {
+    count >= Limits.minCards
+}
+
+func roomy(_ count: Int) -> Bool {
+    count < Limits.softCards
+}
+
+func noCards(_ count: Int) -> Bool {
+    count == 0
+}

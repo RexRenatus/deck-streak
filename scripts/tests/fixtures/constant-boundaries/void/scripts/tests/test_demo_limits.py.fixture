@@ -1,0 +1,8 @@
+import unittest
+
+from demo_limits import MAX_RETRIES
+
+
+class Limits(unittest.TestCase):
+    def test_nothing_ships_beside_this_test(self):
+        self.assertTrue(MAX_RETRIES > 0)
