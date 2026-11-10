@@ -94,7 +94,7 @@ impl Db {
     pub async fn open_foreign_read_only_with(
         path: &Path,
         name: &str,
-        compare: fn(&str, &str) -> Ordering,
+        compare: impl Fn(&str, &str) -> Ordering + Send + Sync + 'static,
     ) -> Result<ForeignDb, KernelError> {
         let options = Self::foreign_options(path).collation(name, compare);
         Self::connect_foreign(options).await

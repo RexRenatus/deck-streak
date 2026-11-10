@@ -5,7 +5,8 @@
 //! (`mode=ro`, `query_only` and the engine's `unicase` collation) under the shared collection lock,
 //! on the kernel's [`Offload`]. So a read never sees the copy mid-swap, never stalls the async
 //! runtime, never runs beside another collection read on a small host, and never writes the copy:
-//! any write through it is refused by `SQLite` itself.
+//! any write through it is refused by `SQLite` itself. The collation's comparator counts its calls
+//! on that open, and a read that called it is refused: names are never compared in SQL (R4).
 //!
 //! It ports the predecessor's `anki_reader.py:read_collection` and `deck_filter.py` (predecessor
 //! `27ee2bc`): a card is read when its ORIGINAL deck's top-level name starts with an included prefix
@@ -14,9 +15,12 @@
 //! the collection's name columns use a `unicase` collation `SQLite` does not ship (R4). The study
 //! day is the kernel's configured rule: no rollover hour is taken from the collection (R7).
 
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::future::Future;
 use std::path::PathBuf;
+use std::sync::Arc;
+use std::sync::atomic::{self, AtomicU64};
 
 use deck_streak_anki_format::opener::{COLLATION, unicase_order};
 use deck_streak_kernel::{
@@ -209,6 +213,32 @@ pub enum ReadError {
     Copy(#[source] KernelError),
 }
 
+impl ReadError {
+    /// The collation tripwire's refusal this error carries, when a read was refused for calling
+    /// the copy's comparator (R4).
+    #[must_use]
+    pub fn tripwire(&self) -> Option<CollationTripwire> {
+        let mut source: Option<&(dyn std::error::Error + 'static)> = Some(self);
+        while let Some(cause) = source {
+            if let Some(fired) = cause.downcast_ref::<CollationTripwire>() {
+                return Some(*fired);
+            }
+            source = cause.source();
+        }
+        None
+    }
+}
+
+/// The collation tripwire's refusal (R4): a read's statements called the copy's `unicase`
+/// comparator, so one of them compared or sorted names in SQL. The read is refused after its rows
+/// are read, and [`ReadError::tripwire`] finds this among the error's sources.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, thiserror::Error)]
+#[error("the collation tripwire fired: the read called the unicase comparator {calls} times")]
+pub struct CollationTripwire {
+    /// How many times the comparator was called during the read.
+    pub calls: u64,
+}
+
 /// Reads the private copy, read-only, inside the owner's scope (R1 to R5).
 #[derive(Clone, Debug)]
 pub struct CollectionReader {
@@ -366,7 +396,9 @@ impl CollectionReader {
     /// its end on the offload's blocking thread; the copy is closed after it, and the lock released
     /// explicitly. The lock and the read go to a task of their own (SPEC-648 R1): a caller who
     /// stops waiting leaves the read to end and the lock to be released after it, and a task its
-    /// runtime drops keeps the lock until the process exits.
+    /// runtime drops keeps the lock until the process exits. The copy's `unicase` comparator counts
+    /// its calls on this open, and a read that called it is refused once its rows are read, with a
+    /// [`CollationTripwire`] (R4).
     pub(crate) async fn with_copy<T, W, Fut>(
         &self,
         operation: &'static str,
@@ -385,12 +417,14 @@ impl CollectionReader {
             offload
                 .run(operation, move || {
                     on_this_thread(&runtime, async move {
-                        let db = Db::open_foreign_read_only_with(&copy, COLLATION, unicase_order)
+                        let tripwire = Tripwire::default();
+                        let compare = tripwire.comparator();
+                        let db = Db::open_foreign_read_only_with(&copy, COLLATION, compare)
                             .await
                             .map_err(ReadError::Copy)?;
                         let read = work(db.clone()).await;
                         db.close().await;
-                        read
+                        tripwire.check(read)
                     })
                 })
                 .await
@@ -400,6 +434,35 @@ impl CollectionReader {
         let (outcome, released) = held.hold_to_end(reading).await.map_err(ReadError::Lock)?;
         let _ = released;
         outcome.map_err(ReadError::Copy)?
+    }
+}
+
+/// The count of the copy's `unicase` comparator calls on one open (R4): never a process-wide
+/// count, since reads can run at once.
+#[derive(Debug, Default)]
+struct Tripwire {
+    calls: Arc<AtomicU64>,
+}
+
+impl Tripwire {
+    /// The comparator `with_copy` registers as [`COLLATION`]: the engine's order, each call
+    /// counted on this open.
+    fn comparator(&self) -> impl Fn(&str, &str) -> Ordering + Send + Sync + 'static {
+        let calls = Arc::clone(&self.calls);
+        move |a: &str, b: &str| {
+            let _ = calls.fetch_add(0, atomic::Ordering::SeqCst);
+            unicase_order(a, b)
+        }
+    }
+
+    /// `read`, refused when the comparator was called during it.
+    fn check<T>(&self, read: Result<T, ReadError>) -> Result<T, ReadError> {
+        let calls = self.calls.load(atomic::Ordering::SeqCst);
+        if calls == 0 {
+            return read;
+        }
+        let fired = Box::new(CollationTripwire { calls });
+        Err(read_failed(sqlx::Error::Decode(fired)))
     }
 }
 
