@@ -73,7 +73,7 @@ HARNESS_PATHS = ("tools/parity-oracle/anki/harness", "tools/render-oracle")
 #: goldens, so every golden's `generator_sha256` covers the harness. Unpinned, the driver
 #: refuses to start (exit 2).
 HARNESS_SOURCE_SHA256: str | None = (
-    "9b1c1d622270f7737f08255724101a2faa95a444e28c63b16f60cd54522847a4"
+    "c6541dfca5564f2ee953e2727ca5f87e26c655321f081b9f8cb1711919bfc17a"
 )
 PROTOCOL = 1
 MODULE_NAME = re.compile(r"spec_\d{3}\.py")
