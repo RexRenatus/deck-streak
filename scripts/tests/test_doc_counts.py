@@ -101,17 +101,76 @@ LISTED = ()
 
 def line_kinds(text):
     """Each line's kind (R4, R5): prose, table, code, front, quote or comment."""
-    return ["prose"] * len(text.split("\n"))
+    lines = text.split("\n")
+    kinds = ["prose"] * len(lines)
+    if lines[0].rstrip() == "---":
+        ends = [at for at in range(1, len(lines)) if lines[at].rstrip() in ("---", "...")]
+        for at in range(ends[0] + 1 if ends else 0):
+            kinds[at] = "front"
+    fence, comment, blank, listed, table = "", False, True, False, False
+    for at, line in enumerate(lines):
+        bare = line.lstrip(" ")
+        if kinds[at] == "front":
+            continue
+        if fence:
+            kinds[at] = "code"
+            if re.fullmatch(re.escape(fence[0]) + "{" + str(len(fence)) + r",}\s*", bare):
+                fence = ""
+            continue
+        opened = FENCE.match(bare)
+        if opened and not (opened.group(1)[0] == "`" and "`" in opened.group(2)):
+            fence, kinds[at] = opened.group(1), "code"
+            continue
+        if comment or bare.startswith("<!--"):
+            kinds[at], comment = "comment", "-->" not in line
+            continue
+        if bare.startswith(">"):
+            kinds[at], blank = "quote", False
+            continue
+        if not line.strip():
+            blank, table = True, False
+            continue
+        indent = len(line) - len(bare)
+        listed = bool(ITEM.match(line)) or (listed and indent > 0)
+        if indent >= 4 and blank and not listed:
+            kinds[at] = "code"
+            continue
+        if table or ("|" in line and at + 1 < len(lines) and DELIMITER.match(lines[at + 1])):
+            kinds[at], table = "table", True
+        blank = False
+    return kinds
 
 
 def living_text(name, text):
     """The text of `name` the census reads, or None for a record (R1, R2)."""
+    if not name.endswith(".md") or RECORDS.match(name):
+        return None
+    if name.startswith("docs/rulings/") and SIGNED.search(text):
+        return None
+    if name == "CHANGELOG.md":
+        lines = text.split("\n")
+        first = next((at for at, line in enumerate(lines) if RELEASED.match(line)), len(lines))
+        return "\n".join(lines[:first])
     return text
 
 
 def claims(name, text):
     """Every count claim on a prose line of `name` (R3 to R6), with its ordinal among equal words."""
-    return []
+    found, seen = [], collections.Counter()
+    for number, (line, kind) in enumerate(zip(text.split("\n"), line_kinds(text)), 1):
+        if kind != "prose" or ONCE.search(line):
+            continue
+        bare = SPAN.sub("\x01", TAG.sub(" ", TARGET.sub("]", line)))
+        bare = ITEM.sub(lambda item: " " * len(item.group(0)), bare, count=1)
+        for match in CLAIM.finditer(bare):
+            words = " ".join(match.group(0).replace("\x01", "`code`").split())
+            spelt = match.group("count").lower()
+            seen[words] += 1
+            count = WORDS[spelt] if spelt in WORDS else int(spelt)
+            found.append(
+                Claim(name, number, count, match.group("noun").lower(), words, seen[words])
+            )
+    return found
 
 
 def key(claim):
@@ -120,12 +179,19 @@ def key(claim):
 
 def jobs_running(tree, workflow, command):
     """How many jobs of `workflow` hold a line that runs `command`."""
-    return 0
+    jobs, current = collections.Counter(), None
+    for line in tree[workflow].split("\n"):
+        heading = re.fullmatch(r"  ([A-Za-z0-9_-]+):\s*", line)
+        if heading:
+            current = heading.group(1)
+        elif current and line.startswith("    ") and command in line:
+            jobs[current] += 1
+    return len(jobs)
 
 
 def tracked(tree, pattern, _unused=""):
     """How many tracked paths match `pattern`."""
-    return sum(0 for name in tree if fnmatch.fnmatchcase(name, pattern))
+    return len([name for name in tree if fnmatch.fnmatchcase(name, pattern)])
 
 
 DERIVATIONS = {"jobs-running": jobs_running, "tracked": tracked}
@@ -133,13 +199,36 @@ DERIVATIONS = {"jobs-running": jobs_running, "tracked": tracked}
 
 def sites(tree, documents, bound, listed):
     """(sites, stale, bound claims seen): each site as (key, form) (R7 to R10)."""
-    return [], [], 0
+    found, stale, seen = [], [], 0
+    texts = {name: living_text(name, tree[name]) for name in documents}
+    every = [
+        claim for name, text in texts.items() if text is not None for claim in claims(name, text)
+    ]
+    binding = {(document, words): rest for document, words, *rest in bound}
+    for document, words in binding:
+        if not any((claim.document, claim.words) == (document, words) for claim in every):
+            stale.append(f"bound {document} {words!r}")
+    for claim in every:
+        rest = binding.get((claim.document, claim.words))
+        if rest is None:
+            found.append((key(claim), "unbound"))
+            continue
+        seen += 1
+        derivation, first, second = rest
+        if DERIVATIONS[derivation](tree, first, second) != claim.count:
+            found.append((key(claim), "mismatch"))
+    keys = {site for site, _form in found}
+    stale += [f"listed {entry}" for entry, _reason in listed if entry not in keys]
+    return found, stale, seen
 
 
 def verdict(found, stale, listed, level):
     """(printed lines, failures): an unlisted site warns at `warn` and fails at `fail`; a stale
     entry fails at both (R10)."""
-    return [], []
+    names = {entry for entry, _reason in listed}
+    unlisted = [f"WARN doc-count {form} {site}" for site, form in found if site not in names]
+    stales = [f"STALE doc-count {entry}" for entry in stale]
+    return unlisted + stales, stales + (unlisted if level == "fail" else [])
 
 
 def planted_tree():
