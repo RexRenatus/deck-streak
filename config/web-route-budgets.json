@@ -1,0 +1,4 @@
+{
+  "_": "Each web route's JavaScript budget, and the shell's: bytes gzip -9 -n summed over the files the route needs beyond the shell, each with the CI job whose web-route-size step measured them (SPEC-652, ADR-674 D4). Read by scripts/web-route-size.py alone. An entry is lowered when the check prints RATCHET for it, and raised only by the pull request that grows its route, which says why.",
+  "routes": {}
+}
