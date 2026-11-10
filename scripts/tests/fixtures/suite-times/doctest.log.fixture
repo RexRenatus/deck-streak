@@ -1,0 +1,20 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 9.99s
+   Doc-tests alpha
+
+running 1 test
+test crates/alpha/src/lib.rs - planted (line 3) ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+
+running 1 test
+test crates/alpha/src/lib.rs - planted (line 9) - compile fail ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.50s
+
+all doctests ran in 1.50s; merged doctests compilation took 1.00s
+   Doc-tests beta_crate
+
+running 1 test
+test crates/beta/src/lib.rs - planted (line 2) ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.75s
