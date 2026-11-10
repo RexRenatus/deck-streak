@@ -35,7 +35,7 @@ import re
 import unittest
 from pathlib import Path
 
-from _support import REPO
+from _support import REPO, examined
 
 FIXTURES = REPO / "scripts" / "tests" / "fixtures" / "client-types"
 API_SRC = "crates/api/src"
@@ -396,16 +396,62 @@ def swift(root):
 
 def census(root):
     """Every pair's finding, keyed `METHOD PATH side`, and the count of equal pairs."""
-    server(root)
-    web(root)
-    swift(root)
-    return {}, 0
+    files, routes = server(root)
+    examined("handler file(s)", files)
+    examined("route(s)", routes)
+    bindings = examined("web binding(s)", web(root))
+    swift_files, mirrors = swift(root)
+    examined("swift file(s)", swift_files)
+    print(f"swift mirrors {len(mirrors)}: a Swift type mirrors a route only through SWIFT-MIRROR")
+    examined("type(s)", routes + bindings + mirrors)
+    by_route = {(r["method"], shape(r["path"])): r for r in routes}
+    findings, paired, equal = {}, set(), 0
+    for client in bindings + mirrors:
+        route = by_route.get((client["method"], shape(client["path"])))
+        path = client["path"] if route is None else route["path"]
+        key = f"{client['method']} {path} {client['side']}"
+        if route is None:
+            findings[key] = ("unmatched", client["where"])
+            continue
+        paired.add((client["method"], shape(path)))
+        theirs, ours = route["keys"], client["keys"]
+        if not theirs or not ours:
+            findings[key] = ("unmeasured", client["where"])
+            continue
+        missing = sorted(ours - theirs)
+        unread = sorted(theirs - ours)
+        if not missing and not unread:
+            equal += 1
+            continue
+        text = "drifted"
+        if missing:
+            text += " missing=" + ",".join(missing)
+        if unread:
+            text += " unread=" + ",".join(unread)
+        findings[key] = (text, client["where"])
+    for (method, path), route in by_route.items():
+        if (method, path) not in paired:
+            findings[f"{method} {route['path']} server"] = ("unmatched", route["where"])
+    return findings, equal
 
 
 def verdict(findings, listed, level):
     """The printed lines and the failures: an unlisted finding warns at warn and fails at fail, and a
     listed entry no finding matches is stale and fails at both."""
-    return [], []
+    lines, failed = [], []
+    for key in sorted(findings):
+        text, where = findings[key]
+        entry = listed.get(key)
+        if entry is not None and entry[0] == text:
+            lines.append(f"LISTED {key}: {text} ({entry[1]})")
+        elif level == WARN:
+            lines.append(f"WARN {key}: {text} at {where}")
+        else:
+            failed.append(f"FAIL {key}: {text} at {where}")
+    for key in sorted(listed):
+        if findings.get(key, (None, None))[0] != listed[key][0]:
+            failed.append(f"STALE {key}: listed {listed[key][0]}, found none")
+    return lines, failed
 
 
 class PlantedTrees(unittest.TestCase):
