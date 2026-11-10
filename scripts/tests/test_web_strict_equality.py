@@ -18,11 +18,12 @@ as `STALE <rule> <key>` at both levels, so a fix removes its entry. Moving `LEVE
 own delivery, under ADR-450 D6. An empty population is VOID, never a pass.
 """
 
+import posixpath
 import re
 import unittest
 from pathlib import Path
 
-from _support import REPO
+from _support import REPO, examined
 
 SOURCE = "web/app/src"
 API = "web/app/src/lib/api.ts"
@@ -219,12 +220,30 @@ def line_of(text, offset):
 
 def loose_sites(files):
     """Each loose comparison, as (key, line); a key is the file and the site's ordinal in it."""
-    return []
+    found = []
+    for path, text in files:
+        code = code_of(path, text)
+        for number, match in enumerate(LOOSE.finditer(code), 1):
+            found.append((f"{path} #{number}", line_of(code, match.start())))
+    return found
 
 
 def boundary_modules(files):
     """The API module and each module it imports a type from, as their paths."""
-    return [API]
+    texts = dict(files)
+    if API not in texts:
+        return []
+    code, found = mask(texts[API]), [API]
+    for match in IMPORT.finditer(texts[API]):
+        names = [name.strip() for name in match.group(2).split(",")]
+        typed = match.group(1) or any(name.startswith("type ") for name in names)
+        if code[match.start()] != "i" or not typed:
+            continue
+        target = posixpath.normpath(posixpath.join(posixpath.dirname(API), match.group(3)))
+        target = target.removesuffix(".js") + ".ts"
+        if target in texts and target not in found:
+            found.append(target)
+    return found
 
 
 def declaration_end(code, start, interface):
@@ -298,12 +317,23 @@ def props_sites(path, code):
 
 def absent_sites(files, boundary):
     """Each boundary site that spells an absent value `undefined`, as (key, line)."""
-    return []
+    found = []
+    for path, text in files:
+        if path in boundary:
+            found += declaration_sites(path, text)
+        if ".test." in path or not path.endswith((".svelte", ".svelte.ts")):
+            continue
+        code = code_of(path, text)
+        found += state_sites(path, code)
+        if path.endswith(".svelte"):
+            found += props_sites(path, code)
+    return sorted(found, key=lambda site: (site[0].split(" ")[0], site[1], site[0]))
 
 
 def census(files):
     """The sites of both rules over (path, text) pairs; an empty population is VOID."""
-    boundary = boundary_modules(files)
+    files = examined("web source file(s)", files)
+    boundary = examined("boundary module(s)", boundary_modules(files))
     return {"loose-equality": loose_sites(files), "absent-spelling": absent_sites(files, boundary)}
 
 
@@ -313,6 +343,13 @@ def verdict(found, listed, level):
     printed, failures = [], []
     for rule in RULES:
         keys = {key for key, _line in found[rule]}
+        for key, line in found[rule]:
+            if key in listed[rule]:
+                continue
+            if level == "fail":
+                failures.append(f"FAIL {rule} {key} line {line}")
+            else:
+                printed.append(f"WARN {rule} {key} line {line}")
         for key in listed[rule]:
             if key not in keys:
                 failures.append(f"STALE {rule} {key}")
