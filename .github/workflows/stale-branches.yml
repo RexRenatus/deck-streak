@@ -1,0 +1,59 @@
+name: stale-branches
+
+# The stale-branch census (SPEC-674, ADR-697). One step writes, read-only, the repository's branch
+# list with each branch's protection, each branch's last commit time and the open pull requests'
+# head branches into one file in the runner's temporary folder, stamped with the read's own time;
+# the next runs the census module over that file alone. It starts at warn: a count past the
+# record prints a WARN line and passes, and a record above the count fails. A schedule runs it
+# daily from the default branch's copy, a dispatch at any ref that holds it, and a pull request
+# that changes the census or this file runs it too. No secret is used, the token reads contents
+# and pull requests only, and every action is pinned by its full commit SHA.
+on:
+  schedule:
+    - cron: "29 4 * * *"
+  workflow_dispatch:
+  pull_request:
+    branches: [dev]
+    types: [opened, synchronize, reopened]
+    paths:
+      - ".github/workflows/stale-branches.yml"
+      - "scripts/tests/test_stale_branches.py"
+      - "scripts/tests/fixtures/stale-branches/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stale-branches-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  census:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: the branch list, each branch's last commit time and the open pull requests, read
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          lists="$RUNNER_TEMP/stale-branches.lists"
+          query='query($owner: String!, $name: String!, $endCursor: String) { repository(owner: $owner, name: $name) { refs(refPrefix: "refs/heads/", first: 100, after: $endCursor) { pageInfo { hasNextPage endCursor } nodes { name target { ... on Commit { committedDate } } } } } }'
+          {
+            printf 'read-at\t%s\n' "$(date -u +%s)"
+            printf 'repository\t%s\n' "$REPO"
+            gh api "repos/$REPO/branches?per_page=100" --paginate --jq '.[] | ["protected", .name, (.protected | tostring)] | @tsv'
+            gh api graphql --paginate -f owner="${REPO%%/*}" -f name="${REPO#*/}" -f query="$query" --jq '.data.repository.refs.nodes[] | ["commit", .name, (.target.committedDate | fromdateiso8601 | tostring)] | @tsv'
+            gh api "repos/$REPO/pulls?state=open&per_page=100" --paginate --jq '.[] | ["pull", .head.ref, (.head.repo.full_name // "")] | @tsv'
+          } > "$lists"
+          cut -f1 "$lists" | sort | uniq -c
+      - name: the census over the lists
+        env:
+          STALE_BRANCHES_LISTS: ${{ runner.temp }}/stale-branches.lists
+        run: python3 -m unittest discover -s scripts/tests -p test_stale_branches.py -v
