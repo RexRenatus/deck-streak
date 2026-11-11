@@ -187,3 +187,17 @@ dormant, and ingest reads exactly what it reads today.
   alone.
 - Nothing live reads or writes the store, so no owner data moves at this change.
 - Every later write of history is held by D6's triggers and every later statement by D7's census.
+
+## Note, appended for RUSTSEC-2026-0459: the driver moves to rusqlite's next release line
+
+This note leaves D1 as it was decided. The workspace's `rusqlite` requirement moves, with the
+engine's, to the release line whose `libsqlite3-sys` bundles the SQLite release that fixes
+RUSTSEC-2026-0459, still with the bundled SQLite and at the version and source the lock holds
+through the engine (ADR-058's, ADR-348's and ADR-583's notes). The one call site that line forces
+in this workspace is the export's column names in `crates/collection/src/data_rights.rs`, which
+the line returns as an iterator rather than a list; the exported rows are unchanged.
+
+Chosen against: a patched copy of `libsqlite3-sys` at its earlier line carrying the fixed SQLite,
+because cargo-deny matches an advisory only to a crate from the advisory's source, so a git or path
+copy would clear the audit by its source whatever it held, and would hide every later advisory
+against the crate while it stood, the reason ADR-583 refused a patched block-buffer.
