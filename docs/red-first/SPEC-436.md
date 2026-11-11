@@ -73,4 +73,19 @@ A13: red at ce91da21514fd24bbab2dd5a0f8f67ee59e8e615: assertion `left == right` 
 A13: green at d58bd8445472c4f1a321355fc932b9523168db1f
 A14: red at ce91da21514fd24bbab2dd5a0f8f67ee59e8e615: assertion `left == right` failed, left: None (an empty population not refused)
 A14: green at d58bd8445472c4f1a321355fc932b9523168db1f
+A15: red at 131912d3b91fc0d51ad08b14eb956b5c4da7a056: assertion `left == right` failed, left: [] (no pair judged, against the six planted keys)
+A15: green at ef332c4a6af73b82988253f1f3f52be5df9cfa18
+A16: red at 131912d3b91fc0d51ad08b14eb956b5c4da7a056: assertion `left == right` failed, left: [] (no pair judged, against the two planted keys)
+A16: green at ef332c4a6af73b82988253f1f3f52be5df9cfa18
+A17: red at 131912d3b91fc0d51ad08b14eb956b5c4da7a056: assertion `left == right` failed, left: [] (no pair judged, against the two listed keys)
+A17: green at ef332c4a6af73b82988253f1f3f52be5df9cfa18
+A18: red at 131912d3b91fc0d51ad08b14eb956b5c4da7a056: assertion `left == right` failed, left: None (an empty population not refused)
+A18: green at ef332c4a6af73b82988253f1f3f52be5df9cfa18
 ```
+
+Amendment 1, the cookie flag census: its four tests were committed with the census over a stub
+that keeps every item, forces the three attribute checks to pass and turns both refusals off
+(131912d3), and each read red on its first assertion by cargo. Test edits after the red commit:
+one. The green commit ef332c4a edits the census file because its walk lives in it beside its
+tests: it restores the three attribute checks and the two refusals; it changes no test function,
+planted text or expected value.

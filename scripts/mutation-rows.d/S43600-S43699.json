@@ -819,6 +819,87 @@
         "if census.files == usize::MAX {",
         "handler_panic_census::the_panic_census_refuses_an_empty_population",
         "an empty population is no longer refused by its own name (SPEC-436 R13, A14)"
+      ],
+      [
+        "S43691-COOKIE-SECURE",
+        "daemon",
+        "tests/cookie_flags_census.rs",
+        ".any(|attribute| attribute == SECURE)",
+        ".any(|attribute| attribute == SECURE || true)",
+        "cookie_flags_census::every_set_cookie_pair_is_judged_by_its_three_flags",
+        "a value missing Secure passes, so its pair leaves the planted sites (SPEC-436 R26, A15)"
+      ],
+      [
+        "S43692-COOKIE-HTTP-ONLY",
+        "daemon",
+        "tests/cookie_flags_census.rs",
+        ".any(|attribute| attribute == HTTP_ONLY)",
+        ".any(|attribute| attribute == HTTP_ONLY || true)",
+        "cookie_flags_census::every_set_cookie_pair_is_judged_by_its_three_flags",
+        "a value missing HttpOnly passes, so its pair leaves the planted sites (SPEC-436 R26, A15)"
+      ],
+      [
+        "S43693-COOKIE-SAME-SITE",
+        "daemon",
+        "tests/cookie_flags_census.rs",
+        ".any(|attribute| attribute.starts_with(SAME_SITE))",
+        ".any(|attribute| attribute.starts_with(SAME_SITE) || true)",
+        "cookie_flags_census::every_set_cookie_pair_is_judged_by_its_three_flags",
+        "a value missing SameSite passes, so its pair leaves the planted sites (SPEC-436 R26, A15)"
+      ],
+      [
+        "S43694-COOKIE-HEADER-CONSTANT",
+        "daemon",
+        "tests/cookie_flags_census.rs",
+        "ident == HEADER_CONSTANT && path.len() * 3 == comma + 2",
+        "ident == HEADER_CONSTANT && path.len() * 3 == comma + 2 && false",
+        "cookie_flags_census::every_set_cookie_pair_is_judged_by_its_three_flags",
+        "a pair named by the SET_COOKIE path is no longer read (SPEC-436 R25, A15)"
+      ],
+      [
+        "S43695-COOKIE-HEADER-LITERAL",
+        "daemon",
+        "tests/cookie_flags_census.rs",
+        "comma == 1 && literal.to_string().to_lowercase() == format!(\"\\\"{HEADER_LITERAL}\\\"\")",
+        "comma == 1 && literal.to_string().to_lowercase() == format!(\"\\\"{HEADER_LITERAL}\\\"\") && false",
+        "cookie_flags_census::every_set_cookie_pair_is_judged_by_its_three_flags",
+        "a pair named by the set-cookie literal is no longer read (SPEC-436 R25, A15)"
+      ],
+      [
+        "S43696-COOKIE-FORMAT",
+        "daemon",
+        "tests/cookie_flags_census.rs",
+        "if ident == \"format\" && is_punct(Some(bang), '!') =>",
+        "if ident == \"format\" && is_punct(Some(bang), '!') && false =>",
+        "cookie_flags_census::every_set_cookie_pair_is_judged_by_its_three_flags",
+        "a format! value is no longer read, so a passing pair becomes a site (SPEC-436 R26, A15)"
+      ],
+      [
+        "S43697-COOKIE-LEVEL",
+        "daemon",
+        "tests/cookie_flags_census.rs",
+        "const LEVEL: Level = Level::Warn;",
+        "const LEVEL: Level = Level::Fail;",
+        "cookie_flags_census::the_repository_lists_exactly_todays_cookie_sites",
+        "the census starts at fail, not warn (SPEC-436 R28, A17)"
+      ],
+      [
+        "S43698-COOKIE-EMPTY-FILES",
+        "daemon",
+        "tests/cookie_flags_census.rs",
+        "if census.files == 0 {",
+        "if census.files == usize::MAX {",
+        "cookie_flags_census::the_cookie_census_refuses_an_empty_population",
+        "an empty population is no longer refused by its own name (SPEC-436 R29, A18)"
+      ],
+      [
+        "S43699-COOKIE-NO-PAIRS",
+        "daemon",
+        "tests/cookie_flags_census.rs",
+        "if census.pairs == 0 {",
+        "if census.pairs == usize::MAX {",
+        "cookie_flags_census::the_cookie_census_refuses_an_empty_population",
+        "a population with no pair is no longer refused (SPEC-436 R29, A18)"
       ]
     ]
   }
