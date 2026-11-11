@@ -10,6 +10,8 @@ Path:
 - **Schematic:** `docs/schematics/data-integrity-ii-checks.md` (added).
 - **Status:** delivered by the pull request that adds this file, with its tests and
   `docs/red-first/SPEC-435.md`.
+- **Amended:** section 11 (#903): the register's `Domain` and `Count` integer sums become checked
+  or saturating, one delivery at a time; the first delivery saturates the chest pity counters.
 
 ## 1. The problem, measured
 
@@ -152,7 +154,8 @@ or guarantee the code enforces bounds it), `Calendar` (a real date or time bound
 (a count over a finite set bounds it). The census holds its sites equal to the register, function
 by function, and refuses a function no row lists, a row whose count differs, and a row the census
 does not reach. A new site passes by being written in a bounded form, or by a row whose reason a
-reviewer reads. Today's register, 46 rows and 114 sites (paths under `crates/`):
+reviewer reads. The register, 45 rows and 107 sites since section 11's first delivery (paths under
+`crates/`):
 
 | source | function | sites | class | bound |
 |---|---|---|---|---|
@@ -180,13 +183,12 @@ reviewer reads. Today's register, 46 rows and 114 sites (paths under `crates/`):
 | `progression/src/records.rs` | `chase` | 1 | Domain | two non-negative counts |
 | `progression/src/xp.rs` | `level_for` | 6 | Widened | widened to `u128` |
 | `progression/src/xp.rs` | `xp_to_reach` | 3 | Domain | a level from `level_for`, whose start is at most the total |
-| `quests/src/chests.rs` | `epic_odds_pts` | 4 | Domain | a counter below its guarantee less a constant; float odds |
+| `quests/src/chests.rs` | `epic_odds_pts` | 3 | Float | float odds |
 | `quests/src/chests.rs` | `grant_session_chests_on` | 2 | Count | a session's start difference in milliseconds; chests held at most the day's cap |
 | `quests/src/chests.rs` | `payout_xp` | 5 | Domain | a constant payout range; float shares |
-| `quests/src/chests.rs` | `roll_rarity` | 6 | Domain | the pity counters below their guarantees plus 1; float odds |
+| `quests/src/chests.rs` | `roll_rarity` | 4 | Float | float odds |
 | `quests/src/chests.rs` | `sweep_stale_chests_on` | 1 | Calendar | a real time in milliseconds |
 | `quests/src/draw.rs` | `fraction` | 1 | Float | a float fraction |
-| `quests/src/pity.rs` | `after` | 4 | Domain | each counter stays below its guarantee: an Epic by the 14th, a Legendary by the 40th, reset by `roll_rarity` |
 | `quests/src/sessions.rs` | `measure` | 2 | Count | the reviews of one session; seconds are float |
 | `quests/src/sessions.rs` | `session_bounds` | 1 | Calendar | a real time in milliseconds |
 | `quests/src/tokens.rs` | `activate_token_on` | 2 | Calendar | the time now in milliseconds plus a constant window |
@@ -248,7 +250,8 @@ R17. The census prints each site as `<path>:<line> <arm>`, never a line's text, 
 ### All three
 
 R18. No product file changes: no source under `crates/*/src`, no migration, no manifest, no lint
-table and no `clippy.toml`.
+table and no `clippy.toml`. Section 11's conversions are the one exception: each changes only the
+functions whose register rows it converts, and no migration, manifest, lint table or `clippy.toml`.
 
 R19. Every red is a planted site in a fixture, never in the product tree. The migration census
 builds its planted migrations in a temporary directory at run time; the arithmetic census reads
@@ -273,6 +276,13 @@ each reads every file of its population.
 | A11 | a planted site no row lists, a row whose count differs and a row the census does not reach are each refused by R16's reason | `an_unlisted_recounted_or_stale_arm_row_is_refused` |
 | A12 | over the tree, every arm's sites equal R16's register file by file, the build script's and the examples' rows included, and the examined count equals section 1's | `every_arm_site_on_the_tree_is_listed_with_its_reason` |
 | A13 | over a temporary tree holding one source under `src/`, one `build.rs` and one example, each with one environment read, the census examines 3 and finds the 3 reads; over an empty tree it refuses at `examined 0` | `an_empty_source_set_is_void_and_every_source_kind_is_read` |
+| A14 | a Legendary counter at the top of `i64` still forces the Legendary guarantee (R23) | `a_legendary_counter_at_the_top_of_its_range_still_forces_the_legendary_guarantee` |
+| A15 | an Epic counter at the top of `i64` still forces the Epic guarantee (R23) | `an_epic_counter_at_the_top_of_its_range_still_forces_the_epic_guarantee` |
+| A16 | an Epic counter at the bottom of `i64` earns the base Epic points and no ramp (R23) | `an_epic_counter_at_the_bottom_of_its_range_earns_no_ramp` |
+| A17 | an Epic resets its counter and holds a Legendary counter at the top of `i64` there (R23) | `an_epic_at_the_top_of_the_legendary_counter_holds_it_there` |
+| A18 | a Legendary resets its counter and holds an Epic counter at the top of `i64` there (R23) | `a_legendary_at_the_top_of_the_epic_counter_holds_it_there` |
+| A19 | a Common holds an Epic counter at the top of `i64` there and adds one to the other (R23) | `a_common_chest_at_the_top_of_the_epic_counter_holds_it_there` |
+| A20 | a Rare holds a Legendary counter at the top of `i64` there and adds one to the other (R23) | `a_rare_chest_at_the_top_of_the_legendary_counter_holds_it_there` |
 
 ```acceptance
 A1: cargo test -p deck-streak-kernel --test additive_migrations -- --exact every_destructive_class_is_found_in_a_planted_migration
@@ -288,6 +298,13 @@ A10: cargo test -p deck-streak-kernel --test allow_list_arms -- --exact each_arm
 A11: cargo test -p deck-streak-kernel --test allow_list_arms -- --exact an_unlisted_recounted_or_stale_arm_row_is_refused
 A12: cargo test -p deck-streak-kernel --test allow_list_arms -- --exact every_arm_site_on_the_tree_is_listed_with_its_reason
 A13: cargo test -p deck-streak-kernel --test allow_list_arms -- --exact an_empty_source_set_is_void_and_every_source_kind_is_read
+A14: cargo test -p deck-streak-quests --test bounded_pity -- --exact a_legendary_counter_at_the_top_of_its_range_still_forces_the_legendary_guarantee
+A15: cargo test -p deck-streak-quests --test bounded_pity -- --exact an_epic_counter_at_the_top_of_its_range_still_forces_the_epic_guarantee
+A16: cargo test -p deck-streak-quests --test bounded_pity -- --exact an_epic_counter_at_the_bottom_of_its_range_earns_no_ramp
+A17: cargo test -p deck-streak-quests --test bounded_pity -- --exact an_epic_at_the_top_of_the_legendary_counter_holds_it_there
+A18: cargo test -p deck-streak-quests --test bounded_pity -- --exact a_legendary_at_the_top_of_the_epic_counter_holds_it_there
+A19: cargo test -p deck-streak-quests --test bounded_pity -- --exact a_common_chest_at_the_top_of_the_epic_counter_holds_it_there
+A20: cargo test -p deck-streak-quests --test bounded_pity -- --exact a_rare_chest_at_the_top_of_the_legendary_counter_holds_it_there
 ```
 
 Every criterion is red first, at the red commit, on an assertion of its behaviour. The red commit
@@ -319,6 +336,14 @@ its examined count and refuses zero.
 | `docs/schematics/data-integrity-ii-checks.md` | the schematic | added: the three censuses, their populations, matchers, counts and sites |
 | `docs/red-first/SPEC-435.md` | the red-first record | added |
 | `changelog.d/data-integrity-ii-435.md` | the changelog fragment | added |
+| `crates/quests/src/pity.rs` | `deck-streak-quests`, product code | changed by section 11: `Pity::after` saturates both counters |
+| `crates/quests/src/chests.rs` | `deck-streak-quests`, product code | changed by section 11: `epic_odds_pts` and `roll_rarity` read the counters through saturating sums |
+| `crates/quests/tests/bounded_pity.rs` | `deck-streak-quests`, test code | added by section 11: the tests of A14-A20 |
+| `crates/economy/tests/bounded_arithmetic.rs` | `deck-streak-economy`, test code | changed by section 11: `LISTED` loses the `after` row and lists `epic_odds_pts` and `roll_rarity` as `Float` |
+| `formal/lean/Formal/Chest.lean` | the Lean chest model | changed by section 11: the covers of `epic_odds_pts` and `roll_rarity` are re-stamped |
+| `scripts/mutation-rows.d/S08100-S08199.json` | the mutation rows | changed by section 11: S08124 is re-anchored |
+| `scripts/mutation-rows.d/S43500-S43599.json` | the mutation rows | changed by section 11: S43583-S43589 are added |
+| `changelog.d/bounded-pity-435.md` | the changelog fragment | added by section 11 |
 
 ## 5. What this does NOT cover
 
@@ -329,7 +354,8 @@ its examined count and refuses zero.
 - It adds no integer-money, append-only or idempotent-sync check; those are held by their own
   delivery (#902).
 - It cures no listed site: no money or counter sum is rewritten into a checked or saturating
-  form, and no register row is removed (#903).
+  form, and no register row is removed (#903). Section 11 records each cure delivered since, one
+  delivery at a time; the cures not yet delivered stay with #903.
 - It reads no counter outside the six crates of R8, such as those of `analytics`, `curriculum`,
   `notifications`, `ingest`, `kernel` and `coordination` (#904).
 - It examines no test code under `crates/*/tests/` for the arms of R15 (#905).
@@ -464,7 +490,8 @@ census is test code, which cargo-mutants never mutates. No find holds the whole 
 | S43581 | `allow_list_arms` | build scripts join the population | A13 |
 | S43582 | `allow_list_arms` | examples join the population | A13 |
 
-S43521, S43526 to S43529, S43557 to S43559, S43579 and S43583 to S43599 are unused. A row on a compound rule has a
+S43521, S43526 to S43529, S43557 to S43559, S43579 and S43590 to S43599 are unused; section 11
+holds S43583 to S43589. A row on a compound rule has a
 plant in which its operand alone decides the result: each form of "deletes rows" has its own
 plant, and A1's additive control holds an `ALTER TABLE` that adds a column and a column named
 `rename`, so a mutant that drops either half of an `ALTER TABLE` rule finds a hit there.
@@ -484,3 +511,53 @@ git ls-tree -r --name-only HEAD -- crates | grep -c -E '^crates/[^/]+/(src/.*\.r
 A12 pins 419, still as an exact count. The register is unchanged: the census finds the same
 twelve listed sites, and the sources dev added hold no SQL escape, shell, configured program or
 environment read. No other section changes.
+
+## 11. Amendment: the register's bounded sums become checked or saturating (#903)
+
+Decided by ADR-449 amendment 1. The register of R12 lists 24 functions whose class is `Domain` or
+`Count`. Read site by site, they hold 44 integer sums and 18 sums with a float operand. Each
+integer sum is bounded by an invariant the code keeps, and the shipped build wraps an integer sum
+that overflows, so a broken invariant would wrap without a sign. This section converts those sums,
+one delivery at a time. The manifest rows of section 4 marked "by section 11", the criteria A14 to
+A20 and R20 to R23 are its first delivery's. ADR-449 amendment 1 changes `docs/decisions/ADR-449-three-census-tests-hold-todays-destructive-migrations-unchecked-operators-and-escape-hatches-in-registers-and-refuse-any-other.md`,
+and `docs/red-first/SPEC-435.md` records A14 to A20.
+
+R20. A conversion rewrites one function's integer sums into `checked_` or `saturating_` forms. Each
+converted site has a test at its bound, red on the unchecked sum and green on the bounded one, and
+a mutation row whose mutant restores the wrap (`wrapping_`).
+
+R21. A converted function's row leaves `LISTED` when no site of it remains. Otherwise the row keeps
+the count of the sites left, with the class and bound that hold them. No row leaves in any other
+delivery, and no refusal, examined count, operator or crate of R8 to R13 changes.
+
+R22. A conversion keeps every result inside the bound its row stated, and says what happens at the
+bound: a `saturating_` form clamps where every value past the bound answers alike, and a `checked_`
+form returns the caller's error where a clamped value would be a wrong amount.
+
+R23. The first delivery saturates the chest pity counters. `Pity::after` adds one to a counter by
+`saturating_add`; `roll_rarity` reads each guarantee through `saturating_add(1)`; `epic_odds_pts`
+reads the ramp through `saturating_sub`. A counter at the top of `i64` is past its guarantee all
+the same, so it still forces that guarantee. A counter at the bottom earns no ramp, as the ramp's
+floor of 0 already answers. Every counter inside its guarantee answers as before. The Lean model of
+the chest rules (`formal/lean/Formal/Chest.lean`) reads integers with no bound, and the saturating
+sums answer as it does at every input.
+
+After the first delivery the register holds 45 rows and 107 sites: the row of `after` leaves, and
+`epic_odds_pts` (3 sites) and `roll_rarity` (4 sites) keep only float sums, as `Float`.
+
+Red first: each of A14 to A20 plants a counter at an end of `i64`. At the base the unchecked sum
+panics under the test profile and wraps in the `release` job's run of the same test, so each test
+is red on its own assertion's subject, the sum at the bound, and green with the saturating sum.
+A8 is not a new criterion: its register changes with the conversion, in the same commit as the
+code.
+
+Formal: the covers of `epic_odds_pts` and `roll_rarity` in `formal/lean/Formal/Chest.lean` are
+re-stamped with the digests of the converted functions. No other cover names a changed function.
+
+Rows: S43583 to S43589, one per converted site, each killed by its own test of A14 to A20. S08124
+is re-anchored on the converted line: its find becomes
+`if since_legendary.saturating_add(1) >= PITY_LEGENDARY_GUARANTEE {`, and its mutant (the
+guarantee reads the counter without the chest being rolled), its id and its killer are kept.
+
+What the first delivery does not do: the other 23 functions' sums stay listed with their rows
+until their own deliveries (#903), and the census reads no crate outside R8 (#904).
