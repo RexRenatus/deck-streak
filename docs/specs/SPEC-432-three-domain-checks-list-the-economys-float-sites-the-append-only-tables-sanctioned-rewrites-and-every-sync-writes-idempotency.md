@@ -307,6 +307,8 @@ was read at `b9a08e60`.
   A2, since the head holds no float left to name. S43237 pins the surcharge's 150 percent, killed
   by the constants test.
 
+### Acceptance criteria of section 10
+
 | id | criterion | decided by |
 |---|---|---|
 | A14 | the cap and the fine equal every record of their parity goldens in whole coins | `the_cap_the_fine_and_the_clip_match_the_parity_goldens` |
