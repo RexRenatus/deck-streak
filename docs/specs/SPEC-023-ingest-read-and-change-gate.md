@@ -65,7 +65,8 @@ R3. The track of a card is `law` when its top-level deck name starts with `DECKS
     the law root, start logs one WARN naming both settings (the predecessor's warning, ported).
 R4. No SQL predicate, ordering or aggregate touches a deck, note-type or tag name column; names are
     read by id and matched in Rust, so a collection whose name columns use `COLLATE unicase` is read
-    with no collation registered.
+    with its `unicase` comparator never called: the reader registers the collation through a
+    comparator that counts its calls on the open, and refuses any read that called it.
 R5. The reader returns only DeckStreak's own types (reviews, cards with their deck id, original deck
     id and track, the collection's creation time, deck names); no engine or SQL type leaves `ingest`.
 R6. The window: reviews newer than the ingest floor are read; the floor is the persisted base, or
@@ -112,7 +113,7 @@ R13. `ingest`'s data-rights port resets `ingest_state` in place; the table is re
 | A3 | the deck scope equals the predecessor's | `scope` test over `goldens/allowed_deck_ids.json` |
 | A4 | the study-event rule equals the predecessor's | `scope` test over `goldens/study_event.json` |
 | A5 | a card in a filtered deck is scoped by its original deck | `scope` test |
-| A6 | a deck table collated `unicase` is read with no collation registered | `reader` test |
+| A6 | a deck table collated `unicase` is read with its comparator never called, and an ordering by name on the reader's connection calls it | `reader` test |
 | A7 | a law root the include list does not cover is warned by name at start | `scope` test |
 | A8 | the ingest window and its rebase equal the predecessor's | `window` test over `goldens/ingest_rebase.json` |
 | A9 | a shrinking pre-window count is reported by the self-check | `window` test |
@@ -134,7 +135,7 @@ A2: cargo test -p deck-streak-ingest --test reader -- --exact only_scoped_cards_
 A3: cargo test -p deck-streak-ingest --test scope -- --exact the_deck_scope_matches_the_predecessors_golden
 A4: cargo test -p deck-streak-ingest --test scope -- --exact the_study_event_rule_matches_the_predecessors_golden
 A5: cargo test -p deck-streak-ingest --test scope -- --exact a_card_in_a_filtered_deck_is_scoped_by_its_original_deck
-A6: cargo test -p deck-streak-ingest --test reader -- --exact a_unicase_collated_deck_table_is_read_without_the_collation
+A6: cargo test -p deck-streak-ingest --test reader -- --exact a_unicase_collated_deck_table_is_read_without_calling_the_collation
 A7: cargo test -p deck-streak-ingest --test scope -- --exact a_law_root_outside_the_include_list_is_warned_by_name
 A8: cargo test -p deck-streak-ingest --test window -- --exact the_ingest_window_and_its_rebase_match_the_predecessors_golden
 A9: cargo test -p deck-streak-ingest --test window -- --exact a_shrinking_pre_window_count_is_reported_by_the_self_check
@@ -243,8 +244,10 @@ real deadlines exist yet. Every clock is a `ManualClock`.
 - **R4: names by id, deck ids in SQL.** The card and review reads, and the window's recount, filter by
   the allowed deck ids, integers bound as one JSON array that `json_each` expands; the scope itself is
   decided in Rust over the names read by id, and the study-event rule is applied in Rust to the rows
-  read (the recount's count needs its SQL mirror, as the predecessor's did). A6 shows the trap is live
-  on the reader's own connection: an ordering by name there fails for want of `unicase`.
+  read (the recount's count needs its SQL mirror, as the predecessor's did). A6 shows the tripwire is
+  live on the reader's own connection: an ordering by name there, with the name index kept out
+  (`NOT INDEXED`), calls the counting comparator and is refused, while every read of the reader
+  counts 0 calls, which is R4's measure.
 - **R8: the record is read before the cycle's own sync.** The predecessor's gate read its last run
   before its own cycle wrote a row; here the sync writes its row first, so the cycle reads the record
   before it syncs, and "no successful run on record" is read at the same moment. A sync refused for
