@@ -3,7 +3,7 @@
 Path:
 `docs/specs/SPEC-674-the-repositorys-stale-branches-are-counted-and-held-to-a-recorded-count.md`.
 
-- **Issue:** #1394, which this SPEC closes.
+- **Issue:** #1394 (referenced: it stays open for the promotion to `fail`, a delivery of its own under ADR-450 D6).
 - **Context(s):** one census module and its planted lists under `scripts/tests/`, one workflow
   that writes the lists it reads, the rows band and the documents. No product source, existing
   test, existing workflow, `scripts/check.sh` or test-runner configuration changes.
