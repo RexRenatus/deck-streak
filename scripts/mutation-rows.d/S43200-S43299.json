@@ -79,8 +79,8 @@
         "tests/integer_money.rs",
         "let declares = word(at).is_some_and(|text| ITEM_KEYWORDS.contains(&text)) && !lifetime;",
         "let declares = word(at).is_some_and(|text| ITEM_KEYWORDS.contains(&text)) && !lifetime && false;",
-        "integer_money::the_economy_holds_floats_only_at_its_listed_sites",
-        "each float is named by the item after the last item keyword; unnamed, the head's sites are no longer the listed items"
+        "integer_money::a_float_planted_in_the_economy_is_refused_by_its_rule",
+        "each float is named by the item after the last item keyword; unnamed, the planted floats are no longer refused by their items"
       ],
       [
         "S43209-A-LISTED-FLOAT-SITE-GONE-IS-REFUSED",
@@ -104,10 +104,10 @@
         "S43211-THE-LISTED-FLOAT-COUNTS",
         "economy",
         "tests/integer_money.rs",
-        "(\"rules.rs\", \"scaled_fine\", 1),",
-        "(\"rules.rs\", \"scaled_fine\", 2),",
+        "const LISTED: [(&str, &str, usize); 0] = [];",
+        "const LISTED: [(&str, &str, usize); 1] = [(\"rules.rs\", \"scaled_fine\", 1)];",
         "integer_money::the_economy_holds_floats_only_at_its_listed_sites",
-        "the listed map holds scaled_fine's one cast; a changed count no longer equals the head's sites"
+        "the listing is empty since the head holds no float; a listed site no longer equals the head's sites"
       ],
       [
         "S43212-AN-UPDATE-IS-A-REWRITE",
@@ -333,6 +333,15 @@
         "if gone && false {",
         "sync_write_idempotency::a_write_module_is_classified_and_a_listed_one_holds_a_write",
         "the judge refuses a listed PLAIN site that is gone; disabled, the planted skip module without record_prior passes"
+      ],
+      [
+        "S43237-THE-PASS-SURCHARGE-IS-150-PERCENT",
+        "economy",
+        "src/constants.rs",
+        "pub const PASS_SURCHARGE_PERCENT: i64 = 150;",
+        "pub const PASS_SURCHARGE_PERCENT: i64 = 151;",
+        "wallet_goldens::the_coin_constants_and_economy_json_match_the_predecessors",
+        "the pass surcharge is 150 percent of the scroll pass's price, the constants golden's 1.5 (SPEC-432 section 10)"
       ]
     ]
   }

@@ -68,16 +68,16 @@ const LISTED: [Listed; 46] = [
     Listed {
         source: "crates/economy/src/rules.rs",
         function: "daily_loss_cap",
-        sites: 1,
-        class: Class::Float,
-        bound: "a float share of the wallet",
+        sites: 3,
+        class: Class::Domain,
+        bound: "a wallet from 1 to `i64::MAX` split at its hundreds, each part times 30 (`Formal/CoinShares.lean`)",
     },
     Listed {
         source: "crates/economy/src/rules.rs",
         function: "scaled_fine",
-        sites: 1,
-        class: Class::Float,
-        bound: "a float share of the wallet",
+        sites: 4,
+        class: Class::Domain,
+        bound: "a wallet from 1 to `i64::MAX` split at its hundreds, each part times 2, the rest plus 99 (`Formal/CoinShares.lean`)",
     },
     Listed {
         source: "crates/economy/src/wallet.rs",

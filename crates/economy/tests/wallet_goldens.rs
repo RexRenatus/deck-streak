@@ -64,6 +64,12 @@ fn declared<'a>(file: &'a Value, path: &[&str]) -> &'a Value {
     path.iter().fold(file, |node, key| &node[*key])
 }
 
+/// A share the engine keeps as a whole percent, as the fraction the predecessor wrote (#890).
+fn fraction(percent: i64) -> Value {
+    let percent = i32::try_from(percent).expect("a percent fits in i32");
+    json!(f64::from(percent) / 100.0)
+}
+
 /// Whether two numbers are the same value, whichever way JSON writes them.
 fn same(left: &Value, right: &Value) -> bool {
     left.as_f64() == right.as_f64() && left.as_f64().is_some()
@@ -78,12 +84,14 @@ fn the_coin_constants_and_economy_json_match_the_predecessors() {
             "constants.COIN_MINT_XP_DIVISOR" => json!(constants::COIN_MINT_XP_DIVISOR),
             "constants.COIN_MINT_DAILY_CAP" => json!(constants::COIN_MINT_DAILY_CAP),
             "constants.DAILY_LOSS_CAP_COINS" => json!(constants::DAILY_LOSS_CAP_COINS),
-            "constants.DAILY_LOSS_CAP_WALLET_FRAC" => json!(constants::DAILY_LOSS_CAP_WALLET_FRAC),
-            "constants.FINE_WALLET_FRAC" => json!(constants::FINE_WALLET_FRAC),
+            "constants.DAILY_LOSS_CAP_WALLET_FRAC" => {
+                fraction(constants::DAILY_LOSS_CAP_WALLET_PERCENT)
+            }
+            "constants.FINE_WALLET_FRAC" => fraction(constants::FINE_WALLET_PERCENT),
             "constants.SHOP_FREEZE_PRICE" => json!(constants::SHOP_FREEZE_PRICE),
             "constants.SHOP_SCROLL_PASS_PRICE" => json!(constants::SHOP_SCROLL_PASS_PRICE),
             "constants.SCROLL_PASS_MINUTES" => json!(constants::SCROLL_PASS_MINUTES),
-            "constants.PASS_SURCHARGE_MULT" => json!(constants::PASS_SURCHARGE_MULT),
+            "constants.PASS_SURCHARGE_MULT" => fraction(constants::PASS_SURCHARGE_PERCENT),
             "constants.PASS_SURCHARGE_HOURS" => json!(constants::PASS_SURCHARGE_HOURS),
             "constants.STREAK_FREEZE_CAP" => json!(constants::STREAK_FREEZE_CAP),
             other => panic!("a constant the golden holds and this test does not know: {other}"),
@@ -115,11 +123,11 @@ fn the_coin_constants_and_economy_json_match_the_predecessors() {
         ),
         (
             &["coins", "loss_cap", "wallet_fraction"],
-            json!(constants::DAILY_LOSS_CAP_WALLET_FRAC),
+            fraction(constants::DAILY_LOSS_CAP_WALLET_PERCENT),
         ),
         (
             &["coins", "fines", "wallet_fraction"],
-            json!(constants::FINE_WALLET_FRAC),
+            fraction(constants::FINE_WALLET_PERCENT),
         ),
         (
             &["shop", "freeze", "price"],

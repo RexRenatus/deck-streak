@@ -231,6 +231,7 @@ NEW_ENTRIES = {
     "lean/DeployEntryRefusal": ("keep", set()),
     "tla/LogCaptureFloor": ("keep", set()),
     PATH_GATE: ("keep", {"O18"}),
+    "lean/CoinShares": ("keep", set()),
 }
 # The 55 existing entries' dispositions.
 # They are the 43 that predate the sync entries, those five, the release gates' entry, and the

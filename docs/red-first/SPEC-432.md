@@ -77,3 +77,30 @@ five listed items. A5 read `examined 410 source file(s)`, `examined 6609 literal
 1, UPSERT 4, SET 4, DELETE 0, PLAIN 3 and INCREMENT 0. No list of this SPEC changed. 1e29f006 makes
 one cure, in the escape-hatch census of SPEC-435: it re-pins that census's examined count to its
 population at current dev, and it edits no file of this SPEC.
+
+## Amendment (#890): the two shares in whole coins
+
+SPEC-432 section 10 (R11 to R13, A14 to A17). The amendment, ADR-446's D10, the tests, the Lean
+entry with its vectors file, the formal ledger row and the three whole percent constants were
+committed first (ef036c87), beside the float constants, with `rules.rs` unchanged. A16, A17 and A1
+were then run alone by name at that commit, `cargo test -p deck-streak-economy --test <target> --
+--exact <name>`, and each read `running 1 test` and failed on an assertion about its criterion.
+The two rules in whole coins were committed next (1baa7440), with the float constants removed and
+no test changed, and the three then passed by name. The commit after 1baa7440 changes only this
+record, so the run at the pull request head reads the same code.
+
+```red-first
+A16: red at ef036c87: the float fine answers 180143985094820 at wallet 9007199254741001, the vector 180143985094821
+A17: red at ef036c87: the float fine answers 184467440737095520 at the largest wallet, the proof 184467440737095517
+A1: red at ef036c87: the head's five float sites stand against an empty listing
+A16: green at 1baa7440
+A17: green at 1baa7440
+A1: green at 1baa7440
+A14: not red: the goldens held the float form too, so it guards the rewrite, and S08204 and S08205 are killed by it
+A15: not red: the percents equal the fractions by construction, so it guards the rewrite, and S43237 is killed by it
+```
+
+SPEC-435's register tree test, `every_unchecked_operator_in_the_money_and_counter_paths_is_listed_with_its_bound`, is red at
+ef036c87 too, for its own reason: the register edit lands before the rules change, so it lists
+3 and 4 integer sites while `rules.rs` still holds one float site in each rule. It is green at
+1baa7440.

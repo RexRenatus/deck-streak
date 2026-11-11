@@ -1,5 +1,6 @@
 import Formal.AgentPinGroupsVectors
 import Formal.ChestVectors
+import Formal.CoinSharesVectors
 import Formal.CompanionDecideVectors
 import Formal.DeployEntryRefusalVectors
 import Formal.DocsMermaidReadVectors
@@ -49,6 +50,7 @@ def main (args : List String) : IO UInt32 := do
   match args with
   | ["AgentPinGroups"] => Formal.AgentPinGroupsVectors.run
   | ["Chest"] => Formal.ChestVectors.run
+  | ["CoinShares"] => Formal.CoinSharesVectors.run
   | ["CompanionDecide"] => Formal.CompanionDecideVectors.run
   | ["DeployEntryRefusal"] => Formal.DeployEntryRefusalVectors.run
   | ["DocsMermaidRead"] => Formal.DocsMermaidReadVectors.run

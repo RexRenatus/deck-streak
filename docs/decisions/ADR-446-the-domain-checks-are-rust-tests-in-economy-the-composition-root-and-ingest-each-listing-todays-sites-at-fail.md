@@ -279,3 +279,61 @@ printing its examined counts; the rows of `S43200-S43299`, each proved killed.
 SPEC-432 holds the measurements, the requirements, the acceptance criteria and the file manifest.
 The shared lexer is SPEC-324's (ADR-325). The wallet's write rules are ADR-308's; the XP ledger's are
 ADR-040's and ADR-072's.
+
+## Amendment (SPEC-432 section 10, #890): D10, the two shares in whole coins
+
+Recorded by SPEC-432, its section 10. D1 to D9 are unchanged, and D9 still describes the delivery
+that landed the three checks. This amendment decides how the five float sites D5 left listed are
+cured: `rules.rs::daily_loss_cap`, `rules.rs::scaled_fine` and the three fraction constants of
+`constants.rs`. Every figure was read at `b9a08e60`.
+
+### D10. The cap and the fine take their shares in whole coins
+
+- Each share is taken in `i64` over the wallet's whole hundreds and its remainder apart. For a
+  positive wallet `w` the cap's share is `w / 100 * 30 + w % 100 * 30 / 100`, rounded down, and
+  the fine's is `w / 100 * 2 + (w % 100 * 2 + 99) / 100`, rounded up. For every wallet from 1 to
+  `i64::MAX` each operator's value lies from 0 to `i64::MAX`; the largest, the cap's at
+  `i64::MAX`, is 2,767,011,611,056,432,742.
+- The three fraction constants become whole percents: `DAILY_LOSS_CAP_WALLET_PERCENT` (30),
+  `FINE_WALLET_PERCENT` (2) and `PASS_SURCHARGE_PERCENT` (150). The crate then holds no float, and
+  D1's listing is empty.
+- The rounding is the parity goldens': both integer forms read every record of
+  `daily_loss_cap.json` (142) and `scaled_fine.json` (99) equal, and no golden changes. The float
+  form and the integer forms agree for every wallet up to 2^53; above it the integer fine is the
+  exact share, where the float form rounds the wallet first.
+- `lean/CoinShares` proves, at `ramp=report`, that the cap is the wallet's share rounded down and
+  at most 100, that the fine is the wallet's share rounded up and at least the configured fine,
+  and that no step of either share leaves the coin type.
+
+Chosen, and what each was chosen against:
+
+- Widening to `i128` and narrowing back with `i64::try_from(..).unwrap_or(..)`: rejected, because
+  no `i64` wallet reaches the narrowing's fallback, so a mutant of that branch survives every test,
+  while every operator of the split form is reached and its mutants over the goldens were all
+  killed, 15 of the cap's and 17 of the fine's.
+- Keeping a float to reproduce the float fine above 2^53: rejected, because it keeps a float in
+  the crate, the site D1 lists and this cure removes. No golden reaches such a wallet (the largest
+  is 1,000,000,000 for the cap and 50,001 for the fine), and the first wallet where the float fine
+  differs from the exact share is 9,007,199,254,741,001, where it reads 180,143,985,094,820 against
+  180,143,985,094,821.
+- Recording the cure in SPEC-432 section 10 alone: rejected, because the cure chooses a rounding
+  and an order of operations for two money shares, with the options above set aside, and a SPEC
+  holds requirements; this record holds D5, which left the sites listed until a cure, and the last
+  bullet of what would make it wrong, which this cure answers.
+
+### Consequences of the amendment
+
+- Good, because the economy crate holds no float, so A1 refuses the first one a change adds, and
+  each share's rounding is proved for every wallet, not only read off the goldens.
+- Bad, because above 2^53 the fine differs from the predecessor's float form by a few coins: at
+  `i64::MAX` it is 184,467,440,737,095,517 where the float form read 184,467,440,737,095,520. No
+  golden holds such a wallet.
+- Bad, because SPEC-435's register lists the two rules with 3 and 4 integer operator sites in place
+  of one float site each.
+
+### What would make this amendment wrong
+
+- A parity golden record the integer forms read unequal: A14 goes red, and the rounding is
+  reopened.
+- A coin type other than `i64`: R13's bound and the third theorem of `lean/CoinShares` hold for
+  `i64` alone and must be proved again.
