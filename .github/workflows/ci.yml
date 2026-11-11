@@ -372,6 +372,31 @@ jobs:
           echo "$PROTOC_SHA256  /tmp/protoc.zip" | sha256sum -c -
           mkdir -p "$HOME/.local/protoc" && unzip -q /tmp/protoc.zip -d "$HOME/.local/protoc"
           echo "$HOME/.local/protoc/bin" >> "$GITHUB_PATH"
+      # SPEC-655 R3: ShellCheck from its pinned release archive, against the archive's digest, over
+      # every tracked shell script by R1's rule. It saves the list, the version, the exit status and
+      # the json1 output where the python stage's census reads them; a finding never fails here.
+      - name: shellcheck 0.11.0, checksum verified, over every tracked shell script (read by the python stage's census)
+        env:
+          SHELLCHECK_SHA256: 8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198
+          SHELLCHECK_DIR: ${{ runner.temp }}/check-logs/shellcheck
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/shellcheck.tar.xz" https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.xz
+          echo "$SHELLCHECK_SHA256  $RUNNER_TEMP/shellcheck.tar.xz" | sha256sum -c -
+          mkdir -p "$HOME/.local/bin" "$SHELLCHECK_DIR"
+          tar -xJf "$RUNNER_TEMP/shellcheck.tar.xz" -C "$HOME/.local/bin" --strip-components=1 shellcheck-v0.11.0/shellcheck
+          "$HOME/.local/bin/shellcheck" --version > "$SHELLCHECK_DIR/version.txt"
+          git ls-files -z | while IFS= read -r -d '' path; do
+            if [ -L "$path" ] || [ ! -f "$path" ]; then continue; fi
+            case "${path##*/}" in
+              *.sh | *.bash | *.dash | *.ksh) printf '%s\n' "$path" ;;
+              *.*) ;;
+              *) if head -n 1 -- "$path" | grep -q -E '^#![[:space:]]*/([^[:space:]]*/)?(env[[:space:]]+(-S[[:space:]]+)?)?(sh|bash|dash|ksh)([[:space:]]|$)'; then printf '%s\n' "$path"; fi ;;
+            esac
+          done > "$SHELLCHECK_DIR/files.txt"
+          mapfile -t scripts < "$SHELLCHECK_DIR/files.txt"
+          status=0
+          "$HOME/.local/bin/shellcheck" --norc --format=json1 --severity=style -- "${scripts[@]}" > "$SHELLCHECK_DIR/output.json" || status=$?
+          echo "$status" > "$SHELLCHECK_DIR/status.txt"
       - name: python, scrub and secrets (the guard tests, among them cargo builds and a cargo deny audit; the public deny-list; gitleaks)
         env:
           CHECK_LOG_DIR: ${{ runner.temp }}/check-logs

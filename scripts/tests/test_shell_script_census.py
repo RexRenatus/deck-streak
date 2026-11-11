@@ -12,6 +12,7 @@ fails, and a listed finding no longer found fails as `STALE` at both levels. The
 under FIXTURES end in `.fixture`, so R1's rule counts none of them in the tree.
 """
 
+import json
 import os
 import re
 import shutil
@@ -20,7 +21,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from _support import REPO
+from _support import REPO, examined
 
 FIXTURES = REPO / "scripts" / "tests" / "fixtures" / "shell-scripts"
 # R1: a tracked file is a shell script by its extension or, when its name holds no dot, by a first
@@ -57,24 +58,70 @@ def shell_of(path):
 
 def population(root, paths):
     """R1: the shell scripts among `paths` below `root`, sorted."""
-    return []
+    scripts = []
+    for path in paths:
+        full, name = Path(root) / path, path.rsplit("/", 1)[-1]
+        if full.is_symlink() or not full.is_file():
+            continue
+        if name.endswith(EXTENSIONS):
+            scripts.append(path)
+        elif "." not in name and shell_of(full):
+            scripts.append(path)
+    return sorted(scripts)
 
 
 def saved(folder):
     """R3, R4: the step's saved list and findings, or VOID: a file missing, a tool off its pin, an
     exit status that says a script was not judged whole, or a status its findings contradict."""
-    return [], []
+    folder = Path(folder)
+    missing = [name for name in SAVED if not (folder / name).is_file()]
+    if missing:
+        raise AssertionError(f"VOID: no saved {' '.join(missing)} in {folder}")
+    version = (folder / "version.txt").read_text(encoding="utf-8").splitlines()
+    if f"version: {VERSION}" not in version:
+        raise AssertionError(f"VOID: the saved output is not ShellCheck {VERSION}'s")
+    status = (folder / "status.txt").read_text(encoding="utf-8").strip()
+    if status not in ("0", "1"):
+        raise AssertionError(f"VOID: ShellCheck exited {status}, so a script was not judged whole")
+    comments = json.loads((folder / "output.json").read_text(encoding="utf-8"))["comments"]
+    if (status == "1") != bool(comments):
+        raise AssertionError(f"VOID: ShellCheck exited {status} with {len(comments)} finding(s)")
+    return (folder / "files.txt").read_text(encoding="utf-8").splitlines(), comments
 
 
 def verdict(scripts, files, comments, listed, level):
     """R4 to R6: the WARN lines to print and the problems that fail, for one saved output."""
-    return [], []
+    if sorted(files) != scripts:
+        return [], [
+            f"DRIFT: the step checked {len(files)} script(s), not the census's {len(scripts)}"
+        ]
+    found, at = {}, {}
+    for comment in comments:
+        key = (comment["file"], f"SC{comment['code']}")
+        found[key] = found.get(key, 0) + 1
+        at.setdefault(key, []).append(comment["line"])
+    warned, problems = [], []
+    for key in sorted(found):
+        count, allowed = found[key], listed.get(key, (0, ""))[0]
+        if count > allowed:
+            lines = ", ".join(str(line) for line in sorted(at[key]))
+            said = f"WARN {key[0]} {key[1]} found {count}, listed {allowed}, at line(s) {lines}"
+            (problems if level == "fail" else warned).append(said)
+    for key in sorted(listed):
+        if not listed[key][1].strip():
+            problems.append(f"UNREASONED {key[0]} {key[1]} listed {listed[key][0]}, with no reason")
+        if found.get(key, 0) < listed[key][0]:
+            problems.append(
+                f"STALE {key[0]} {key[1]} found {found.get(key, 0)}, listed {listed[key][0]}"
+            )
+    return warned, problems
 
 
 def judge(root, paths, folder, listed=LISTED, level=LEVEL):
     """The census over one tree: R2's count first, then the saved output, then the verdict."""
+    scripts = examined("shell script(s)", population(root, paths))
     files, comments = saved(folder)
-    return verdict(population(root, paths), files, comments, listed, level)
+    return verdict(scripts, files, comments, listed, level)
 
 
 def planted(root, *names):
