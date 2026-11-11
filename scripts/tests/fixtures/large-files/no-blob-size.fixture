@@ -1,0 +1,4 @@
+# A submodule's commit has no blob size, so no size decides it; a link is a blob holding the name
+# it points at, judged by that blob's size like any file (SPEC-673 R3, R5, R7).
+160000 commit -	vendor/engine
+120000 blob 12	assets/link.bin
