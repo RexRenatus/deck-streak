@@ -126,7 +126,7 @@ is removed or moved.
 
 - Today's sites over every tracked path: the hygiene job of the delivery's first push runs the
   repository test, which prints one `WARN build-output` line for each unlisted site; that job is
-  JOB-NEW, and the second push lists each site it printed or records why one stays unlisted.
+  130638505747, and the second push lists each site it printed or records why one stays unlisted.
 - `scripts/tests/test_ci_workflows.py` and every other census of `scripts/tests` over the new
   module and fixtures, read in the hygiene job by name.
 - The rows of section 9, by the `mutation-rows` job.
