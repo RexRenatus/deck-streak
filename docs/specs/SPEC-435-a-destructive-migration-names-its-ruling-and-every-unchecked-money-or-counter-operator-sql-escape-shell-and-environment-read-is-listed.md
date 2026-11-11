@@ -534,6 +534,7 @@ A14: cargo test -p deck-streak-kernel --test additive_migrations -- --exact ever
 A15: cargo test -p deck-streak-kernel --test additive_migrations -- --exact a_destructive_migration_with_no_recorded_ruling_is_reported_at_warn_and_refused_at_fail
 A16: cargo test -p deck-streak-kernel --test additive_migrations -- --exact a_ruling_entry_no_admitted_row_matches_is_stale_at_both_levels
 ```
+This section's mutation rows are S43583 to S43592, and S43593 to S43599 stay unused.
 
 | path | part | change |
 |---|---|---|
