@@ -582,13 +582,38 @@ def edition_of(root: pathlib.Path, crate: str, package: dict) -> str:
     return edition
 
 
+def unpathed_binary(root: pathlib.Path, crate: str, manifest: dict, name: str) -> str:
+    """The source of a `[[bin]]` table named `name` with no `path`, when no inferred binary has
+    that name, read as cargo reads it (issue #527). Under the 2015 edition cargo still takes the
+    first file of its older paths: `src/<name>.rs`, tried only when the package has no library
+    target (no `[lib]` table, and no `src/lib.rs` with `autolib` on), then `src/main.rs`, then
+    `src/bin/main.rs`. Under every later edition, and under 2015 when none of them is a file,
+    cargo refuses the manifest, and the reader refuses it by name rather than read a fallback."""
+    where = f"crates/{crate}"
+    crate_dir = root / where
+    package = manifest["package"]
+    if edition_of(root, crate, package) == "2015":
+        autolib = package.get("autolib", True)
+        if not isinstance(autolib, bool):
+            raise KillerUnresolved(f"{where} sets autolib to something other than a boolean")
+        library = "lib" in manifest or (autolib and (crate_dir / "src" / "lib.rs").is_file())
+        older = [] if library else [f"src/{name}.rs"]
+        for path in [*older, "src/main.rs", "src/bin/main.rs"]:
+            if (crate_dir / path).is_file():
+                return path
+    raise KillerUnresolved(
+        f"{where} declares the binary {name} with no path, and cargo finds no file for it"
+    )
+
+
 def cargo_targets(root: pathlib.Path, crate: str) -> tuple[list[tuple[str, str]], list[str]]:
     """The binaries (name, path) and the test target names of `crates/<crate>`, as cargo builds
     them: the manifest's `[[bin]]` and `[[test]]` tables, then the auto-discovered targets unless
     `autobins` or `autotests` is false, an inferred target dropped when an explicit one has its
     name or its declared path (`path_key`). A table with no path takes the auto-discovered path of
-    its name. With no `autobins` or `autotests` key, a declared table switches its kind's
-    inference off in the 2015 edition (`edition_of`) and leaves it on in every later one."""
+    its name, and a `[[bin]]` whose name has none is read as cargo reads it (`unpathed_binary`).
+    With no `autobins` or `autotests` key, a declared table switches its kind's inference off in
+    the 2015 edition (`edition_of`) and leaves it on in every later one."""
     where = f"crates/{crate}"
     manifest = manifest_of(root, crate)
     package = manifest["package"]
@@ -598,9 +623,9 @@ def cargo_targets(root: pathlib.Path, crate: str) -> tuple[list[tuple[str, str]]
         bins[package["name"]] = "src/main.rs"
     tests = inferred_targets(crate_dir, "tests")
     targets: dict[str, list[tuple[str, str]]] = {}
-    for kind, table, inferred, switch, fallback in (
-        ("bin", "bin", bins, "autobins", "src/main.rs"),
-        ("test", "test", tests, "autotests", None),
+    for kind, table, inferred, switch in (
+        ("bin", "bin", bins, "autobins"),
+        ("test", "test", tests, "autotests"),
     ):
         auto = package.get(switch, True)
         if not isinstance(auto, bool):
@@ -612,7 +637,11 @@ def cargo_targets(root: pathlib.Path, crate: str) -> tuple[list[tuple[str, str]]
             if isinstance(path, str):
                 paths.add(path_key(crate_dir, path))
             if path is None and isinstance(name, str):
-                path = inferred.get(name, fallback or f"tests/{name}.rs")
+                path = inferred.get(name)
+                if path is None and kind == "bin":
+                    path = unpathed_binary(root, crate, manifest, name)
+                elif path is None:
+                    path = f"tests/{name}.rs"
             if not isinstance(name, str) or not isinstance(path, str):
                 raise KillerUnresolved(f"{where} declares a {kind} with no name or path")
             explicit.append((name, path))
