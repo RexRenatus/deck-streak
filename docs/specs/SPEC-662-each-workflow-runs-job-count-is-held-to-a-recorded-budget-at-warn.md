@@ -47,10 +47,11 @@ R6. `BUDGET` maps each run, (workflow file, event), to the most jobs it may star
 R7. `UNDECIDED` maps each job whose count the census cannot decide, (workflow file, job), to what
     bounds it.
 R8. The verdict prints `WARN job-budget <file> <event>: <n> job(s), past <budget>` for a run past
-    its budget, `... no budget` for a run with no entry, `WARN job-budget-undecided <file> <job>:
-    <source>` for an undecided job not listed, `WARN job-budget <file> <event>: no reason` for an
-    entry with an empty reason, `STALE job-budget <file> <event>` for a budget entry no run
-    matches, and `STALE job-budget-undecided <file> <job>` for an undecided entry no job matches.
+    its budget, `... no budget` for a run with no entry,
+    `WARN job-budget-undecided <file> <job>: <source>` for an undecided job not listed,
+    `WARN job-budget <file> <event>: no reason` for an entry with an empty reason,
+    `STALE job-budget <file> <event>` for a budget entry no run matches, and
+    `STALE job-budget-undecided <file> <job>` for an undecided entry no job matches.
 R9. `LEVEL` is `Level.WARN`: every line of R8 prints, each STALE line fails, and every other line
     passes. A STALE line fails at both levels, as SPEC-436 R21 holds for its census. At
     `Level.FAIL` every line of R8 fails. Moving `LEVEL` to `Level.FAIL` is its own delivery under
