@@ -66,6 +66,12 @@ last before the copy).
 - Chosen: the measurements above, each cited at dev `57cbb5e1`, because they show the icons are generated placeholders, the scrub refuses any committed image, and the app has no catalog
 - Treating the harness's icon set as the app's: rejected because it belongs to the harness target and its image is written by CI and ignored by git
 
+## D2, the token home: ADR-597's decision, not this record's
+
+This record and ADR-597 come from one design and number their decisions in one series, D1 to D8.
+D2, the token home of the palette's six values, is the palette's alone and is ADR-597's D2. This
+record makes no decision under D2; its D1 and D3 to D8 keep the series' numbers.
+
 ## D3, the app's first asset catalog: what it was chosen against
 
 `ios/App/Assets.xcassets` is created with its root `Contents.json` (the harness catalog's own
