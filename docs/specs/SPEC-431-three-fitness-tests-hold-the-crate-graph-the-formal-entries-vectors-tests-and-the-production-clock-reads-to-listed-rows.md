@@ -348,3 +348,130 @@ row is then also stale).
 R18 holds again at the dev that this pull request merges when it is checked: the lists gain the
 rows that dev adds over the rebuild's cut, each citing ADR-445 and named in the last part of
 ADR-445's appendix, with no product change and no test changed.
+
+## 11. Amendment: the clock reads of the web client's TypeScript and the native Swift
+
+This section answers section 5's bullet on a clock-read census for the web client's TypeScript and
+the native Swift (#879). Two censuses join the Rust one, each with its own reader and its own list
+(ADR-445 D11); the Rust census, its population and its list are unchanged.
+
+R20. The Swift population is every tracked `.swift` file under `ios/` whose role in
+     `ios/swift-roles.json` is not `test`; a file the register does not list is read as production.
+     A `test` file is set aside, listed and never read. An absent register is a finding.
+R21. A Swift clock read is `Date()` or `NSDate()` with no argument, `Date.init()` and the bare
+     `Date.init`; a `.now` member or implicit member on any receiver but `self` or `Self`;
+     `ContinuousClock()`, `SuspendingClock()` and the implicit `.continuous` and `.suspending`;
+     `timeIntervalSinceNow`, the property and the initializer label;
+     `Date.timeIntervalSinceReferenceDate`; `systemUptime`, `CFAbsoluteTimeGetCurrent`,
+     `CACurrentMediaTime`, `mach_absolute_time`, `mach_continuous_time`, `clock_gettime` and
+     `gettimeofday`; and the same made, `.init`ed or read through a `typealias` of `Date`, `NSDate`,
+     `ContinuousClock` or `SuspendingClock`, collected over the population to a fixed point; with
+     any path prefix and whitespace around `.`. `Date(timeIntervalSince1970:)`, an instance's
+     `timeIntervalSinceReferenceDate`, a bare `now()` and `ContinuousClock.Instant` as a type are
+     none. The reader has no types, so a `.now` of a type of DeckStreak's own counts and refuses.
+R22. Before a Swift file is matched, its line, block (nested) and doc comments, the text of every
+     string, multi-line string and raw string (any number of `#`), and every `#/.../#` regex
+     literal are blanked, newlines kept; each interpolation, `\(` or `\#(` by the string's own
+     delimiter, is read as code. A comment or literal left open is a finding.
+R23. The web population is every `.svelte`, `.ts`, `.js`, `.mts`, `.cts`, `.mjs` and `.cjs` file
+     under `web/app/src/` and `web/app/scripts/` and at the app's root. Set aside, listed and never
+     read: a name holding `.test.` or `.spec.`, a `.d.ts`, a Playwright config at the app's root,
+     and every file under `tests/`, `tests-card/`, `tests-engine/`, `tests-study/`, `bench/` and
+     `engine-harness/`. `src/lib/paraglide/` is compiled on every run and is not read.
+R24. A web clock read is any reference to `Date`, `performance` or `Temporal` in a value position,
+     bare or as a member of `globalThis`, `window` or `self`, a string-literal key included, read
+     by the Svelte compiler's parser, a module read as a component's module script. None:
+     `Date.UTC`, `Date.parse`, `Date.prototype`, `new Date(...)` with one or more arguments and none
+     spread, `<x> instanceof Date`, a member of `Temporal` other than `Temporal.Now`, a member or
+     key named like a global, comments, strings, a template literal's text, and type positions. A
+     local named like a global is read as it. A file the parser refuses, a module holding the text
+     `</script`, and a TypeScript form that holds code the census does not read (an enum, a
+     namespace with a body, an import alias, a parameter property) are findings.
+R25. `config/clock-reads-web.json` and `config/clock-reads-swift.json` each hold
+     `{"sites": [{"path", "count", "adr", "why"}]}`, sorted by `path`, with no path twice and no
+     unknown key; each file's reads equal its row's count in both directions: a read with no row,
+     a count off its file's reads, and a row for a file with no read are each a finding, named as
+     `<path>: <n> clock read(s) and no row: <path>:<line>: <spelling>` or
+     `<path>: <n> clock read(s), its row counts <m>: ...`.
+R26. Each row's `adr` is one `docs/decisions/ADR-<n>-*.md` file whose text holds the row's path as
+     `` `<path>` ``.
+R27. Each census prints what it examined, set aside and found, and its planted defects; 0
+     production files is VOID.
+
+At this amendment's base the web list holds 3 rows (4 reads) and the Swift list 2 rows (3 reads),
+each citing ADR-445, which names each path in its D11 appendix.
+
+| id | criterion | decided by |
+|---|---|---|
+| A12 | Every production Swift file's clock reads equal its row's count, and 0 production files is VOID (R20, R25) | ADR-445 D11 |
+| A13 | Each Swift clock spelling, path prefix and alias is a read, and each none-form none (R21) | ADR-445 D11 |
+| A14 | A `test` file is set aside, an unlisted file is read, comments and literal text hold no read, an interpolation does, and a literal left open is a finding (R20, R22) | ADR-445 D11 |
+| A15 | Every Swift file with reads is admitted by an ADR file that names it (R26) | ADR-445 D11 |
+| A16 | Every production web file's clock reads equal its row's count, and 0 production files is VOID (R23, R25) | ADR-445 D11 |
+| A17 | Each web clock spelling is a read, and each value-built date and type position none (R24) | ADR-445 D11 |
+| A18 | Test code is set aside, comments, strings and a template literal's text hold no read, markup and a template literal's expression do, and an unreadable source is a finding (R23, R24) | ADR-445 D11 |
+| A19 | Every web file with reads is admitted by an ADR file that names it (R26) | ADR-445 D11 |
+
+```acceptance
+A12: python3 -m unittest discover -s scripts/tests -p test_swift_clock_reads.py -k test_every_production_swift_files_clock_reads_equal_its_row
+A13: python3 -m unittest discover -s scripts/tests -p test_swift_clock_reads.py -k test_each_swift_clock_spelling_and_alias_is_a_read
+A14: python3 -m unittest discover -s scripts/tests -p test_swift_clock_reads.py -k test_test_files_comments_and_literals_hold_no_read
+A15: python3 -m unittest discover -s scripts/tests -p test_swift_clock_reads.py -k test_every_swift_file_with_reads_is_admitted_by_an_adr_that_names_it
+A16: pnpm --dir web/app exec vitest run src/lib/clock-reads.test.ts -t "every production web file's clock reads equal its row"
+A17: pnpm --dir web/app exec vitest run src/lib/clock-reads.test.ts -t "each clock spelling is a read and each value-built date is none"
+A18: pnpm --dir web/app exec vitest run src/lib/clock-reads.test.ts -t "test files, comments, strings and types hold no read"
+A19: pnpm --dir web/app exec vitest run src/lib/clock-reads.test.ts -t "every web file with reads is admitted by an adr that names it"
+```
+
+Planted defects, each refused by name with the finding its fixture spells. A12 and A16: an
+unlisted read; a count one below its file's reads; one above; a row for a file with no read; a
+duplicate path; a row out of order; an absent list; no production file (VOID); for Swift, a read in
+a `Package.swift` manifest and an absent register; for the web, a read in `scripts/` and in the
+app root's config. A13 and A17: each spelling of R21 and R24 a read, each none-form none, and for
+Swift a `typealias` of `Date` and of a clock, made, read through a second alias in another file.
+A14: a read in a `test` file set aside; one in a file the register does not list read; a read in
+a line, doc, block and nested block comment, a string with an escaped quote, a multi-line string,
+a raw string holding a quote and a regex literal, each none; one in an interpolation of a string,
+a raw string and a multi-line string, each a read; a string and a block comment left open, each a
+finding. A18: a read in each set-aside name and directory and in `src/lib/paraglide/`, none; a
+comment, a string and a template literal's text, none; a template literal's expression, markup and
+a component's script, each a read; an HTML comment, none; a module holding `</script` and one the
+parser refuses, each a finding. A15 and A19: a row citing an absent ADR, one whose ADR lacks its
+path, and one whose `adr` is not an ADR id.
+
+Not seen, and left to further fitness tests (#882): in Swift, a type-aware reading of `.now`, a
+bare `/.../` regex literal (read as code), and a time a framework takes for the code; in the web
+client, the global object reached under another name, a computed key that is not a string literal,
+text run as code, and a time a library or the browser takes for the code.
+
+Manifest rows this amendment adds to section 4:
+
+| path | part | change |
+|---|---|---|
+| `scripts/tests/test_swift_clock_reads.py` | scripts | added: the Swift clock-read census, A12 to A15 |
+| `web/app/src/lib/clock-reads.test.ts` | web | added: the web clock-read census, A16 to A19 |
+| `config/clock-reads-swift.json` | config | added: the two Swift rows |
+| `config/clock-reads-web.json` | config | added: the three web rows |
+| `docs/schematics/fitness-tests-crate-edges-formal-vectors-and-clock-reads.md` | docs | changed: section 5, the two censuses' data flow |
+| `docs/decisions/ADR-445-each-fitness-test-is-its-own-census-over-a-listed-file-and-every-row-names-the-adr-that-admits-it.md` | docs | changed: D11 and its appendix |
+| `docs/red-first/SPEC-431.md` | docs | changed: A12 to A19's red and green lines |
+| `scripts/mutation-rows.d/S43100-S43199.json` | scripts | changed: rows S43137 to S43148 |
+| `changelog.d/fitness-tests-879.md` | changelog | added: the fragment |
+
+Mutation rows this amendment adds to section 7. The web census's planted defects are its proof
+that it can fail; a row kind a vitest test kills is left to further fitness tests (#882).
+
+| id | target | mutant | killer |
+|---|---|---|---|
+| S43137-SWIFT-ROW-PATH-MOVED | `config/clock-reads-swift.json` | the review session's row names another path | A12 |
+| S43138-SWIFT-HARNESS-COUNT-LOWERED | `config/clock-reads-swift.json` | the harness row counts 1 | A12 |
+| S43139-SWIFT-NEW-READ-UNLISTED | `ios/App/Sources/AnswerClock.swift` | a `Date()` added | A12 |
+| S43140-SWIFT-POPULATION-EMPTY | `scripts/tests/test_swift_clock_reads.py` | no `.swift` path is read | A12 |
+| S43141-SWIFT-TEST-ROLE-READ | `scripts/tests/test_swift_clock_reads.py` | a `test` file read as production | A14 |
+| S43142-SWIFT-LINE-COMMENT-READ | `scripts/tests/test_swift_clock_reads.py` | the line comment branch removed | A14 |
+| S43143-SWIFT-INTERPOLATION-BLANKED | `scripts/tests/test_swift_clock_reads.py` | an interpolation blanked as string text | A14 |
+| S43144-SWIFT-RAW-STRING-UNOPENED | `scripts/tests/test_swift_clock_reads.py` | a raw string's `#` delimiter not read | A14 |
+| S43145-SWIFT-NOW-RULE-REMOVED | `scripts/tests/test_swift_clock_reads.py` | `.now` no longer a read | A13 |
+| S43146-SWIFT-ALIAS-UNCOLLECTED | `scripts/tests/test_swift_clock_reads.py` | a `typealias` of a clock type not collected | A13 |
+| S43147-SWIFT-OWN-RECEIVER-COUNTED | `scripts/tests/test_swift_clock_reads.py` | `self.now` counted as a read | A13 |
+| S43148-SWIFT-TOKEN-UNNAMED | ADR-445 | the harness path's token altered | A15 |

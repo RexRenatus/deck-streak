@@ -102,3 +102,25 @@ flowchart LR
 None of the three changes `scripts/tests/test_context_map_schematic.py`,
 `scripts/tests/test_xp_crate_graph.py`, the fence in `docs/CONTEXT-MAP.md` or
 `config/formal.json`, which keep holding what they hold.
+
+## 5. The clock reads of the web client and the native Swift (SPEC-431 section 11)
+
+Each census reads its population, sets test code aside, counts each file's reads and compares the
+counts with its list in both directions; each row's ADR must hold its path's token.
+
+| step | Swift: `scripts/tests/test_swift_clock_reads.py` | web: `web/app/src/lib/clock-reads.test.ts` |
+|---|---|---|
+| population | every tracked `.swift` under `ios/`, by its role in `ios/swift-roles.json` | every `.svelte`, `.ts` and `.js` form under `web/app/src/` and `web/app/scripts/` and at the app's root |
+| set aside | role `test`, listed and never read | test names, `.d.ts`, the Playwright configs and the test directories, listed and never read |
+| reader | its own lexer: comments, string, raw string and regex text blanked, interpolations kept as code | the Svelte compiler's parser, a module read as a component's module script |
+| a read | the spellings of SPEC-431 R21, with aliases collected to a fixed point | a value reference to `Date`, `performance` or `Temporal`, less SPEC-431 R24's none-forms |
+| list | `config/clock-reads-swift.json` | `config/clock-reads-web.json` |
+| findings | unlisted read, count off, stale row, literal left open, unadmitted file | unlisted read, count off, stale row, unreadable source, unadmitted file |
+| runs in | `hygiene` | `web` |
+| rows | S43137 to S43148 | its planted defects (SPEC-431 section 11) |
+
+| what | at this amendment's base | printed as |
+|---|---|---|
+| Swift rows | `ios/App/Sources/ReviewSession.swift` 1, `ios/Harness/Sources/EngineSession.swift` 2 | `listed <n> clock row(s)` |
+| web rows | `web/app/scripts/record-docs-mermaid-fences.js` 2, `web/app/src/lib/study/ReviewScreen.svelte` 1, `web/app/src/routes/remote/+page.svelte` 1 | `listed <n> clock row(s)` |
+| not seen | a type-aware `.now`, a bare `/.../` regex literal, a framework's own time; the global object under another name, a computed key that is not a string literal, text run as code, a library's own time | ADR-445 D11 |
