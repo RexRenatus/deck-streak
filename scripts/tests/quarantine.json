@@ -1,0 +1,6 @@
+{
+  "_": "SPEC-677: each quarantined test names the runs on one head that disagreed; each site is a marker no entry binds, listed with its reason. A quarantined test keeps running.",
+  "level": "warn",
+  "quarantined": [],
+  "sites": []
+}

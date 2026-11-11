@@ -1,0 +1,20 @@
+{
+  "level": "warn",
+  "quarantined": [],
+  "sites": [
+    {
+      "file": "markers.ts.fixture",
+      "stack": "web",
+      "form": "skip",
+      "count": 1,
+      "reason": "planted: the condition names a project, which the census does not admit"
+    },
+    {
+      "file": "markers.ts.fixture",
+      "stack": "web",
+      "form": "fixme",
+      "count": 1,
+      "reason": "planted: listed, and no such marker is in the file"
+    }
+  ]
+}

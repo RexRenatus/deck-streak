@@ -1,0 +1,9 @@
+"""Planted: a skip under a root whose own path holds src; read as text, never run."""
+
+import unittest
+
+
+class Planted(unittest.TestCase):
+    @unittest.skip("planted with no listed entry")
+    def test_skipped(self):
+        self.fail()
