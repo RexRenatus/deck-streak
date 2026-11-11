@@ -81,23 +81,21 @@ Each runs in the python stage of `scripts/check.sh`, which CI's `hygiene` job ru
 
 ## 4. File manifest
 
-- `scripts/tests/test_lock_duplicates.py`: the census, its listing and its tests (new).
-- `scripts/tests/fixtures/lock-duplicates/site.lock.fixture`: one name at two versions (new).
-- `scripts/tests/fixtures/lock-duplicates/clean.lock.fixture`: every name at one version (new).
-- `scripts/tests/fixtures/lock-duplicates/listed.lock.fixture`: a listed duplicate (new).
-- `scripts/tests/fixtures/lock-duplicates/two-sources.lock.fixture`: one version from two sources
-  (new).
-- `scripts/tests/fixtures/lock-duplicates/stale.lock.fixture`: a name held once (new).
-- `scripts/tests/fixtures/lock-duplicates/empty.lock.fixture`: no package entry (new).
-- `scripts/tests/fixtures/lock-duplicates/undecided.lock.fixture`: a bare string over two versions
-  (new).
-- `scripts/mutation-rows.d/S66800-S66899.json`: the census's rows (new).
-- `docs/specs/SPEC-668-each-crate-name-the-lock-holds-more-than-once-is-listed-or-reported.md`: this
-  file (new).
-- `docs/decisions/ADR-691-duplicate-crate-versions-are-a-census-of-the-lock-at-warn-beside-cargo-deny.md`
-  (new).
-- `docs/red-first/SPEC-668.md`: the red-first record (new).
-- `changelog.d/duplicate-crate-versions-1389.md`: the changelog fragment (new).
+| file | context | change |
+|---|---|---|
+| `scripts/tests/test_lock_duplicates.py` | repo | added: the census, its listing and its tests |
+| `scripts/tests/fixtures/lock-duplicates/site.lock.fixture` | repo | added: one name at two versions |
+| `scripts/tests/fixtures/lock-duplicates/clean.lock.fixture` | repo | added: every name at one version |
+| `scripts/tests/fixtures/lock-duplicates/listed.lock.fixture` | repo | added: a listed duplicate |
+| `scripts/tests/fixtures/lock-duplicates/two-sources.lock.fixture` | repo | added: one version from two sources |
+| `scripts/tests/fixtures/lock-duplicates/stale.lock.fixture` | repo | added: a name held once |
+| `scripts/tests/fixtures/lock-duplicates/empty.lock.fixture` | repo | added: no package entry |
+| `scripts/tests/fixtures/lock-duplicates/undecided.lock.fixture` | repo | added: a bare string over two versions |
+| `scripts/mutation-rows.d/S66800-S66899.json` | repo | added: the census's rows |
+| `docs/specs/SPEC-668-each-crate-name-the-lock-holds-more-than-once-is-listed-or-reported.md` | repo | added: this file |
+| `docs/decisions/ADR-691-duplicate-crate-versions-are-a-census-of-the-lock-at-warn-beside-cargo-deny.md` | repo | added |
+| `docs/red-first/SPEC-668.md` | repo | added: the red-first record |
+| `changelog.d/duplicate-crate-versions-1389.md` | repo | added: the changelog fragment |
 
 Each planted lock ends in `.fixture`, so no runner collects it; the census reads each as text.
 
