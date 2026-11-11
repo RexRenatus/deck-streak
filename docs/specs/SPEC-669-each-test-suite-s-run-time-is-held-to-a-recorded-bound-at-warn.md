@@ -78,24 +78,24 @@ A9: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k tes
 
 ## 4. File manifest
 
-- `scripts/tests/test_suite_time_ratchet.py`: the census, its planted tests and its CI reader.
-- `scripts/tests/fixtures/suite-times/tree.json.fixture`: the planted tree.
-- `scripts/tests/fixtures/suite-times/test.log.fixture`: planted Rust result lines.
-- `scripts/tests/fixtures/suite-times/python.log.fixture`: planted Python module lines.
-- `scripts/tests/fixtures/suite-times/web.log.fixture`: planted web unit file lines.
-- `scripts/tests/fixtures/suite-times/doctest.log.fixture`: planted doc-test lines.
-- `scripts/tests/fixtures/suite-times/listing.json.fixture`: the planted listing.
-- `scripts/tests/fixtures/suite-times/empty-tree.json.fixture`: a planted tree with no suite.
-- `scripts/suite-times.json`: the listing of today's suites, each with its bound, margin and reason.
-- `.github/workflows/ci.yml`: the job of R7.
-- `scripts/tests/test_ci_workflows.py`: the registers the job of R7 needs, insert-only.
-- `docs/specs/SPEC-669-each-test-suite-s-run-time-is-held-to-a-recorded-bound-at-warn.md`: this
-  SPEC.
-- `docs/decisions/ADR-692-a-suite-s-time-is-read-from-the-stage-logs-and-held-to-a-listed-bound-at-warn.md`:
-  the decision.
-- `docs/red-first/SPEC-669.md`: the red-first record.
-- `changelog.d/suite-time-ratchet-669.md`: the changelog fragment.
-- `scripts/mutation-rows.d/S66900-S66999.json`: the rows on the census's arms.
+| file | context | change |
+|---|---|---|
+| `scripts/tests/test_suite_time_ratchet.py` | repo | added: the census, its planted tests and its CI reader |
+| `scripts/tests/fixtures/suite-times/tree.json.fixture` | repo | added: the planted tree |
+| `scripts/tests/fixtures/suite-times/test.log.fixture` | repo | added: planted Rust result lines |
+| `scripts/tests/fixtures/suite-times/python.log.fixture` | repo | added: planted Python module lines |
+| `scripts/tests/fixtures/suite-times/web.log.fixture` | repo | added: planted web unit file lines |
+| `scripts/tests/fixtures/suite-times/doctest.log.fixture` | repo | added: planted doc-test lines |
+| `scripts/tests/fixtures/suite-times/listing.json.fixture` | repo | added: the planted listing |
+| `scripts/tests/fixtures/suite-times/empty-tree.json.fixture` | repo | added: a planted tree with no suite |
+| `scripts/suite-times.json` | repo | added: the listing of today's suites, each with its bound, margin and reason |
+| `.github/workflows/ci.yml` | repo | changed: the job of R7 |
+| `scripts/tests/test_ci_workflows.py` | repo | changed: the registers the job of R7 needs, insert-only |
+| `docs/specs/SPEC-669-each-test-suite-s-run-time-is-held-to-a-recorded-bound-at-warn.md` | repo | added: this SPEC |
+| `docs/decisions/ADR-692-a-suite-s-time-is-read-from-the-stage-logs-and-held-to-a-listed-bound-at-warn.md` | repo | added: the decision |
+| `docs/red-first/SPEC-669.md` | repo | added: the red-first record |
+| `changelog.d/suite-time-ratchet-669.md` | repo | added: the changelog fragment |
+| `scripts/mutation-rows.d/S66900-S66999.json` | repo | added: the rows on the census's arms |
 
 ## 5. What this does NOT do
 
