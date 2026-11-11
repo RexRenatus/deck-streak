@@ -4,6 +4,8 @@
   dev (`.github/workflows/`, `.mergify.yml`).
 - **Decided by:** ADR-625 (dev merges through the Mergify merge queue, chosen over hand-built union
   branches and GitHub's own merge queue).
+- **Revised by:** ADR-689 (R2: a pull request also enters the queue on the READY status a dedicated
+  GitHub App posts on its head; R1, R3 to R9 and ADR-625 stand).
 - **Schematic:** `docs/schematics/merge-queue.md`, new.
 - **Status:** delivered by the pull request that adds this file, with its tests and implementation.
 - **Mutation band:** S60400-S60499.
@@ -45,9 +47,17 @@ deletes a branch or posts anything. The queue checks one batch at a time
 hours in place of the computed `auto`, and holds no `priority_rules`, since no pull request into dev
 is marked release-blocking.
 
-R2. A pull request enters the queue only when its base is dev, it carries the label `queue`, it is
-not a draft, it has no unresolved review thread, and `ci`, `fragment` and `dependency-review` each
-succeeded on it.
+R2. A pull request enters the queue only when its base is dev, it is not a draft, it has no
+unresolved review thread, `ci`, `fragment` and `dependency-review` each succeeded on it, and it
+either carries the label `queue` or carries the status `queue-ready` that the `deckstreak-ready`
+GitHub App posted on its head with the state `success`, read in the qualified form
+`@deckstreak-ready/queue-ready`, so a status of that name from any other poster never matches. Two
+`pull_request_rules` entries, each with the `queue` action alone, send a pull request to the queue:
+one on the label, one on that status. A queue command, or the queue checkbox, admits only a pull
+request that one of the two rules would admit. While that App's status on a pull request's head
+reads `failure`, the pull request does not enter, and a queued one leaves the queue: the queue
+conditions refuse it. The App never posts on a queue batch pull request, so the merge conditions,
+which repeat the queue conditions, hold there.
 
 R3. A batch merges only after `ci`, `fragment` and `dependency-review` each succeeded on the batch
 pull request; each member then merges by a merge commit. The queue rule's `merge_conditions` are the
@@ -87,8 +97,8 @@ Each criterion is one test of `scripts/tests/test_merge_queue.py`, named in the 
 | criterion | what it decides | test |
 |---|---|---|
 | A1 | the one queue rule tests up to six together, one batch at a time under a fixed checks timeout, and merges each member by a merge commit; no rule ranks pull requests, and every rule only queues (R1) | `test_merge_queue.py` |
-| A2 | a pull request enters the queue only into dev, labelled `queue`, ready for review, with no unresolved thread and the three checks green (R2) | `test_merge_queue.py` |
-| A3 | a batch merges only after `ci`, `fragment` and `dependency-review` pass on it; the merge conditions repeat the queue conditions, so a lone pull request that holds the tip of dev merges directly; planted two-step and `merge-batch` copies are refused (R3) | `test_merge_queue.py` |
+| A2 | a pull request enters the queue only into dev, labelled `queue` or carrying the App's `queue-ready` status at `success`, ready for review, with no unresolved thread and the three checks green; the same status name from another poster, the App's status at `failure`, and a queue command on a pull request with neither the label nor the status are refused, and a queued pull request whose App status turns to `failure` no longer meets the queue conditions (R2) | `test_merge_queue.py` |
+| A3 | a batch merges only after `ci`, `fragment` and `dependency-review` pass on it; the merge conditions repeat the queue conditions, so a lone pull request that holds the tip of dev merges directly; a batch whose members entered by the App's status merges on the batch's checks alone; planted two-step and `merge-batch` copies are refused (R3) | `test_merge_queue.py` |
 | A4 | the queue requires every check and rule the dev ruleset file requires; a planted ruleset copy holding a fourth check is refused (R4) | `test_merge_queue.py` |
 | A5 | the three required workflows run on a queue batch pull request into dev; planted copies with a `paths` filter and with a job-level draft condition are refused (R6) | `test_merge_queue.py` |
 | A6 | a batch whose members each add a fragment passes `fragment` (R7) | `test_merge_queue.py` |
@@ -128,6 +138,8 @@ A11: python3 -m unittest discover -s scripts/tests -p test_merge_queue.py -k tes
 | `.github/workflows/changelog.yml` | amended insert-only (C3): one contiguous block between cut lines 35 and 36, `git diff --numstat` deleted count `0` |
 | `scripts/mutation-rows.d/S60400-S60499.json` | new (C3) |
 | `scripts/tests/test_ci_workflows.py` | ONLY IF CI's python.log at push 1 shows a census there refusing the new module by name: insert-only, the census line alone, at a line no open pull request's hunk holds (measured by hunk header); otherwise untouched |
+| `docs/decisions/ADR-689-pull-requests-into-dev-also-enter-the-merge-queue-on-a-ready-status-a-dedicated-github-app-posts.md` | new (the revision named in the header) |
+| `changelog.d/ci-merge-queue-ready-status.md` | new (the revision named in the header) |
 
 ## 5. What this does NOT cover
 
@@ -137,6 +149,8 @@ A11: python3 -m unittest discover -s scripts/tests -p test_merge_queue.py -k tes
   are not edited here (R9).
 - Merges into main: the release pull request from dev into main is merged as before, and the queue
   acts only on pull requests into dev.
+- The GitHub App and its key: the App is made and installed outside the tree, and nothing here
+  creates, installs, holds or reads it or its key.
 
 ## 6. Risks
 
