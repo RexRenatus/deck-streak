@@ -125,22 +125,103 @@ def member(rel, path):
 
 def census(root=REPO, planted=False):
     """R1: every file under root that `member` holds, by its path relative to root."""
-    return [Path(folder) for folder, _dirs, _names in os.walk(root)][:0]
+    found = []
+    for folder, dirs, names in os.walk(root):
+        dirs[:] = [d for d in dirs if d not in PRUNE]
+        for base in names:
+            if base.endswith(".fixture") != planted:
+                continue
+            path = Path(folder) / base
+            rel = path.relative_to(root).as_posix().removesuffix(".fixture")
+            if member(rel, path):
+                found.append(path)
+    return sorted(found)
 
 
 def markers(name, text):
     """R2 and R5: each marker of one file as (line, stack, form, reason, admitted)."""
-    return []
+    stack = stack_of(name)
+    found = []
+    for number, line in enumerate(text.splitlines(), 1):
+        for form, pattern in FORMS.get(stack, ()):
+            match = pattern.search(line)
+            if not match:
+                continue
+            groups = match.groupdict()
+            cond = groups.get("cond") or ""
+            reason = groups.get("reason") or ""
+            quoted = QUOTED.findall(cond or reason)
+            stated = (quoted[-1] if quoted else "") if cond or reason else ""
+            admitted = bool(cond) and PLATFORM.search(cond.split(",")[0]) is not None
+            if form == "ignore" and reason:
+                runner = re.search(
+                    r"\b([a-z][a-z0-9_]{2,}),? runs it\b|child run of ([a-z0-9_]+)",
+                    reason,
+                )
+                named = runner and (runner.group(1) or runner.group(2))
+                admitted = bool(named) and f"fn {named}(" in text and '"--ignored"' in text
+            found.append((number, stack, form, stated, admitted))
+            break
+    return found
 
 
 def judge(files, listing, root=REPO):
     """R3 to R7: (problems that fail at any level, unlisted sites, examined count)."""
-    return [], [], len(files)
+    problems, unlisted = [], []
+    level = listing.get("level")
+    if level not in LEVELS:
+        problems.append(f"level {level!r} is not one of {LEVELS}")
+    texts = {}
+    for path in files:
+        try:
+            name = path.relative_to(root).as_posix()
+        except ValueError:
+            name = path.name
+        texts[name] = path.read_text(encoding="utf-8")
+    for entry in listing.get("quarantined", []):
+        test, record = entry.get("test", ""), entry.get("record") or []
+        where, _, fn = test.partition("::")
+        if where not in texts or not fn or not re.search(rf"\b{re.escape(fn)}\b", texts[where]):
+            problems.append(f"quarantined {test}: its test is not in the census")
+        runs = [r for r in record if isinstance(r, dict)]
+        shaped = all(
+            isinstance(r.get("run"), int)
+            and isinstance(r.get("attempt"), int)
+            and r.get("job")
+            and r.get("conclusion") in ("success", "failure")
+            and HEAD.match(str(r.get("head", "")))
+            for r in runs
+        )
+        heads = {r.get("head") for r in runs}
+        verdicts = {r.get("conclusion") for r in runs}
+        if not shaped or len(heads) != 1 or verdicts != {"success", "failure"}:
+            problems.append(f"quarantined {test}: no record of two runs on one head that disagreed")
+    counted = {}
+    for name, text in texts.items():
+        for _line, stack, form, reason, admitted in markers(name, text):
+            if not admitted:
+                key = (name, stack, form)
+                counted[key] = counted.get(key, 0) + 1
+    listed = {}
+    for site in listing.get("sites", []):
+        key = (site.get("file"), site.get("stack"), site.get("form"))
+        listed[key] = (site.get("count"), site.get("reason"))
+        if not site.get("reason"):
+            problems.append(f"site {key}: listed with no reason")
+    for key in sorted(set(counted) | set(listed)):
+        have, (want, _why) = counted.get(key, 0), listed.get(key, (0, None))
+        if have > want:
+            unlisted.append(f"{':'.join(key)}: {have} marker(s), {want} listed")
+        elif have < want:
+            problems.append(f"{':'.join(key)}: {have} marker(s), {want} listed (stale)")
+    return problems, unlisted, len(texts)
 
 
 def verdict(problems, unlisted, level):
     """R7: an unlisted site fails only at fail; a listing problem fails at either level."""
-    return True
+    for line in unlisted:
+        print(f"WARN quarantine: {line}")
+    return not problems and (level == "warn" or not unlisted)
 
 
 def planted(name):
