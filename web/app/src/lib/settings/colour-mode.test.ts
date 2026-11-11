@@ -17,7 +17,11 @@ import {
 // compiled stylesheet and the root layout as they ship, and call the colour-mode module itself.
 const LAYOUT_CSS = readFileSync(new URL('../../routes/layout.css', import.meta.url), 'utf8');
 const ROOT_LAYOUT = readFileSync(new URL('../../routes/+layout.svelte', import.meta.url), 'utf8');
-const COMPILED = compileTokens(JSON.parse(readFileSync(new URL('../design/tokens.json', import.meta.url), 'utf8')));
+// The stylesheet the token file compiles to, compiled inside each test that reads it: a compile at
+// module scope runs outside every test, so StrykerJS would count each mutant of the token compiler
+// as static and re-run the whole suite for it.
+const tokenStylesheet = (): string =>
+  compileTokens(JSON.parse(readFileSync(new URL('../design/tokens.json', import.meta.url), 'utf8')));
 const SYSTEM_RULE = /@media\s+not\s+all\s+and\s+\(prefers-color-scheme:\s*light\)\s*\{/;
 
 function examined<T>(what: string, items: T[]): T[] {
@@ -110,15 +114,15 @@ function applyFindings(apply: (root: ModeRoot, storage: Pick<Storage, 'getItem'>
 
 describe('the web colour mode', () => {
   it('the stylesheet paints the system mode first, dark unless the browser reports light', () => {
-    examined('colour roles the compile emits under .dark', [...compiledDark(COMPILED).keys()]);
-    expect(systemRuleFindings(LAYOUT_CSS, COMPILED)).toEqual([]);
+    examined('colour roles the compile emits under .dark', [...compiledDark(tokenStylesheet()).keys()]);
+    expect(systemRuleFindings(LAYOUT_CSS, tokenStylesheet())).toEqual([]);
   });
 
   it('a planted system rule that misses a colour role is refused', () => {
     const planted = LAYOUT_CSS.replace(/^[ \t]*--border\s*:[^;]*;[ \t]*\n/m, '');
     expect(planted, 'the plant removed the border role from the system rule').not.toBe(LAYOUT_CSS);
-    expect(systemRuleFindings(planted, COMPILED)).toEqual(['--border is missing from the system rule']);
-    expect(systemRuleFindings(LAYOUT_CSS, COMPILED), 'the control').toEqual([]);
+    expect(systemRuleFindings(planted, tokenStylesheet())).toEqual(['--border is missing from the system rule']);
+    expect(systemRuleFindings(LAYOUT_CSS, tokenStylesheet()), 'the control').toEqual([]);
   });
 
   it('the stored choice is applied to the root element after mount', () => {
