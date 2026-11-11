@@ -18,9 +18,9 @@ Python, web, Swift and the nextest configuration), each chosen by its stack's ru
 file's path relative to the checkout (`member`); it prints `examined N test file(s)` and
 refuses 0, which is VOID.
 R2. It finds each marker form by stack: `#[ignore]` and a `cfg_attr` ignore; `skip`, `skipIf`,
-`skipUnless`, `expectedFailure`, `self.skipTest` and `SkipTest`; `.skip`, `.fixme`, `.todo`,
-`.fail`, `.only` and a `retries` or `retry` setting; `XCTSkip` and `XCTExpectFailure`; and a
-nextest `retries` setting.
+`skipUnless`, `expectedFailure`, `self.skipTest` and `SkipTest`; `.skip`, `.skipIf`, `.runIf`,
+`.fixme`, `.todo`, `.fail`, `.only` and a `retries` or `retry` setting; `XCTSkip` and
+`XCTExpectFailure`; and a nextest `retries` setting.
 R3. A quarantine entry names its test as `<file>::<name>`, and the census refuses an entry whose
 test is not in a census file.
 R4. A quarantine entry's record holds at least two runs on one head, each by run id, attempt, job

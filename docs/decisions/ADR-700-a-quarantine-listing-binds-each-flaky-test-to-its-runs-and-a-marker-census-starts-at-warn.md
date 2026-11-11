@@ -1,6 +1,10 @@
+---
+status: "accepted"
+---
+
 # ADR-700: a quarantine listing binds each flaky test to its runs, and a marker census starts at warn
 
-Decides SPEC-677. Status: accepted.
+Decides SPEC-677.
 
 ## Context
 
