@@ -86,3 +86,13 @@ A19: green at 73e7b00
 A20: red at 32e96dd: ingest_state is a singleton: reset in place (CHARTER 13), not None
 A20: green at 73e7b00
 ```
+
+A6 was amended in the fix round of the advisory cure, which registers the copy's `unicase`
+collation on the reader's connection through a comparator that counts its calls and refuses any
+read that called it. Its last assertion now runs `SELECT id FROM decks NOT INDEXED ORDER BY name`
+through `CollectionReader::execute_statement` and asserts that the refusal carries more than 0
+comparator calls, and its test is renamed
+`a_unicase_collated_deck_table_is_read_without_calling_the_collation`. At 5d32f1d, where
+the comparator is registered and adds 0 to its count, A6 failed by that assertion:
+`an ordering by a unicase name calls the comparator: Ok(0)`. It is green at 6fa6c4b, the last commit that changes `crates/` or
+`formal/`; the commit after it changes only documents. The A6 lines above stay as recorded.
