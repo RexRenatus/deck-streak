@@ -56,7 +56,8 @@ R9. `LEVEL` is `Level.WARN`: every line of R8 prints, each STALE line fails, and
     `Level.FAIL` every line of R8 fails. Moving `LEVEL` to `Level.FAIL` is its own delivery under
     ADR-450 D6; demoting it once at fail is a weakening.
 R10. No workflow, job, matrix, trigger or condition changes, and no existing test, pin, census or
-    row changes.
+    row changes. The one change to an existing file is a data entry for the new module, added as
+    the last entry of `DYNAMIC_IMPORTS` in `scripts/tests/test_ci_workflows.py`.
 
 ## 3. Acceptance criteria of SPEC-662
 
@@ -97,7 +98,7 @@ Each command runs from `scripts/tests`. A9 reads every workflow file and is read
 | `docs/specs/SPEC-662-each-workflow-runs-job-count-is-held-to-a-recorded-budget-at-warn.md` | added: this SPEC |
 | `docs/decisions/ADR-684-each-workflow-runs-job-count-is-a-census-at-warn-against-a-recorded-budget.md` | added: the decision |
 | `docs/red-first/SPEC-662.md` | added: the red-first record |
-| `changelog.d/ci-job-budget-NEW.md` | added: the fragment |
+| `changelog.d/ci-job-budget-662.md` | added: the fragment |
 
 ## 5. What this does NOT cover
 
