@@ -14,14 +14,14 @@ Path: `docs/specs/SPEC-654-the-web-and-iphone-clients-answer-types-are-censused-
 ## 1. The problem, measured
 
 The web client parses each answer of the request handlers by hand, and nothing compares the keys a
-handler sends with the keys its client reads. Over the tree this SPEC was cut from, 25 files sit
-directly under `crates/api/src`, and the measurement read 24 of them. Over those 24 the census of
+handler sends with the keys its client reads. Over the tree this SPEC was cut from, the files
+directly under `crates/api/src` were read 24 by the measurement. Over those 24 the census of
 section 2 examines 46 routes, the 19 `read(` calls of the web client and 80 Swift files, 65 types
 in all: 12 pairs are equal; 4 are drifted (the score's `reviews` and the governor's `standby` and
 `lapse` are sent and unread; the streak's track keys are put in a map, a form the census does not
 read; the feed's items are a type the census cannot reach); 3 are unmeasured (their parsers read
 outside the named forms); and 27 routes have no `read(` call and no Swift type. The routes of the
-25th file were not measured: no listed entry holds them, so the census prints each as a `WARN`
+unread files were not measured: no listed entry holds them, so the census prints each as a `WARN`
 line at warn and passes. No Swift type mirrors a route: the app has no
 API layer yet. Most answers are `json!` literals, so no derive-based generator can reach them today.
 
