@@ -1,6 +1,7 @@
-# The Mergify merge queue for pull requests into dev (SPEC-604, ADR-625).
+# The Mergify merge queue for pull requests into dev (SPEC-604, ADR-625, ADR-689).
 # Mergify reads this file from dev, the default branch (SPEC-620, ADR-642).
-# The one queue rule is dev; the pull request rule below sends each labelled pull request to it.
+# The one queue rule is dev. Two pull request rules send a pull request to it: one on the label
+# `queue`, one on the READY status the deckstreak-ready GitHub App posts on the pull request's head.
 merge_queue:
   max_parallel_checks: 1
 queue_rules:
@@ -8,24 +9,27 @@ queue_rules:
     batch_size: 6
     merge_method: merge
     checks_timeout: 360 minutes
+    # No label here: the two pull request rules below decide entry. A READY status that the App
+    # has turned to failure takes a queued pull request out of the queue; the App never posts on a
+    # queue batch pull request, so the same line holds there.
     queue_conditions:
       - base = dev
-      - label = queue
       - -draft
       - "#review-threads-unresolved = 0"
       - check-success = ci
       - check-success = fragment
       - check-success = dependency-review
+      - -check-failure = @deckstreak-ready/queue-ready
     # The same list as queue_conditions, so the queue is single-step: a lone queued pull request
     # that already holds the tip of dev merges without a batch pull request.
     merge_conditions:
       - base = dev
-      - label = queue
       - -draft
       - "#review-threads-unresolved = 0"
       - check-success = ci
       - check-success = fragment
       - check-success = dependency-review
+      - -check-failure = @deckstreak-ready/queue-ready
 pull_request_rules:
   - name: a labelled pull request into dev enters the queue
     conditions:
@@ -34,3 +38,29 @@ pull_request_rules:
     actions:
       queue:
         name: dev
+  - name: a pull request into dev with the READY status enters the queue
+    conditions:
+      - base = dev
+      - -draft
+      - "#review-threads-unresolved = 0"
+      - check-success = ci
+      - check-success = fragment
+      - check-success = dependency-review
+      - check-success = @deckstreak-ready/queue-ready
+    actions:
+      queue:
+        name: dev
+# A queue command, or the queue checkbox, admits only what the two rules admit.
+commands_restrictions:
+  queue:
+    conditions:
+      - sender-permission >= write
+      - or:
+          - label = queue
+          - check-success = @deckstreak-ready/queue-ready
+  requeue:
+    conditions:
+      - sender-permission >= write
+      - or:
+          - label = queue
+          - check-success = @deckstreak-ready/queue-ready
