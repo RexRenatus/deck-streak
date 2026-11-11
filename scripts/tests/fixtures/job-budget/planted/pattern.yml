@@ -1,0 +1,9 @@
+name: pattern
+on:
+  pull_request_target:
+    branches: [d*]
+jobs:
+  only:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo only
