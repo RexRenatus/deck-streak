@@ -1,5 +1,5 @@
 //! The read (SPEC-023 A1, A2, A6): the copy is read only through a read-only connection, inside the
-//! owner's scope, and with no collation registered.
+//! owner's scope, and with the collation's comparator never called.
 //!
 //! Each test builds the scoped collection with Anki's own engine where the syncer keeps its copy:
 //! the engine's `decks` table collates its names `unicase`, and the engine's own filtered deck
@@ -128,13 +128,13 @@ async fn only_scoped_cards_and_their_study_reviews_are_read() {
 }
 
 #[tokio::test]
-async fn a_unicase_collated_deck_table_is_read_without_the_collation() {
+async fn a_unicase_collated_deck_table_is_read_without_calling_the_collation() {
     let fixture = Fixture::new(ENDPOINT);
     synthetic::build_scoped(&fixture.copy());
     let reader = synthetic::reader(&fixture.settings(), "", None, support::clock_at(0));
     let read = reader.read(0).await.expect("the copy reads");
 
-    // Every deck's stored name, read with no collation registered, is the one the engine reads
+    // Every deck's stored name, read with the comparator never called, is the one the engine reads
     // through its own connection, which registers `unicase`.
     let stored = synthetic::stored_deck_names(&fixture.copy());
     assert_eq!(read.deck_names, stored);
@@ -148,16 +148,20 @@ async fn a_unicase_collated_deck_table_is_read_without_the_collation() {
         declared.to_lowercase().contains("collate unicase"),
         "{declared}"
     );
-    // ...and the reader's connection registers no such collation, so an ordering by name fails
-    // there: the read above touched no name in SQL.
+    // ...and the reader's connection counts every call of its `unicase` comparator, so an ordering
+    // by name with the name index kept out calls it there and is refused: the read above touched
+    // no name in SQL.
     let ordered = reader
-        .execute_statement("SELECT id FROM decks ORDER BY name")
-        .await
-        .map_err(|error| chain(&error));
+        .execute_statement("SELECT id FROM decks NOT INDEXED ORDER BY name")
+        .await;
+    let calls = ordered
+        .as_ref()
+        .err()
+        .and_then(ReadError::tripwire)
+        .map_or(0, |fired| fired.calls);
     assert!(
-        ordered
-            .as_ref()
-            .is_err_and(|message| message.contains("no such collation sequence: unicase")),
-        "an ordering by a unicase name needs the collation: {ordered:?}"
+        calls > 0,
+        "an ordering by a unicase name calls the comparator: {:?}",
+        ordered.map_err(|error| chain(&error))
     );
 }

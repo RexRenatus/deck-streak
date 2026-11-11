@@ -80,8 +80,10 @@ tokio = "~1.54"
 # and source the lock already holds through the engine. The collection crate and ingest's schema-18
 # adapter name it; only crates/collection/src/store.rs builds a connection. ADR-622 (SPEC-602): the
 # anki-format crate names it too, and its defensive opener, crates/anki-format/src/opener.rs, is the
-# second file that builds one, for every foreign file it reads.
-rusqlite = { version = "0.39.0", features = ["bundled"] }
+# second file that builds one, for every foreign file it reads. RUSTSEC-2026-0459 moved it with
+# the engine and the sqlx fork to the release line whose libsqlite3-sys bundles the fixed SQLite
+# (ADR-530's note).
+rusqlite = { version = "0.41.1", features = ["bundled"] }
 # ADR-623 (SPEC-602): the comparator of the collation schema-18 names carry, at the version the lock
 # already holds through the engine.
 unicase = "2.6.0"
@@ -209,9 +211,12 @@ divan = { package = "codspeed-divan-compat", version = "=6.0.0" }
 # of RexRenatus/anki#1, which drops both crates from the engine, and one commit over it, which
 # drops their ignore entries from the fork's own deny list; that commit is tagged
 # `deckstreak-pin-26.09.3-wasm32-unmaint` (ADR-058's note).
+# RUSTSEC-2026-0459 moved it one commit more, to rusqlite's release line whose libsqlite3-sys
+# bundles the fixed SQLite, with the call sites that line forces; that commit is tagged
+# `deckstreak-pin-26.09.3-wasm32-sqlite` (ADR-058's note).
 [patch."https://github.com/ankitects/anki.git"]
-anki = { git = "https://github.com/RexRenatus/anki.git", rev = "2d8e3150f5e392f5cfaa7bfe8485c479186307a9" }
-anki_proto = { git = "https://github.com/RexRenatus/anki.git", rev = "2d8e3150f5e392f5cfaa7bfe8485c479186307a9" }
+anki = { git = "https://github.com/RexRenatus/anki.git", rev = "c1241180ae457c71ed4ca963f5673e74d1a9bf7c" }
+anki_proto = { git = "https://github.com/RexRenatus/anki.git", rev = "c1241180ae457c71ed4ca963f5673e74d1a9bf7c" }
 
 # ADR-513: web-push-native from the maintainer's fork, at the upstream change that moves it to
 # p256 0.14, so crypto-bigint 0.5.5 and RUSTSEC-2026-0387 leave the lock. Pinned by `rev`; the
@@ -223,14 +228,16 @@ web-push-native = { git = "https://github.com/RexRenatus/web-push-native.git", r
 # ADR-583: the seven sqlx crates from the maintainer's fork, at the published sqlx 0.9.0 with sha2
 # moved to 0.11, so digest 0.10 and block-buffer 0.10.4 leave the lock (GHSA-qwgh-2vcv-g2f7). Pinned
 # by `rev`; the fork's branch `deckstreak-sha2-0.11` keeps the commit fetchable. The entries go when
-# a sqlx release requires sha2 0.11.
-sqlx = { git = "https://github.com/RexRenatus/sqlx.git", rev = "9e8282470fd7a1d7d57cd20cad526e0996875012" }
-sqlx-core = { git = "https://github.com/RexRenatus/sqlx.git", rev = "9e8282470fd7a1d7d57cd20cad526e0996875012" }
-sqlx-macros = { git = "https://github.com/RexRenatus/sqlx.git", rev = "9e8282470fd7a1d7d57cd20cad526e0996875012" }
-sqlx-macros-core = { git = "https://github.com/RexRenatus/sqlx.git", rev = "9e8282470fd7a1d7d57cd20cad526e0996875012" }
-sqlx-mysql = { git = "https://github.com/RexRenatus/sqlx.git", rev = "9e8282470fd7a1d7d57cd20cad526e0996875012" }
-sqlx-postgres = { git = "https://github.com/RexRenatus/sqlx.git", rev = "9e8282470fd7a1d7d57cd20cad526e0996875012" }
-sqlx-sqlite = { git = "https://github.com/RexRenatus/sqlx.git", rev = "9e8282470fd7a1d7d57cd20cad526e0996875012" }
+# a sqlx release requires sha2 0.11. RUSTSEC-2026-0459 moved the rev one commit along that branch,
+# which admits the libsqlite3-sys line rusqlite now takes; the entries also wait for a sqlx release
+# that admits it (ADR-583's note).
+sqlx = { git = "https://github.com/RexRenatus/sqlx.git", rev = "6e7df9289d37f673ec59a1cfb162126ab9545019" }
+sqlx-core = { git = "https://github.com/RexRenatus/sqlx.git", rev = "6e7df9289d37f673ec59a1cfb162126ab9545019" }
+sqlx-macros = { git = "https://github.com/RexRenatus/sqlx.git", rev = "6e7df9289d37f673ec59a1cfb162126ab9545019" }
+sqlx-macros-core = { git = "https://github.com/RexRenatus/sqlx.git", rev = "6e7df9289d37f673ec59a1cfb162126ab9545019" }
+sqlx-mysql = { git = "https://github.com/RexRenatus/sqlx.git", rev = "6e7df9289d37f673ec59a1cfb162126ab9545019" }
+sqlx-postgres = { git = "https://github.com/RexRenatus/sqlx.git", rev = "6e7df9289d37f673ec59a1cfb162126ab9545019" }
+sqlx-sqlite = { git = "https://github.com/RexRenatus/sqlx.git", rev = "6e7df9289d37f673ec59a1cfb162126ab9545019" }
 # ADR-657: the seven uniffi crates from the maintainer's fork, at the published 0.29.1 with
 # uniffi_bindgen's unused paste dropped, so RUSTSEC-2024-0436 loses this parent. Pinned by `rev`;
 # the fork's branch `deckstreak-no-paste` keeps the commit fetchable. uniffi_internal_macros comes
