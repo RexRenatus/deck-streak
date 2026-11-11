@@ -1,0 +1,158 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S66601-RUST-TESTS-DIRECTORY-IS-TEST-CODE",
+        "scripts/tests/test_constant_boundaries.py",
+        "TEST_PARTS = {\"tests\", \"benches\", \"examples\"}",
+        "TEST_PARTS = {\"benches\", \"examples\"}",
+        "a Rust file under a tests directory is test code; without it a crate's test file is read as shipped source (SPEC-666 R3)",
+        "test_constant_boundaries.PlantedTrees.test_each_file_is_classed_by_language_and_test_code_is_read_apart"
+      ],
+      [
+        "S66602-WEB-TEST-FILES-ARE-TEST-CODE",
+        "scripts/tests/test_constant_boundaries.py",
+        "WEB_TEST = re.compile(r\"\\.(?:test|spec)\\.",
+        "WEB_TEST = re.compile(r\"\\.(?:spec)\\.",
+        "a web file the runner's test pattern names is test code; without it a .test.ts file is read as shipped source (SPEC-666 R3)",
+        "test_constant_boundaries.PlantedTrees.test_each_file_is_classed_by_language_and_test_code_is_read_apart"
+      ],
+      [
+        "S66603-SWIFT-TEST-TARGETS-ARE-TEST-CODE",
+        "scripts/tests/test_constant_boundaries.py",
+        "SWIFT_TEST = re.compile(r\"(?:^|/)[^/]*Tests/\")",
+        "SWIFT_TEST = re.compile(r\"(?:^|/)[^/]*UITests/\")",
+        "a Swift file under a directory whose name ends in Tests is test code; without it a unit test target is read as shipped source (SPEC-666 R3)",
+        "test_constant_boundaries.PlantedTrees.test_each_file_is_classed_by_language_and_test_code_is_read_apart"
+      ],
+      [
+        "S66604-LESS-OR-EQUAL-IS-A-COMPARISON",
+        "scripts/tests/test_constant_boundaries.py",
+        "(===|!==|==|!=|<=|>=|<|>)",
+        "(===|!==|==|!=|>=|<|>)",
+        "a spaced <= is a comparison; without it a comparison by <= against a named constant is never read (SPEC-666 R4)",
+        "test_constant_boundaries.PlantedTrees.test_a_test_at_the_constant_alone_leaves_a_site"
+      ],
+      [
+        "S66605-A-LINE-COMMENT-IS-BLANKED",
+        "scripts/tests/test_constant_boundaries.py",
+        "        if pair == \"//\":",
+        "        if pair == \"#!\":",
+        "a line comment is blanked before the reading; without it a comparison spelt in a comment is read as code (SPEC-666 R4)",
+        "test_constant_boundaries.PlantedTrees.test_a_test_below_at_and_above_the_constant_makes_a_comparison_clean"
+      ],
+      [
+        "S66606-AN-UNDECLARED-RUST-PATH-IS-UNDECIDED",
+        "scripts/tests/test_constant_boundaries.py",
+        "return \"constant\" if path.group(1) in tree.rust else \"undecided\"",
+        "return \"constant\"",
+        "a Rust capitals path that no shipped const or static declares is undecided; without it an enum variant is read as a named constant (SPEC-666 R8)",
+        "test_constant_boundaries.PlantedTrees.test_a_bare_literal_test_code_and_an_undecided_operand_are_never_sites"
+      ],
+      [
+        "S66607-A-SHIPPED-SCRIPT-CONST-IS-A-CONSTANT",
+        "scripts/tests/test_constant_boundaries.py",
+        "if parts & (tree.script | scope):",
+        "if parts & scope:",
+        "a capitals name a shipped TypeScript const declares is a constant in any file; without it a comparison in the declaring file is never a site (SPEC-666 R5)",
+        "test_constant_boundaries.PlantedTrees.test_a_comparison_with_no_boundary_test_is_a_site_in_each_language"
+      ],
+      [
+        "S66608-A-SWIFT-STATIC-LET-IS-A-CONSTANT",
+        "scripts/tests/test_constant_boundaries.py",
+        "return \"constant\" if name.group(2) in tree.swift else None",
+        "return None",
+        "a Swift Type.name that a static let declares is a constant; without it no Swift comparison is read (SPEC-666 R5)",
+        "test_constant_boundaries.PlantedTrees.test_a_test_below_at_and_above_the_constant_makes_a_comparison_clean"
+      ],
+      [
+        "S66609-A-PYTHON-MODULE-CAPITAL-IS-DECLARED",
+        "scripts/tests/test_constant_boundaries.py",
+        "declared |= {name for name in names if CAPITALS.match(name)}",
+        "declared |= set()",
+        "a capitals name assigned at module level is a declared constant; without it each one reads as undecided (SPEC-666 R5)",
+        "test_constant_boundaries.PlantedTrees.test_a_bare_literal_test_code_and_an_undecided_operand_are_never_sites"
+      ],
+      [
+        "S66610-AN-IMPORTED-PYTHON-CAPITAL-IS-A-CONSTANT",
+        "scripts/tests/test_constant_boundaries.py",
+        "return \"constant\" if node.id in imported else \"undecided\"",
+        "return \"undecided\"",
+        "a capitals name imported by from is a constant; without it a test's comparison against an imported constant is not counted as test code (SPEC-666 R5)",
+        "test_constant_boundaries.PlantedTrees.test_each_file_is_classed_by_language_and_test_code_is_read_apart"
+      ],
+      [
+        "S66611-A-SHELL-NAME-ASSIGNED-ONCE-IS-A-CONSTANT",
+        "scripts/tests/test_constant_boundaries.py",
+        "elif name and (names[-1] in readonly or assigned[names[-1]] == 1):",
+        "elif name and names[-1] in readonly:",
+        "a shell name assigned exactly once in its file is a constant; without it only readonly names are read (SPEC-666 R5)",
+        "test_constant_boundaries.PlantedTrees.test_a_comparison_with_no_boundary_test_is_a_site_in_each_language"
+      ],
+      [
+        "S66612-RUST-TEST-ITEMS-ARE-READ-APART",
+        "scripts/tests/test_constant_boundaries.py",
+        "scan_text(language, path, keep_spans(code, spans, False), tree, reading, part)",
+        "scan_text(language, path, code, tree, reading, part)",
+        "a shipped Rust file's test items are blanked from its shipped reading; without it a comparison in a cfg(test) module is a site (SPEC-666 R3)",
+        "test_constant_boundaries.PlantedTrees.test_a_test_below_at_and_above_the_constant_makes_a_comparison_clean"
+      ],
+      [
+        "S66613-EVERY-POINT-NEEDS-A-TEST",
+        "scripts/tests/test_constant_boundaries.py",
+        "POINTS = (\"below\", \"at\", \"above\")",
+        "POINTS = (\"at\",)",
+        "a comparison is clean only with a test below, at and above the constant; without it a test at the constant alone clears it (SPEC-666 R6)",
+        "test_constant_boundaries.PlantedTrees.test_a_test_at_the_constant_alone_leaves_a_site"
+      ],
+      [
+        "S66614-A-RUST-TEST-RESOLVES-BY-ITS-FN",
+        "scripts/tests/test_constant_boundaries.py",
+        "return re.search(rf\"\\bfn\\s+{re.escape(name)}\\s*[(<]\", code) is not None",
+        "return re.search(rf\"\\bfn\\s+{re.escape(name)}\\s*[(<]\", code) is None",
+        "a Rust test name resolves to an fn the tree defines; without it no Rust register point resolves (SPEC-666 R6)",
+        "test_constant_boundaries.PlantedTrees.test_a_test_below_at_and_above_the_constant_makes_a_comparison_clean"
+      ],
+      [
+        "S66615-AN-UNCOVERED-SITE-SAYS-SO",
+        "scripts/tests/test_constant_boundaries.py",
+        "reason = \"no boundary test\" if key not in tests else",
+        "reason = \"no boundary test\" if False else",
+        "a site the register does not name reports no boundary test; without it it reports its three points as missing (SPEC-666 R6)",
+        "test_constant_boundaries.PlantedTrees.test_a_comparison_with_no_boundary_test_is_a_site_in_each_language"
+      ],
+      [
+        "S66616-A-LISTED-SITE-IS-SILENT",
+        "scripts/tests/test_constant_boundaries.py",
+        "        if key in listed:",
+        "        if key in ():",
+        "a site the listing names prints no warning; without it a listed site still warns (SPEC-666 R9)",
+        "test_constant_boundaries.PlantedTrees.test_the_level_decides_whether_a_site_fails_and_a_stale_entry_always_does"
+      ],
+      [
+        "S66617-THE-FAIL-LEVEL-FAILS-A-SITE",
+        "scripts/tests/test_constant_boundaries.py",
+        "        if level == \"fail\":",
+        "        if level == \"never\":",
+        "at the fail level an unlisted site fails; without it the level never fails a site (SPEC-666 R9)",
+        "test_constant_boundaries.PlantedTrees.test_the_level_decides_whether_a_site_fails_and_a_stale_entry_always_does"
+      ],
+      [
+        "S66618-A-STALE-LISTED-ENTRY-FAILS",
+        "scripts/tests/test_constant_boundaries.py",
+        "stale = sorted(set(listed) - sites) + ",
+        "stale = sorted(set()) + ",
+        "a listed key that names no current site fails at both levels; without it a stale listing entry passes (SPEC-666 R9)",
+        "test_constant_boundaries.PlantedTrees.test_the_level_decides_whether_a_site_fails_and_a_stale_entry_always_does"
+      ],
+      [
+        "S66619-AN-EMPTY-POPULATION-IS-VOID",
+        "scripts/tests/test_constant_boundaries.py",
+        "examined(\"shipped source file(s)\", shipped)",
+        "examined(\"shipped source file(s)\", shipped or [\"\"])",
+        "an empty shipped population is refused; without it a tree of test code only passes (SPEC-666 R10)",
+        "test_constant_boundaries.PlantedTrees.test_an_empty_population_is_void"
+      ]
+    ]
+  }
+}
