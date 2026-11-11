@@ -7,8 +7,8 @@ behaviour (d1cbd173): it reads its two options, prints `examined 0 route(s) and 
 returns 0 at either level. 8705b855 turns them green.
 
 Each red is quoted from one run at d1cbd173 of `python3 -B -m unittest discover -s scripts/tests -p
-test_web_route_size.py`, and each green is the same command at 8705b855, the head of the first
-push, which CI ran.
+test_web_route_size.py`, and each green is the same command at 8705b855. The head of the first push
+is a documents-only record commit: `git diff --quiet 8705b855 HEAD -- scripts .github` reads rc 0.
 
 ```red-first
 A1: red at d1cbd173: AssertionError: 'web-route-size: WARN OVER BUDGET /a: gzip-9 3888 > 3887 by 1' not found in 'web-route-size: examined 0 route(s) and the shell\nweb-route-size: PASS: every route within its budget\n'
