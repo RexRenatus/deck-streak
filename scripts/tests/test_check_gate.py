@@ -31,6 +31,8 @@ TOOLS = {
     "audit-rust": ["cargo", "cargo-deny", "git"],
     # The engine set's own stage (SPEC-038 R13), which the engine job runs.
     "test-engine": ["cargo", "cargo-nextest"],
+    # The census set's own stage (SPEC-632 R3), which the census job runs once per run.
+    "test-census": ["cargo", "cargo-nextest"],
     # The workspace's tests in the shipped profile (SPEC-330), which the release job runs.
     "test-release": ["cargo", "cargo-nextest"],
     "web": ["node", "pnpm"],
@@ -49,6 +51,7 @@ ENGINE_STAGES = {
     "test": ["cargo", "cargo-nextest"],
     "doctest": ["cargo"],
     "test-engine": ["cargo", "cargo-nextest"],
+    "test-census": ["cargo", "cargo-nextest"],
     "test-release": ["cargo", "cargo-nextest"],
 }
 # A planted guard test that fails, and a planted oracle suite of two passing tests (SPEC-054 A13).
@@ -271,13 +274,23 @@ class ThePythonStageRunsEverySuite(unittest.TestCase):
 
 
 # --------------------------------------------------------- the engine set (SPEC-038 A16, A17)
+# and the census set beside it (SPEC-632 A4, A5)
 
 # The engine set's one definition (SPEC-038 R13): a nextest filterset, in single quotes.
 ENGINE_DEFINITION = re.compile(r"^ENGINE_TESTS='([^'\n]*)'$", re.M)
-# The two test stages and the filterset each must run: every test outside the set, and the set.
-SPLIT = {"test": "not ({})", "test-engine": "{}"}
+# The census set's one definition (SPEC-632 R1), read the way the engine set's is.
+CENSUS_DEFINITION = re.compile(r"^CENSUS_TESTS='([^'\n]*)'$", re.M)
+# The three test stages and the filterset each must run: every test outside both sets, the engine
+# set, and the census set.
+SPLIT = {
+    "test": "not ({engine} | {census})",
+    "test-engine": "{engine}",
+    "test-census": "{census}",
+}
 # A set no real test is in, written in the definition's place to see which stages follow it.
 PLANTED_SET = "test(=a_planted_engine_test)"
+# The same for the census set, so a stage that states either set itself is seen.
+PLANTED_CENSUS_SET = "test(=a_planted_census_test)"
 # The flags that carry a filterset to nextest.
 FILTERSET_FLAGS = ("-E", "--filterset")
 # The flag that names a test target to build and run (SPEC-038 A21).
@@ -375,21 +388,40 @@ def derived_targets(engine):
     return [target for _, target in ENGINE_BINARY.findall(engine)]
 
 
-def split_problems(check, scratch):
-    """What a check.sh gets wrong about the engine set (SPEC-038 R13): a set defined other than
-    once, a test stage that does not run it (negated in `test`, as it is in `test-engine`), a stage
-    that holds its own copy of it, or two commands that differ in more than the filterset. It runs
-    both stages twice, with the definition as written and with PLANTED_SET in its place, so a stage
-    that states the set itself instead of reading the definition stays behind and is seen. The
-    commands are compared without their `--test <target>` pairs, which target_problems judges."""
-    definitions = ENGINE_DEFINITION.findall(check)
-    if len(definitions) != 1:
-        return [f"check.sh defines the engine set {len(definitions)} time(s), not once"]
+def one_definition_each(check):
+    """The engine set and the census set a check.sh defines, as a pair, and no problem; or None
+    and the problem when either set is defined other than once."""
+    engines = ENGINE_DEFINITION.findall(check)
+    if len(engines) != 1:
+        return None, [f"check.sh defines the engine set {len(engines)} time(s), not once"]
+    censuses = CENSUS_DEFINITION.findall(check)
+    if len(censuses) != 1:
+        return None, [f"check.sh defines the census set {len(censuses)} time(s), not once"]
+    return (engines[0], censuses[0]), []
+
+
+def planted_sets(check):
+    """`check` with PLANTED_SET in the engine set's definition and PLANTED_CENSUS_SET in the
+    census set's."""
     planted = ENGINE_DEFINITION.sub(lambda _: f"ENGINE_TESTS='{PLANTED_SET}'", check)
-    problems = []
-    for label, text, engine in (
-        ("as written", check, definitions[0]),
-        ("planted", planted, PLANTED_SET),
+    return CENSUS_DEFINITION.sub(lambda _: f"CENSUS_TESTS='{PLANTED_CENSUS_SET}'", planted)
+
+
+def split_problems(check, scratch):
+    """What a check.sh gets wrong about the engine set and the census set (SPEC-038 R13, SPEC-632
+    R2 and R3): a set defined other than once, a test stage that does not run its filterset (the
+    complement of both sets in `test`, the engine set in `test-engine`, the census set in
+    `test-census`), a stage that holds its own copy of a set, or commands that differ in more than
+    the filterset. It runs the three stages twice, with the definitions as written and with
+    PLANTED_SET and PLANTED_CENSUS_SET in their place, so a stage that states either set itself
+    instead of reading its definition stays behind and is seen. The commands are compared without
+    their `--test <target>` pairs, which target_problems judges."""
+    sets, problems = one_definition_each(check)
+    if problems:
+        return problems
+    for label, text, (engine, census) in (
+        ("as written", check, sets),
+        ("planted", planted_sets(check), (PLANTED_SET, PLANTED_CENSUS_SET)),
     ):
         commands = {}
         for stage, form in SPLIT.items():
@@ -402,31 +434,32 @@ def split_problems(check, scratch):
                 continue
             found, commands[stage] = filtersets(calls[0])
             commands[stage] = target_flags(commands[stage])[1]
-            wanted = form.format(engine)
+            wanted = form.format(engine=engine, census=census)
             if found != [wanted]:
                 problems.append(f"{stage} ({label}) runs the filterset {found}, not [{wanted!r}]")
         if len(commands) == len(SPLIT) and len({tuple(c) for c in commands.values()}) != 1:
             problems.append(
-                f"the two stages ({label}) differ in more than the filterset: {commands}"
+                f"the test stages ({label}) differ in more than the filterset: {commands}"
             )
     return problems
 
 
 def target_problems(check, scratch):
-    """What a check.sh gets wrong about the test targets (SPEC-038 A21): the engine stage must name
-    one `--test <target>` for each whole binary the engine set names, and the test stage none. It
-    runs both stages twice, with the definition as written and with PLANTED_SET in its place, so a
-    stage that writes its targets by hand instead of deriving them from the definition stays behind
-    and is seen: the planted set names no binary, so it wants no target."""
-    definitions = ENGINE_DEFINITION.findall(check)
-    if len(definitions) != 1:
-        return [f"check.sh defines the engine set {len(definitions)} time(s), not once"]
-    planted = ENGINE_DEFINITION.sub(lambda _: f"ENGINE_TESTS='{PLANTED_SET}'", check)
-    problems = []
-    for label, text, engine in (
-        ("as written", check, definitions[0]),
-        ("planted", planted, PLANTED_SET),
+    """What a check.sh gets wrong about the test targets (SPEC-038 A21, SPEC-632 R3): the engine
+    stage must name one `--test <target>` for each whole binary the engine set names, the census
+    stage one for each whole binary the census set names, and the test stage none. It runs the
+    three stages twice, with the definitions as written and with PLANTED_SET and
+    PLANTED_CENSUS_SET in their place, so a stage that writes its targets by hand instead of
+    deriving them from its definition stays behind and is seen: a planted set names no binary, so
+    it wants no target."""
+    sets, problems = one_definition_each(check)
+    if problems:
+        return problems
+    for label, text, (engine, census) in (
+        ("as written", check, sets),
+        ("planted", planted_sets(check), (PLANTED_SET, PLANTED_CENSUS_SET)),
     ):
+        derived = {"test-engine": derived_targets(engine), "test-census": derived_targets(census)}
         for stage in SPLIT:
             done, calls = run_recorded(text, stage, scratch / label.replace(" ", "-") / stage)
             if done.returncode != 0 or len(calls) != 1:
@@ -436,23 +469,42 @@ def target_problems(check, scratch):
                 )
                 continue
             found = target_flags(calls[0])[0]
-            wanted = derived_targets(engine) if stage == "test-engine" else []
+            wanted = derived.get(stage, [])
             if found != wanted:
                 problems.append(f"{stage} ({label}) names the test targets {found}, not {wanted}")
     return problems
 
 
-def planted_check(test_stage, engine_stage, definitions=("binary_id(=p::slow)",)):
-    """A small check.sh: the engine set's definitions, and the two test stages as given."""
+def planted_check(
+    test_stage,
+    engine_stage,
+    definitions=("binary_id(=p::slow)",),
+    census_stage=None,
+    censuses=("binary_id(=p::census)",),
+):
+    """A small check.sh: the engine set's and the census set's definitions, and the three test
+    stages as given; the census stage, unless one is given, derives its targets from its
+    definition (CENSUS_DERIVES)."""
     lines = ["#!/usr/bin/env bash"]
     lines += [f"ENGINE_TESTS='{definition}'" for definition in definitions]
+    lines += [f"CENSUS_TESTS='{census}'" for census in censuses]
     lines += [f"stage_test() {{ {test_stage}; }}", f"stage_test_engine() {{ {engine_stage}; }}"]
+    lines += [f"stage_test_census() {{ {census_stage or CENSUS_DERIVES}; }}"]
     lines += ['"stage_${1//-/_}"']
     return "\n".join(lines) + "\n"
 
 
-NEGATED = 'cargo nextest run --workspace -E "not ($ENGINE_TESTS)"'
+NEGATED = 'cargo nextest run --workspace -E "not ($ENGINE_TESTS | $CENSUS_TESTS)"'
 AS_IS = 'cargo nextest run --workspace -E "$ENGINE_TESTS"'
+# The census stage as planted_check writes it unless told otherwise: its targets derived from its
+# definition by a loop of the same shape check.sh uses; and the census stage with no targets.
+CENSUS_DERIVES = (
+    r'targets=(); rest="$CENSUS_TESTS"; '
+    r'while [[ "$rest" =~ binary_id\(=[a-z0-9-]+::([a-z0-9_]+)\) ]]; do '
+    r'targets+=(--test "${BASH_REMATCH[1]}"); rest="${rest#*"${BASH_REMATCH[0]}"}"; done; '
+    r'cargo nextest run --workspace -E "$CENSUS_TESTS" ${targets[@]+"${targets[@]}"}'
+)
+CENSUS_AS_IS = 'cargo nextest run --workspace -E "$CENSUS_TESTS"'
 # Each planted check.sh, and what split_problems must say about it.
 PLANTED_SPLITS = [
     (
@@ -464,31 +516,79 @@ PLANTED_SPLITS = [
         ],
     ),
     (
+        "a census stage that holds its own copy of the census set",
+        planted_check(
+            NEGATED, AS_IS, census_stage="cargo nextest run --workspace -E 'binary_id(=p::census)'"
+        ),
+        [
+            "test-census (planted) runs the filterset ['binary_id(=p::census)'], "
+            "not ['test(=a_planted_census_test)']"
+        ],
+    ),
+    (
         "a test stage that runs the set instead of its complement",
         planted_check(AS_IS, AS_IS),
         [
             "test (as written) runs the filterset ['binary_id(=p::slow)'], "
-            "not ['not (binary_id(=p::slow))']",
+            "not ['not (binary_id(=p::slow) | binary_id(=p::census))']",
             "test (planted) runs the filterset ['test(=a_planted_engine_test)'], "
-            "not ['not (test(=a_planted_engine_test))']",
+            "not ['not (test(=a_planted_engine_test) | test(=a_planted_census_test))']",
+        ],
+    ),
+    (
+        "a test stage that leaves the census set in",
+        planted_check('cargo nextest run --workspace -E "not ($ENGINE_TESTS)"', AS_IS),
+        [
+            "test (as written) runs the filterset ['not (binary_id(=p::slow))'], "
+            "not ['not (binary_id(=p::slow) | binary_id(=p::census))']",
+            "test (planted) runs the filterset ['not (test(=a_planted_engine_test))'], "
+            "not ['not (test(=a_planted_engine_test) | test(=a_planted_census_test))']",
         ],
     ),
     (
         "an engine stage that builds another scope",
         planted_check(NEGATED, 'cargo nextest run --package p -E "$ENGINE_TESTS"'),
         [
-            "the two stages (as written) differ in more than the filterset: "
+            "the test stages (as written) differ in more than the filterset: "
             "{'test': ['nextest', 'run', '--workspace'], "
-            "'test-engine': ['nextest', 'run', '--package', 'p']}",
-            "the two stages (planted) differ in more than the filterset: "
+            "'test-engine': ['nextest', 'run', '--package', 'p'], "
+            "'test-census': ['nextest', 'run', '--workspace']}",
+            "the test stages (planted) differ in more than the filterset: "
             "{'test': ['nextest', 'run', '--workspace'], "
-            "'test-engine': ['nextest', 'run', '--package', 'p']}",
+            "'test-engine': ['nextest', 'run', '--package', 'p'], "
+            "'test-census': ['nextest', 'run', '--workspace']}",
+        ],
+    ),
+    (
+        "a census stage that builds another scope",
+        planted_check(
+            NEGATED, AS_IS, census_stage='cargo nextest run --package p -E "$CENSUS_TESTS"'
+        ),
+        [
+            "the test stages (as written) differ in more than the filterset: "
+            "{'test': ['nextest', 'run', '--workspace'], "
+            "'test-engine': ['nextest', 'run', '--workspace'], "
+            "'test-census': ['nextest', 'run', '--package', 'p']}",
+            "the test stages (planted) differ in more than the filterset: "
+            "{'test': ['nextest', 'run', '--workspace'], "
+            "'test-engine': ['nextest', 'run', '--workspace'], "
+            "'test-census': ['nextest', 'run', '--package', 'p']}",
         ],
     ),
     (
         "a set defined twice",
         planted_check(NEGATED, AS_IS, ("binary_id(=p::slow)", "binary_id(=p::slower)")),
         ["check.sh defines the engine set 2 time(s), not once"],
+    ),
+    (
+        "a census set defined twice",
+        planted_check(NEGATED, AS_IS, censuses=("binary_id(=p::census)", "binary_id(=p::recount)")),
+        ["check.sh defines the census set 2 time(s), not once"],
+    ),
+    (
+        "no census set",
+        planted_check(NEGATED, AS_IS, censuses=()),
+        ["check.sh defines the census set 0 time(s), not once"],
     ),
 ]
 
@@ -541,6 +641,16 @@ PLANTED_TARGETS = [
             "test (as written) names the test targets ['slow'], not []",
             "test (planted) names the test targets ['slow'], not []",
         ],
+    ),
+    (
+        "a census target list written by hand beside the census set",
+        planted_check(NEGATED, DERIVES, TWO_BINARIES, census_stage=CENSUS_AS_IS + " --test census"),
+        ["test-census (planted) names the test targets ['census'], not []"],
+    ),
+    (
+        "a census stage that names none of the census set's targets",
+        planted_check(NEGATED, DERIVES, TWO_BINARIES, census_stage=CENSUS_AS_IS),
+        ["test-census (as written) names the test targets [], not ['census']"],
     ),
 ]
 
@@ -603,6 +713,9 @@ class TheEngineSetSplitsTheTests(unittest.TestCase):
         definitions = ENGINE_DEFINITION.findall(check)
         self.assertEqual(len(definitions), 1, "check.sh defines no single engine set")
         wanted = examined("test targets the engine set names", derived_targets(definitions[0]))
+        censuses = CENSUS_DEFINITION.findall(check)
+        self.assertEqual(len(censuses), 1, "check.sh defines no single census set")
+        census = examined("test targets the census set names", derived_targets(censuses[0]))
         with tempfile.TemporaryDirectory() as scratch:
             where = Path(scratch)
             self.assertEqual(target_problems(check, where / "check"), [])
@@ -610,6 +723,10 @@ class TheEngineSetSplitsTheTests(unittest.TestCase):
             self.assertEqual((done.returncode, len(calls)), (0, 1), done.stdout)
             self.assertEqual(target_flags(calls[0])[0], wanted)
             self.assertIn("--workspace", calls[0], "the engine stage narrowed its package scope")
+            done, calls = run_recorded(check, "test-census", where / "census")
+            self.assertEqual((done.returncode, len(calls)), (0, 1), done.stdout)
+            self.assertEqual(target_flags(calls[0])[0], census)
+            self.assertIn("--workspace", calls[0], "the census stage narrowed its package scope")
             # The judge refuses each way a check.sh could name its targets other than derived.
             for at, (name, planted, expected) in enumerate(PLANTED_TARGETS):
                 with self.subTest(planted=name):

@@ -829,3 +829,9 @@ R2 allows it, and only after `cargo clean --workspace --release` has left the de
 release-profile artifacts alone in `target/`. It restores only that key, falling back to the newest
 entry of the same toolchain pin. In `ci.yml` the `rust` job stays the only job that saves the debug
 key, and no other job restores the release key. R2 is unchanged.
+
+## Amendment: the census set beside the engine set (SPEC-632)
+
+Insert-only. R13 is amended: the census set is one nextest filterset, `CENSUS_TESTS` in `scripts/check.sh`, stated nowhere else. The `test` stage runs `cargo nextest run --workspace --locked --no-fail-fast -E 'not (<the engine set> | <the census set>)'`, `test-engine` runs `-E '<the engine set>'` and a new `test-census` runs `-E '<the census set>'`. The commands differ only in the filterset, so every test of the workspace runs in exactly one of them.
+
+R3's layout is amended in the same form: a gate job `census`, with no needs and no matrix, runs `bash scripts/check.sh test-census` beside the others, restores the Rust cache and saves none, and the aggregate `ci` needs it right after `engine`, so the census tests stay required. Every other requirement is unchanged.

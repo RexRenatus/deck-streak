@@ -26,9 +26,9 @@ fi
 mkdir -p "$LOG_DIR"
 TIMINGS="$LOG_DIR/timings.tsv"
 
-# In CI's order: the rust job, the engine job, the release job, the web job, the hygiene job. The packs are judged
-# on the maintainer's box by scripts/box-packs.sh, never here (ADR-069).
-STAGES_ALL=(fmt clippy test doctest audit-rust test-engine test-release web audit-web python scrub secrets)
+# In CI's order: the rust job, the engine job, the census job, the release job, the web job, the hygiene
+# job. The packs are judged on the maintainer's box by scripts/box-packs.sh, never here (ADR-069).
+STAGES_ALL=(fmt clippy test doctest audit-rust test-engine test-census test-release web audit-web python scrub secrets)
 if [ "$#" -gt 0 ]; then STAGES=("$@"); else STAGES=("${STAGES_ALL[@]}"); fi
 
 # The engine set (SPEC-038 R13), defined here and nowhere else: SPEC-022's two test binaries that
@@ -37,6 +37,12 @@ if [ "$#" -gt 0 ]; then STAGES=("$@"); else STAGES=("${STAGES_ALL[@]}"); fi
 # `test-engine` runs the set, with one command that differs only in this filterset, so each test
 # runs in exactly one of the two, and a test added to either binary goes with it.
 ENGINE_TESTS='binary_id(=deck-streak-ingest::sync) | binary_id(=deck-streak-ingest::engine_budget)'
+
+# The census set (SPEC-632), defined here and nowhere else: the xp census, which spawns its own
+# cargo check with a cleared environment and a target directory of its own, so its verdict is the
+# same in both profiles. `test` and `test-release` run every test outside both sets, and
+# `test-census` runs this set alone, once per run.
+CENSUS_TESTS='binary_id(=deck-streak-progression::xp_census)'
 
 # The web audit's level (SPEC-058 R2), defined here and nowhere else: pnpm's lowest, so every
 # advisory pnpm grades fails the stage, the bar audit-rust holds, where deny.toml makes every
@@ -89,7 +95,7 @@ stage_clippy() {
 
 stage_test() {
     need_cargo && need_nextest && need_protoc &&
-        cargo nextest run --workspace --locked --no-fail-fast -E "not ($ENGINE_TESTS)"
+        cargo nextest run --workspace --locked --no-fail-fast -E "not ($ENGINE_TESTS | $CENSUS_TESTS)"
 }
 
 stage_test_engine() {
@@ -118,13 +124,30 @@ stage_test_engine() {
             ${targets[@]+"${targets[@]}"} ${slice[@]+"${slice[@]}"}
 }
 
+stage_test_census() {
+    # The census set alone, with test's own command: CI runs it once per run in a job of its own,
+    # since its verdict is the same in both profiles (SPEC-632). One --test <target> per whole
+    # binary the set names, read from CENSUS_TESTS and written nowhere else, so cargo builds those
+    # test targets and no other. It takes no slice.
+    local census_targets=() rest="$CENSUS_TESTS"
+    local named='binary_id\(=[a-z0-9-]+::([a-z0-9_]+)\)'
+    while [[ "$rest" =~ $named ]]; do
+        census_targets+=(--test "${BASH_REMATCH[1]}")
+        rest="${rest#*"${BASH_REMATCH[0]}"}"
+    done
+    need_cargo && need_nextest && need_protoc &&
+        cargo nextest run --workspace --locked --no-fail-fast -E "$CENSUS_TESTS" \
+            ${census_targets[@]+"${census_targets[@]}"}
+}
+
 stage_test_release() {
     # The workspace's tests in the profile the daemon ships from (release.yml builds with
     # --release; the workspace sets no [profile.release]), so a rule that holds only with debug
     # assertions on fails here (SPEC-330, ADR-330). Every test `test` runs; the engine set stays
-    # with test-engine, and engine_budget has its own release run in engine-measure.yml.
+    # with test-engine, the census set with test-census (SPEC-632), and engine_budget has its own
+    # release run in engine-measure.yml.
     need_cargo && need_nextest && need_protoc &&
-        cargo nextest run --workspace --locked --no-fail-fast --release -E "not ($ENGINE_TESTS)"
+        cargo nextest run --workspace --locked --no-fail-fast --release -E "not ($ENGINE_TESTS | $CENSUS_TESTS)"
 }
 
 stage_doctest() { need_cargo && need_protoc && cargo test --doc --workspace --locked; }
