@@ -33,12 +33,12 @@ flowchart LR
 flowchart LR
   crates["crates/*/src/**/*.rs"] --> lexer2["lex: string literals decoded"]
   migs["migrations/*.sql"] --> strip["SQL comments dropped"]
-  register["register: 4 tables, each with its declaring migration"] --> match
+  register["register: 8 tables, each with its migration"] --> match
   lexer2 --> match["UPDATE, UPDATE OR, DELETE FROM, REPLACE INTO, INSERT OR REPLACE, upsert"]
   strip --> match
   lexer2 --> closed["fail closed: placeholder, join prefix, query_file"]
   match --> found["rewrites by file, item, kind and table"]
-  sanctioned["sanctioned: 7 writes"] --> judge2["judge: found equals sanctioned"]
+  sanctioned["sanctioned: 12 writes"] --> judge2["judge: found equals sanctioned"]
   found --> judge2
   closed --> judge2
   judge2 --> verdict2["pass, or refusal by name"]
@@ -56,8 +56,17 @@ flowchart LR
   `badges_earned`; `crates/curriculum/src/data_rights.rs:134` `erase` DELETE `band_milestones`;
   `crates/coordination/src/recompute/badges.rs:198` `offer_badges` UPDATE `badges_earned`;
   `crates/curriculum/src/store.rs:386` `mark_band_up` UPDATE `band_milestones`.
+- **After #895 (SPEC-432 sections 10 to 15, ADR-446 D10), read at `b9a08e60`:** the register adds
+  `freeze_events` (`migrations/007601_streaks_state_and_governor.sql`), `sync_runs`
+  (`migrations/002201_ingest_sync_runs.sql`), `notification_decisions`
+  (`migrations/004101_notifications_router.sql`) and `agent_runs`
+  (`migrations/004301_agent_runs.sql`), each the migration that creates it, and the sanctioned list
+  adds the owner's four erases, `crates/streaks/src/data_rights.rs:174`,
+  `crates/ingest/src/data_rights.rs:275`, `crates/notifications/src/data_rights.rs:71` and
+  `crates/agent/src/data_rights.rs:70` (each `erase` DELETE), and the retention prune
+  `crates/agent/src/runs.rs:103` (`prune_before` DELETE `agent_runs`).
 - **Where it runs:** `cargo test -p deck-streak-daemon --test append_only_tables`. The composition
-  root hosts it because the register names three contexts' tables.
+  root hosts it because the register names seven contexts' tables.
 
 ## 3. Sync write idempotency (data flow)
 
