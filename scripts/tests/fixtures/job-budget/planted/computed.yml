@@ -1,0 +1,22 @@
+name: computed
+on:
+  pull_request:
+    branches: [dev]
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    outputs:
+      legs: ${{ steps.plan.outputs.legs }}
+    steps:
+      - id: plan
+        run: echo plan
+  legs:
+    needs: [plan]
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        leg: ${{ fromJSON(needs.plan.outputs.legs) }}
+    steps:
+      - run: echo leg
+  remote:
+    uses: example-org/example-repo/.github/workflows/build.yml@v1
