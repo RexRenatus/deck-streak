@@ -252,11 +252,7 @@ impl Store {
             let mut tables = Map::new();
             for (table, statement) in EXPORTS {
                 let mut prepared = snapshot.conn().prepare_cached(statement)?;
-                let columns: Vec<String> = prepared
-                    .column_names()
-                    .into_iter()
-                    .map(str::to_owned)
-                    .collect();
+                let columns: Vec<String> = prepared.column_names().map(str::to_owned).collect();
                 let mut rows = prepared.query([])?;
                 let mut exported = Vec::new();
                 while let Some(row) = rows.next()? {
