@@ -31,6 +31,7 @@ named file by `git show b9a08e60:<path>`.
   out of it by name. The census reads every tracked file: its first run in CI prints each site,
   and each site it prints outside those paths is listed with its recorded size before the change
   merges. A site among those paths prints at warn, unlisted.
+  That first run is job 130593140054, the `hygiene` job at the first push of this delivery.
 
 ## 2. Requirements
 
