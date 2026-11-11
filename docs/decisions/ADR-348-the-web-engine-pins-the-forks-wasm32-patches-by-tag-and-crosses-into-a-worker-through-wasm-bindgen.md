@@ -189,3 +189,14 @@ refuses as any op it does not name. The rest of the boundary stands.
 - Removing the `answer` export: chosen because only `rate` answers a card a press named.
 - Keeping `answer` and minting a token for the head card: rejected because it is a grade by script.
 - Keeping `answer` and always refusing: rejected because a dead export is a surface the boundary census must still carry.
+
+## Note, appended for RUSTSEC-2026-0459: the SQLite route moves to rusqlite's next release line
+
+This note leaves the decision above as it was made. The SQLite route keeps its shape, one rusqlite
+for both targets and one `libsqlite3-sys` in the graph, and moves to the rusqlite release line
+whose `libsqlite3-sys` bundles the SQLite release that fixes RUSTSEC-2026-0459. That line still
+routes `wasm32-unknown-unknown` to `sqlite-wasm-rs`, through its default `ffi-sqlite-wasm-rs`
+feature, so the worker's route is unchanged. Natively it takes a `libsqlite3-sys` line that no sqlx
+release admits yet, so the sqlx fork admits it (ADR-583's note), and the engine pin moves with it
+(ADR-058's note). The `rust`, `engine`, `release`, `web-engine` and Apple jobs and
+`engine-measure.yml` re-read the move, as they read this decision.
