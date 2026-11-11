@@ -206,6 +206,24 @@
       "evidence": "args.event is read only as != \"push\" (line 529) and == \"push\" (line 556), which give True and False for both defaults, so the diff is read and no push line prints, before and after.",
       "issue": "#1122",
       "reached_by": "test_coverage_report.KillTheReportFigures.test_a_runner_exit_that_is_no_integer_is_unknown_and_no_event_prints_no_push_line"
+    },
+    {
+      "file": "scripts/ios_lane.py",
+      "mutant": "replace False with True in sign",
+      "anchor": "usedforsecurity=False",
+      "reason": "the keyword changes no byte of the fingerprint; S324 in the python stage holds it",
+      "evidence": "hashlib.sha1(der, usedforsecurity=True) returns the digest the False spelling returns for every input, since the flag only tells a restricted hash backend whether the hash guards a secret, so the identity the lane matches is the same; ruff's S324 refuses the True spelling and passes the False one.",
+      "issue": "#872",
+      "reached_by": "test_ios_lane.LaneCredential.test_signing_imports_the_certificate_non_extractable_into_a_job_keychain"
+    },
+    {
+      "file": "scripts/mutation_carry.py",
+      "mutant": "replace False with True in blob_id",
+      "anchor": "usedforsecurity=False",
+      "reason": "the keyword changes no byte of the blob id; S324 in the python stage holds it",
+      "evidence": "hashlib.sha1(data, usedforsecurity=True) returns the digest the False spelling returns for every input, since the flag only tells a restricted hash backend whether the hash guards a secret, so the blob id the carry compares with a diff's index line is the same; ruff's S324 refuses the True spelling and passes the False one.",
+      "issue": "#1167",
+      "reached_by": "test_mutation_carry_kills.DiffSections.test_the_base_tree_is_rebuilt_or_refused_by_name"
     }
   ]
 }

@@ -485,7 +485,9 @@ class LaneCredential(unittest.TestCase):
         }
         self.certificate = os.urandom(512)
         self.developer_certificate = os.urandom(256)
-        self.identity = hashlib.sha1(self.developer_certificate).hexdigest().upper()
+        self.identity = (
+            hashlib.sha1(self.developer_certificate, usedforsecurity=False).hexdigest().upper()
+        )
         self.values = {
             "KEY": "-----BEGIN " + f"PRIVATE KEY-----\n{token}\n-----END PRIVATE KEY-----\n",
             "KEYID": uuid.uuid4().hex[:10].upper(),

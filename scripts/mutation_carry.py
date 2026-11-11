@@ -118,15 +118,23 @@ def select_base(runs: object, run_id: int, repository: str) -> tuple[dict | None
 
 
 def fetch(url: str, token: str) -> object:
-    request = urllib.request.Request(
-        url,
-        headers={
-            "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {token}",
-            "X-GitHub-Api-Version": API_VERSION,
-        },
-    )
-    with urllib.request.urlopen(request, timeout=60) as response:
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {token}",
+        "X-GitHub-Api-Version": API_VERSION,
+    }
+    scheme, separator, rest = url.partition("://")
+    if not separator or scheme not in ("http", "https"):
+        raise ValueError(f"not an http or https address: {url}")
+    if scheme == "https":
+        opened = urllib.request.urlopen(
+            urllib.request.Request(f"https://{rest}", headers=headers), timeout=60
+        )
+    else:
+        opened = urllib.request.urlopen(
+            urllib.request.Request(f"http://{rest}", headers=headers), timeout=60
+        )
+    with opened as response:
         return json.loads(response.read().decode("utf-8"))
 
 
@@ -265,7 +273,7 @@ def present(side: Section | None, other: Section | None) -> bool:
 
 
 def blob_id(data: bytes) -> str:
-    return hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest()
+    return hashlib.sha1(b"blob %d\0" % len(data) + data, usedforsecurity=False).hexdigest()
 
 
 def applied(old: str, section: Section) -> str:

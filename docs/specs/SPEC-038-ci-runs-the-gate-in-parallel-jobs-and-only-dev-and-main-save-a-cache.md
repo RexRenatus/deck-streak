@@ -829,3 +829,18 @@ R2 allows it, and only after `cargo clean --workspace --release` has left the de
 release-profile artifacts alone in `target/`. It restores only that key, falling back to the newest
 entry of the same toolchain pin. In `ci.yml` the `rust` job stays the only job that saves the debug
 key, and no other job restores the release key. R2 is unchanged.
+
+## 19. Amendments, by SPEC-424: the python stage checks ruff after cargo
+
+Insert-only under ruling (i) of section 8: every earlier byte is kept in order. It inserts this
+section and nothing else. Made by SPEC-424 and ADR-438 (D1 and D9).
+
+- **R4, as amended.** The `python` stage checks `python3`, then `cargo`, then
+  `ruff`, which must be the version `scripts/ruff-requirements.txt` pins (SPEC-424 R4 and R5). A
+  missing `ruff` fails the stage by name with its install hint, locally and in CI, as every other
+  missing tool does. Every other stage's tools are unchanged.
+- **What holds it.** `scripts/tests/test_check_gate.py`'s `TOOLS` map names `ruff` after `cargo`
+  for `python`, and `test_every_stage_fails_by_name_without_each_tool_it_runs` reads it (SPEC-424
+  A4). This section adds no criterion of its own, so it adds no acceptance section.
+- **Files**: `scripts/check.sh`, `scripts/tests/test_check_gate.py` and this SPEC, each delivered
+  by SPEC-424.

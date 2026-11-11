@@ -28,12 +28,13 @@ HINTS = re.compile(
 )
 
 
-def run(*args):
+def run(*args, cwd=None):
     return subprocess.run(
         [sys.executable, str(SCRIPT), *args],
         capture_output=True,
         text=True,
         check=False,
+        cwd=cwd,
     )
 
 
@@ -1443,18 +1444,11 @@ class KillTheParserRefusals(unittest.TestCase):
 class KillTheDefaultsInTheWorkingFolder(unittest.TestCase):
     """Mutation kills for the empty defaults of --github-output, --summary and --out-dir: a mutant
     that names one writes into the working folder, so each test starts the script from a temporary
-    folder it made, passes only absolute paths, and restores the folder it started in."""
+    folder it made, passes only absolute paths, and starts the child there by `cwd=`."""
 
     def test_the_plan_writes_no_output_file_unless_named(self):
-        import os
-
-        saved = os.getcwd()
         with tempfile.TemporaryDirectory() as tmp:
-            os.chdir(tmp)
-            try:
-                done = run("plan", "--event", "pull_request")
-            finally:
-                os.chdir(saved)
+            done = run("plan", "--event", "pull_request", cwd=tmp)
             written = (Path(tmp) / "XX").exists()
         self.assertEqual(done.returncode, 0, said(done))
         self.assertEqual(
@@ -1467,16 +1461,9 @@ class KillTheDefaultsInTheWorkingFolder(unittest.TestCase):
         self.assertFalse(written)
 
     def test_the_report_writes_no_summary_unless_named(self):
-        import os
-
-        saved = os.getcwd()
         with tempfile.TemporaryDirectory() as tmp:
             text = write(tmp, "in.lcov", lcov("scripts/one.py", [(1, 1)]))
-            os.chdir(tmp)
-            try:
-                done = run("report", "--lane", "python", "--lcov", text, "--root", tmp)
-            finally:
-                os.chdir(saved)
+            done = run("report", "--lane", "python", "--lcov", text, "--root", tmp, cwd=tmp)
             written = (Path(tmp) / "XX").exists()
         self.assertEqual(done.returncode, 0, said(done))
         self.assertEqual(
@@ -1487,26 +1474,20 @@ class KillTheDefaultsInTheWorkingFolder(unittest.TestCase):
         self.assertFalse(written)
 
     def test_the_report_writes_no_report_folder_unless_named(self):
-        import os
-
-        saved = os.getcwd()
         with tempfile.TemporaryDirectory() as tmp:
             text = write(tmp, "in.lcov", lcov("scripts/one.py", [(1, 1)]))
-            os.chdir(tmp)
-            try:
-                done = run(
-                    "report",
-                    "--lane",
-                    "python",
-                    "--lcov",
-                    text,
-                    "--root",
-                    tmp,
-                    "--event",
-                    "push",
-                )
-            finally:
-                os.chdir(saved)
+            done = run(
+                "report",
+                "--lane",
+                "python",
+                "--lcov",
+                text,
+                "--root",
+                tmp,
+                "--event",
+                "push",
+                cwd=tmp,
+            )
             written = (Path(tmp) / "XX").exists()
         self.assertEqual(done.returncode, 0, said(done))
         self.assertEqual(

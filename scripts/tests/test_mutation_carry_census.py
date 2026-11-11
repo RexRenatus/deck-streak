@@ -37,7 +37,7 @@ def child(*args):
 
 def blob(text):
     data = text.encode()
-    return hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest()
+    return hashlib.sha1(b"blob %d\0" % len(data) + data, usedforsecurity=False).hexdigest()
 
 
 def section(path, before=None, after=None, binary=False):

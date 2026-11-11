@@ -366,6 +366,85 @@ class BaseChoice(Base):
         self.judge(table)
         examined("K04 cases", table)
 
+    def test_the_request_helper_refuses_every_scheme_but_http_and_https_before_it_opens(self):
+        local = self.scratch / "answer.json"
+        local.write_text('{"runs": 1}', encoding="utf-8")
+        address = local.as_uri()
+        opened = []
+
+        def urlopen(request, timeout):
+            opened.append((request.full_url, timeout))
+            return io.BytesIO(b'{"runs": 1}')
+
+        table = [
+            (
+                "a file address",
+                lambda: self.mc.fetch(address, "t"),
+                ("raised", "ValueError", "not an http or https address: " + address),
+            ),
+            (
+                "ftp",
+                lambda: self.mc.fetch("ftp://forge/x", "t"),
+                ("raised", "ValueError", "not an http or https address: " + "ftp://forge/x"),
+            ),
+            (
+                "data",
+                lambda: self.mc.fetch("data:,x", "t"),
+                ("raised", "ValueError", "not an http or https address: " + "data:,x"),
+            ),
+            (
+                "no scheme",
+                lambda: self.mc.fetch("forge/x", "t"),
+                ("raised", "ValueError", "not an http or https address: " + "forge/x"),
+            ),
+            (
+                "https with no separator",
+                lambda: self.mc.fetch("https", "t"),
+                ("raised", "ValueError", "not an http or https address: " + "https"),
+            ),
+            (
+                "http with no separator",
+                lambda: self.mc.fetch("http", "t"),
+                ("raised", "ValueError", "not an http or https address: " + "http"),
+            ),
+        ]
+        with mock.patch.object(self.mc.urllib.request, "urlopen", urlopen):
+            self.judge(table)
+        self.assertEqual(opened, [])
+        examined("K04 refusals", table)
+
+    def test_the_request_helper_hands_an_http_or_https_address_to_the_opener_unchanged(self):
+        def fetched(address):
+            seen = []
+
+            def urlopen(request, timeout):
+                seen.append((request.full_url, sorted(request.header_items()), timeout))
+                return io.BytesIO(b'{"runs": 1}')
+
+            with mock.patch.object(self.mc.urllib.request, "urlopen", urlopen):
+                value = self.mc.fetch(address, "t")
+            return value, seen
+
+        headers = [
+            ("Accept", "application/vnd.github+json"),
+            ("Authorization", "Bearer t"),
+            ("X-github-api-version", "2022-11-28"),
+        ]
+        table = [
+            (
+                "https",
+                lambda: fetched("https://forge/x?y=1"),
+                ({"runs": 1}, [("https://forge/x?y=1", headers, 60)]),
+            ),
+            (
+                "http",
+                lambda: fetched("http://forge/x"),
+                ({"runs": 1}, [("http://forge/x", headers, 60)]),
+            ),
+        ]
+        self.judge(table)
+        examined("K04 opens", table)
+
 
 OUTCOMES = "deckstreak.mutation-outcomes.v1"
 NOT_ITS_SCHEMA = ("raised", "NoBase", "no base: the base's manifest is not of its schema")
@@ -1810,7 +1889,7 @@ class ClassDigests(Base):
 
 
 HEADER = "diff --git a/x b/x\n"
-ADDED_ID = hashlib.sha1(b"blob 4\0new\n").hexdigest()[:7]
+ADDED_ID = hashlib.sha1(b"blob 4\0new\n", usedforsecurity=False).hexdigest()[:7]
 ADDED = f"{HEADER}new file mode 100644\nindex 0000000..{ADDED_ID}\n@@ -0,0 +1 @@\n+new\n"
 
 
