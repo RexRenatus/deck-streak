@@ -20,32 +20,32 @@
       [
         "S60403-THE-QUEUE-LABEL-ADMITS",
         ".mergify.yml",
-        "    queue_conditions:\n      - base = dev\n      - label = queue\n",
-        "    queue_conditions:\n      - base = dev\n      - label = queued\n",
-        "a pull request enters only with the queue label; a condition on another label name keeps every labelled pull request out (SPEC-604 R2)",
+        "    conditions:\n      - base = dev\n      - label = queue\n",
+        "    conditions:\n      - base = dev\n      - label = queued\n",
+        "a pull request without the READY status enters only with the queue label; a label rule on another label name keeps every such labelled pull request out (SPEC-604 R2)",
         "test_merge_queue.TheQueueConditions.test_a_pull_request_enters_the_queue_only_into_dev_labelled_ready_resolved_and_green"
       ],
       [
         "S60404-A-DRAFT-STAYS-OUT",
         ".mergify.yml",
-        "    queue_conditions:\n      - base = dev\n      - label = queue\n      - -draft\n",
-        "    queue_conditions:\n      - base = dev\n      - label = queue\n      - draft\n",
+        "    queue_conditions:\n      - base = dev\n      - -draft\n",
+        "    queue_conditions:\n      - base = dev\n      - draft\n",
         "a draft never enters the queue; a condition that asks for a draft refuses every pull request ready for review (SPEC-604 R2)",
         "test_merge_queue.TheQueueConditions.test_a_pull_request_enters_the_queue_only_into_dev_labelled_ready_resolved_and_green"
       ],
       [
         "S60405-NO-UNRESOLVED-THREAD-ENTERS",
         ".mergify.yml",
-        "    queue_conditions:\n      - base = dev\n      - label = queue\n      - -draft\n      - \"#review-threads-unresolved = 0\"\n",
-        "    queue_conditions:\n      - base = dev\n      - label = queue\n      - -draft\n      - \"#review-threads-unresolved >= 0\"\n",
+        "    queue_conditions:\n      - base = dev\n      - -draft\n      - \"#review-threads-unresolved = 0\"\n",
+        "    queue_conditions:\n      - base = dev\n      - -draft\n      - \"#review-threads-unresolved >= 0\"\n",
         "a pull request with an unresolved review thread stays out; a bound every count meets admits it (SPEC-604 R2, R4)",
         "test_merge_queue.TheQueueConditions.test_a_pull_request_enters_the_queue_only_into_dev_labelled_ready_resolved_and_green"
       ],
       [
         "S60406-A-BATCH-WAITS-FOR-CI",
         ".mergify.yml",
-        "    merge_conditions:\n      - base = dev\n      - label = queue\n      - -draft\n      - \"#review-threads-unresolved = 0\"\n      - check-success = ci\n",
-        "    merge_conditions:\n      - base = dev\n      - label = queue\n      - -draft\n      - \"#review-threads-unresolved = 0\"\n      - check-success = cj\n",
+        "    merge_conditions:\n      - base = dev\n      - -draft\n      - \"#review-threads-unresolved = 0\"\n      - check-success = ci\n",
+        "    merge_conditions:\n      - base = dev\n      - -draft\n      - \"#review-threads-unresolved = 0\"\n      - check-success = cj\n",
         "a batch merges only after ci passes on it; a merge condition on a check no workflow produces never lets a green batch merge (SPEC-604 R3)",
         "test_merge_queue.TheQueueConditions.test_a_batch_merges_only_after_ci_fragment_and_dependency_review_pass_on_it"
       ],
@@ -100,10 +100,82 @@
       [
         "S60413-THE-QUEUE-IS-SINGLE-STEP",
         ".mergify.yml",
-        "    merge_conditions:\n      - base = dev\n      - label = queue\n      - -draft\n",
-        "    merge_conditions:\n      - base = dev\n      - label = queue\n",
+        "    merge_conditions:\n      - base = dev\n      - -draft\n",
+        "    merge_conditions:\n      - base = dev\n",
         "the merge conditions repeat the queue conditions; a merge list that differs makes the queue two-step, so a lone pull request that holds the tip of dev waits for a batch run (SPEC-604 R3)",
         "test_merge_queue.TheQueueConditions.test_a_batch_merges_only_after_ci_fragment_and_dependency_review_pass_on_it"
+      ],
+      [
+        "S60414-THE-READY-RULE-READS-THE-APPS-STATUS",
+        ".mergify.yml",
+        "      - check-success = @deckstreak-ready/queue-ready\n    actions:",
+        "      - check-success = queue-ready\n    actions:",
+        "the READY rule reads the App's status in its qualified form; read as the bare name it admits a status of that name from any poster (SPEC-604 R2)",
+        "test_merge_queue.TheQueueConditions.test_a_pull_request_enters_the_queue_only_into_dev_labelled_ready_resolved_and_green"
+      ],
+      [
+        "S60415-A-FAILED-STATUS-KEEPS-A-PULL-REQUEST-OUT",
+        ".mergify.yml",
+        "      - -check-failure = @deckstreak-ready/queue-ready\n    # The same list as queue_conditions",
+        "    # The same list as queue_conditions",
+        "the queue conditions refuse a pull request whose status from the App reads failure; without that line a labelled pull request with that status at failure enters, and a queued one stays (SPEC-604 R2)",
+        "test_merge_queue.TheQueueConditions.test_a_pull_request_enters_the_queue_only_into_dev_labelled_ready_resolved_and_green"
+      ],
+      [
+        "S60416-THE-MERGE-CONDITIONS-REPEAT-THE-FAILED-STATUS-LINE",
+        ".mergify.yml",
+        "      - -check-failure = @deckstreak-ready/queue-ready\npull_request_rules:",
+        "pull_request_rules:",
+        "the merge conditions repeat the queue conditions, the line on a failed status from the App included; a merge list without it makes the queue two-step, and a lone pull request merging directly would pass a failed status (SPEC-604 R2, R3)",
+        "test_merge_queue.TheQueueConditions.test_a_batch_merges_only_after_ci_fragment_and_dependency_review_pass_on_it"
+      ],
+      [
+        "S60417-A-QUEUE-COMMAND-NEEDS-WRITE-PERMISSION",
+        ".mergify.yml",
+        "  queue:\n    conditions:\n      - sender-permission >= write\n",
+        "  queue:\n    conditions:\n      - sender-permission >= triage\n",
+        "a queue command needs write permission; a bound of triage lets a sender who cannot write queue a pull request (SPEC-604 R2)",
+        "test_merge_queue.TheQueueConditions.test_a_pull_request_enters_the_queue_only_into_dev_labelled_ready_resolved_and_green"
+      ],
+      [
+        "S60418-A-QUEUE-COMMAND-ADMITS-THE-LABEL",
+        ".mergify.yml",
+        "  queue:\n    conditions:\n      - sender-permission >= write\n      - or:\n          - label = queue\n",
+        "  queue:\n    conditions:\n      - sender-permission >= write\n      - or:\n          - label = queued\n",
+        "a queue command admits a labelled pull request; a restriction on another label name refuses every labelled pull request without the App's status (SPEC-604 R2)",
+        "test_merge_queue.TheQueueConditions.test_a_pull_request_enters_the_queue_only_into_dev_labelled_ready_resolved_and_green"
+      ],
+      [
+        "S60419-A-QUEUE-COMMAND-ADMITS-THE-APPS-STATUS",
+        ".mergify.yml",
+        "  queue:\n    conditions:\n      - sender-permission >= write\n      - or:\n          - label = queue\n          - check-success = @deckstreak-ready/queue-ready\n",
+        "  queue:\n    conditions:\n      - sender-permission >= write\n      - or:\n          - label = queue\n          - check-success = queue-ready\n",
+        "a queue command admits a pull request with the App's status, read in the qualified form; read as the bare name it admits a status of that name from any poster (SPEC-604 R2)",
+        "test_merge_queue.TheQueueConditions.test_a_pull_request_enters_the_queue_only_into_dev_labelled_ready_resolved_and_green"
+      ],
+      [
+        "S60420-ONE-OPERAND-OF-AN-OR-SUFFICES",
+        "scripts/tests/test_merge_queue.py",
+        "return any(holds(item, state) for item in condition[\"or\"] or [])",
+        "return all(holds(item, state) for item in condition[\"or\"] or [])",
+        "the evaluator holds an or when one of its conditions holds; read as all of them, a queue command on a labelled pull request is refused (SPEC-604 R2)",
+        "test_merge_queue.TheQueueConditions.test_a_pull_request_enters_the_queue_only_into_dev_labelled_ready_resolved_and_green"
+      ],
+      [
+        "S60421-PERMISSIONS-RANK-LOWEST-FIRST",
+        "scripts/tests/test_merge_queue.py",
+        "PERMISSIONS = (\"none\", \"read\", \"triage\", \"write\", \"maintain\", \"admin\")",
+        "PERMISSIONS = (\"none\", \"read\", \"write\", \"triage\", \"maintain\", \"admin\")",
+        "the evaluator ranks permissions lowest first; with triage above write, a sender who cannot write passes the command's bar (SPEC-604 R2)",
+        "test_merge_queue.TheQueueConditions.test_a_pull_request_enters_the_queue_only_into_dev_labelled_ready_resolved_and_green"
+      ],
+      [
+        "S60422-A-PERMISSION-IS-COMPARED-BY-RANK",
+        "scripts/tests/test_merge_queue.py",
+        "value, operand = PERMISSIONS.index(value), PERMISSIONS.index(operand)",
+        "value, operand = PERMISSIONS.index(operand), PERMISSIONS.index(value)",
+        "the evaluator compares the sender's rank with the bound's; compared the other way round, a sender who cannot write passes the command's bar (SPEC-604 R2)",
+        "test_merge_queue.TheQueueConditions.test_a_pull_request_enters_the_queue_only_into_dev_labelled_ready_resolved_and_green"
       ]
     ]
   }
