@@ -666,6 +666,96 @@
         "krate.join(\"examples_\")",
         "allow_list_arms::an_empty_source_set_is_void_and_every_source_kind_is_read",
         "a crate's examples join the population (SPEC-435 R14); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43583-A-ROW-BEFORE-THE-RULE-PRINTS-NOTHING",
+        "kernel",
+        "tests/additive_migrations.rs",
+        ".any(|(migration, class, _)| (*migration, *class) == key)",
+        ".any(|(migration, class, _)| (*migration, *class) == key && false)",
+        "additive_migrations::a_destructive_migration_with_no_recorded_ruling_is_reported_at_warn_and_refused_at_fail",
+        "a row held before the ruling rule prints nothing (SPEC-435 R20); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43584-AN-UNCITED-ROW-IS-REPORTED",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "None => \"cites no recorded ruling under docs/rulings/\".to_owned(),",
+        "None => continue,",
+        "additive_migrations::a_destructive_migration_with_no_recorded_ruling_is_reported_at_warn_and_refused_at_fail",
+        "a row that cites no recorded ruling is reported by its reason (SPEC-435 R21); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43585-A-PATH-OUTSIDE-THE-RULINGS-IS-REPORTED",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "if !shaped {",
+        "if !shaped && false {",
+        "additive_migrations::a_destructive_migration_with_no_recorded_ruling_is_reported_at_warn_and_refused_at_fail",
+        "a cited path that is not a file in docs/rulings/ is reported (SPEC-435 R21); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43586-AN-ABSENT-RULING-IS-REPORTED",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "return Err(format!(\"cites {ruling}, which the tree does not hold\"));",
+        "return Ok(());",
+        "additive_migrations::a_destructive_migration_with_no_recorded_ruling_is_reported_at_warn_and_refused_at_fail",
+        "a cited ruling the tree does not hold is reported (SPEC-435 R21); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43587-A-RULING-NAMING-ANOTHER-IS-REPORTED",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "if !text.contains(migration) {",
+        "if !text.contains(migration) && false {",
+        "additive_migrations::a_destructive_migration_with_no_recorded_ruling_is_reported_at_warn_and_refused_at_fail",
+        "a cited ruling that does not name the migration is reported (SPEC-435 R20); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43588-THE-LEVEL-WORD-FOLLOWS-THE-LEVEL",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "if fails { \"FAIL\" } else { \"WARN\" },",
+        "if fails { \"WARN\" } else { \"FAIL\" },",
+        "additive_migrations::a_destructive_migration_with_no_recorded_ruling_is_reported_at_warn_and_refused_at_fail",
+        "an uncited row prints WARN at warn and FAIL at fail (SPEC-435 R21); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43589-AN-UNCITED-ROW-FAILS-AT-FAIL",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "failed |= fails;",
+        "failed |= false;",
+        "additive_migrations::a_destructive_migration_with_no_recorded_ruling_is_reported_at_warn_and_refused_at_fail",
+        "an uncited row fails the census at fail (SPEC-435 R21); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43590-A-STALE-BEFORE-ENTRY-FAILS",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "if !held {",
+        "if !held && false {",
+        "additive_migrations::a_ruling_entry_no_admitted_row_matches_is_stale_at_both_levels",
+        "a before-the-rule entry no row matches is stale and fails (SPEC-435 R21); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43591-A-STALE-CITED-ENTRY-FAILS",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "if !matched {",
+        "if !matched && false {",
+        "additive_migrations::a_ruling_entry_no_admitted_row_matches_is_stale_at_both_levels",
+        "a cited entry no row matches is stale and fails (SPEC-435 R21); the census is test code, which cargo-mutants never mutates"
+      ],
+      [
+        "S43592-THE-RULE-STARTS-AT-WARN",
+        "kernel",
+        "tests/additive_migrations.rs",
+        "const RULING_LEVEL: Level = Level::Warn;",
+        "const RULING_LEVEL: Level = Level::Fail;",
+        "additive_migrations::every_destructive_migration_after_the_ruling_rule_cites_its_recorded_ruling",
+        "the ruling rule starts at warn (SPEC-435 R22); the census is test code, which cargo-mutants never mutates"
       ]
     ]
   }

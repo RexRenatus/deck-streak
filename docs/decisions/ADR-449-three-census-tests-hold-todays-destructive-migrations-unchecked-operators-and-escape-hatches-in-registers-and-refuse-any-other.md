@@ -281,3 +281,31 @@ counts at the build's cut equal SPEC-435 section 1's.
 SPEC-020 R10, R17 and R18; SPEC-023 R1; SPEC-041 section 8; SPEC-083; SPEC-330 (#473); ADR-043;
 `crates/kernel/tests/schema.rs`; `crates/agent/tests/deck_gate_census.rs`; `clippy.toml`;
 `formal/tla/WalletFloor`, the wallet floor model whose invariant bounds `purchase_on`'s subtraction.
+
+## Amendment (#892): a destructive migration cites its recorded ruling
+
+SPEC-435 section 11 adds one rule to D1's census, and this amendment records its two decisions. D1
+stands as written: the census still reads every `.sql` file in `migrations/`, every hit no
+`ADMITTED` row lists still fails, and every row still names the SPEC that admits it.
+
+**D10. A destructive migration added after the rule cites a recorded ruling, and the rule starts
+at warn.** Each `ADMITTED` row is either held before the rule (D11) or has one `CITED` entry naming
+a file `docs/rulings/<file>.md` that the tree holds and whose text names the migration's file name
+(SPEC-435 R20). At `Warn` a row that cites no such ruling prints its `WARN` line and the census
+passes; at `Fail` it fails; an entry no row matches is stale and fails at both levels (R21). The
+rule moves to `Fail` by a delivery that changes `RULING_LEVEL` and shows the rule's live precision
+over the last 30 merged pull requests at 0.8 or more, by ADR-446 D6's measure (R22).
+
+**D11. The rows on dev before the rule are held by name.** `BEFORE_THE_RULE` holds the two rows of
+`004102_notifications_queue_claim.sql`, removes a table and renames, each with a reason naming the
+record that admits it: SPEC-041 section 8, recorded by D1. They cite no recorded ruling, and an
+entry no row matches is stale.
+
+### D10 and D11: what each was chosen against
+
+- D10, a start at fail: rejected because the issue asks for the rule at warn first, and its
+  precision is measured only once it runs.
+- D11, a citation comment inside each migration: rejected because an applied migration is never
+  edited, so the rebuild's file cannot carry one.
+- D11, a cut by migration number that admits every file at or below it: rejected because it admits
+  a migration by its position rather than by its name.
