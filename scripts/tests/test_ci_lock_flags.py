@@ -20,7 +20,7 @@ import shlex
 import unittest
 from collections import namedtuple
 
-from _support import REPO, examined
+from _support import REPO, examined, refuse_link_components
 
 FIXTURES = REPO / "scripts" / "tests" / "fixtures" / "lock-flags"
 LEVEL = "warn"
@@ -295,7 +295,62 @@ def first_word(words, skip_values=()):
 def judge(tool, rest):
     """(subcommand, whether its lock flag is present, kind) for one tool word and the words after
     it; kind is `site`, `clean` or `none` (R4, R5)."""
-    return "", False, "none"
+    if tool == "cargo":
+        words = rest[1:] if rest and rest[0].startswith("+") else rest
+        if not words or words[0] in ("--version", "-V", "--help", "-h"):
+            return "", False, "none"
+        sub = first_word(words)
+        if not SUBCOMMAND.match(sub):
+            return sub, False, "none"
+        before = words[: words.index("--")] if "--" in words else words
+        if sub == "mutants":
+            locked = any(
+                word in ("--cargo-arg=--locked", "--cargo-arg=--frozen")
+                or (
+                    word == "--cargo-arg"
+                    and before[index + 1 : index + 2] in (["--locked"], ["--frozen"])
+                )
+                for index, word in enumerate(before)
+            )
+            sub = "mutants --list" if "--list" in words else "mutants"
+        else:
+            locked = any(word.split("=")[0] in CARGO_LOCK for word in before)
+        if sub in CARGO_SECOND_WORD:
+            second = first_word(words[words.index(sub) + 1 :])
+            sub = f"{sub} {second}".strip()
+        if sub in CARGO_NO_LOCK:
+            return sub, locked, "none"
+        return sub, locked, "clean" if locked else "site"
+    if tool == "pnpm":
+        sub = first_word(rest, PNPM_VALUE_OPTIONS)
+        if sub in ("install", "i"):
+            locked = "--frozen-lockfile" in rest and "--no-frozen-lockfile" not in rest
+            return sub, locked, "clean" if locked else "site"
+        return sub, False, "site" if sub in PNPM_SITES else "none"
+    if tool in ("npm", "npx"):
+        sub = "" if tool == "npx" else first_word(rest)
+        if tool == "npm" and sub == "ci":
+            return sub, True, "clean"
+        return sub, False, "site" if tool == "npx" or sub in NPM_SITES else "none"
+    if tool == "swift":
+        sub = first_word(rest)
+        if sub == "package":
+            sub = f"package {first_word(rest[rest.index('package') + 1 :])}".strip()
+        locked = any(word in SWIFT_RESOLVED for word in rest)
+        if sub not in SWIFT_RESOLVES:
+            return sub, locked, "none"
+        return sub, locked, "clean" if locked else "site"
+    if tool == "xcodebuild":
+        actions = [word for word in rest if word in XCODE_ACTIONS]
+        # R4: every xcodebuild action or project call is a site, whatever flags it carries.
+        if not actions and not any(word in XCODE_PROJECT for word in rest):
+            return first_word(rest), False, "none"
+        return (actions or ["build"])[0], False, "site"
+    sub = first_word(rest)
+    if sub != "install":
+        return sub, False, "none"
+    locked = "--require-hashes" in rest
+    return sub, locked, "clean" if locked else "site"
 
 
 def tool_words(command):
@@ -508,13 +563,40 @@ def keyed(commands):
 def verdict(sites, listed, level):
     """(lines to print, failures): an unlisted site is WARN, failing only at `fail`; an entry no
     current site matches is STALE and fails at both levels (R7)."""
-    return [], []
+    lines, failures = [], []
+    for key, command in sorted(sites.items()):
+        if key not in listed:
+            line = (
+                f"WARN {command.file}:{command.line}: {command.tool} {command.sub} has no lock flag"
+            )
+            lines.append(line)
+            if level == "fail":
+                failures.append(line)
+    for key in sorted(listed):
+        if key not in sites:
+            line = f"STALE {key}: no current command matches this entry"
+            lines.append(line)
+            failures.append(line)
+    return lines, failures
 
 
 def population(root=REPO):
     """(workflow paths, called script paths): every workflow and every script a run text names by
     path that the tree holds, each read once (R1); an empty workflow set is refused."""
-    return [], []
+    workflows = examined(
+        "workflow file(s)",
+        sorted(
+            p for p in (root / ".github" / "workflows").glob("*") if p.suffix in (".yml", ".yaml")
+        ),
+    )
+    called = set()
+    for path in workflows:
+        refuse_link_components(path, root)
+        called.update(workflow_commands(path.name, path.read_text(encoding="utf-8"))[2])
+    scripts = sorted(root / name for name in called if (root / name).is_file())
+    for path in scripts:
+        refuse_link_components(path, root)
+    return workflows, scripts
 
 
 def census(root=REPO):
