@@ -25,3 +25,24 @@ its red was read in CI, in the `hygiene` job, where the census refused the stub'
 
 Test edits after the red commit: none. The green commit replaces the stub bodies with the readers and imports `refuse_link_components`;
 it changes no test function, planted text or expected value.
+
+A1: red at 395c714: AssertionError: AssertionError not raised
+A1: green at fe22725
+A2: red at 395c714: AssertionError: Lists differ: [] != [('cargo', 'cargo', 'build', 'site'), ('ca[353 chars]an')]
+A2: green at fe22725
+A3: red at 395c714: AssertionError: Lists differ: [('node', 'pnpm', 'action-setup run_install', 'site')] != [('node', 'pnpm', 'install', 'site'), ('node', 'pnpm', 'inst[402 chars]te')]
+A3: green at fe22725
+A4: red at 395c714: AssertionError: Lists differ: [] != [('build', 'cargo', 'build', 'clean'), ('b[153 chars]te')]
+A4: green at fe22725
+A5: red at 395c714: AssertionError: Lists differ: [] != [('build', 'cargo', 'build', 'site'), ('bu[63 chars]te')]
+A5: green at fe22725
+A6: red at 395c714: AssertionError: Tuples differ: (0, []) != (2, [])
+A6: green at fe22725
+A7: red at 395c714: AssertionError: 0 != 1 : warn
+A7: green at fe22725
+A8: red at 395c714: AssertionError: examined 0 file(s): the population is empty, so nothing was judged (the `hygiene` job 130466085178)
+A8: green at fe22725
+
+The repository test's census lines at the green commit were read in the `hygiene` job 130491445522.
+
+The green commit `fe22725` carries the census, and `git diff --quiet fe22725 HEAD` over the module and its planted files reads rc 0.
