@@ -11,7 +11,7 @@ goldens, the census digests and the driver's pin line reach this tree.
 |---|---|---|
 | the DeckStreak tree | a clean `git archive` export of the commit under test, never the working checkout | read-only |
 | the harness source | the owner's private evidence; its `tree_digest` is the pin | read-only |
-| the engine | cargo's registry and git checkouts at the pin `2d8e3150f5e392f5cfaa7bfe8485c479186307a9`, never the whole cargo home | read-only |
+| the engine | cargo's registry and git checkouts at the pin `c1241180ae457c71ed4ca963f5673e74d1a9bf7c`, never the whole cargo home | read-only |
 | the output folder | a new empty folder | the only writable mount |
 | a temporary home | a fresh empty folder for cargo's target and the harness's throwaway collections | writable, removed after |
 

@@ -3,8 +3,9 @@
 //! and never listed.
 //!
 //! The evaluator's side opens the collection only through the kernel's
-//! [`Db::open_foreign_read_only`] (`mode=ro` and `query_only`, as [`crate::reader`] does), so a
-//! write through it is refused by `SQLite` itself. The engine opens collections writable and, in
+//! [`Db::open_foreign_read_only_with`] (`mode=ro`, `query_only` and the engine's `unicase`
+//! collation, as [`crate::reader`] does), so a write through it is refused by `SQLite` itself.
+//! The engine opens collections writable and, in
 //! client mode, rewrites a configured offset, so its side runs only on a scratch copy the tool
 //! makes. A scratch path that names the source's own file (the same device and inode, so a hard
 //! link, a symbolic link or another spelling of the path) is refused before anything is opened,
@@ -24,6 +25,7 @@ use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use deck_streak_anki_format::opener::{COLLATION, unicase_order};
 use deck_streak_kernel::{Db, ForeignDb};
 use deck_streak_search::{
     Card, Collection, Deck, EngineDay, Note, Notetype, Profile, Refusal, Review, eval,
@@ -99,7 +101,7 @@ pub async fn search_parity(
     if names_the_source(source, scratch) {
         return Err(ParityError::WritableOpen);
     }
-    let foreign = Db::open_foreign_read_only(source)
+    let foreign = Db::open_foreign_read_only_with(source, COLLATION, unicase_order)
         .await
         .map_err(|_| ParityError::Read)?;
     let rows = read_rows(&foreign).await;
