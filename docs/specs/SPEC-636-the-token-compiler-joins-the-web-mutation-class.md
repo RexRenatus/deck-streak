@@ -140,3 +140,23 @@ Python runner in its population (`scripts/mutation-python.json`).
 
 Revert the pull request. The classifier, the `mutate` list, its two copies and the walk return to
 the `web/app/src` class together.
+
+## Amendment: the older survivors (tests only)
+
+A later pull request adds tests only. `web/app/src/lib/design/token-compiler.test.ts` pins the token
+compiler's contract: each refusal by its exact message, a small document's whole stylesheet, each
+Telegram theme parameter and each CSS generic family by name, and the one read and one write of
+`writeTokens`, with the file system calls stood in. `web/app/src/lib/settings/colour-mode.test.ts`
+compiles the tokens inside each test that reads them, never at module scope, so StrykerJS no longer
+counts the compiler's mutants as static. No product file, StrykerJS, Vitest or package setting, and
+no assertion changes. A3 is the proof: a ranged StrykerJS run over the compiler's older lines, before
+and after the change.
+
+| id | criterion | decided by |
+|---|---|---|
+| A3 | a ranged StrykerJS run over the token compiler's older lines leaves no mutant without coverage, and no survivor but the two equivalent mutants named below; not red at the base, where every new test passes | the ranged StrykerJS run, before and after |
+
+The two equivalent mutants: the default `seen` list of `hexOf` holding a planted string (an alias
+path matches `[\w.-]+`, so no path equals a string with a space), and `false ||` in place of the
+`typeof parameter !== 'string'` test (a non-string is never a member of the set of parameter names,
+so the set test refuses it either way).
