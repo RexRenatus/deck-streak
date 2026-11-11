@@ -342,6 +342,43 @@ that dev adds over the rebuild's cut are listed as found, each citing ADR-445 an
 token in the last part of the appendix, and no product file changes. They are D5's listing at
 that dev, as the rebuild's rows are at its cut, not rows added inside D6's review window.
 
+### D11, source-level reaches out of a member
+
+- Chosen: a fourth census, `scripts/tests/test_source_reaches.py`, with its own list,
+  `config/source-reaches.json`, as D4 gives each check its own home. It closes the reach D1 names
+  as unseen: a `path` attribute, set directly or through `cfg_attr`, or an `include!`,
+  `include_str!` or `include_bytes!` call that reaches past its member's own directory, which no
+  manifest states. It reads every Rust file under each member's directory, and each file outside
+  the members that a module's `path` or an `include!` brings in, and resolves each site as the
+  compiler does. A site in its own member's directory is counted with no row, because the crate
+  graph holds no edge from a member to itself. Every other site is a reach, and each key of
+  `from`, `to` and the kind of code that holds it has one row with its exact count, citing the ADR
+  whose text names the reach as `<from> -> <to>`. A path the census cannot resolve is refused, and
+  no row can admit it. The census imports the clock census's lexer and its reading of test code,
+  and the crate census's member reader, by name, so it reaches no code by a name held in data,
+  adds no site to the register in `scripts/tests/test_ci_workflows.py`, and changes neither
+  module.
+  - The listing: D5 applied at this delivery's cut. Every reach the cut holds is a row citing this
+    ADR, named by its token in the appendix this decision adds, and no product file changes. Five
+    reaches go into another member, each a `path` attribute in a test. Three of those pairs have
+    no manifest edge: from `bot` into the streak constants of `streaks`, and from `engine-core`
+    into the allow-list of `ffi` and the study module of `web-engine`. Each is listed as found,
+    and each cure is left to its own delivery.
+  - Kill criteria: D6's criteria hold for the fourth list.
+
+Chosen against:
+
+- A row for each site in its own member too: lost, because a member's own files reach no other
+  member's code, and every new test support module would then need a row and a token.
+- Admitting `tools/` and the data files no member owns as a class: lost, because a new member that
+  reaches a shared file would then enter unread.
+- One row per site: lost, because each line moved would move a row, and a key with an exact count
+  holds the same fact.
+- A fourth test in `scripts/tests/test_crate_edges.py`, with a key in `config/crate-edges.json`:
+  lost, because D4 reads each check alone, and nine mutation rows anchor on that module.
+- Reading the compiler's dependency output: lost, because it needs a build in the leg where the
+  censuses run, and it sees only the files one build compiles for its own target and features.
+
 ## Decision Outcome
 
 Chosen options: D1 to D9 as each "Chosen:" bullet states, because together they make the crate
@@ -491,3 +528,114 @@ The rows added for the dev that this pull request merges when it is checked, ove
 `lean/AgentPinGroups`
 `lean/DeployEntryRefusal`
 `lean/PathGate`
+
+## Appendix: the reaches D11 lists
+
+The census reads each token below exactly as it is spelled, so each sits on one line.
+
+Every reach out of a member at this delivery's cut, grouped by where it lands. Each token's pair
+has one row citing this ADR for each kind of code that holds its sites.
+
+Into another member's directory:
+
+- `daemon -> crates/bot/tests/support/fake_bot_api.rs`
+- `engine-core -> crates/ffi/src/allow_list.rs`
+- `readings -> crates/ingest/tests/support/synthetic.rs`
+- `bot -> crates/streaks/src/constants.rs`
+- `engine-core -> crates/web-engine/src/study.rs`
+
+Into the shared Rust files under `tools/`:
+
+- `api -> tools/log-capture/capture.rs`
+- `bot -> tools/log-capture/capture.rs`
+- `coordination -> tools/log-capture/capture.rs`
+- `daemon -> tools/log-capture/capture.rs`
+- `identity -> tools/log-capture/capture.rs`
+- `ingest -> tools/log-capture/capture.rs`
+- `kernel -> tools/log-capture/capture.rs`
+- `mcp -> tools/log-capture/capture.rs`
+- `notifications -> tools/log-capture/capture.rs`
+- `push -> tools/log-capture/capture.rs`
+- `readings -> tools/log-capture/capture.rs`
+- `analytics -> tools/parity-oracle/golden.rs`
+- `bot -> tools/parity-oracle/golden.rs`
+- `coordination -> tools/parity-oracle/golden.rs`
+- `curriculum -> tools/parity-oracle/golden.rs`
+- `daemon -> tools/parity-oracle/golden.rs`
+- `economy -> tools/parity-oracle/golden.rs`
+- `habits -> tools/parity-oracle/golden.rs`
+- `ingest -> tools/parity-oracle/golden.rs`
+- `insights -> tools/parity-oracle/golden.rs`
+- `kernel -> tools/parity-oracle/golden.rs`
+- `mcp -> tools/parity-oracle/golden.rs`
+- `media -> tools/parity-oracle/golden.rs`
+- `notifications -> tools/parity-oracle/golden.rs`
+- `progression -> tools/parity-oracle/golden.rs`
+- `quests -> tools/parity-oracle/golden.rs`
+- `readings -> tools/parity-oracle/golden.rs`
+- `render -> tools/parity-oracle/golden.rs`
+- `search -> tools/parity-oracle/golden.rs`
+- `streaks -> tools/parity-oracle/golden.rs`
+- `study-day -> tools/parity-oracle/golden.rs`
+- `vault -> tools/parity-oracle/golden.rs`
+- `xp -> tools/parity-oracle/golden.rs`
+- `economy -> tools/table-census/population.rs`
+- `progression -> tools/table-census/population.rs`
+- `daemon -> tools/table-census/table_census.rs`
+- `economy -> tools/table-census/table_census.rs`
+- `ingest -> tools/table-census/table_census.rs`
+- `progression -> tools/table-census/table_census.rs`
+
+Into files no member owns:
+
+- `agent -> agent/personas/es.persona.md`
+- `agent -> agent/personas/fr.persona.md`
+- `agent -> agent/personas/ja.persona.md`
+- `agent -> agent/personas/ko.persona.md`
+- `agent -> agent/personas/law-business-associations.persona.md`
+- `agent -> agent/personas/law-civil-procedure.persona.md`
+- `agent -> agent/personas/law-conflict-of-laws.persona.md`
+- `agent -> agent/personas/law-constitutional-law.persona.md`
+- `agent -> agent/personas/law-contracts.persona.md`
+- `agent -> agent/personas/law-criminal-law-and-procedure.persona.md`
+- `agent -> agent/personas/law-evidence.persona.md`
+- `agent -> agent/personas/law-family-law.persona.md`
+- `agent -> agent/personas/law-professional-responsibility.persona.md`
+- `agent -> agent/personas/law-real-property.persona.md`
+- `agent -> agent/personas/law-secured-transactions.persona.md`
+- `agent -> agent/personas/law-torts.persona.md`
+- `agent -> agent/personas/law-trusts-and-estates.persona.md`
+- `agent -> agent/personas/zh.persona.md`
+- `economy -> economy.json`
+- `ingest -> economy.json`
+- `progression -> economy.json`
+- `quests -> economy.json`
+- `streaks -> economy.json`
+- `xp -> economy.json`
+- `quests -> formal/vectors/chest.jsonl`
+- `companion -> formal/vectors/companion-decide.jsonl`
+- `web-engine -> formal/vectors/companion-decide.jsonl`
+- `companion -> formal/vectors/companion-frames.jsonl`
+- `web-engine -> formal/vectors/companion-frames.jsonl`
+- `engine-core -> formal/vectors/due-reorder.jsonl`
+- `progression -> formal/vectors/exchange.jsonl`
+- `sync -> formal/vectors/field-merge.jsonl`
+- `fsrs7 -> formal/vectors/fsrs7-memory-state.jsonl`
+- `engine-core -> formal/vectors/fsrs7-port-state.jsonl`
+- `engine-core -> formal/vectors/fsrs7-schedule.jsonl`
+- `fsrs7 -> formal/vectors/fsrs7-stock.jsonl`
+- `habits -> formal/vectors/habit-writing.jsonl`
+- `sync -> formal/vectors/id-slot.jsonl`
+- `media -> formal/vectors/media-bind.jsonl`
+- `media -> formal/vectors/media-gc.jsonl`
+- `progression -> formal/vectors/next-milestone.jsonl`
+- `fsrs7 -> formal/vectors/replay-history.jsonl`
+- `sync -> formal/vectors/review-key.jsonl`
+- `curriculum -> formal/vectors/road-to-c2.jsonl`
+- `economy -> formal/vectors/skip-tariff.jsonl`
+- `sync -> formal/vectors/sync-clock.jsonl`
+- `quests -> formal/vectors/token-bonus.jsonl`
+- `economy -> formal/vectors/wallet.jsonl`
+- `progression -> formal/vectors/xp-reconciliation.jsonl`
+- `notifications -> notifications-policy.json`
+- `ffi -> web/app/src/lib/study/review-templates.golden.json`
