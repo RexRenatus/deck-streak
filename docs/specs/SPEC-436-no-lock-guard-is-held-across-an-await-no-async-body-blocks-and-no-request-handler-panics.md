@@ -308,3 +308,70 @@ occurs exactly once in its file. Each mutant compiles under `-D warnings`.
 | S43685-S43688 | `tests/handler_panic_census.rs` | one handler crate: `api`, `bot`, `daemon`, `mcp` | A13 |
 | S43689 | `tests/handler_panic_census.rs` | `LEVEL`'s `Warn` | A13 |
 | S43690 | `tests/handler_panic_census.rs` | the empty-population refusal | A14 |
+
+## 10. Amendment: the agent's gate and runner remove their staged files through tokio's file removal
+
+This section amends the requirements above for the cure that section 5 leaves to its own delivery
+(#908). The four `std::fs::remove_file` calls that section 1 lists in `crates/agent/src/gate.rs`
+(`check`, twice, and `check_input`) and `crates/agent/src/runner.rs` (`run`) now remove their staged
+files through tokio's file removal, which runs each removal on the blocking pool, so no runtime
+worker waits on an unlink. The census's member set, rails, refusals, warn and examined lines, its
+level and every other listed entry, test and row stay as they are.
+
+R25. The gate's `check` removes its two staged files, the output and the template, by
+     `tokio::fs::remove_file`, both started in the same poll by `tokio::join!`, so no await lies
+     between the two removals; `check_input` and the runner's `run` each remove their one staged
+     file by `tokio::fs::remove_file(..).await`. Each removal's error is ignored, as before, and
+     each function answers what it answered before.
+R26. `crates/agent/Cargo.toml`'s `tokio` dependency gains the `fs` feature, which `tokio::fs` needs,
+     and no other feature; `Cargo.lock` does not change.
+R27. In the same change, `LISTED` in `crates/daemon/tests/blocking_census.rs` loses the four agent
+     entries and no other, so it holds the seven skip-day keys of section 1 in their order: R22's
+     listing and A8's expected keys become those seven. `LEVEL` stays `Level::Warn`.
+R28. Four rows join the band, each killed by one test of the agent's own suite:
+
+| id | target | mutant | killer |
+|---|---|---|---|
+| S43691-THE-CHECK-REMOVES-ITS-STAGED-OUTPUT | `crates/agent/src/gate.rs` | the check's output removal answers without removing | A16 |
+| S43692-THE-CHECK-REMOVES-ITS-STAGED-TEMPLATE | `crates/agent/src/gate.rs` | the check's template removal answers without removing | A16 |
+| S43693-THE-INPUT-CHECK-REMOVES-ITS-STAGED-INPUT | `crates/agent/src/gate.rs` | the input check's removal answers without removing | A16 |
+| S43694-THE-RUN-REMOVES-ITS-PROMPT | `crates/agent/src/runner.rs` | the run's prompt removal answers without removing | `runner::the_prompt_is_left_only_on_a_private_file_that_is_removed` |
+
+| id | criterion | decided by |
+|---|---|---|
+| A15 | R25, R27: over the repository, the census examines `crates/agent/src/gate.rs` and `crates/agent/src/runner.rs` and finds no blocking site in any agent source | `blocking_census::the_agent_gate_and_runner_remove_their_staged_files_off_the_runtime_workers` |
+| A16 | R25: the gate's check and its input check each hand the probe staged files that exist while it runs, four in all, and leave no file in the gate's work directory once each check has ended | `gate::every_file_the_gate_stages_is_removed_when_its_check_ends` |
+
+```acceptance
+A15: cargo test -p deck-streak-daemon --test blocking_census -- --exact the_agent_gate_and_runner_remove_their_staged_files_off_the_runtime_workers
+A16: cargo test -p deck-streak-agent --test gate -- --exact every_file_the_gate_stages_is_removed_when_its_check_ends
+```
+
+A15 reads the tree, as A8 does, and is red before the cure by its own assertion: the census finds the
+four agent removals. A16 holds what the gate already did before the cure, removing each file it
+stages; it guards the cure, as `runner::the_prompt_is_left_only_on_a_private_file_that_is_removed`
+guards the runner's. A8 keeps its test and reads R27's seven keys.
+
+Formal: unchanged, decided by surface. No `@phx covers` line names `crates/agent/src/gate.rs` or
+`crates/agent/src/runner.rs`; the change moves each staged file's removal onto the blocking pool and
+adds no actor, shared state or write path.
+
+The files this amendment changes, in section 4's form:
+
+| path | part | change |
+|---|---|---|
+| `crates/agent/src/gate.rs` | `deck-streak-agent` | changed: the check and the input check remove their staged files through tokio's file removal (R25) |
+| `crates/agent/src/runner.rs` | `deck-streak-agent` | changed: the run removes its prompt file through tokio's file removal (R25) |
+| `crates/agent/Cargo.toml` | `deck-streak-agent` | changed: `tokio` gains the `fs` feature, with its comment (R26) |
+| `crates/agent/tests/gate.rs` | `deck-streak-agent` | changed: A16 |
+| `crates/daemon/tests/blocking_census.rs` | `deck-streak-daemon` | changed: `LISTED` loses the four agent entries (R27); A15 |
+| `scripts/mutation-rows.d/S43600-S43699.json` | scripts | changed: S43691 to S43694 added (R28) |
+| `docs/specs/SPEC-436-no-lock-guard-is-held-across-an-await-no-async-body-blocks-and-no-request-handler-panics.md` | docs | changed: this section |
+| `docs/schematics/async-robustness-checks.md` | docs | changed: the listed table loses the four agent rows, with a line naming this section |
+| `docs/red-first/SPEC-436.md` | docs | changed: the record of A15, A16 and A8's new listing |
+| `changelog.d/agent-staged-removal-436.md` | changelog | added: the fragment |
+
+No other path changes. Not covered here: the seven skip-day sites, which move onto the blocking pool
+in their own delivery (#907); a blocking call reached through a synchronous helper, such as the
+runner's prompt write, and the census's other false-negative classes (#910); and a passing census's
+warn lines in CI's logs (#909).
