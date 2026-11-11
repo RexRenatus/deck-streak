@@ -9,6 +9,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
+use deck_streak_anki_format::opener::{COLLATION, unicase_order};
 use deck_streak_collection::sql::Statement;
 use deck_streak_collection::{
     CardRead, CollectionRead, FieldRead, ForeignFile, LogCounts, NoteRead, ReviewRead, StoreError,
@@ -67,16 +68,19 @@ pub struct Schema18 {
 }
 
 impl Schema18 {
-    /// Opens the schema-18 file at `path` read-only and `query_only`.
+    /// Opens the schema-18 file at `path` read-only and `query_only`, with the engine's
+    /// [`COLLATION`] registered so `SQLite` can plan over the indexes that name it. Names are still
+    /// matched in Rust, never in SQL.
     ///
     /// # Errors
     ///
     /// [`StoreError::StoreFile`] for a collection store, and [`StoreError::Sqlite`] when the file
     /// cannot be opened.
     pub fn open(path: &Path) -> Result<Self, StoreError> {
-        Ok(Self {
-            file: ForeignFile::open_read_only(path)?,
-        })
+        let file = ForeignFile::open_read_only(path)?;
+        file.connection()
+            .create_collation(COLLATION, unicase_order)?;
+        Ok(Self { file })
     }
 
     /// Prepares `statement` against the file without running it: the statement census's check.
