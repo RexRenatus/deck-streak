@@ -8,7 +8,7 @@
 //! holds one card whose sound tags name three videos and a sound, and `health/`, the card health
 //! collection (SPEC-507 R17), whose deck `Health` holds one card with a review record. The
 //! `xcframework` job runs it and uploads what it wrote beside the harness's fixture. It includes the
-//! tests' five builders alone, so the collections the Swift tests read are the ones the Rust tests
+//! tests' builders and their day pin alone, so the Swift tests read the collections the Rust tests
 //! read.
 //! Beside them it writes a second collection in `occlusion/`, whose deck `Occlusion` holds one
 //! image occlusion card, with its own `collection.media/` holding the card's image (SPEC-380 R10).
@@ -20,7 +20,7 @@
 //! It prints nothing on success. On any error it writes one line to stderr and exits 2.
 //!
 //! After it writes the review collection, it sets that collection's rollover hour half a day ahead
-//! of its own reading, through the day pin it includes beside the four builders (SPEC-615 R1).
+//! of its own reading, through the day pin it includes beside the builders (SPEC-615 R1).
 
 use std::path::Path;
 use std::process::ExitCode;
