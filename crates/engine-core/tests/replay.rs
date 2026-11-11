@@ -667,11 +667,7 @@ fn card_row(collection: &Path, card: i64) -> (BTreeMap<String, String>, Map<Stri
         let mut statement = db
             .prepare("select * from cards where id = ?")
             .expect("the card's read prepares");
-        let names: Vec<String> = statement
-            .column_names()
-            .into_iter()
-            .map(str::to_owned)
-            .collect();
+        let names: Vec<String> = statement.column_names().map(str::to_owned).collect();
         let (cells, data): (Vec<String>, String) = statement
             .query_row([card], |row| {
                 let cells = (0..names.len())
