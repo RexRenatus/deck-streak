@@ -24,7 +24,8 @@ release the engine takes and the upstream revision `deck-streak-fsrs7` takes, AD
 them, `toml` 1.1.8, was read as reached from the workspace only through a dev-dependency. These figures
 are a lower bound: the whole population is counted by the census itself, whose first run in CI
 prints `examined <n> package(s) in the lock` and one line per site, and push 2 records that run
-here: `hygiene` job JOB-NEW.
+here: `hygiene` job 130530810425, which printed `examined 645 package(s) in the lock` and
+`examined 35 duplicated name(s)`, and no `WARN` line.
 
 ## 2. Requirements
 
