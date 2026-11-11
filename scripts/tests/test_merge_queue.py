@@ -49,6 +49,13 @@ QUEUE_PREFIX = "mergify/merge-queue/"
 QUEUE_REF = QUEUE_PREFIX + "5f" * 5
 # The fixed bound on how long the queue waits for the checks of a batch.
 CHECKS_TIMEOUT = "360 minutes"
+# The READY status: the context the maintainer's GitHub App posts on a pull request's head, read in
+# the qualified form so that a status of the same name from any other poster never matches.
+READY_APP = "deckstreak-ready"
+READY_CONTEXT = "queue-ready"
+READY_STATUS = f"@{READY_APP}/{READY_CONTEXT}"
+# The permission levels a sender can hold, lowest first, for `sender-permission >= <level>`.
+PERMISSIONS = ("none", "read", "triage", "write", "maintain", "admin")
 REFUSED = "Add a fragment under changelog.d/ (see changelog.d/README.md).\n"
 PASSED = "A Dependabot pull request that changes only dependency files needs no fragment.\n"
 
@@ -256,6 +263,10 @@ CONDITION = re.compile(r"(-)?(#)?([a-z][a-z-]*)(?: (=|!=|>=|<=) (\S+))?")
 
 
 def holds(condition, state):
+    if isinstance(condition, dict):
+        if list(condition) != ["or"]:
+            raise AssertionError(f"a condition the evaluator refuses: {condition}")
+        return any(holds(item, state) for item in condition["or"] or [])
     found = CONDITION.fullmatch(str(condition))
     if found is None:
         raise AssertionError(f"a condition the evaluator refuses: {condition}")
@@ -263,6 +274,8 @@ def holds(condition, state):
     if attribute not in state:
         raise AssertionError(f"{condition} reads {attribute}, which no scenario models")
     value = state[attribute]
+    if attribute == "sender-permission":
+        value, operand = PERMISSIONS.index(value), PERMISSIONS.index(operand)
     if count:
         value = len(value)
         operand = None if operand is None else int(operand)
@@ -295,6 +308,19 @@ def enters(config, state):
             if all_hold(target.get("queue_conditions") or [], state):
                 return True
     return False
+
+
+def command_enters(config, state, command):
+    """Whether a `command` (`queue` or `requeue`), or the queue checkbox, on a pull request in
+    `state` enters the queue: the command's restriction holds and the one queue rule accepts it."""
+    rules = queue_rules(config)
+    restriction = ((config.get("commands_restrictions") or {}).get(command) or {}).get("conditions")
+    conditions = ["sender-permission >= write"] if restriction is None else restriction
+    return (
+        len(rules) == 1
+        and all_hold(conditions, state)
+        and all_hold(rules[0].get("queue_conditions") or [], state)
+    )
 
 
 def merges(config, batch, members):
@@ -348,13 +374,17 @@ READY = {
     "draft": False,
     "review-threads-unresolved": [],
     "check-success": list(CHECKS),
+    "check-failure": [],
+    "sender-permission": "write",
 }
+BY_STATUS = {**READY, "label": [], "check-success": [*CHECKS, READY_STATUS]}
 BATCH = {
     "base": "dev",
     "label": [],
     "draft": True,
     "review-threads-unresolved": [],
     "check-success": list(CHECKS),
+    "check-failure": [],
 }
 
 
@@ -606,19 +636,68 @@ class TheQueueConditions(unittest.TestCase):
     def test_a_pull_request_enters_the_queue_only_into_dev_labelled_ready_resolved_and_green(self):
         config = queue_file()
         self.assertTrue(enters(config, READY), "a ready, labelled, green pull request enters")
+        self.assertTrue(
+            enters(config, BY_STATUS), "a ready, green pull request with the READY status enters"
+        )
+        withdrawn = {**BY_STATUS, "check-success": list(CHECKS), "check-failure": [READY_STATUS]}
         refused = {
             "into main": {**READY, "base": "main"},
-            "with no label": {**READY, "label": []},
+            "with no label and no READY status": {**READY, "label": []},
             "with another label": {**READY, "label": ["queued"]},
+            "with the READY name from another poster": {
+                **BY_STATUS,
+                "check-success": [*CHECKS, READY_CONTEXT],
+            },
+            "with the READY status at failure": withdrawn,
+            "labelled, with the READY status at failure": {
+                **READY,
+                "check-failure": [READY_STATUS],
+            },
             "a draft": {**READY, "draft": True},
+            "a draft with the READY status": {**BY_STATUS, "draft": True},
             "with an unresolved thread": {**READY, "review-threads-unresolved": ["thread"]},
         }
         for check in CHECKS:
             green = [name for name in CHECKS if name != check]
             refused[f"without {check}"] = {**READY, "check-success": green}
+            refused[f"with the READY status, without {check}"] = {
+                **BY_STATUS,
+                "check-success": [*green, READY_STATUS],
+            }
         for what, state in examined("pull requests the queue refuses", refused.items()):
             with self.subTest(what):
                 self.assertFalse(enters(config, state), f"a pull request {what} stays out")
+        rules = queue_rules(config)
+        rule = rules[0] if len(rules) == 1 else {}
+        self.assertFalse(
+            all_hold(rule.get("queue_conditions") or [], withdrawn),
+            "a queued pull request whose READY status turns to failure no longer meets the queue",
+        )
+        commands = {
+            "labelled": (READY, True),
+            "with the READY status": (BY_STATUS, True),
+            "with neither the label nor the READY status": ({**READY, "label": []}, False),
+            "from a sender who cannot write": ({**READY, "sender-permission": "triage"}, False),
+            "from a sender who can maintain": ({**READY, "sender-permission": "maintain"}, True),
+            "with the READY name from another poster": (
+                {**BY_STATUS, "check-success": [*CHECKS, READY_CONTEXT]},
+                False,
+            ),
+        }
+        for key in ("queue", "requeue"):
+            for what, (state, entered) in examined(f"{key} commands", commands.items()):
+                with self.subTest(command=what, key=key):
+                    self.assertEqual(
+                        command_enters(config, state, key),
+                        entered,
+                        f"a {key} command on a pull request {what}",
+                    )
+        self.assertFalse(
+            command_enters(config, {**READY, "label": []}, "requeue"),
+            "a requeue command on a pull request with neither the label nor the READY status",
+        )
+        with self.assertRaises(AssertionError, msg="an and mapping the queue file never uses"):
+            holds({"and": ["label = queue"]}, READY)
 
     def test_a_batch_merges_only_after_ci_fragment_and_dependency_review_pass_on_it(self):
         config = queue_file()
@@ -637,6 +716,11 @@ class TheQueueConditions(unittest.TestCase):
         members = examined("batch members", [READY] * 6)
         self.assertTrue(
             merges(config, BATCH, members), "a draft batch with the three checks green merges"
+        )
+        by_status = examined("members that entered by the READY status", [BY_STATUS] * 6)
+        self.assertTrue(
+            merges(config, BATCH, by_status),
+            "a batch whose members entered by the READY status merges on the batch's checks alone",
         )
         for check in examined("required checks", CHECKS):
             with self.subTest(check):

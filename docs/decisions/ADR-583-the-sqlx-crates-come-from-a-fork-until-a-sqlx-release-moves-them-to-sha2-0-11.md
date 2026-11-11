@@ -116,3 +116,14 @@ guard holds; and `scripts/tests/test_engine_pin.py` checks the `allow-git` list 
 - The sqlx change is offered upstream to launchbadge/sqlx once this delivery is green.
 - Read with ADR-058, whose note moves the engine pin, and ADR-513, whose git-source rule this
   extends.
+
+## Note, appended for RUSTSEC-2026-0459: the fork admits the libsqlite3-sys line with the fixed SQLite
+
+This note leaves the decision above as it was made. The fork's branch `deckstreak-sha2-0.11` takes
+one commit over the commit D1 pinned: the upper bound of sqlx-sqlite's
+`libsqlite3-sys` range moves one release line, the same one-line change upstream made for the line
+before it, so the workspace's one `libsqlite3-sys` can be the line that bundles the SQLite release
+that fixes RUSTSEC-2026-0459 (ADR-348's and ADR-058's notes). No source file changes. The seven
+`[patch.crates-io]` entries take the sqlx crates by `rev` from that commit, `6e7df9289d37f673ec59a1cfb162126ab9545019`, all seven
+from one commit as D2 requires. The entries now go when a sqlx release carries the sha2 move and
+admits that `libsqlite3-sys` line, and the range change is offered upstream with the sha2 change.
