@@ -1,0 +1,11 @@
+{
+  "_": [
+    "The boundary-test register of SPEC-666 and ADR-688, read by scripts/tests/test_constant_boundaries.py.",
+    "boundary_tests: each key, '<file> <operator> <constant> #<ordinal>', names the tests that hold the",
+    "compared value below, at and above the constant, each '<path>::<name>' of test code the tree defines.",
+    "listed: each site the census reports today, keyed the same way, with its reason. A listed key that",
+    "names no current site, and a boundary_tests key that names no comparison, fail at both levels."
+  ],
+  "boundary_tests": {},
+  "listed": {}
+}

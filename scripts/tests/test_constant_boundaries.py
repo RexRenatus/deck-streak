@@ -99,15 +99,18 @@ def classify(path):
     rule reads. A planted `.fixture` is never part of a census (R2, R3, R11)."""
     if path.endswith(".fixture"):
         return None
+    parts = set(path.split("/")[:-1])
     if path.endswith(".rs"):
-        return ("rust", "shipped")
+        return ("rust", "test" if parts & TEST_PARTS else "shipped")
     if path.endswith(".py"):
-        return ("python", "shipped")
+        test = "tests" in parts or path.rsplit("/", 1)[-1].startswith("test_")
+        return ("python", "test" if test else "shipped")
     if path.endswith((".ts", ".js", ".mjs", ".cjs", ".svelte")):
         language = "svelte" if path.endswith(".svelte") else "typescript"
-        return (language, "shipped")
+        test = WEB_TEST.search(path) or path.startswith(WEB_TEST_DIRS)
+        return (language, "test" if test else "shipped")
     if path.endswith(".swift"):
-        return ("swift", "shipped")
+        return ("swift", "test" if SWIFT_TEST.search(path) else "shipped")
     if path.endswith(".sh"):
         return ("shell", "shipped")
     return None
@@ -396,7 +399,6 @@ def record(reading, language, path, line, operator, operand, verdicts, part):
 
 def scan_text(language, path, code, tree, reading, part):
     """Each comparison of a brace language's code, into the reading (R4 to R8)."""
-    return
     reader = "typescript" if language == "svelte" else language
     scope = scope_of(reader, code)
     for match in COMPARISON.finditer(code):
@@ -410,7 +412,6 @@ def scan_text(language, path, code, tree, reading, part):
 
 def scan_python(path, text, reading, part):
     """Each comparison of one Python file, by its syntax tree (R4, R5)."""
-    return
     module = ast.parse(text)
     declared, imported = set(), set()
     for node in module.body:
@@ -451,7 +452,6 @@ def scan_python(path, text, reading, part):
 
 def scan_shell(path, text, reading):
     """Each test-command comparison of one shell script (R4, R5)."""
-    return
     lines = [re.sub(r"'[^']*'", "''", line) for line in text.split("\n")]
     lines = [re.sub(r"(^|\s)#.*$", r"\1", line) for line in lines]
     code = "\n".join(lines)
@@ -489,7 +489,7 @@ def census(sources):
         if kind:
             groups.setdefault(kind, []).append(path)
     shipped = [path for language in LANGUAGES for path in groups.get((language, "shipped"), [])]
-    examined("shipped source file(s)", shipped or [""])
+    examined("shipped source file(s)", shipped)
     tree = Tree(sources, groups)
     modules = rust_test_modules(sources)
     reading = {"examined": {}, "counts": Counter(), "constant": [], "undecided": []}
@@ -536,7 +536,6 @@ def keyed(found):
 
 def defines(sources, test):
     """Whether `test`, `<path>::<name>`, names test code the tree defines (R6)."""
-    return False
     path, _, name = test.partition("::")
     kind = classify(path) if path in sources else None
     if not name or kind is None:
@@ -562,7 +561,6 @@ def defines(sources, test):
 def verdict(reading, register, sources, level):
     """(printed lines, failures): an unlisted site warns, and fails at `fail`; a listed entry or a
     register entry that names no current site is stale and fails at both levels (R6, R9)."""
-    return [], []
     tests, listed = register.get("boundary_tests", {}), register.get("listed", {})
     lines, failures, sites = [], [], set()
     for key in reading["comparisons"]:
