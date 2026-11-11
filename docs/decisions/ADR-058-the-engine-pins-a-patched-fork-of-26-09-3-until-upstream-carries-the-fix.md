@@ -372,3 +372,27 @@ as they stand, with ADR-583, whose sqlx fork stays, and with ADR-657, whose thre
 | rustls-pemfile | `3555a27ade8b5181e3fe8c7eb1e9f5792c47c596` | the PEM count uses `rustls-pki-types`; RUSTSEC-2025-0134 leaves the lock | as the guard |
 | licence list | `e68c6b50e4be6511400064a1e2e6fccfdd97f079` | the fork's licence list drops the removed crates; no source file changes | as the guards |
 | deny list | `2d8e3150f5e392f5cfaa7bfe8485c479186307a9` | the fork's `.deny.toml` drops the six ignore entries the removed crates needed; no build file changes | as the guards |
+
+## Note, appended for RUSTSEC-2026-0459: the pin moves one commit along the fork for the bundled SQLite
+
+This note leaves the body above as it was decided. The fork's branch `deckstreak-blockbuf` takes
+one commit over the deny list commit the note above pinned. It moves the
+engine's rusqlite requirement, for both targets, to the release line whose libsqlite3-sys bundles
+the SQLite release that fixes RUSTSEC-2026-0459, and takes only the call sites that line forces:
+the collection's connection is mutable where the statement trace is installed and the trace's
+result is returned, and on `wasm32` the connection that serializes the collection is mutable.
+The fork's lock moves rusqlite, libsqlite3-sys and hashlink with it. A new tag,
+`deckstreak-pin-26.09.3-wasm32-sqlite`, names the commit, the branch's head; the earlier tags stay
+where they are. The root manifest's `[patch]` entry takes `anki` and `anki_proto` by `rev` from
+it. Read with ADR-336, which this note leaves as it stands, with ADR-348, whose SQLite route moves
+by its own note, with ADR-583, whose sqlx fork moves in the same change, and with ADR-530, whose
+driver moves with the engine.
+
+| record | measured |
+|---|---|
+| the pinned commit | `c1241180ae457c71ed4ca963f5673e74d1a9bf7c`, the head of branch `deckstreak-blockbuf`, tagged `deckstreak-pin-26.09.3-wasm32-sqlite` (`git ls-remote`) |
+| `git diff --stat 26.09.3 c124118` on the fork | 48 files changed, 2258 insertions(+), 1502 deletions(-) |
+
+| patch | commit | reason | removal condition |
+|---|---|---|---|
+| bundled SQLite | `c1241180ae457c71ed4ca963f5673e74d1a9bf7c` | the engine's rusqlite moves to the release line whose libsqlite3-sys bundles the fixed SQLite, which clears RUSTSEC-2026-0459 in this workspace's lock and in the fork's; the trace and serialize call sites take the mutable connection that line requires | upstream requires that rusqlite line or a later one |
