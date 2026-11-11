@@ -6,6 +6,7 @@
 //! on before any statement touches its schema, and it is refused before any row is read when a
 //! check does not hold.
 
+use std::cmp::Ordering;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read as _, Write};
 use std::path::{Path, PathBuf};
@@ -43,6 +44,13 @@ pub const USER_VERSION: i64 = 0;
 
 /// The collation schema-18 names carry, registered on every copy (ADR-623).
 pub const COLLATION: &str = "unicase";
+
+/// The order of [`COLLATION`]: the engine's, comparing names case-folded. Every connection that
+/// reads a schema-18 file registers it, so `SQLite` can plan over the indexes that name it.
+#[must_use]
+pub fn unicase_order(a: &str, b: &str) -> Ordering {
+    UniCase::new(a).cmp(&UniCase::new(b))
+}
 
 /// Which foreign file is opened, and so which table set it must hold.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -327,7 +335,7 @@ fn defensive_connection(copy: &Path, limits: &Limits) -> Result<Connection, Refu
     connection.set_db_config(DbConfig::SQLITE_DBCONFIG_TRUSTED_SCHEMA, false)?;
     connection.set_limit(Limit::SQLITE_LIMIT_LENGTH, limits.max_length)?;
     connection.set_limit(Limit::SQLITE_LIMIT_SQL_LENGTH, limits.max_sql_length)?;
-    connection.create_collation(COLLATION, |a, b| UniCase::new(a).cmp(&UniCase::new(b)))?;
+    connection.create_collation(COLLATION, unicase_order)?;
     connection.execute_batch(
         "PRAGMA query_only = ON; PRAGMA cell_size_check = ON; PRAGMA mmap_size = 0;",
     )?;
