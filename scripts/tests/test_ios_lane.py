@@ -123,7 +123,7 @@ if tool == "openssl" and "-export" in args:
     Path(value("-out")).write_bytes(b"rewrapped")
 elif tool == "openssl":
     entry["read"] = hashlib.sha256(Path(value("-in")).read_bytes()).hexdigest()
-    entry["stdin"] = hashlib.sha256(stdin.encode("utf-8")).hexdigest()
+    entry["stdin"] = hashlib.pbkdf2_hmac("sha256", stdin.encode("utf-8"), b"stdin", 100_000).hex()
     # The fixture's refused reads: each read takes the next one's text as its standard error and
     # exits 1, until none is left.
     if fixture.get("refused reads"):
@@ -1069,7 +1069,9 @@ class LaneCredential(unittest.TestCase):
         ]
         self.assertEqual([r["args"] for r in reads], [first, ["pkcs12", "-legacy", *first[1:]]])
         certificate = hashlib.sha256(self.certificate).hexdigest()
-        password = hashlib.sha256(f"{self.values['PASSWORD']}\n".encode("utf-8")).hexdigest()
+        password = hashlib.pbkdf2_hmac(
+            "sha256", f"{self.values['PASSWORD']}\n".encode("utf-8"), b"stdin", 100_000
+        ).hex()
         for read in examined("certificate reads", reads):
             with self.subTest(read=read["args"][1]):
                 self.assertEqual((read["read"], read["stdin"]), (certificate, password))
