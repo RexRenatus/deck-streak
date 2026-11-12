@@ -3305,7 +3305,7 @@ class TheCardSandboxRunsInBothEngines(unittest.TestCase):
         self.assertEqual(runs.count(CARD_SUITE), 1, "the job does not run the planted suite once")
         self.assertLess(runs.index(CARD_INSTALL), runs.index(CARD_SUITE))
         # one upload of the suite's results after it, whatever its verdict; the job's JUnit
-        # upload is the JUnit census's (SPEC-038 R21)
+        # upload is the JUnit census's (SPEC-038 R26)
         uploads = [
             at
             for at, step in enumerate(steps)
@@ -3556,7 +3556,7 @@ class OnlyAPushSavesACache(unittest.TestCase):
             env = dict(job.get("env") or {}, **(steps[at].get("env") or {}))
             logs = str(env.get("CHECK_LOG_DIR", "")).rstrip("/")
             self.assertTrue(logs, f"{job_id} writes its logs to a temporary directory nobody reads")
-            # The job's JUnit upload is the JUnit census's (SPEC-038 R21).
+            # The job's JUnit upload is the JUnit census's (SPEC-038 R26).
             uploads = [
                 s
                 for s in steps[at + 1 :]
@@ -14693,9 +14693,9 @@ class TheBenchLanes(unittest.TestCase):
                 self.assertEqual(bool(condition(step["if"], context)), runs, (event, applicable))
 
 
-# --------------------------------------------------------------------------- SPEC-038 R21 to R23
+# --------------------------------------------------------------------------- SPEC-038 R26 to R28
 
-# Each ci.yml job that runs tests and the artifact its JUnit results upload as (SPEC-038 R21); a
+# Each ci.yml job that runs tests and the artifact its JUnit results upload as (SPEC-038 R26); a
 # matrix job's artifact names its slice, as its stage logs do. No job that runs tests is left out.
 JUNIT_ARTIFACTS = {
     "card-sandbox": "junit-card-sandbox",
@@ -14785,7 +14785,7 @@ def junit_variables(step):
 
 def junit_problems(job_id, job):
     """What keeps a job's JUnit results from an artifact on every run, each named by the job
-    (SPEC-038 R21, R23). One upload step names the job's artifact, uploads JUNIT_DIR with
+    (SPEC-038 R26, R28). One upload step names the job's artifact, uploads JUNIT_DIR with
     `if: ${{ always() }}`, warns when no file was written, and follows every step that runs tests.
     A nextest job first moves nextest's file there in a step that always runs, after its tests and
     before its upload and any cache save; every other runner a step runs is named its own file
@@ -14845,7 +14845,7 @@ def junit_problems(job_id, job):
 
 def reporter_problems(path, text):
     """What keeps a configuration from adding its runner's JUnit reporter only when its variable
-    names a file (SPEC-038 R21): each text JUNIT_REPORTERS gives it, held exactly once."""
+    names a file (SPEC-038 R26): each text JUNIT_REPORTERS gives it, held exactly once."""
     return [
         f"{path} does not hold {held!r} once"
         for held in JUNIT_REPORTERS[path]
@@ -14855,7 +14855,7 @@ def reporter_problems(path, text):
 
 def profile_problems(profiles):
     """What keeps nextest's profiles from writing JUnit results and failing a pass on retry
-    (SPEC-038 R22): the default profile writes `junit.xml`, retries a failing test at least once
+    (SPEC-038 R27): the default profile writes `junit.xml`, retries a failing test at least once
     and fails a test that passes on a retry; every other profile, which inherits the default one,
     sets its own retries to 0, so no mutant's failing test runs twice, and passes no pass on a
     retry; and no override of any profile retries a test or passes a pass on a retry, since an
@@ -14892,7 +14892,7 @@ def env_text(env):
 
 
 def retry_switch_problems(workflow, gate):
-    """Each place that sets one of nextest's switches over its profiles (SPEC-038 R22): the
+    """Each place that sets one of nextest's switches over its profiles (SPEC-038 R27): the
     workflow's env, each job that runs tests by its env and each step's env and run, and the gate's
     script, `gate` its text."""
     places = [("ci.yml env", env_text(workflow.get("env")))]
@@ -14938,7 +14938,7 @@ def planted_browser(script, file):
 
 
 class EveryTestJobUploadsItsJUnit(unittest.TestCase):
-    """SPEC-038 R21 to R23: every ci.yml job that runs tests uploads its JUnit results whatever its
+    """SPEC-038 R26 to R28: every ci.yml job that runs tests uploads its JUnit results whatever its
     tests concluded, nextest retries a failing test once and a pass on that retry still fails, and
     every other profile, the mutants profile among them, retries nothing."""
 

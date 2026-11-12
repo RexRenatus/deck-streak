@@ -294,7 +294,7 @@ class EachModuleIsNamedBesideItsRanLine(unittest.TestCase):
 
 class TheStageWritesItsJUnitResults(unittest.TestCase):
     def test_the_stage_writes_one_test_case_per_module_to_the_named_file(self):
-        """SPEC-038 A29: with PYTHON_STAGE_JUNIT_FILE naming a file, the stage writes one test suite
+        """SPEC-038 A31: with PYTHON_STAGE_JUNIT_FILE naming a file, the stage writes one test suite
         per suite and one test case per module there after its last line, making the file's folder
         or reusing it; a failing module's case carries its exit and its output, each character XML
         cannot hold written as `?`; no module is handed the variable; with it empty, no file."""
