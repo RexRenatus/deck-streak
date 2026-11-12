@@ -109,6 +109,16 @@ entry = {
 }
 out = ""
 err = ""
+if tool == "openssl" and args == ["version"]:
+    # The version call is answered apart from the reads: it has a record of its own, it writes the
+    # version line a test planted, or nothing, and it makes a planted decoy executable.
+    with open(shims / "version.jsonl", "a", encoding="utf-8") as calls:
+        calls.write(json.dumps(entry) + "\\n")
+    if (shims / "version").exists():
+        sys.stdout.write((shims / "version").read_text())
+    if (shims / "decoy").exists():
+        Path((shims / "decoy").read_text()).chmod(0o755)
+    sys.exit(1 if (shims / "fail-version").exists() else 0)
 if tool == "openssl" and "-export" in args:
     Path(value("-out")).write_bytes(b"rewrapped")
 elif tool == "openssl":
@@ -153,6 +163,18 @@ if err:
     sys.exit(1)
 if (shims / f"fail-{tool}").exists():
     sys.exit(1)
+"""
+
+# A second openssl, planted on `PATH` before the shims and written without the execute bit, so a
+# search when the step starts passes over it; the shims' version answer then makes it executable,
+# so a later search by the bare name would run it. It records its arguments and exits 1.
+DECOY = """
+import json, os, sys
+from pathlib import Path
+
+with open(Path(os.environ["SHIMS"]) / "decoy.jsonl", "a", encoding="utf-8") as record:
+    record.write(json.dumps(sys.argv[1:]) + "\\n")
+sys.exit(1)
 """
 
 
@@ -1182,6 +1204,57 @@ class LaneCredential(unittest.TestCase):
                 written.index(failed) + len(failed),
                 written.index(legacy) + len(legacy),
             ],
+        )
+
+    def test_the_openssl_version_is_printed_before_the_read_and_every_call_names_its_path(self):
+        """RED-FIRST (SPEC-352 A29): the step prints the version line of the openssl that PATH
+        gives when it starts, once and written out before the certificate read runs, with no
+        credential part in that call; the read, the read under -legacy and the re-wrap run that
+        same binary, even once another openssl appears earlier on PATH. A failed version call, or
+        no openssl on PATH, refuses with one fixed line before any read."""
+        line = "fixture openssl version line"
+        (self.shims / "version").write_text(f"{line}\n", encoding="utf-8")
+        early = self.scratch / "early"
+        early.mkdir()
+        decoy = early / "openssl"
+        decoy.write_text(f"#!{sys.executable}\n{DECOY}", encoding="utf-8")
+        decoy.chmod(0o644)
+        (self.shims / "decoy").write_text(str(decoy), encoding="utf-8")
+        self.refuse_reads("Error: Unsupported algorithm RC2-40-CBC\n")
+        parts = ("CERTIFICATE", "PASSWORD", "PROFILE")
+        path = os.pathsep.join((str(early), str(self.bin), os.environ["PATH"]))
+        code, printed, errors, records, _ = self.step("sign", parts, PATH=path)
+        self.assertEqual([text for text in printed.splitlines() if text == line], [line])
+        self.assertEqual(code, 0, errors)
+        version = (self.shims / "version.jsonl").read_text(encoding="utf-8").splitlines()
+        calls = [json.loads(text) for text in version]
+        self.assertEqual(
+            [(c["args"], c["in_args"], c["on_stdin"], c["in_env"]) for c in calls],
+            [(["version"], [], [], [])],
+        )
+        written = printed.encode("utf-8")
+        after = written.index(f"{line}\n".encode("utf-8")) + len(line) + 1
+        self.assertEqual(self.reads(records)[0]["stdout_size"], after)
+        self.assertEqual(
+            [r["args"][:2] for r in records if r["tool"] == "openssl"],
+            [["pkcs12", "-in"], ["pkcs12", "-legacy"], ["pkcs12", "-export"]],
+        )
+        # The decoy was made executable before the read and never ran.
+        self.assertEqual(decoy.stat().st_mode & 0o777, 0o755)
+        self.assertFalse((self.shims / "decoy.jsonl").exists())
+        # A failed version call refuses naming the tool bare, before any read.
+        self.step("clean")
+        (self.shims / "fail-version").touch()
+        code, _, errors, records, _ = self.step("sign", parts)
+        self.assertEqual(
+            (code, errors.splitlines(), records), (1, ["openssl version failed with exit 1"], [])
+        )
+        # No openssl on PATH: one fixed line, before any tool runs.
+        empty = self.scratch / "empty"
+        empty.mkdir()
+        code, _, errors, records, _ = self.step("sign", parts, PATH=str(empty))
+        self.assertEqual(
+            (code, errors.splitlines(), records), (1, ["no openssl is on the PATH"], [])
         )
 
 
