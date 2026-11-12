@@ -276,16 +276,16 @@
       [
         "S61834-THE-RUST-UPLOAD-WAITS-ON-THE-UPLOAD-PLAN",
         ".github/workflows/ci.yml",
-        "# v5.6.1\n        if: ${{ needs.bench-rust-build.outputs.upload == 'true' }}",
-        "# v5.6.1\n        if: ${{ needs.bench-rust-build.outputs.upload == 'false' }}",
+        "        if: ${{ needs.bench-rust-build.outputs.upload == 'true' }}\n        with:\n          mode: simulation",
+        "        if: ${{ needs.bench-rust-build.outputs.upload == 'false' }}\n        with:\n          mode: simulation",
         "bench-rust uploads to CodSpeed only when its build job says to upload; inverted it uploads with nothing built (SPEC-618 R4)",
         "test_ci_workflows.TheBenchLanes.test_each_bench_job_starts_and_its_plan_gates_every_step"
       ],
       [
         "S61835-THE-WEB-UPLOAD-WAITS-ON-THE-UPLOAD-PLAN",
         ".github/workflows/ci.yml",
-        "# v5.6.1\n        if: ${{ needs.bench-web-build.outputs.upload == 'true' }}",
-        "# v5.6.1\n        if: ${{ needs.bench-web-build.outputs.upload == 'false' }}",
+        "        if: ${{ needs.bench-web-build.outputs.upload == 'true' }}\n        with:\n          mode: simulation",
+        "        if: ${{ needs.bench-web-build.outputs.upload == 'false' }}\n        with:\n          mode: simulation",
         "bench-web uploads to CodSpeed only when its build job says to upload; inverted it uploads with nothing installed (SPEC-618 R4)",
         "test_ci_workflows.TheBenchLanes.test_each_bench_job_starts_and_its_plan_gates_every_step"
       ],
