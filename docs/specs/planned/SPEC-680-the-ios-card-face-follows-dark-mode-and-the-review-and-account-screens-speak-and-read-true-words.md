@@ -118,6 +118,16 @@ A6: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -config
 A7: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -configuration Debug -destination "platform=iOS Simulator,name=iPhone 17,OS=27.0" -destination "platform=iOS Simulator,name=iPad (A16),OS=27.0" -disable-concurrent-destination-testing -only-testing:DeckStreakUITests/AccountFormFlowTests/test_the_return_key_on_the_password_field_signs_in
 A8: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -configuration Debug -destination "platform=iOS Simulator,name=iPhone 17,OS=27.0" -destination "platform=iOS Simulator,name=iPad (A16),OS=27.0" -disable-concurrent-destination-testing -only-testing:DeckStreakUITests/ReviewFlowTests/test_the_review_counts_read_as_one_element
 ```
+| criterion | requirement | test |
+|---|---|---|
+| A1 | R1 | `test_a_dark_card_face_reads_its_night_classes` |
+| A2 | R2 | `test_a_fresh_install_offers_sync_from_the_account_sheet` |
+| A3 | R3 | `test_each_finish_reads_words_that_name_what_was_done` |
+| A4 | R4 | `test_a_rating_pressed_as_the_answer_shows_is_not_sent` |
+| A5 | R5 | `test_every_app_error_reads_words_of_its_own` |
+| A6 | R6 | `test_the_review_announces_each_answer_grade_card_and_finish` |
+| A7 | R7 | `test_the_return_key_on_the_password_field_signs_in` |
+| A8 | R8 | `test_the_review_counts_read_as_one_element` |
 
 Each criterion holds the requirement of its number: for R1, a dark face's night classes on the
 question and the answer, and none on a day face; for R2, the offer on a fresh install and the
