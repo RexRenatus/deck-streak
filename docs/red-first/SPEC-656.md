@@ -33,3 +33,7 @@ first failure lines, as unittest prints them (a long value is cut by its own `[N
 
 A1 reads the repository, so its red is the first push's `hygiene` failure, read there by its
 FAIL header.
+
+The census cure in 79b42001 matches script and style tags in any case and closes each on an end
+tag with any attributes; it changes no test function, planted text or expected value, and the
+census finds the same sites in the repository before and after it.
