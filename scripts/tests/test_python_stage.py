@@ -309,7 +309,7 @@ class TheStageWritesItsJUnitResults(unittest.TestCase):
             for attempt in examined("stage runs", ["fresh", "again"]):
                 done = run_stage(Path(scratch) / attempt, tree, ["one", "two"], **named)
                 self.assertTrue(junit.is_file(), "the stage wrote no JUnit file")
-                root = ElementTree.parse(junit).getroot()
+                root = ElementTree.fromstring(junit.read_bytes())
                 junit.unlink()
                 lines = done.stdout.splitlines()
                 self.assertEqual(lines[-1], verdict)

@@ -981,7 +981,7 @@ the stage wrote no JUnit file. A29 judges the census itself, over plants of its 
 | `web/app/playwright.config.ts`, `web/app/playwright.card.config.ts`, `web/app/playwright.engine.config.ts`, `web/app/playwright.study.config.ts` | Playwright's JUnit reporter beside the configuration's own, when `PLAYWRIGHT_JUNIT_OUTPUT_FILE` names a file |
 | `scripts/python_stage.py` | the stage's JUnit results, one test case per module, when `PYTHON_STAGE_JUNIT_FILE` names a file |
 | `scripts/tests/test_python_stage.py` | A31, over planted suites |
-| `scripts/tests/test_ci_workflows.py` | the JUnit census, its planted cases and its three read sites; the stage-log and card upload counts leave out the job's JUnit upload |
+| `scripts/tests/test_ci_workflows.py` | the JUnit census, its planted cases, its three read sites and one listed dynamic site, the JUnit parse in `test_python_stage.py`; the stage-log and card upload counts leave out the job's JUnit upload |
 | `docs/specs/SPEC-038-ci-runs-the-gate-in-parallel-jobs-and-only-dev-and-main-save-a-cache.md` | this section |
 | `docs/red-first/SPEC-038.md` | A27 to A29 and A31 |
 | `changelog.d/ci-junit-results.md` | the fragment |

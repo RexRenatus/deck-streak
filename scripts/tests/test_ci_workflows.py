@@ -10474,6 +10474,15 @@ DYNAMIC_IMPORTS = {
         ("_stand_in_census", "arms_of", "warnings.simplefilter('ignore')", 1),
     ),
     **allowed(
+        "parses the JUnit file the python stage wrote, from the bytes read on the same line, to count its test cases; bytes in and an element tree out, and it reads no workflow file",
+        (
+            "test_python_stage",
+            "TheStageWritesItsJUnitResults.test_the_stage_writes_one_test_case_per_module_to_the_named_file",
+            "ElementTree.fromstring(junit.read_bytes())",
+            1,
+        ),
+    ),
+    **allowed(
         "registers the production module loaded by path under its own name, so its dataclasses resolve",
         ("test_mutation_python", "runner_module", "sys.modules", 1),
         ("test_mutation_python_cli_kills", "runner", "sys.modules", 1),
@@ -14988,9 +14997,10 @@ class EveryTestJobUploadsItsJUnit(unittest.TestCase):
             return retry_switch_problems(body, gate)
 
         def browsers(first, second):
-            return lambda s: s.__setitem__(
-                slice(0, 1), [planted_browser("engine", first), planted_browser("study", second)]
-            )
+            def edit(s):
+                s[0:1] = [planted_browser("engine", first), planted_browser("study", second)]
+
+            return edit
 
         self.assertEqual(job(browsers("engine.xml", "study.xml")), [])
         self.assertEqual(
