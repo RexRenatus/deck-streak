@@ -1,0 +1,43 @@
+# Planted for the redundant-guard census (SPEC-665 R11); read as text, never run.
+
+check_ready() {
+  if [ -n "$ready" ]; then
+    if [ -n "$ready" ]; then # planted: same-expression
+      echo ready
+    fi
+  fi
+}
+
+check_name() {
+  if [ -n "$name" ] && ! [ -n "$name" ]; then # planted: same-expression
+    echo never
+  fi
+}
+
+reassigned() {
+  if [ -n "$value" ]; then
+    value=""
+    if [ -n "$value" ]; then # accepted: reassigned
+      echo kept
+    fi
+  fi
+}
+
+called() {
+  if [ -n "$(list_items)" ]; then
+    if [ -n "$(list_items)" ]; then # accepted: call
+      echo listed
+    fi
+  fi
+}
+
+looped() {
+  if [ -n "$item" ]; then
+    for next in a b; do
+      if [ -n "$item" ]; then # accepted: loop
+        echo "$next"
+      fi
+      item=""
+    done
+  fi
+}
