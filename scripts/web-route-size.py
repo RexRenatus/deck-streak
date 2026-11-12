@@ -56,7 +56,7 @@ EXIT_PASS, EXIT_FAIL, EXIT_VOID = 0, 1, 2
 CLIENT = Path(".svelte-kit") / "output" / "client"
 MANIFEST = CLIENT / ".vite" / "manifest.json"
 #: A node's source as the manifest names it, and the route file a node's source re-exports.
-NODE = re.compile(r"^\.svelte-kit/generated/client-optimized/nodes/[0-9]+\.js$")
+NODE = re.compile(r"^\.svelte-kit/generated/build/client-optimized/nodes/[0-9]+\.js$")
 ROUTE_FILE = re.compile(r"src/routes/((?:[^\"'/\s]+/)*)\+(page|layout)\.svelte")
 #: The entry of the files every route loads first.
 SHELL = "(shell)"
