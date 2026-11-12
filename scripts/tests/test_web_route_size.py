@@ -431,5 +431,51 @@ class TheCommandLineStatesItself(unittest.TestCase):
         self.assertIs(written, True)
 
 
+class TheLeastEntryAndASourceThatIsNoNodeReadAsWritten(unittest.TestCase):
+    def test_an_entry_of_one_byte_is_its_routes_budget(self):
+        with tempfile.TemporaryDirectory() as root:
+            app = plant(root, BUILD, ROUTES)
+            want = figures(app)
+            a = want["/a"]
+            code, out = run_check(app, table(root, {**want, "/a": 1}))
+            self.assertIn(f"web-route-size: route /a: 3 file(s), gzip-9 {a}, budget 1", out)
+            self.assertIn(f"web-route-size: WARN OVER BUDGET /a: gzip-9 {a} > 1 by {a - 1}", out)
+            self.assertNotIn("VOID", out)
+            self.assertEqual(code, 0, out)
+
+    def test_an_entry_measured_by_job_one_is_its_routes_budget(self):
+        with tempfile.TemporaryDirectory() as root:
+            app = plant(root, BUILD, ROUTES)
+            want = figures(app)
+            a = want["/a"]
+            routes = {route: {"bytes": figure, "job": 7} for route, figure in want.items()}
+            routes["/a"] = {"bytes": a, "job": 1}
+            budget_file = Path(root) / "budgets.json"
+            budget_file.write_text(json.dumps({"_": "planted", "routes": routes}), encoding="utf-8")
+            code, out = run_check(app, budget_file)
+            self.assertIn(f"web-route-size: route /a: 3 file(s), gzip-9 {a}, budget {a}", out)
+            self.assertIn("web-route-size: PASS: every route within its budget", out)
+            self.assertNotIn("VOID", out)
+            self.assertEqual(code, 0, out)
+
+    def test_an_entry_whose_source_is_no_node_is_the_shells_and_never_opened(self):
+        # The app entry names its source as the client build writes it, a file this plant never
+        # writes, so the check leaves a figure only when it reads that entry into the shell
+        # without opening it.
+        source = ".svelte-kit/generated/build/client-optimized/app.js"
+        chunks = {**BUILD, "entry/app.js": {**BUILD["entry/app.js"], "src": source}}
+        with tempfile.TemporaryDirectory() as root:
+            app = plant(root, chunks, ROUTES)
+            self.assertFalse((app / source).exists())
+            want = figures(app)
+            shell = want["(shell)"]
+            code, out = run_check(app, table(root, want))
+            line = f"web-route-size: route (shell): 6 file(s), gzip-9 {shell}, budget {shell}"
+            self.assertIn(line, out)
+            self.assertIn("web-route-size: PASS: every route within its budget", out)
+            self.assertNotIn("VOID", out)
+            self.assertEqual(code, 0, out)
+
+
 if __name__ == "__main__":
     unittest.main()
