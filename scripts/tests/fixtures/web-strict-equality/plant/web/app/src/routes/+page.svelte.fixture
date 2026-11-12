@@ -1,0 +1,18 @@
+<!-- A planted page for scripts/tests/test_web_strict_equality.py (SPEC-656). See api.ts.fixture. -->
+<script lang="ts">
+  import type { Answer } from '#lib/api.js';
+  import type { View } from '#lib/views.js';
+
+  let view = $state<Answer<View>>(); // planted: absent-spelling
+  let saved = $state<Answer<View> | null>(null); // accepted: null spells an absent value
+  let box = $state<HTMLDivElement>(); // accepted: no API value
+  let count = $state(0); // accepted: no absent value
+  const shown = count != 0; // planted: loose-equality
+  const label = 'a != b'; // accepted: inside a string
+</script>
+
+<!-- {a == b} in an HTML comment is prose -->
+{#if view == undefined} <!-- planted: loose-equality -->
+  <p bind:this={box}>{saved === null ? label : 'saved'}</p> <!-- accepted: strict equality -->
+{/if}
+<p>Plain text a == b is no expression, {shown}.</p> <!-- accepted: text outside braces -->
