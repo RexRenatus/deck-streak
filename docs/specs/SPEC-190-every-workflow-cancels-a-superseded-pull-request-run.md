@@ -410,3 +410,121 @@ Before: "; a workflow file is read only through the loader, proved by the census
 
 After: "; in the loader's population a workflow file is read only through the loader, proved by the
 census and its killer (A12)"
+
+## 15. Amendment: Dependabot passes `fragment` when it changes only dependency files (#1020)
+
+This amendment is insert-only. It adds R13 and R14 to the step of `fragment`, the one job of
+`changelog.yml`, which the rulesets of `dev` and `main` both require (`.github/rulesets/dev.json`,
+`.github/rulesets/main.json`). R2 and every other statement of this SPEC stand.
+
+The problem, measured:
+
+- **Every Dependabot pull request read `fragment` red.** Of the last 300 closed pull requests
+  (`gh pr list --state closed --limit 300`), 20 are Dependabot ones, each into `dev` with the author
+  `dependabot[bot]` and none merged, and `fragment` reads `failure` at the head of all 20
+  (`gh api repos/RexRenatus/deck-streak/commits/<head>/check-runs`, read by name). The step passes a
+  pull request that compiles `CHANGELOG.md` or adds a file under `changelog.d/`, and Dependabot does
+  neither: on #1020 it printed "Add a fragment under changelog.d/ (see changelog.d/README.md)."
+  (job 121124019052).
+- **Each of them changes only files its ecosystem updates.** Their 55 changed files (the pulls files
+  API, per pull request) are workflow files under `.github/workflows/`, `Cargo.lock`, `Cargo.toml`,
+  `pnpm-lock.yaml` and `web/app/package.json`; none lies outside the files R13 names.
+- **The other reds of `ci` on #1020 were not the update.** Its `rust` job failed `audit-rust` on
+  advisories (job 121124019426) and its `web` job failed `audit-web` on 13 advisories (job
+  121124019438). Pull requests by people read the same two reds over the same graphs, one of them
+  with the action pin `dev` held (run 40439271746, job 121975397556; run 40446750205, jobs
+  121999746362 and 121999746598); #1031 and #1039 cleared the advisories on `dev`, and the push run
+  of `dev` at its head before this amendment reads `rust`, `web`, `web-engine` and `hygiene` green
+  (run 41476561802). Its `web-engine` job failed one WebKit test of the engine suite on the test
+  time-out (job 121124019307): the test file is the same at the base of #1020 and on `dev`, and the
+  job failed a WebKit test on 4 of the 20 heads, three tests in all, and on 1 of 17 runs of pull
+  requests by people in the days after it (run 40783519250).
+
+R13. **`fragment` passes a Dependabot pull request that changes only files its ecosystems
+update.** The step reads the author of the pull request from the event,
+`github.event.pull_request.user.login`, through `env`, never `github.actor`,
+`github.triggering_actor`, a branch name or a title, and compares it whole with `dependabot[bot]`
+by a `test` string comparison, never a pattern. A login with brackets is the login of an app, which
+no person can register. For that author, after the two passes the step already had (a compiled
+`CHANGELOG.md`, an added fragment), it lists every path the pull request changes, both paths of a
+moved file (`git diff --name-only --no-renames`), and passes, printing so,
+when it lists at least one and each is, whole, a file an ecosystem of `.github/dependabot.yml`
+updates in this tree, each ecosystem with `directory: /`:
+
+- cargo: `Cargo.toml`, `Cargo.lock` and `crates/<member>/Cargo.toml`, the members of the workspace
+  (`members = ["crates/*"]`);
+- npm: `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml` (its catalog) and
+  `web/app/package.json`, the one package of the workspace;
+- github-actions: a `.yml` or `.yaml` file directly in `.github/workflows/`.
+
+A path git quotes, one holding a character it escapes, is none of them. Dependabot reads
+`.github/dependabot.yml` from the default branch, `main`, so a change to it on `dev` takes effect at
+the next release; A14 reads the file in the tree under test.
+
+R14. **Every other pull request reads as before.** A pull request by any other author, a login that
+only resembles the Dependabot login included, and a Dependabot pull request that changes any other
+path, moves a file onto a listed path or changes no path, gets the verdict and the message the step
+gave before R13. The change adds no trigger, permission, secret or `continue-on-error`, and changes
+no ruleset and no line of `.github/dependabot.yml`.
+
+## 16. Acceptance criteria of the Dependabot amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A13 | a Dependabot pull request that changes only files R13 names passes `fragment` and says so: the lockfile, the workspace manifest or a member manifest of Cargo, the root manifest, the package manifest or the catalog of pnpm, each with its lockfile, and workflow files of either suffix | `test_changelog_fragment.py` `a_dependabot_pull_request_that_changes_only_dependency_files_needs_no_fragment` |
+| A14 | `.github/dependabot.yml` names exactly the ecosystems cargo, npm and github-actions, each from `/`; the Cargo workspace takes its members from `crates/*` and the pnpm workspace holds the one package `web/app`; and a Dependabot pull request that changes any one file of this tree those ecosystems update passes `fragment` alone, over a population derived from the tree that prints its count | `test_changelog_fragment.py` `every_file_an_ecosystem_updates_in_this_tree_passes_alone` |
+| A15 | a pull request by a person reads the verdict and the message it read before R13: refused with no fragment, a dependency update included, and passed with a fragment or a compiled changelog; a Dependabot pull request with a fragment passes as before | `test_changelog_fragment.py` `every_other_author_reads_as_before` |
+| A16 | a Dependabot pull request that also changes a source file, a manifest no ecosystem updates, the configuration of Dependabot or a file below the workflow directory, that moves a source file onto the manifest path of a member, or that changes no path, is refused with the message of before | `test_changelog_fragment.py` `a_dependabot_pull_request_that_changes_another_path_is_refused` |
+| A17 | a login that only resembles the Dependabot login (another case, a character missing or added, a space, another bot, none) is refused with the message of before | `test_changelog_fragment.py` `a_login_that_only_resembles_dependabots_is_refused` |
+| A18 | the step reads the author from `github.event.pull_request.user.login` through `env`, beside `BASE`, and its script expands no expression | `test_changelog_fragment.py` `the_author_is_read_from_the_event_pull_request` |
+
+```acceptance
+A13: python3 -m unittest discover -s scripts/tests -p test_changelog_fragment.py -k a_dependabot_pull_request_that_changes_only_dependency_files_needs_no_fragment
+A14: python3 -m unittest discover -s scripts/tests -p test_changelog_fragment.py -k every_file_an_ecosystem_updates_in_this_tree_passes_alone
+A15: python3 -m unittest discover -s scripts/tests -p test_changelog_fragment.py -k every_other_author_reads_as_before
+A16: python3 -m unittest discover -s scripts/tests -p test_changelog_fragment.py -k a_dependabot_pull_request_that_changes_another_path_is_refused
+A17: python3 -m unittest discover -s scripts/tests -p test_changelog_fragment.py -k a_login_that_only_resembles_dependabots_is_refused
+A18: python3 -m unittest discover -s scripts/tests -p test_changelog_fragment.py -k the_author_is_read_from_the_event_pull_request
+```
+
+Each test runs the step of `fragment` from `changelog.yml` under `bash -e`, as the runner runs it,
+in a planted repository whose base and head commits stand for a pull request, its env taken from the
+event payload of the case; each prints how many cases it examined and refuses zero. Six hand-proved
+rows, S19061 to S19066, each mutate one arm of R13 or R14. No schematic: the change adds no
+component; it is one guard in the step `fragment` already runs.
+
+### File manifest of the Dependabot amendment
+
+| file | context | change |
+|---|---|---|
+| `.github/workflows/changelog.yml` | repo | changed: R13, the arm in the step of `fragment`, and the opening comment of the file |
+| `scripts/tests/test_changelog_fragment.py` | repo | added: A13 to A18 |
+| `scripts/mutation-rows.d/S19000-S19099.json` | repo | changed: S19061 to S19066, one row per arm of R13 and R14 |
+| `docs/specs/SPEC-190-every-workflow-cancels-a-superseded-pull-request-run.md` | repo | changed: this amendment, appended |
+| `docs/decisions/ADR-190-one-concurrency-rule-for-every-workflow-with-a-pull-request-trigger.md` | repo | changed: its amendment, appended |
+| `docs/red-first/SPEC-190.md` | repo | changed: A13 to A18 |
+| `changelog.d/ci-dependabot-fragment-1020.md` | repo | added |
+
+### What the Dependabot amendment does NOT do
+
+- It commits no fragment for Dependabot, which would need a token that may write contents and, for
+  `fragment` to report on the new head, a secret token or a `pull_request_target` trigger (ADR-190,
+  its amendment; #1020).
+- It changes no line of `.github/dependabot.yml`, no ruleset, no line of `ci.yml`, and no trigger or
+  permission of `changelog.yml` (#1020).
+- It changes neither the dependency audits nor the WebKit test the other reds of #1020 read: #1031
+  and #1039 cleared the advisories on `dev`, and the WebKit time-out is left to a round of its own
+  (#1020).
+- It passes no pull request of another bot or of a person without a fragment (#1020).
+
+### Risks of the Dependabot amendment
+
+- **A person who can push to the branch of a Dependabot pull request.** The author stays
+  `dependabot[bot]`, so a pushed change that touches only files R13 names passes without a fragment;
+  any other file is refused (A16). Review of the commits of the pull request before it merges
+  detects it.
+- **The base moves between the event and the merge ref.** The listed paths then hold changes of the
+  base, so the arm refuses and the step reads as before; a new push runs it again.
+- **Dependabot updates a file R13 does not name, or its login changes.** The step refuses as
+  before, seen on the next Dependabot pull request; A14 reds when `.github/dependabot.yml` gains an
+  ecosystem or a directory, or a workspace gains a member pattern or a package.

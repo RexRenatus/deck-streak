@@ -285,11 +285,40 @@ impl SyncServer {
 
 impl Drop for SyncServer {
     fn drop(&mut self) {
-        // Closing its standard input stops the server; the kill covers a server that hangs.
-        drop(self.stdin.take());
-        let _ = self.child.kill();
-        let _ = self.child.wait();
+        // Closing its standard input stops the server; `stop` kills only a server that hangs.
+        let _ = stop(&mut self.child, self.stdin.take());
     }
+}
+
+/// How long a child whose standard input is closed has to exit on its own before [`stop`] kills
+/// it. Its own exit runs its exit handlers to their end, and under the coverage run one of them
+/// writes the child's raw profile: a kill that lands inside that write leaves the profile cut
+/// short, and the merge then refuses every profile of the run.
+const STOP_GRACE: std::time::Duration = std::time::Duration::from_secs(10);
+/// How often [`stop`] looks at the child again while it waits.
+const STOP_POLL: std::time::Duration = std::time::Duration::from_millis(10);
+
+/// Stops `child`, a server or any child that exits when its standard input closes: closes
+/// `stdin`, waits up to [`STOP_GRACE`] for the child to exit on its own, and kills it only past
+/// that bound. Answers how the child ended.
+///
+/// # Errors
+///
+/// When the child cannot be waited for.
+pub fn stop(
+    child: &mut Child,
+    stdin: Option<ChildStdin>,
+) -> std::io::Result<std::process::ExitStatus> {
+    drop(stdin);
+    let deadline = std::time::Instant::now() + STOP_GRACE;
+    while std::time::Instant::now() < deadline {
+        if let Some(status) = child.try_wait()? {
+            return Ok(status);
+        }
+        thread::sleep(STOP_POLL);
+    }
+    let _ = child.kill();
+    child.wait()
 }
 
 /// In a [`SERVER`] child: serves the engine's sync server over [`SERVER_BASE`] on a loopback
@@ -540,13 +569,13 @@ impl AnkiEngine for ScriptedEngine {
         answer
     }
 
-    async fn full_download(
+    fn full_download(
         &self,
         _collection: &Path,
         _login: &SyncLogin,
-    ) -> Result<(), EngineError> {
+    ) -> impl std::future::Future<Output = Result<(), EngineError>> + Send {
         self.0.full_downloads.fetch_add(1, Ordering::SeqCst);
-        Ok(())
+        std::future::ready(Ok(()))
     }
 }
 
@@ -564,24 +593,32 @@ impl MemoryRuns {
 }
 
 impl SyncRunStore for MemoryRuns {
-    async fn scheduled_run_on(&self, day: StudyDay) -> Result<bool, KernelError> {
-        Ok(self
+    fn scheduled_run_on(
+        &self,
+        day: StudyDay,
+    ) -> impl std::future::Future<Output = Result<bool, KernelError>> + Send {
+        std::future::ready(Ok(self
             .runs()
             .iter()
-            .any(|run| run.trigger == Trigger::Scheduled && run.study_day == day))
+            .any(|run| run.trigger == Trigger::Scheduled && run.study_day == day)))
     }
 
-    async fn last_success(&self) -> Result<Option<SyncRun>, KernelError> {
-        Ok(self
+    fn last_success(
+        &self,
+    ) -> impl std::future::Future<Output = Result<Option<SyncRun>, KernelError>> + Send {
+        std::future::ready(Ok(self
             .runs()
             .into_iter()
             .filter(|run| run.outcome.is_ok())
-            .max_by_key(|run| run.finished_at))
+            .max_by_key(|run| run.finished_at)))
     }
 
-    async fn record(&self, run: &SyncRun) -> Result<(), KernelError> {
+    fn record(
+        &self,
+        run: &SyncRun,
+    ) -> impl std::future::Future<Output = Result<(), KernelError>> + Send {
         self.0.lock().unwrap().push(run.clone());
-        Ok(())
+        std::future::ready(Ok(()))
     }
 }
 
@@ -772,14 +809,23 @@ fn sync_setting_from_another_client(runtime: &Runtime, mut col: Collection, endp
 
 /// Plays the owner's other Anki client sending what it changed in the collection at `collection`
 /// to the server at `endpoint` with the engine's own normal sync (SPEC-083 A39). No code of this
-/// workspace runs here.
+/// workspace runs here. The collection's modified stamp is read before the sync and after it: a
+/// sync that left the stamp where it was carried nothing to the server, the engine's answer when
+/// both sides hold one stamp, so it is refused by name (SPEC-459 R2).
 ///
 /// # Panics
 ///
-/// When the engine fails.
+/// When the engine fails, or when the sync left the collection's modified stamp where it was.
 pub fn sync_on_another_client(runtime: &Runtime, collection: &Path, endpoint: &str) {
+    let before = synthetic::modified(collection);
     let col = CollectionBuilder::new(collection)
         .build()
         .unwrap_or_else(|error| panic!("the other client opens its collection: {error}"));
     sync_setting_from_another_client(runtime, col, endpoint);
+    let after = synthetic::modified(collection);
+    assert_ne!(
+        after, before,
+        "the other client's sync carried no change to the server: its stamp stayed {before} \
+         (SPEC-459 R2)"
+    );
 }

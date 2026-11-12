@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { locales } from '$lib/paraglide/runtime.js';
+import { locales } from '#lib/paraglide/runtime.js';
 
 // SPEC-408 R4, R5, A3; ADR-422 D4. Both mastery descriptions are message keys in every shipped
 // locale's file: present, not empty, not the English text outside English, different from each

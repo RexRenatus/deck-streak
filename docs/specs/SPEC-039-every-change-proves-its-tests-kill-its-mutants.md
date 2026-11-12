@@ -403,6 +403,12 @@ and green are the `mutation-rust` job's two runs.
 | `docs/decisions/ADR-057-mutation-testing-runs-on-the-diff-in-ci-and-weekly-on-dev.md` | `repo` | changed by section 12: a dated note |
 | `docs/red-first/SPEC-039.md` | `repo` | changed by section 12: A41's record |
 | `changelog.d/fix-shell-mutant-parse-288.md` | `repo` | added by section 12 |
+| `scripts/mutation_rows.py` | `repo` | changed by section 43: `unpathed_binary` reads an unpathed `[[bin]]` by cargo's older rule, or refuses it by name |
+| `scripts/tests/test_bin_kind_census.py` | `repo` | changed by section 43: the unpathed family (A81) and A82 to A85 |
+| `scripts/mutation-rows.d/S03900-S03999.json` | `repo` | changed by section 43: the rows that pin A81 to A85's decisions |
+| `docs/decisions/ADR-299-the-bin-kind-reads-what-the-compiler-builds.md` | `repo` | changed by section 43: an amendment |
+| `docs/red-first/SPEC-039.md` | `repo` | changed by section 43: A81 to A85's record |
+| `changelog.d/fix-bin-kind-unpathed-527.md` | `repo` | added by section 43 |
 
 ## 5. What this does NOT do
 
@@ -1394,3 +1400,84 @@ reads each shard by name, reads VOID when one is missing, cut or partial, and ha
 files to the judge step, whose line is unchanged. R3's rule stands: every changed web file is
 mutated whole, now in exactly one shard. R18's 100 minutes stands on each shard and on
 `mutation-web`, and no StrykerJS setting changes.
+
+## 41. Amendment: a release run carries Python outcomes from one recorded run (SPEC-493)
+
+Insert-only; every earlier byte is kept. R3 runs every listed mutant of every pull request, the release's included. SPEC-493
+lets the release run of a release pull request it admits carry a Python mutant's outcome from one recorded release run of this
+repository, for a file whose whole read set, absent paths and directory listings included, is byte-identical at that run and
+here (ADR-511): `mutation-plan` gains job-level permissions of `contents: read` and `actions: read`, a base step, its downloads
+and a `carry` step, and `shards` deals the re-run set, `python-rerun.json`; `mutation-verdict` holds the listing to the re-run
+names plus the carried ones and keeps `mutation-outcomes`. The listing, every bound and R3's jobs are unchanged, a carried
+outcome is judged at the head as a re-run one is, and Rust, rows and web outcomes are never carried.
+
+## 42. Amendment: on the release run the mutation jobs are advisory in `ci` (SPEC-500)
+
+Insert-only; every earlier byte is kept. R3 has a release pull request into `main` judged on its merge diff, and each
+job's result a need of `ci`. SPEC-500 keeps every job, its diff and its report as R3 has them, and changes how `ci`
+reads them on that one run (ADR-518): `base-is-dev` names the release run by `release_run`'s predicate in a second
+step, and on the run it names `ci` prints each of the 8 mutation jobs' results, to its log and its step summary, and
+admits one non-success result, by value, for each mutation job's non-success result. Every other need must succeed as
+on any run. Every pull request into `dev` and every push keeps R3's rule: a failed or cancelled mutation job fails
+`ci`, and only the legs SPEC-290 and SPEC-422 name may read `skipped`. Section 1's reading, that GitHub runs
+`schedule` only from the default branch, is why it matters: the weekly battery reaches `main` only through a release
+pull request that can merge.
+
+## 43. Amendment: an unpathed `[[bin]]` is read by cargo's older rule, or refused (#527)
+
+Insert-only; every earlier byte is kept, and section 4 gains this amendment's rows. Section 19
+has a table with no path take "the path inferred for its name", and the reader gave a `[[bin]]`
+table whose name no inferred binary holds the path `src/main.rs`, in every edition. Cargo reads
+such a table by another rule, and two layouts outside section 21's families were read
+differently from it (#527):
+
+1. **Edition 2015, no library target.** Cargo reads the table from its older paths, the first
+   that is a file: `src/<name>.rs`, tried only when the package has no library target, then
+   `src/main.rs`, then `src/bin/main.rs`. The reader read `src/main.rs`.
+2. **A later edition, no inferred file.** Cargo refuses the manifest. The reader read
+   `src/main.rs`, or refused the crate for another reason.
+
+The reader now reads such a table as cargo does (`unpathed_binary`). Under edition 2015 it takes
+the first older path that is a file, where a package has a library target when it declares a
+`[lib]` table or holds `src/lib.rs` with `autolib` on. Under every later edition, and under 2015
+when no older path holds a file, it refuses by name: "declares the binary <name> with no path,
+and cargo finds no file for it". An `autolib` that is not a boolean, which cargo refuses, is
+refused by name where the reader reads it. A table whose name an inferred binary holds is read
+as before, and so is every `[[test]]` table. Section 19's clause that "a table with no path takes
+the path inferred for its name" reads, under this amendment, "a table with no path takes the path
+inferred for its name, and a `[[bin]]` table whose name none is inferred for is read by section
+43".
+
+The population gains the unpathed family: a `[[bin]]` named `tool` with no path, crossed with
+every subset of the three older paths, four library shapes (none, `src/lib.rs`, a `[lib]` table
+elsewhere, and `src/lib.rs` under `autolib = false`) and every edition stated and inherited. Its
+edition 2015 members are read as `cargo metadata --no-deps` reads them, or refused by name where
+cargo refuses them, and its later-edition members are refused by cargo and by the reader. The
+test prints and asserts its `examined` figure, which the axis tables derive, and holds the
+family's presence controls: cargo reads each older path for some member, and refuses some
+member. Four planted tests read the same layouts without the oracle.
+
+The rows `S03900`, `S03952` to `S03959` and `S03983` to `S03985` pin the lines this amendment
+adds. No row anchored before this amendment moves.
+
+## 44. Acceptance criteria of the section 43 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A81 | every member of the unpathed family (every subset of the older paths, four library shapes, every edition stated and inherited) is read as cargo reads it or is refused by name, the figure examined equals the one the axis tables derive, and cargo reads each older path for some member and refuses some member | `test_bin_kind_census.py` |
+| A82 | under edition 2015, with no library target, an unpathed `[[bin]]` that no inferred binary is named for is read from `src/<name>.rs`, and `src/lib.rs` under `autolib = false` is no library target | `test_bin_kind_census.py` |
+| A83 | under edition 2015, a `[lib]` table or `src/lib.rs` skips `src/<name>.rs`, and `src/main.rs` is read before `src/bin/main.rs` | `test_bin_kind_census.py` |
+| A84 | under a later edition, stated or inherited, an unpathed `[[bin]]` that no inferred binary is named for is refused by name, with `autobins` on or off | `test_bin_kind_census.py` |
+| A85 | under edition 2015, an unpathed `[[bin]]` with no file on the older paths, and an `autolib` that is not a boolean, are refused by name | `test_bin_kind_census.py` |
+
+```acceptance
+A81: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_every_layout_agrees_with_cargo_and_the_compiler_or_is_refused_by_name
+A82: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_under_2015_with_no_library_target_the_binarys_own_name_file_is_read
+A83: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_under_2015_a_library_target_skips_the_name_file_and_main_comes_first
+A84: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_after_2015_an_unpathed_bin_cargo_finds_no_file_for_is_refused_by_name
+A85: python3 -m unittest discover -s scripts/tests -p test_bin_kind_census.py -k test_under_2015_what_cargo_cannot_read_is_refused_by_name
+```
+
+File manifest of the amendment: the six rows section 4 gains for section 43.
+
+Issue #527 is closed by this delivery.

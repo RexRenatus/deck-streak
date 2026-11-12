@@ -235,3 +235,38 @@ SPEC. Each is corrected above; the reasons are these.
 
 Amendment (2026-09-28): a passage describing another service's operations was replaced with
 DeckStreak's own memory watch under the public-text rule (ADR-059).
+
+## Amendment (SPEC-582): the alert template writes to the journal
+
+The install's alert sender is no longer Telegram (ADR-601 D4):
+
+- R2: every alert of `deploy/slo.json` routes to `journal`, and `alerting.channel` is `journal`;
+  `alerting.unit` is still `deck-streak-alert@.service`.
+- R3: `deploy/systemd/deck-streak-alert@.service` runs `deploy/scripts/alert-journal.sh` with `%i`.
+  The script reads no credential and makes no request. It writes one line at error priority naming
+  the failed unit, its result and its exit status, quotes no line of the failed run, and exits 0
+  once the line is written.
+- A3 is held by SPEC-582 A9 and A10. A4 (the bot token off the alert's command line) has no
+  subject: the sender loads no token.
+
+Lines 47-48, 51-57, 86-87, 123 and 166-170 record the Telegram sender as this SPEC delivered it.
+Every `OnFailure=` line, the evaluator and the memory watch page through the same template as
+before.
+
+## Amendment (SPEC-585): the pager reads the alert template's line
+
+SPEC-585 and ADR-604 amend R2 and R3 as SPEC-582 and ADR-601 left them. Every other requirement
+stands.
+
+- **R2.** Every alert of `deploy/slo.json` is routed to `pager`, and `alerting` names
+  `deck-streak-alert@.service` with the channel `pager`. The SLOs, their objectives, windows and
+  burn rates, the error budget policy, the evaluator and the memory watch stand as R2 states them.
+- **R3.** The alert template and its journal sender stand as ADR-601 left them. The one line the
+  sender writes is the page: the pager declared in `docs/monitoring/pager.json` reads it off the
+  host and tells a person through at least two notification channels of two kinds (ADR-604 D1,
+  D2).
+- **§6, "Telegram is unreachable when a page is sent".** Superseded: a page waits on the log
+  shipper and the monitoring service, and a sender that cannot write its line is told by the
+  service manager's own record of its failure (ADR-604 D3).
+- **§5, "It installs nothing on a host".** Still true: the log shipper, the log store's window,
+  the policies and the channels are the host's and the monitoring service's acts (#42).

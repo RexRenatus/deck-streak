@@ -224,3 +224,15 @@ over a fully migrated temporary database.
   test now expects exactly that departure while it waits, and fails once it stops firing. Its
   exemption for the journal's size cap is gone, because the drop-in sets `SystemMaxUse=`. The
   schematic was planned with the SPEC, so the delivery changes it rather than adding it.
+
+## 8. Amendments (SPEC-584): the backups window is seven days
+
+- **R5.** `privacy.json` declares the backups window `P7D`, not `P3D` (ADR-603 D2).
+- **R6.** The template's 24-hour interval and 48-hour retention stay inside the declared `P7D`
+  until SPEC-584's deploy change keeps the interval at 24 hours, sets the retention to 120
+  hours, switches the replicator's own retention enforcement off and leaves the pruning to the
+  bucket's rule at six days.
+- **R7.** `PRIVACY.md` states the `P7D` window for the replica and the daily copies, and discloses
+  the disk snapshots and the second-region copy with the same window (SPEC-584 R2 to R4).
+- `privacy.json` and `PRIVACY.md`: changed by SPEC-584; `deploy/litestream.yml`: unchanged in this
+  delivery, changed by SPEC-584's deploy change.

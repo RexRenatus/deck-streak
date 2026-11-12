@@ -232,3 +232,129 @@ Chosen, and what each was chosen against:
 - Bad, because an advisory in a build or test tool fails every pull request until an update or an
   override fixes it, as #259 does for #254 and #255.
 - Bad, because a registry outage fails the stage, VOID, until a re-run.
+
+## Amendment: every pull request into dev is reviewed for the dependencies it adds
+
+Recorded by SPEC-038, its section 17. This decision is unchanged; the amendment decides how the
+dependencies a pull request adds or changes are judged beside `audit-web` and `audit-rust`.
+
+Chosen, and what each was chosen against:
+
+- GitHub's dependency review action, in a workflow of its own that runs on every pull request
+  into `dev`, its one job a required check by name. It was chosen because it reads the licence and
+  the known advisories of every dependency a pull request adds or changes, npm packages and pinned
+  actions among them, which neither audit reads.
+  - A job in `ci.yml` that the aggregate `ci` needs: rejected, because open pull requests change
+    `ci.yml`, and the aggregate's `needs` line is a line they would share; a workflow of its own
+    changes no line of `ci.yml`.
+  - A licence checker over the npm lockfile alone: rejected, because it reads neither the actions
+    nor any advisory.
+- Every scope, `runtime, development, unknown`, at the action's lowest severity, `low`. It was
+  chosen because both audits already hold every advisory as an error.
+  - `runtime` alone: rejected, because every package of the JavaScript workspace is a development
+    dependency, so it would review no npm package.
+  - A severity floor above `low`: rejected, because an advisory below it would never fail the
+    review, and the two audits would hold a different bar.
+- No list of allowed advisories, no package admitted under any licence, no `warn-only` and no
+  `continue-on-error`. It was chosen because an advisory with no fix is fixed by us, by an update,
+  a replacement or a patched copy of our own, and is never ignored.
+  - A list of allowed advisories for an advisory with no fix: rejected, for that reason.
+  - `warn-only`, or `continue-on-error` on the step: rejected, because the job would then pass
+    with a finding.
+- An allow list, the `allow` list of `deny.toml`, read by the census from `deny.toml` itself. It
+  was chosen because one licence policy then holds every ecosystem, and neither list can move
+  alone.
+  - A deny list of licences known to be incompatible: rejected, because a licence nobody listed
+    would pass.
+  - A list of its own for npm and the actions: rejected, because two lists drift.
+- Rust's crates reviewed too, on the same list. It was chosen because the action reads every
+  ecosystem the dependency graph reads, and none of its inputs leaves one out.
+  - `warn-only`, with a step of our own that fails on every finding outside Cargo: rejected,
+    because the action's own verdict would then be set aside for a filter of ours.
+  - Exempting each crate by its package URL: rejected, because it is a list of exceptions, and it
+    reaches no advisory.
+
+### Consequences of the amendment
+
+- Good, because an npm package or an action that carries a known advisory, or a licence outside
+  the list, fails the pull request that adds or changes it, whatever its scope.
+- Good, because the review names each advisory's first patched version, the fix the policy asks
+  for.
+- Bad, because a crate is judged twice, by `audit-rust` over the whole graph and by the review
+  when a pull request changes it; a change of `frankenstein`, which `deny.toml` admits under its
+  own licence for that crate alone, reads red in the review until a decision of its own.
+- Bad, because a dependency whose licence is outside the list reads red when a pull request
+  updates it, until the list grows by a reviewed change to `deny.toml`.
+- Bad, because the job reads the dependency graph through the network, so an outage of the graph
+  fails the job until a re-run.
+
+### What would make this amendment wrong
+
+- The action gains an input that leaves an ecosystem out: Rust then goes back to `audit-rust`
+  alone, and this amendment is amended.
+- The review cannot compare a pull request into `dev`, whose base is not the default branch: the
+  job's run on its own pull request is the first measurement of that, and a red there reopens
+  this decision.
+
+## Note: zizmor reads the `.github` directory, so the Dependabot configuration is audited too
+
+Recorded by SPEC-428 and ADR-442 D3. This decision is unchanged. The note moves the operand of the
+`workflow-lint` job's zizmor command from `.github/workflows` to `.github`, so this ADR's
+Confirmation line, "zizmor over `.github/workflows`, in the `workflow-lint` job", now reads as
+zizmor over `.github`, which collects `.github/dependabot.yml` beside every workflow file. The
+job's name, its place among `ci`'s needs and its timeout are unchanged, and zizmor is installed at
+an exact version (ADR-442 D4).
+
+### Consequences of the note
+
+- Good, because a change to the Dependabot configuration is audited on the pull request that
+  makes it.
+- Bad, because a finding on that file fails `workflow-lint`, and so `ci`, until the file is cured.
+
+## Amendment: a scheduled run re-audits dev's dependencies
+
+Recorded by SPEC-038, its section 19. This decision is unchanged; the amendment decides how `dev`
+is audited again between pushes, since both audits read an advisory database when they run.
+
+Chosen, and what each was chosen against:
+
+- A workflow of its own, `advisory-audit.yml`, that runs `audit-rust` and `audit-web` over `dev`
+  once a day and on dispatch, and on no pull request and no push. It was chosen because a new
+  advisory then reads red on a run of its own before a push or a pull request meets it, while no
+  required check and no pull request waits on that run.
+  - A `schedule` trigger on `ci.yml`: rejected, because a scheduled `ci` run executes every job of
+    the gate, the test stages among them, to read two stages again, and open pull requests change
+    `ci.yml`.
+  - A `pull_request` or `push` trigger on the new workflow: rejected, because its jobs would then
+    report on pull requests and pushes beside `ci`'s own audits, which already judge them there.
+- A read-only token, `contents: read`, that no job widens; the run's conclusion and its uploaded
+  stage logs are its result. It was chosen because a scheduled job that writes nothing holds no
+  write token, and the stage logs already name each advisory.
+  - `issues: write`, so that each red run opens an issue for its advisories or comments on the
+    open one: rejected, because it adds a production script that writes from a scheduled job, with
+    its own tests and mutation legs, to say what the red run and its logs already say.
+  - A token of its own, so that the run opens the fix pull request with checks of its own:
+    rejected, because it needs a secret, and no workflow reads one (SPEC-034, its section 7).
+- No `continue-on-error`, no condition on an audit, no advisory ignored and no cache. It was chosen
+  because an advisory with no fix is fixed by us and never ignored, and a run that passed with a
+  finding would hide the advisory it exists to show.
+  - `continue-on-error` on the audit steps, so that the run reads green and only its logs carry
+    the finding: rejected, because the run's conclusion would then never read red.
+
+### Consequences of the amendment
+
+- Good, because a new advisory against `dev`'s lockfiles reads red on the next scheduled run,
+  before a push or a pull request meets it.
+- Good, because the change adds no required check and changes no line of `ci.yml`.
+- Bad, because a schedule runs only from the default branch's copy of a workflow, so the daily run
+  takes effect only when that copy holds the file; until then a dispatch at `dev` runs it.
+- Bad, because both jobs read the network when they run, so an outage of the advisory database or
+  the registry reds the run until a re-run.
+- Bad, because the run files nothing: its red is read only by whoever reads its runs.
+
+### What would make this amendment wrong
+
+- A red scheduled run that nobody reads before a push meets the same advisory: the run then has to
+  write where it is read, and this amendment is amended.
+- The audits gain a source they read when they run that this workflow does not set up: the
+  scheduled run would then judge less than `ci` does, and it is changed to set that source up.

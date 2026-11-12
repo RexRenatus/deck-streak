@@ -5,6 +5,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::reader::{
     CollectionReader, ReadError, allowed_deck_ids, deck_names, read_failed, scope_ids,
 };
+use crate::schema18::{FIELDS, NOTE_FIELDS, REVIEWED_NOTES, TEMPLATES};
 
 /// The read of every template's raw `config`.
 pub const READ_TEMPLATE_CONFIGS: &str = "templates (ntid, ord, config)";
@@ -64,26 +65,6 @@ pub struct StructureReads {
 const FIELD_SEPARATOR: char = '\u{1f}';
 /// The replacement for a control character in a name (U+FFFD).
 const CONTROL_MARKER: char = '\u{fffd}';
-
-/// Each template of the note types in scope: note type, ordinal, names and raw config. The names are
-/// read, never compared, ordered or joined on (R4).
-const TEMPLATES: &str = "SELECT t.ntid, t.ord, n.name, t.name, t.config FROM templates t \
-     JOIN notetypes n ON n.id = t.ntid \
-     WHERE t.ntid IN (SELECT DISTINCT no.mid FROM notes no JOIN cards c ON c.nid = no.id \
-     WHERE (CASE WHEN c.odid != 0 THEN c.odid ELSE c.did END) IN (SELECT value FROM json_each(?1))) \
-     ORDER BY t.ntid, t.ord";
-/// Each declared field of the note types in scope.
-const FIELDS: &str = "SELECT f.ntid, f.ord, f.name FROM fields f \
-     WHERE f.ntid IN (SELECT DISTINCT no.mid FROM notes no JOIN cards c ON c.nid = no.id \
-     WHERE (CASE WHEN c.odid != 0 THEN c.odid ELSE c.did END) IN (SELECT value FROM json_each(?1))) \
-     ORDER BY f.ntid, f.ord";
-/// The notes of the cards in scope with a study review, as the predecessor's read wrote it.
-const REVIEWED_NOTES: &str = "SELECT DISTINCT c.nid FROM cards c JOIN revlog r ON r.cid = c.id \
-     WHERE r.type = 1 AND r.ease >= 1 \
-     AND (CASE WHEN c.odid != 0 THEN c.odid ELSE c.did END) IN (SELECT value FROM json_each(?1))";
-/// The note type and fields of the notes in `?1`, a JSON array of ids.
-const NOTE_FIELDS: &str =
-    "SELECT id, mid, flds FROM notes WHERE id IN (SELECT value FROM json_each(?1))";
 
 /// Whether `character` is white space as Python's `str.strip` counts it: Unicode white space and
 /// the four information separators U+001C to U+001F.

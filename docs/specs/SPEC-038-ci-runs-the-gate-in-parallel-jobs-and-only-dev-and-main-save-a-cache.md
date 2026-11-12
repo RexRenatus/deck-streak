@@ -744,3 +744,166 @@ A22: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py
 A22: python3 -m unittest discover -s scripts/tests -p test_mutation_workflows.py -k test_the_mutants_job_scan_reads_a_workflow_saved_with_the_yaml_suffix
 A22: python3 -m unittest discover -s scripts/tests -p test_rust_cache_workflow.py -k test_the_cron_scan_reads_a_workflow_saved_with_the_yaml_suffix
 ```
+
+## 17. Amendment: every pull request into dev is reviewed for the dependencies it adds
+
+Insert-only: every earlier byte is kept in order. It appends this section and the next, and
+nothing else.
+
+- **The problem, measured.** At `dev` 31db0d6 no workflow runs GitHub's dependency review:
+  `git grep -c -F dependency-review-action 31db0d6` matches no file. `audit-web` audits the npm
+  packages the lockfile resolves for advisories (section 10), and `audit-rust` holds the Rust
+  graph to RustSec and to the licence list of `deny.toml`. No check reads the licence of an npm
+  package, and none reads a pinned action for a known advisory: the `workflow-lint` job runs
+  zizmor with `--no-online-audits` (`ci.yml` line 1117). Every package of the JavaScript
+  workspace is a development dependency (ADR-055, its note on the web audit), so a review of the
+  `runtime` scope alone would review no npm package.
+- **What the action reads.** The dependency review action compares the dependency graph at the
+  pull request's base and head, and reads every ecosystem the graph reads: the npm lockfile, the
+  actions each workflow pins, and the Rust manifests and `Cargo.lock`. No input of the action, at
+  the commit R17 pins, leaves an ecosystem out.
+
+R17. A workflow of its own, `.github/workflows/dependency-review.yml`, runs one job,
+    `dependency-review`, on every pull request into `dev` (opened, synchronize and reopened), with
+    no path filter, no other event and no condition, a read-only token, no checkout and no
+    secret. Its one step runs `actions/dependency-review-action`, pinned by a full commit SHA. The
+    job reports as `dependency-review`, the name a required check on `dev` takes.
+R18. The step fails the job on every dependency the pull request adds or changes that carries a
+    known advisory of any severity, `fail-on-severity: low`, the action's lowest, in every scope,
+    `fail-on-scopes: runtime, development, unknown`, or a licence outside R19's list, with
+    `license-check` and `vulnerability-check` both `true`. The only other input it sets is
+    `show-patched-versions: true`, which names each advisory's first patched version: there is
+    no list of allowed advisories, no package admitted under any licence, no `warn-only`, no
+    configuration file and no `continue-on-error`. Rust's crates are reviewed too, because the
+    action cannot leave them out: `audit-rust` stays the judge of the whole Rust graph, and the
+    review judges the crates a pull request changes, on the same licence list.
+R19. The licence list is the `allow` list of `deny.toml`'s `[licenses]` table, in its order, and
+    nothing else. It differs from the policy of `deny.toml` in three named ways. The exception
+    that admits one licence for the `frankenstein` crate alone is not carried, because the action
+    admits a licence for one package only through a list of exempt packages, which R18 refuses.
+    `confidence-threshold` has no counterpart, because the review reads the licence the dependency
+    graph declares and detects none from text. `[licenses.private]` has no counterpart among the
+    action's inputs.
+R20. A census, `scripts/tests/test_dependency_review.py`, holds R17 to R19 over every workflow
+    file, `.yml` and `.yaml` alike, through the workflow reader of `test_ci_workflows.py`, and
+    reads the licence list from `deny.toml` itself, so the two lists cannot drift. Its one read of
+    `deny.toml` is registered in that module's `NOT_WORKFLOW_READS`, and a planted workflow for
+    each weakening shows the census refuses it by name.
+
+- Files: `.github/workflows/dependency-review.yml` (added), `scripts/tests/test_dependency_review.py`
+  (added), `scripts/tests/test_ci_workflows.py` (one `NOT_WORKFLOW_READS` entry),
+  `scripts/mutation-rows.d/S03800-S03899.json` (rows S03803 to S03808, this SPEC's band), this
+  SPEC, `docs/decisions/ADR-055-the-gate-runs-in-parallel-jobs-and-only-a-push-saves-a-cache.md`
+  (an amendment appended), `docs/red-first/SPEC-038.md` (an addendum) and a changelog fragment.
+- It changes no Rust, no `ci.yml`, no `deny.toml` and no ruleset file. After it lands,
+  `dependency-review` is added to `dev`'s required checks in the repository's settings, so
+  `.github/rulesets/dev.json` names two of the three required checks until a change of its own
+  records the third.
+- The rows S03803 to S03808 each weaken one rule of R17 to R19 in the workflow, and A23's test
+  kills each.
+
+## 18. Acceptance criteria added by the section 17 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A23 | the workflows hold exactly one step that runs the dependency review, and it meets R17 to R19: every pull request into `dev` and no other event, no path filter and no condition, a full commit SHA, every scope at the lowest severity, both checks on, the licence list of `deny.toml`, and no other input | `test_dependency_review.py`, over the repository's workflow directory |
+| A24 | the census refuses each planted weakening by name, and passes the planted reviewed shape, saved as `.yml` or `.yaml` | `test_dependency_review.py`, over planted workflows in a scratch directory |
+
+```acceptance
+A23: python3 -m unittest discover -s scripts/tests -p test_dependency_review.py -k test_the_workflows_hold_one_review_that_meets_every_rule
+A24: python3 -m unittest discover -s scripts/tests -p test_dependency_review.py -k test_each_planted_weakening_is_refused_by_name
+```
+
+A23 reads red at a commit that holds the census and no review workflow, by assertion: no step
+runs the action. A24 judges the census itself, over planted workflows of its own that hold every
+shape it reads, among them an allowed advisory, an exempt package, `warn-only`, a scope left
+out, a severity floor, a check turned off, a licence left out, a tag in place of a SHA, a path
+filter, a second event, a condition and a second review.
+
+## Amendment: the release job keeps a release-profile cache of its own (SPEC-631)
+
+Insert-only; every earlier byte is kept. R1 is amended: besides the `rust` job, the `release` job
+saves the same paths under its own key
+`rust-release-<runner os>-<hashFiles('rust-toolchain.toml')>-<hashFiles('Cargo.lock')>`, only when
+R2 allows it, and only after `cargo clean --workspace --release` has left the dependencies'
+release-profile artifacts alone in `target/`. It restores only that key, falling back to the newest
+entry of the same toolchain pin. In `ci.yml` the `rust` job stays the only job that saves the debug
+key, and no other job restores the release key. R2 is unchanged.
+
+## 19. Amendment: a scheduled run re-audits dev's dependencies
+
+Insert-only: every earlier byte is kept in order. It appends this section and the next, and
+nothing else.
+
+- **The problem, measured.** Both audit stages read a database when they run, not only the tree.
+  `audit-rust` runs `cargo deny --locked check advisories bans licenses sources`
+  (`scripts/check.sh` line 136), and cargo-deny fetches the RustSec advisory database before it
+  checks unless fetching is turned off; `deny.toml` names no database of its own and ignores no
+  advisory (its `[advisories]` table, lines 7 to 11). `audit-web` runs
+  `pnpm audit --json --audit-level "$AUDIT_WEB_LEVEL"` (line 173), and pnpm's report is the
+  registry's answer for every package the lockfile resolves. So a tree that read green can read red
+  with no new commit. `ci.yml` runs the two stages only on a pull request and on a push (its `on`
+  block, lines 14 to 19), and of the three scheduled workflows at `dev` b9a08e6,
+  `mutation-weekly.yml`, `rust-cache.yml` and `testflight-rerelease-check.yml`, none calls
+  `scripts/check.sh`. At b9a08e6 the push run's `rust` job read `audit-rust` red, with
+  `advisories FAILED, bans ok, licenses ok, sources ok` and two RustSec advisories in its stage
+  log (job 129090178681).
+- **What a schedule runs.** A scheduled run executes the default branch's copy of a workflow
+  (`rust-cache.yml` lines 3 to 7), so R21's schedule takes effect when that copy holds the file;
+  a dispatch runs the file at `dev` before then.
+
+R21. A workflow of its own, `.github/workflows/advisory-audit.yml`, runs on `schedule`, with one
+    cron a day at a fixed minute that no other workflow's cron uses, and on `workflow_dispatch`,
+    and on no other event: no `pull_request` and no `push`. No run of it reports under a required
+    check's name, and no pull request waits on it.
+R22. Its token is read-only: the workflow's `permissions` is `contents: read`, and no job sets a
+    token of its own. No step reads a secret.
+R23. Two jobs, `audit-rust` and `audit-web`, each check out `dev` with `persist-credentials:
+    false`, set up only the tools their stage checks for, with the actions and the full commit
+    SHAs `ci.yml`'s `rust` and `web` jobs use and the `cargo-deny` version the `rust` job
+    installs, and run `bash scripts/check.sh audit-rust` and `bash scripts/check.sh audit-web`.
+    Each audit stage runs in exactly one job, and no other stage runs. No job or step sets
+    `continue-on-error`, and neither audit runs under a condition, so a red audit reds its job and
+    the run. No cache is restored or saved.
+R24. Each job uploads its stage logs with `if: ${{ always() }}`, from the directory its
+    `CHECK_LOG_DIR` names, under an artifact name of its own, so a red run's advisories are read
+    from its logs.
+R25. A census, `scripts/tests/test_advisory_audit.py`, holds R21 to R24 over every workflow file,
+    `.yml` and `.yaml` alike, through the workflow reader of `test_ci_workflows.py`, and a planted
+    workflow for each weakening shows that it refuses one by name. Every read it makes goes
+    through that module's loader or its `gate_stages`, so it adds no `NOT_WORKFLOW_READS` entry.
+
+| file | context | change |
+|---|---|---|
+| `.github/workflows/advisory-audit.yml` | repo | added by the section 19 amendment: R21 to R24 |
+| `scripts/tests/test_advisory_audit.py` | repo | added by the section 19 amendment: A25 and A26 (R25) |
+| `docs/specs/SPEC-038-ci-runs-the-gate-in-parallel-jobs-and-only-dev-and-main-save-a-cache.md` | repo | changed by the section 19 amendment: sections 19 and 20 |
+| `docs/decisions/ADR-055-the-gate-runs-in-parallel-jobs-and-only-a-push-saves-a-cache.md` | repo | changed by the section 19 amendment: an amendment appended |
+| `docs/red-first/SPEC-038.md` | repo | changed by the section 19 amendment: an addendum, A25 and A26 |
+| `changelog.d/ci-advisory-audit.md` | repo | added by the section 19 amendment |
+
+- It changes no Rust, no `ci.yml`, no `scripts/check.sh`, no `deny.toml`, no ruleset file, no
+  `.mergify.yml` and no `test_ci_workflows.py`. It adds no required check, no mutation row and no
+  production script, and it ignores no advisory.
+- The run files nothing: its conclusion and its uploaded stage logs are its result.
+
+## 20. Acceptance criteria added by the section 19 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A25 | the workflows hold exactly one workflow that runs an audit stage on a schedule, and it meets R21 to R24: a daily cron at a minute no other workflow uses, a dispatch and no other event, a read-only token no job widens, full commit SHAs, checkouts of `dev` that keep no credential, each audit stage in exactly one job and no other stage, no `continue-on-error` and no condition on an audit, each job's stage logs uploaded whatever its audit read, and `ci.yml`'s `cargo-deny` version | `test_advisory_audit.py`, over the repository's workflow directory |
+| A26 | the census refuses each planted weakening by name, and passes the planted audited shape, saved as `.yml` or `.yaml` | `test_advisory_audit.py`, over planted workflows in a scratch directory |
+
+```acceptance
+A25: python3 -m unittest discover -s scripts/tests -p test_advisory_audit.py -k test_the_workflows_hold_one_scheduled_audit_that_meets_every_rule
+A26: python3 -m unittest discover -s scripts/tests -p test_advisory_audit.py -k test_each_planted_weakening_is_refused_by_name
+```
+
+A25 reads red at a commit that holds the census and no scheduled audit, by assertion: no workflow
+runs an audit stage on a schedule. A26 judges the census itself, over planted workflows of its own
+that hold every shape it reads, among them a pull request trigger, a push trigger, a missing
+dispatch, an hourly cron, a minute another workflow schedules, a token that writes, a job that
+writes issues, a tag in place of a SHA, a persisted credential, a checkout of another branch, an
+audit stage left out or run twice, a stage that is not an audit, `continue-on-error`, a condition,
+a missing or conditional upload, one artifact name for both jobs and a `cargo-deny` version of its
+own.

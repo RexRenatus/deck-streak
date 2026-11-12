@@ -950,3 +950,98 @@ describe("the API client's sign-in surface", () => {
     expect(sent).toEqual(['POST /api/session', 'GET /api/identities']);
   });
 });
+
+// SPEC-516 R2, R6, B2, B6; ADR-534 D1, D5. The data screen's two calls: the owner's export, posted
+// as JSON with an empty body in the session and answered as the document's bytes, never read as a
+// value; and the server's backup age, read from the snapshot route in the session.
+describe("the API client's data screen calls", () => {
+  /** A server answering the n-th request with the n-th of `answers`, recording each request. */
+  function serving(answers: readonly (() => Response)[]) {
+    const sent: Sent[] = [];
+    const fetch = vi.fn(async (input: RequestInfo | URL, init: RequestInit = {}) => {
+      sent.push({
+        url: String(input),
+        method: init.method ?? 'GET',
+        credentials: init.credentials,
+        headers: Object.fromEntries(new Headers(init.headers).entries()),
+        body: typeof init.body === 'string' ? init.body : undefined
+      });
+      return (answers[sent.length - 1] ?? (() => new Response(null, { status: 599 })))();
+    });
+    const api = createApi({
+      launchData: () => LAUNCH,
+      fetch: fetch as unknown as typeof globalThis.fetch
+    });
+    return { api, sent };
+  }
+
+  const open = () => new Response(null, { status: 200 });
+  const DOCUMENT = '{"schema":"deckstreak.export.v1","sync_runs":[]}\n';
+
+  it('the export posts an empty JSON body in the session and answers the document as it came', async () => {
+    const { api, sent } = serving([
+      open,
+      () => new Response(DOCUMENT, { status: 200, headers: { 'content-type': 'application/json' } })
+    ]);
+
+    const answer = await api.dataExport();
+
+    expect(answer.kind).toBe('ok');
+    const blob = answer.kind === 'ok' ? answer.value : new Blob();
+    expect(await blob.text()).toBe(DOCUMENT);
+    expect(lines(sent)).toEqual(['POST /api/session', 'POST /api/data/export']);
+    expect(sent[1].headers).toEqual({ 'content-type': 'application/json' });
+    expect(sent[1].credentials).toBe('same-origin');
+    expect(sent[1].body).toBe('{}');
+    // the launch data travels only in the handshake
+    expect(sent.filter((request) => JSON.stringify(request).includes(LAUNCH))).toEqual([sent[0]]);
+  });
+
+  it('an export the server refuses is unavailable, and a refused session asks the owner to reopen', async () => {
+    for (const refusal of [
+      () => Response.json({ reason: 'too_many_exports' }, { status: 429 }),
+      () => Response.json({ reason: 'database_not_open' }, { status: 503 }),
+      () => Response.json({ reason: 'cross_site_request' }, { status: 403 })
+    ]) {
+      const { api } = serving([open, refusal]);
+      expect(await api.dataExport()).toEqual({ kind: 'unavailable' });
+    }
+    const { api } = serving([
+      open,
+      () => new Response(null, { status: 401 }),
+      () => new Response(null, { status: 401 })
+    ]);
+    expect(await api.dataExport()).toEqual({ kind: 'reopen' });
+  });
+
+  it('an export whose request never reaches the server is unavailable', async () => {
+    const { api, sent } = serving([
+      open,
+      () => {
+        throw new TypeError('the network is down');
+      }
+    ]);
+    expect(await api.dataExport()).toEqual({ kind: 'unavailable' });
+    expect(lines(sent)).toEqual(['POST /api/session', 'POST /api/data/export']);
+  });
+
+  it("the server's backup reads the snapshot route: found with its age, not found, or unknown", async () => {
+    const cases: [unknown, unknown][] = [
+      [{ found: true, age_seconds: 7200 }, { kind: 'ok', value: { found: true, age: 7200 } }],
+      [{ found: true, age_seconds: 0 }, { kind: 'ok', value: { found: true, age: 0 } }],
+      [{ found: false }, { kind: 'ok', value: { found: false } }],
+      [{ found: null }, { kind: 'ok', value: { found: null } }],
+      [{ found: true }, { kind: 'unavailable' }],
+      [{ found: true, age_seconds: -1 }, { kind: 'unavailable' }],
+      [{ found: true, age_seconds: 1.5 }, { kind: 'unavailable' }],
+      [{ found: 'yes' }, { kind: 'unavailable' }],
+      [[], { kind: 'unavailable' }]
+    ];
+    for (const [body, expected] of cases) {
+      const { api, sent } = serving([open, () => Response.json(body)]);
+      expect(await api.serverBackup(), JSON.stringify(body)).toEqual(expected);
+      expect(lines(sent)).toEqual(['POST /api/session', 'GET /api/sync/snapshot']);
+    }
+    console.log(`examined ${cases.length} snapshot answer(s)`);
+  });
+});

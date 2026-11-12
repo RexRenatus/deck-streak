@@ -160,11 +160,9 @@ async fn the_reads_answer_the_rows_of_the_day_and_no_other() {
             ("reviews_law".to_owned(), 12),
         ]
     );
-    assert!(
-        day_rows(&mut read, day(DAY + 2))
-            .await
-            .expect("read")
-            .is_empty()
+    assert_eq!(
+        day_rows(&mut read, day(DAY + 2)).await.expect("read"),
+        Vec::<(String, u32)>::new()
     );
 }
 

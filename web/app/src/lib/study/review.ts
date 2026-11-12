@@ -9,16 +9,21 @@
 // SPEC-383 R10, R13; ADR-397. The same press and confirmation reach the review's last bury or flag:
 // the control names the change it would undo, a flag's own return offers the flag's undo, and a
 // refused undo of a bury or a flag reads the change's notice, picked by the kind it pressed.
-import { frameDocument } from '$lib/card/frame-document';
-import { EngineError } from '$lib/engine/client';
-import type { CardView, Clip, Counts, ErrorCode, Faces, Head, Rating, UndoOffer } from '$lib/engine/protocol';
-import { m } from '$lib/paraglide/messages.js';
-import { sideAfter, type Action, type Side } from '$lib/remote/actions';
-import { statusText } from './refusal';
+// SPEC-505 R3, R5; ADR-523 D2: a face the frame refuses is announced by the first failing check's
+// reason, read from the one composition the frame renders, with the classes and title it is given.
+// SPEC-506 R5; ADR-524. A speech clip the device has no local voice for is not spoken, and the status
+// region names its language until the next gesture; any status the review announces outranks it.
+import type { RefusalReason } from '#lib/card/frame-document.js';
+import { frameCard } from '#lib/card/frame-host.js';
+import { EngineError } from '#lib/engine/client.js';
+import type { CardHealth, CardView, Clip, Counts, ErrorCode, Faces, Head, Rating, UndoOffer } from '#lib/engine/protocol.js';
+import { m } from '#lib/paraglide/messages.js';
+import { sideAfter, type Action, type Side } from '#lib/remote/actions.js';
+import { noVoiceText, statusText } from './refusal';
 
-/** The schematic's states: a card loading, a side shown, a request in flight, an undo offered and
- * asking to be confirmed, a refusal, done. */
-export type Phase = 'loading' | 'question' | 'answer' | 'busy' | 'confirming' | 'refused' | 'done';
+/** The schematic's states: a card loading, a side shown, a withheld card shown, a request in
+ * flight, an undo offered and asking to be confirmed, a refusal, done. */
+export type Phase = 'loading' | 'question' | 'answer' | 'withheld' | 'busy' | 'confirming' | 'refused' | 'done';
 
 /** What moves the machine: an action, keeping an offered answer, or the outcome of the request in
  * flight. */
@@ -26,6 +31,7 @@ export type ReviewEvent =
   | Action
   | 'keep'
   | 'view'
+  | 'withheld'
   | 'empty'
   | 'settled'
   | 'flagged'
@@ -44,10 +50,14 @@ export type Effect = 'none' | 'card' | 'rate' | 'bury' | 'flag' | 'offer' | 'und
  * does to the flag (SPEC-383 R9). */
 export type Offer = Extract<UndoOffer, { offer: object }>['offer'];
 
-/** The machine's state: its phase, and the side the review shows or returns to. */
+/** What the review shows: a side, or a card the engine withheld, which has no side to show
+ * (SPEC-380 R5). */
+export type Shown = Side | 'withheld';
+
+/** The machine's state: its phase, and what the review shows or returns to. */
 export interface ReviewState {
   phase: Phase;
-  side: Side;
+  side: Shown;
 }
 
 /** One cell: the next phase (`side` is the side's own phase) and the request it asks for. A cell
@@ -77,11 +87,14 @@ const REPLAY: Cell = { phase: 'side', effect: 'replay' };
 const TABLE: Record<Phase, Partial<Record<ReviewEvent, Cell>>> = {
   loading: {
     view: { phase: 'question', effect: 'none' },
+    withheld: { phase: 'withheld', effect: 'none' },
     empty: { phase: 'done', effect: 'none' },
     refusal: REFUSED
   },
   question: { 'show-answer': { phase: 'answer', effect: 'none' }, undo: OFFER, bury: BURY, flag: FLAG, replay: REPLAY },
   answer: { again: RATE, good: RATE, undo: OFFER, bury: BURY, flag: FLAG, replay: REPLAY },
+  // a withheld card is the question side less its reveal and its replay: no rating reaches it (R5)
+  withheld: { undo: OFFER, bury: BURY, flag: FLAG },
   busy: {
     settled: NEXT,
     'not-shown': NEXT,
@@ -109,9 +122,17 @@ const TABLE: Record<Phase, Partial<Record<ReviewEvent, Cell>>> = {
 export function step(state: ReviewState, event: ReviewEvent): { state: ReviewState; effect: Effect } {
   const cell = TABLE[state.phase][event];
   if (cell === undefined) return { state, effect: 'none' };
-  // a new card shows its question; an action moves the side as the remote's reviewer does, and an
-  // action that is kept rather than carried out moves nothing
-  const side = event === 'view' ? 'question' : cell.keeps ? state.side : sideAfter(event as Action, state.side);
+  // a new card shows its question, or its line when the engine withheld it; an action moves the
+  // side as the remote's reviewer does, and an action that is kept rather than carried out moves
+  // nothing. A withheld card has no cell that moves a side, so it stays withheld until the next card
+  const side: Shown =
+    event === 'view'
+      ? 'question'
+      : event === 'withheld'
+        ? 'withheld'
+        : cell.keeps
+          ? state.side
+          : sideAfter(event as Action, state.side as Side);
   return { state: { phase: cell.phase === 'side' ? side : cell.phase, side }, effect: cell.effect };
 }
 
@@ -162,6 +183,9 @@ export interface StudyClient {
   /** Both faces of the shown card, completed by the core with its media (SPEC-350 R14). A client
    * without it shows the card view's own sides, as part 1 does. */
   faces?(card: bigint): Promise<Faces>;
+  /** The shown card's health, read by the core's two fixed reads (SPEC-507 R1); it writes nothing. A
+   * client without it shows no record. */
+  cardHealth?(card: bigint): Promise<CardHealth | null>;
 }
 
 /** What plays a face's clips: the page's player (`audio.ts`). */
@@ -169,8 +193,9 @@ export interface ClipPlayer {
   play(clips: readonly Clip[]): Promise<boolean>;
 }
 
-/** What the status region announces: a refusal's code, a card the frame refused, a done deck. */
-export type Status = ErrorCode | 'escaped' | 'done';
+/** What the status region announces: a refusal's code, the reason the frame refused a card, a card
+ * the engine withheld, a done deck (SPEC-505 R5; SPEC-380 R5). */
+export type Status = ErrorCode | RefusalReason | 'withheld' | 'done';
 
 /** What the frame shows: the card last shown, and its side. */
 export interface Face {
@@ -192,11 +217,20 @@ export class Review {
   #refusal: ErrorCode | null = null;
   /** A refusal the review recovered from, announced until the next gesture. */
   #notice: Status | null = null;
+  /** The language of the last speech clip the device had no local voice for, announced until the
+   * next gesture (SPEC-506 R5). */
+  #unvoiced: string | null = null;
   /** The change the engine offered to undo, kept until its confirmation sends it. */
   #offer: Offer | null = null;
   /** What the last undo press was for, so its refusal reads that change's notice (SPEC-383 R13). */
   #pressed: CardView['undo'] = null;
   #shownAt = 0;
+  /** How many overlays are open over the review: the answer clock stops while any is (SPEC-507 R9). */
+  #overlays = 0;
+  /** When the open overlays began, or `null` while none is open. */
+  #pausedAt: number | null = null;
+  /** The milliseconds overlays held the shown card since it showed. */
+  #paused = 0;
   /** The late cards the engine has rated, which raise the one-tap sync offer (SPEC-409 R1). */
   #lateReviews = 0;
   #inFlight: Promise<void> = Promise.resolve();
@@ -214,8 +248,10 @@ export class Review {
     return this.#state.phase;
   }
 
+  /** The side the keys and the remote read: a withheld card reads as its question, on which only a
+   * reveal fires, and the withheld card has no reveal (SPEC-380 R5). */
   get side(): Side {
-    return this.#state.side;
+    return this.#state.side === 'withheld' ? 'question' : this.#state.side;
   }
 
   /** How many late cards the review has rated and the engine has answered (SPEC-409 R1). */
@@ -245,24 +281,33 @@ export class Review {
 
   /** Whether the frame refuses the face it shows, which then shows a message in its place. */
   get escaped(): boolean {
+    return this.refused !== null;
+  }
+
+  /** The reason the frame refuses the face it shows, or `null` when it shows it: the face as the
+   * screen frames it, with the card's classes and the side's frame title (SPEC-505 R3). */
+  get refused(): RefusalReason | null {
     const face = this.#face;
-    if (face === null) return false;
-    const html = face.side === 'answer' ? face.view.answer : face.view.question;
-    return frameDocument(html, face.view.css).refused === 'escaped';
+    if (face === null) return null;
+    const answer = face.side === 'answer';
+    const title = answer ? m.study_answer_frame() : m.study_question_frame();
+    const classes = `card card${face.view.ordinal + 1}`;
+    return frameCard(answer ? face.view.answer : face.view.question, face.view.css, title, classes).refused ?? null;
   }
 
   /** What the status region announces now, or `null` when it is quiet. */
   get status(): Status | null {
     if (this.#state.phase === 'refused') return this.#refusal;
     if (this.#state.phase === 'done') return 'done';
-    return this.#notice ?? (this.escaped ? 'escaped' : null);
+    return this.#notice ?? (this.#face?.view.withheld ? 'withheld' : this.refused);
   }
 
   /** The status region's words, or `null` when it is quiet: a refused undo of a bury or a flag
-   * reads the change's notice, and every other status its own (SPEC-383 R13). */
+   * reads the change's notice, and every other status its own (SPEC-383 R13). With no status, a
+   * speech clip the device had no local voice for names its language (SPEC-506 R5). */
   get statusLine(): string | null {
     const status = this.status;
-    if (status === null) return null;
+    if (status === null) return this.#unvoiced === null ? null : noVoiceText(this.#unvoiced);
     const change = CHANGES.includes(this.#pressed) ? CHANGE_NOTICES[status] : undefined;
     return change?.() ?? statusText(status);
   }
@@ -278,7 +323,8 @@ export class Review {
   get controls(): Action[] {
     const face = this.#face;
     if (face === null) return [];
-    const side: Action[] = face.side === 'question' ? ['show-answer'] : ['again', 'good'];
+    // a withheld card offers neither a reveal nor a grade (SPEC-380 R5)
+    const side: Action[] = face.view.withheld ? [] : face.side === 'question' ? ['show-answer'] : ['again', 'good'];
     const undo: Action[] = OFFERED.includes(face.view.undo) ? ['undo'] : [];
     // Replay only on a side with replay clips; a blocked play leaves it there to ask again (R15)
     const replay: Action[] = this.#faces?.[face.side].replay.length ? ['replay'] : [];
@@ -293,9 +339,49 @@ export class Review {
     return [...new Set(clips.flatMap((clip) => (clip.kind === 'speech' ? [clip.language] : [])))];
   }
 
+  /** Opens an overlay over the review, the card health panel or an editor: the answer clock stops
+   * until the last open overlay closes (SPEC-507 R9). */
+  openOverlay(): void {
+    if (this.#overlays === 0) this.#pausedAt = this.#now();
+    this.#overlays += 1;
+  }
+
+  /** Closes an open overlay; with the last one closed, the answer clock runs again (SPEC-507 R9). */
+  closeOverlay(): void {
+    if (this.#overlays === 0) return;
+    this.#overlays -= 1;
+    if (this.#overlays === 0 && this.#pausedAt !== null) {
+      this.#paused += this.#now() - this.#pausedAt;
+      this.#pausedAt = null;
+    }
+  }
+
+  /** The shown card's health, or `null` when no card is shown, the client reads none or the engine
+   * refused the read; it moves nothing (SPEC-507 R1). */
+  async cardHealth(): Promise<CardHealth | null> {
+    const card = this.#face?.view.id;
+    if (card === undefined) return null;
+    const client = await this.#client();
+    return (await client.cardHealth?.(card).catch(() => null)) ?? null;
+  }
+
+  /** The milliseconds the shown card has been answered: since it showed, less every overlay's time. */
+  #answerMs(): number {
+    const now = this.#now();
+    const open = this.#pausedAt === null ? 0 : now - this.#pausedAt;
+    return Math.round(now - this.#shownAt - this.#paused - open);
+  }
+
   /** Loads the first card. */
   start(): void {
     this.#run('card');
+    this.#onChange();
+  }
+
+  /** The speaker had no local voice for a clip in `language`, so the clip was not spoken: the status
+   * region names the language until the learner's next gesture (SPEC-506 R5). */
+  unvoiced(language: string): void {
+    this.#unvoiced = language;
     this.#onChange();
   }
 
@@ -313,18 +399,21 @@ export class Review {
       }
     }
     this.#notice = null;
+    this.#unvoiced = null;
     this.#fire(action);
   }
 
   /** Keeps the offered answer: "Keep it" and Escape (SPEC-371 R10). */
   keep(): void {
     this.#notice = null;
+    this.#unvoiced = null;
     this.#fire('keep');
   }
 
   /** Asks again after a refusal. */
   retry(): void {
     this.#notice = null;
+    this.#unvoiced = null;
     this.#fire('retry');
   }
 
@@ -337,9 +426,10 @@ export class Review {
     } while (current !== this.#inFlight);
   }
 
-  /** Announces `notice` on the side the review shows, and moves nothing. */
+  /** Announces `notice` on the side the review shows, or on a withheld card as on its question
+   * (SPEC-380 R5), and moves nothing. */
   #announce(notice: Status): void {
-    if (this.#state.phase !== 'question' && this.#state.phase !== 'answer') return;
+    if (!(['question', 'answer', 'withheld'] as Phase[]).includes(this.#state.phase)) return;
     this.#notice = notice;
     this.#onChange();
   }
@@ -359,7 +449,7 @@ export class Review {
   #sound(event: ReviewEvent, from: Phase, effect: Effect): void {
     const faces = this.#faces;
     if (faces === null) return;
-    const face = faces[this.#state.side];
+    const face = faces[this.side];
     if (effect === 'replay') {
       void this.#player?.play(face.replay);
     } else if (AUTOPLAY.includes(event) && this.#state.phase !== from) {
@@ -371,8 +461,8 @@ export class Review {
    * keep the face, so a grade leaves the rated card's answer on screen until the next card shows;
    * a refusal and a done deck show none. */
   #show(phase: Phase): void {
-    if (phase === 'question' || phase === 'answer') {
-      this.#face = { view: this.#view as CardView, side: phase };
+    if (phase === 'question' || phase === 'answer' || phase === 'withheld') {
+      this.#face = { view: this.#view as CardView, side: this.side };
     } else if (phase === 'refused' || phase === 'done') {
       this.#face = null;
     }
@@ -400,12 +490,15 @@ export class Review {
           ? head.card
           : { ...(head.card as CardView), question: faces.question.text, answer: faces.answer.text };
       this.#shownAt = this.#now();
-      return head.card === null ? 'empty' : 'view';
+      // a new card starts its clock afresh; an overlay still open holds its time from the show on
+      this.#paused = 0;
+      if (this.#pausedAt !== null) this.#pausedAt = this.#shownAt;
+      return head.card === null ? 'empty' : head.card.withheld ? 'withheld' : 'view';
     }
     if (effect === 'offer') return this.#offered(await client.undoOffer());
     const card = (this.#view as CardView).id;
     if (effect === 'rate') {
-      await client.rate(card, RATING[event as Action] as Rating, Math.round(this.#now() - this.#shownAt));
+      await client.rate(card, RATING[event as Action] as Rating, this.#answerMs());
       if ((this.#view as CardView).late) this.#lateReviews += 1;
     } else if (effect === 'bury') {
       await client.bury(card);

@@ -2,7 +2,7 @@
   // SPEC-350 R7, R10, A13; ADR-361. The two answer buttons, Again then Good: native buttons, so Tab
   // reaches each in turn and Enter or Space presses it, each named by its grade and the interval the
   // engine describes for it. Each is at least 44 by 44 CSS px, and its colour settles within 150 ms.
-  import { m } from '$lib/paraglide/messages.js';
+  import { m } from '#lib/paraglide/messages.js';
 
   type Grade = 'again' | 'good';
 

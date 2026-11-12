@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
+  import { m } from '#lib/paraglide/messages.js';
   import { WEEKDAY_COLUMN, weekdayOf } from './streak';
   import type { AtStake, CalendarDay, Marker, StreakTrack, StreakView } from './streak';
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
+  import { m } from '#lib/paraglide/messages.js';
   import type { CourseProgress } from './progress';
 
   // One course's Road to C2 (SPEC-077 R17): its flag and name, its band and mastery, its current
@@ -26,7 +26,7 @@
       <li
         data-band={cell.band}
         aria-current={cell.band === course.currentBand ? 'step' : undefined}
-        class="rounded-md border p-2 aria-[current=step]:border-2 aria-[current=step]:border-primary"
+        class="rounded-md border p-2 aria-[current=step]:border-2 aria-[current=step]:border-ring"
       >
         <span class="font-semibold">{cell.band}</span>
         <span class="block text-sm">{m.progress_band_mastery({ pct: Math.round(cell.pct) })}</span>

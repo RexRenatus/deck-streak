@@ -1,0 +1,771 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S51200-STUDY-REVIEWS-FLOOR",
+        "collection",
+        "src/sql.rs",
+        "     FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "     FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id >= ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study reviews keep the floor's own review out; moved one step the read counts the review at the floor"
+      ],
+      [
+        "S51201-STUDY-REVIEWS-ADMITS-KIND-4",
+        "collection",
+        "src/sql.rs",
+        "     FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "     FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3, 4) AND r.ease >= 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study reviews read only the study kinds 0 to 3; widened, a kind-4 answer counts as study"
+      ],
+      [
+        "S51202-STUDY-REVIEWS-DROPS-KIND-0",
+        "collection",
+        "src/sql.rs",
+        "     FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "     FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (1, 2, 3) AND r.ease >= 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study reviews read a review of kind 0 as study; without it that review leaves the read"
+      ],
+      [
+        "S51203-STUDY-REVIEWS-DROPS-KIND-1",
+        "collection",
+        "src/sql.rs",
+        "     FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "     FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 2, 3) AND r.ease >= 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study reviews read a review of kind 1 as study; without it that review leaves the read"
+      ],
+      [
+        "S51204-STUDY-REVIEWS-DROPS-KIND-2",
+        "collection",
+        "src/sql.rs",
+        "     FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "     FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 3) AND r.ease >= 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study reviews read a review of kind 2 as study; without it that review leaves the read"
+      ],
+      [
+        "S51205-STUDY-REVIEWS-DROPS-KIND-3",
+        "collection",
+        "src/sql.rs",
+        "     FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "     FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2) AND r.ease >= 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study reviews read a review of kind 3 as study; without it that review leaves the read"
+      ],
+      [
+        "S51206-STUDY-REVIEWS-ADMITS-EASE-0",
+        "collection",
+        "src/sql.rs",
+        "     FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "     FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 0 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study reviews keep an unanswered review (ease 0) out; widened, it counts as study"
+      ],
+      [
+        "S51207-STUDY-REVIEWS-DROPS-EASE-1",
+        "collection",
+        "src/sql.rs",
+        "     FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "     FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease > 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study reviews read an answer of ease 1; at > 1 the lowest answer leaves the read"
+      ],
+      [
+        "S51208-STUDY-REVIEWS-DROPS-DECK-SCOPE",
+        "collection",
+        "src/sql.rs",
+        "     FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\\n     AND c.deck_id IN (SELECT value FROM json_each(?2)) \\",
+        "     FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\\n     AND (c.deck_id IN (SELECT value FROM json_each(?2)) OR 1) \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study reviews read only the cards whose home deck is in the scope; dropped, another deck's review is read"
+      ],
+      [
+        "S51209-STUDY-REVIEWS-DROPS-RETRACTION",
+        "collection",
+        "src/sql.rs",
+        "WHERE x.review_id = r.id) ORDER BY r.id\";",
+        "WHERE 0) ORDER BY r.id\";",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study reviews leave a retracted review out; dropped, the retracted review is read again (SPEC-512 A6)"
+      ],
+      [
+        "S51210-STUDY-REVIEWS-ORDER",
+        "collection",
+        "src/sql.rs",
+        "ORDER BY r.id\";",
+        "ORDER BY r.id DESC\";",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study reviews come oldest first; reversed, the replay reads the newest first"
+      ],
+      [
+        "S51211-STUDY-REVIEW-IDS-FLOOR",
+        "collection",
+        "src/sql.rs",
+        "pub const STORE_STUDY_REVIEW_IDS: &str = \"SELECT r.id FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "pub const STORE_STUDY_REVIEW_IDS: &str = \"SELECT r.id FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id >= ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study review ids keep the floor's own review out; moved one step the read counts the review at the floor"
+      ],
+      [
+        "S51212-STUDY-REVIEW-IDS-ADMITS-KIND-4",
+        "collection",
+        "src/sql.rs",
+        "pub const STORE_STUDY_REVIEW_IDS: &str = \"SELECT r.id FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "pub const STORE_STUDY_REVIEW_IDS: &str = \"SELECT r.id FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3, 4) AND r.ease >= 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study review ids read only the study kinds 0 to 3; widened, a kind-4 answer counts as study"
+      ],
+      [
+        "S51213-STUDY-REVIEW-IDS-DROPS-KIND-0",
+        "collection",
+        "src/sql.rs",
+        "pub const STORE_STUDY_REVIEW_IDS: &str = \"SELECT r.id FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "pub const STORE_STUDY_REVIEW_IDS: &str = \"SELECT r.id FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (1, 2, 3) AND r.ease >= 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study review ids read a review of kind 0 as study; without it that review leaves the read"
+      ],
+      [
+        "S51214-STUDY-REVIEW-IDS-DROPS-KIND-1",
+        "collection",
+        "src/sql.rs",
+        "pub const STORE_STUDY_REVIEW_IDS: &str = \"SELECT r.id FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "pub const STORE_STUDY_REVIEW_IDS: &str = \"SELECT r.id FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 2, 3) AND r.ease >= 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study review ids read a review of kind 1 as study; without it that review leaves the read"
+      ],
+      [
+        "S51215-STUDY-REVIEW-IDS-DROPS-KIND-2",
+        "collection",
+        "src/sql.rs",
+        "pub const STORE_STUDY_REVIEW_IDS: &str = \"SELECT r.id FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "pub const STORE_STUDY_REVIEW_IDS: &str = \"SELECT r.id FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 3) AND r.ease >= 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study review ids read a review of kind 2 as study; without it that review leaves the read"
+      ],
+      [
+        "S51216-STUDY-REVIEW-IDS-DROPS-KIND-3",
+        "collection",
+        "src/sql.rs",
+        "pub const STORE_STUDY_REVIEW_IDS: &str = \"SELECT r.id FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "pub const STORE_STUDY_REVIEW_IDS: &str = \"SELECT r.id FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2) AND r.ease >= 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study review ids read a review of kind 3 as study; without it that review leaves the read"
+      ],
+      [
+        "S51217-STUDY-REVIEW-IDS-ADMITS-EASE-0",
+        "collection",
+        "src/sql.rs",
+        "pub const STORE_STUDY_REVIEW_IDS: &str = \"SELECT r.id FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "pub const STORE_STUDY_REVIEW_IDS: &str = \"SELECT r.id FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 0 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study review ids keep an unanswered review (ease 0) out; widened, it counts as study"
+      ],
+      [
+        "S51218-STUDY-REVIEW-IDS-DROPS-EASE-1",
+        "collection",
+        "src/sql.rs",
+        "pub const STORE_STUDY_REVIEW_IDS: &str = \"SELECT r.id FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "pub const STORE_STUDY_REVIEW_IDS: &str = \"SELECT r.id FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease > 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study review ids read an answer of ease 1; at > 1 the lowest answer leaves the read"
+      ],
+      [
+        "S51219-STUDY-REVIEW-IDS-DROPS-DECK-SCOPE",
+        "collection",
+        "src/sql.rs",
+        "pub const STORE_STUDY_REVIEW_IDS: &str = \"SELECT r.id FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\\n     AND c.deck_id IN (SELECT value FROM json_each(?2)) \\",
+        "pub const STORE_STUDY_REVIEW_IDS: &str = \"SELECT r.id FROM review_log r JOIN cards c ON c.id = r.card_id \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\\n     AND (c.deck_id IN (SELECT value FROM json_each(?2)) OR 1) \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study review ids read only the cards whose home deck is in the scope; dropped, another deck's review is read"
+      ],
+      [
+        "S51220-STUDY-REVIEW-IDS-DROPS-RETRACTION",
+        "collection",
+        "src/sql.rs",
+        "WHERE x.review_id = r.id) ORDER BY r.id LIMIT ?3\";",
+        "WHERE 0) ORDER BY r.id LIMIT ?3\";",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study review ids leave a retracted review out; dropped, the retracted review is read again (SPEC-512 A6)"
+      ],
+      [
+        "S51221-STUDY-REVIEW-IDS-ORDER",
+        "collection",
+        "src/sql.rs",
+        "ORDER BY r.id LIMIT",
+        "ORDER BY r.id DESC LIMIT",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "a page of study review ids is the oldest ones; reversed, a page starts at the newest"
+      ],
+      [
+        "S51222-STUDY-REVIEW-IDS-LIMIT",
+        "collection",
+        "src/sql.rs",
+        "LIMIT ?3",
+        "LIMIT ?3 + 1",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "a page holds at most the limit's ids; one past it, a page holds one id more than asked"
+      ],
+      [
+        "S51223-STUDY-REVIEWS-THROUGH-FLOOR",
+        "collection",
+        "src/sql.rs",
+        "r.id <= ?1",
+        "r.id < ?1",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study reviews counted through a floor keep the floor's own review out; moved one step the read counts the review at the floor"
+      ],
+      [
+        "S51224-STUDY-REVIEWS-THROUGH-ADMITS-KIND-4",
+        "collection",
+        "src/sql.rs",
+        "     WHERE r.id <= ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "     WHERE r.id <= ?1 AND r.kind IN (0, 1, 2, 3, 4) AND r.ease >= 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study reviews counted through a floor read only the study kinds 0 to 3; widened, a kind-4 answer counts as study"
+      ],
+      [
+        "S51225-STUDY-REVIEWS-THROUGH-DROPS-KIND-0",
+        "collection",
+        "src/sql.rs",
+        "     WHERE r.id <= ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "     WHERE r.id <= ?1 AND r.kind IN (1, 2, 3) AND r.ease >= 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study reviews counted through a floor read a review of kind 0 as study; without it that review leaves the read"
+      ],
+      [
+        "S51226-STUDY-REVIEWS-THROUGH-DROPS-KIND-1",
+        "collection",
+        "src/sql.rs",
+        "     WHERE r.id <= ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "     WHERE r.id <= ?1 AND r.kind IN (0, 2, 3) AND r.ease >= 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study reviews counted through a floor read a review of kind 1 as study; without it that review leaves the read"
+      ],
+      [
+        "S51227-STUDY-REVIEWS-THROUGH-DROPS-KIND-2",
+        "collection",
+        "src/sql.rs",
+        "     WHERE r.id <= ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "     WHERE r.id <= ?1 AND r.kind IN (0, 1, 3) AND r.ease >= 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study reviews counted through a floor read a review of kind 2 as study; without it that review leaves the read"
+      ],
+      [
+        "S51228-STUDY-REVIEWS-THROUGH-DROPS-KIND-3",
+        "collection",
+        "src/sql.rs",
+        "     WHERE r.id <= ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "     WHERE r.id <= ?1 AND r.kind IN (0, 1, 2) AND r.ease >= 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study reviews counted through a floor read a review of kind 3 as study; without it that review leaves the read"
+      ],
+      [
+        "S51229-STUDY-REVIEWS-THROUGH-ADMITS-EASE-0",
+        "collection",
+        "src/sql.rs",
+        "     WHERE r.id <= ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "     WHERE r.id <= ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 0 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study reviews counted through a floor keep an unanswered review (ease 0) out; widened, it counts as study"
+      ],
+      [
+        "S51230-STUDY-REVIEWS-THROUGH-DROPS-EASE-1",
+        "collection",
+        "src/sql.rs",
+        "     WHERE r.id <= ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "     WHERE r.id <= ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease > 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study reviews counted through a floor read an answer of ease 1; at > 1 the lowest answer leaves the read"
+      ],
+      [
+        "S51231-STUDY-REVIEWS-THROUGH-DROPS-DECK-SCOPE",
+        "collection",
+        "src/sql.rs",
+        "     WHERE r.id <= ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\\n     AND c.deck_id IN (SELECT value FROM json_each(?2)) \\",
+        "     WHERE r.id <= ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\\n     AND (c.deck_id IN (SELECT value FROM json_each(?2)) OR 1) \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study reviews counted through a floor read only the cards whose home deck is in the scope; dropped, another deck's review is read"
+      ],
+      [
+        "S51232-STUDY-REVIEWS-THROUGH-DROPS-RETRACTION",
+        "collection",
+        "src/sql.rs",
+        "     AND c.deck_id IN (SELECT value FROM json_each(?2)) \\\n     AND NOT EXISTS (SELECT 1 FROM review_retraction x WHERE x.review_id = r.id)\";",
+        "     AND c.deck_id IN (SELECT value FROM json_each(?2)) \\\n     AND NOT EXISTS (SELECT 1 FROM review_retraction x WHERE 0)\";",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the study reviews counted through a floor leave a retracted review out; dropped, the retracted review is read again (SPEC-512 A6)"
+      ],
+      [
+        "S51233-STUDIED-CARDS-FLOOR",
+        "collection",
+        "src/sql.rs",
+        "pub const STORE_STUDIED_CARDS: &str = \"SELECT DISTINCT r.card_id FROM review_log r \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "pub const STORE_STUDIED_CARDS: &str = \"SELECT DISTINCT r.card_id FROM review_log r \\\n     WHERE r.id >= ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the studied cards keep the floor's own review out; moved one step the read counts the review at the floor"
+      ],
+      [
+        "S51234-STUDIED-CARDS-ADMITS-KIND-4",
+        "collection",
+        "src/sql.rs",
+        "pub const STORE_STUDIED_CARDS: &str = \"SELECT DISTINCT r.card_id FROM review_log r \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "pub const STORE_STUDIED_CARDS: &str = \"SELECT DISTINCT r.card_id FROM review_log r \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3, 4) AND r.ease >= 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the studied cards read only the study kinds 0 to 3; widened, a kind-4 answer counts as study"
+      ],
+      [
+        "S51235-STUDIED-CARDS-DROPS-KIND-0",
+        "collection",
+        "src/sql.rs",
+        "pub const STORE_STUDIED_CARDS: &str = \"SELECT DISTINCT r.card_id FROM review_log r \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "pub const STORE_STUDIED_CARDS: &str = \"SELECT DISTINCT r.card_id FROM review_log r \\\n     WHERE r.id > ?1 AND r.kind IN (1, 2, 3) AND r.ease >= 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the studied cards read a review of kind 0 as study; without it that review leaves the read"
+      ],
+      [
+        "S51236-STUDIED-CARDS-DROPS-KIND-1",
+        "collection",
+        "src/sql.rs",
+        "pub const STORE_STUDIED_CARDS: &str = \"SELECT DISTINCT r.card_id FROM review_log r \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "pub const STORE_STUDIED_CARDS: &str = \"SELECT DISTINCT r.card_id FROM review_log r \\\n     WHERE r.id > ?1 AND r.kind IN (0, 2, 3) AND r.ease >= 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the studied cards read a review of kind 1 as study; without it that review leaves the read"
+      ],
+      [
+        "S51237-STUDIED-CARDS-DROPS-KIND-2",
+        "collection",
+        "src/sql.rs",
+        "pub const STORE_STUDIED_CARDS: &str = \"SELECT DISTINCT r.card_id FROM review_log r \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "pub const STORE_STUDIED_CARDS: &str = \"SELECT DISTINCT r.card_id FROM review_log r \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 3) AND r.ease >= 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the studied cards read a review of kind 2 as study; without it that review leaves the read"
+      ],
+      [
+        "S51238-STUDIED-CARDS-DROPS-KIND-3",
+        "collection",
+        "src/sql.rs",
+        "pub const STORE_STUDIED_CARDS: &str = \"SELECT DISTINCT r.card_id FROM review_log r \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "pub const STORE_STUDIED_CARDS: &str = \"SELECT DISTINCT r.card_id FROM review_log r \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2) AND r.ease >= 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the studied cards read a review of kind 3 as study; without it that review leaves the read"
+      ],
+      [
+        "S51239-STUDIED-CARDS-ADMITS-EASE-0",
+        "collection",
+        "src/sql.rs",
+        "pub const STORE_STUDIED_CARDS: &str = \"SELECT DISTINCT r.card_id FROM review_log r \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "pub const STORE_STUDIED_CARDS: &str = \"SELECT DISTINCT r.card_id FROM review_log r \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 0 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the studied cards keep an unanswered review (ease 0) out; widened, it counts as study"
+      ],
+      [
+        "S51240-STUDIED-CARDS-DROPS-EASE-1",
+        "collection",
+        "src/sql.rs",
+        "pub const STORE_STUDIED_CARDS: &str = \"SELECT DISTINCT r.card_id FROM review_log r \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\",
+        "pub const STORE_STUDIED_CARDS: &str = \"SELECT DISTINCT r.card_id FROM review_log r \\\n     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease > 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the studied cards read an answer of ease 1; at > 1 the lowest answer leaves the read"
+      ],
+      [
+        "S51241-STUDIED-CARDS-DROPS-RETRACTION",
+        "collection",
+        "src/sql.rs",
+        "     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\\n     AND NOT EXISTS (SELECT 1 FROM review_retraction x WHERE x.review_id = r.id)\";",
+        "     WHERE r.id > ?1 AND r.kind IN (0, 1, 2, 3) AND r.ease >= 1 \\\n     AND NOT EXISTS (SELECT 1 FROM review_retraction x WHERE 0)\";",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the studied cards leave a retracted review out; dropped, the retracted review is read again (SPEC-512 A6)"
+      ],
+      [
+        "S51242-REVIEWED-NOTES-ADMITS-KIND-0",
+        "collection",
+        "src/sql.rs",
+        "r.kind = 1",
+        "r.kind IN (0, 1)",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "a reviewed note is one with a review answer of kind 1; widened, a learn answer marks its note reviewed"
+      ],
+      [
+        "S51243-REVIEWED-NOTES-ADMITS-EASE-0",
+        "collection",
+        "src/sql.rs",
+        "     JOIN review_log r ON r.card_id = c.id WHERE r.kind = 1 AND r.ease >= 1 \\",
+        "     JOIN review_log r ON r.card_id = c.id WHERE r.kind = 1 AND r.ease >= 0 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "an unanswered review (ease 0) marks no note reviewed; widened, it does"
+      ],
+      [
+        "S51244-REVIEWED-NOTES-DROPS-EASE-1",
+        "collection",
+        "src/sql.rs",
+        "     JOIN review_log r ON r.card_id = c.id WHERE r.kind = 1 AND r.ease >= 1 \\",
+        "     JOIN review_log r ON r.card_id = c.id WHERE r.kind = 1 AND r.ease > 1 \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "an answer of ease 1 marks its note reviewed; at > 1 it does not"
+      ],
+      [
+        "S51245-REVIEWED-NOTES-DROPS-DECK-SCOPE",
+        "collection",
+        "src/sql.rs",
+        "c.deck_id IN (SELECT value FROM json_each(?1)) \\",
+        "(c.deck_id IN (SELECT value FROM json_each(?1)) OR 1) \\",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "only the scope's cards mark their notes reviewed; dropped, another deck's review marks its note"
+      ],
+      [
+        "S51246-REVIEWED-NOTES-DROPS-RETRACTION",
+        "collection",
+        "src/sql.rs",
+        "     AND c.deck_id IN (SELECT value FROM json_each(?1)) \\\n     AND NOT EXISTS (SELECT 1 FROM review_retraction x WHERE x.review_id = r.id)\";",
+        "     AND c.deck_id IN (SELECT value FROM json_each(?1)) \\\n     AND NOT EXISTS (SELECT 1 FROM review_retraction x WHERE 0)\";",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "a retracted review marks no note reviewed; dropped, it does (SPEC-512 A6)"
+      ],
+      [
+        "S51247-CARDS-DROPS-DECK-SCOPE",
+        "collection",
+        "src/sql.rs",
+        "c.deck_id IN (SELECT value FROM json_each(?1)) ORDER BY c.id\";",
+        "(c.deck_id IN (SELECT value FROM json_each(?1)) OR 1) ORDER BY c.id\";",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the cards read are the scope's home decks' cards; dropped, another deck's card is read"
+      ],
+      [
+        "S51248-TEMPLATES-DROPS-DECK-SCOPE",
+        "collection",
+        "src/sql.rs",
+        "c.deck_id IN (SELECT value FROM json_each(?1))) ORDER BY t.notetype_id, t.ord\";",
+        "(c.deck_id IN (SELECT value FROM json_each(?1)) OR 1)) ORDER BY t.notetype_id, t.ord\";",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the templates read are those of the notetypes the scope's cards use; dropped, another notetype's template is read"
+      ],
+      [
+        "S51249-FIELDS-DROPS-DECK-SCOPE",
+        "collection",
+        "src/sql.rs",
+        "c.deck_id IN (SELECT value FROM json_each(?1))) ORDER BY f.notetype_id, f.ord\";",
+        "(c.deck_id IN (SELECT value FROM json_each(?1)) OR 1)) ORDER BY f.notetype_id, f.ord\";",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the fields read are those of the notetypes the scope's cards use; dropped, another notetype's field is read"
+      ],
+      [
+        "S51250-NOTE-FIELDS-DROPS-NOTE-SCOPE",
+        "collection",
+        "src/sql.rs",
+        "n.id IN (SELECT value FROM json_each(?1))",
+        "(n.id IN (SELECT value FROM json_each(?1)) OR 1)",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "the note fields read are the asked notes' fields; dropped, every note's fields are read"
+      ],
+      [
+        "S51251-RESCHEDULE-COUNT-ADMITS-KIND-5",
+        "collection",
+        "src/sql.rs",
+        "kind = 4",
+        "kind >= 4",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "a rescheduling row is kind 4; widened, a kind-5 row counts as one"
+      ],
+      [
+        "S51252-RESCHEDULE-COUNT-ADMITS-AN-ANSWER",
+        "collection",
+        "src/sql.rs",
+        "ease = 0",
+        "ease >= 0",
+        "read_port::each_guard_of_the_read_statements_alone_keeps_its_review_out",
+        "a rescheduling row has ease 0; widened, a kind-4 answer counts as one"
+      ],
+      [
+        "S51253-FOREIGN-KEYS-OFF",
+        "collection",
+        "src/sql.rs",
+        "foreign_keys = ON",
+        "foreign_keys = OFF",
+        "opener::the_opener_sets_each_roles_pragmas_and_stamps_the_application_id",
+        "every writer enforces foreign keys; off, a dangling reference is written (SPEC-512 A1)"
+      ],
+      [
+        "S51254-SECURE-DELETE-OFF",
+        "collection",
+        "src/sql.rs",
+        "secure_delete = ON",
+        "secure_delete = OFF",
+        "opener::the_opener_sets_each_roles_pragmas_and_stamps_the_application_id",
+        "every writer overwrites a deleted row's bytes; off, an erased row's bytes stay in the file (SPEC-512 A1)"
+      ],
+      [
+        "S51255-JOURNAL-NOT-WAL",
+        "collection",
+        "src/sql.rs",
+        "journal_mode = WAL",
+        "journal_mode = DELETE",
+        "opener::the_opener_sets_each_roles_pragmas_and_stamps_the_application_id",
+        "a native writer uses the write-ahead log; in rollback mode a reader blocks the writer (SPEC-512 A1)"
+      ],
+      [
+        "S51256-SERVER-SYNCHRONOUS-NORMAL",
+        "collection",
+        "src/sql.rs",
+        "synchronous = FULL",
+        "synchronous = NORMAL",
+        "opener::the_opener_sets_each_roles_pragmas_and_stamps_the_application_id",
+        "the server's commit reaches the disk before it returns; at NORMAL a power cut loses a committed answer (SPEC-512 A1)"
+      ],
+      [
+        "S51257-DEVICE-SYNCHRONOUS-FULL",
+        "collection",
+        "src/sql.rs",
+        "synchronous = NORMAL",
+        "synchronous = FULL",
+        "opener::the_opener_sets_each_roles_pragmas_and_stamps_the_application_id",
+        "a device keeps the kernel's own durability; at FULL it pays a sync per commit the role does not ask (SPEC-512 A1)"
+      ],
+      [
+        "S51258-READER-WRITABLE",
+        "collection",
+        "src/sql.rs",
+        "query_only = ON",
+        "query_only = OFF",
+        "opener::the_reader_opens_query_only_and_refuses_every_write",
+        "the reader and a foreign file refuse every write; off, the reader writes (SPEC-512 A1)"
+      ],
+      [
+        "S51259-RECORD-REPLACED",
+        "collection",
+        "src/sql.rs",
+        "INSERT OR IGNORE",
+        "INSERT OR REPLACE",
+        "opener::a_store_opened_in_another_role_is_refused",
+        "the store's record is written once; replaced, a reopening in another role takes the store (SPEC-512 A1)"
+      ],
+      [
+        "S51260-RECORD-MISSED",
+        "collection",
+        "src/sql.rs",
+        "WHERE id = 1",
+        "WHERE id = 2",
+        "opener::the_writer_holds_its_role_and_each_slot_answers_its_number",
+        "the opener reads the one record it wrote; another id finds none and every store is refused (SPEC-512 A1)"
+      ],
+      [
+        "S51261-APPLICATION-ID-READS-USER-VERSION",
+        "collection",
+        "src/sql.rs",
+        "PRAGMA application_id",
+        "PRAGMA user_version",
+        "opener::the_opener_sets_each_roles_pragmas_and_stamps_the_application_id",
+        "the settings read the file's application_id; reading user_version instead, a store at head reports 1, not its stamp (SPEC-512 A1)"
+      ],
+      [
+        "S51262-USER-VERSION-READS-APPLICATION-ID",
+        "collection",
+        "src/sql.rs",
+        "PRAGMA user_version",
+        "PRAGMA application_id",
+        "opener::the_reader_refuses_a_store_one_schema_below_head",
+        "the opener reads the schema's user_version; reading the application_id instead, a store below head reads far above it and is refused as newer (SPEC-512 A2)"
+      ],
+      [
+        "S51263-SCHEMA-SIZE-READS-TEMP",
+        "collection",
+        "src/sql.rs",
+        "FROM sqlite_schema",
+        "FROM sqlite_temp_schema",
+        "opener::the_store_opener_refuses_a_file_of_another_application_and_leaves_it_untouched",
+        "an unstamped file is empty only when its schema holds nothing; counted over the temp schema, another application's file with a table reads empty and is taken (SPEC-512 A8)"
+      ],
+      [
+        "S51264-JOURNAL-MODE-READS-LOCKING-MODE",
+        "collection",
+        "src/sql.rs",
+        "PRAGMA journal_mode\";",
+        "PRAGMA locking_mode\";",
+        "opener::the_opener_sets_each_roles_pragmas_and_stamps_the_application_id",
+        "the settings read the journal mode; reading the locking mode instead, a writer in the write-ahead log reports normal (SPEC-512 A1)"
+      ],
+      [
+        "S51265-SYNCHRONOUS-READS-FOREIGN-KEYS",
+        "collection",
+        "src/sql.rs",
+        "PRAGMA synchronous\";",
+        "PRAGMA foreign_keys\";",
+        "opener::the_opener_sets_each_roles_pragmas_and_stamps_the_application_id",
+        "the settings read the synchronous level; reading foreign_keys instead, the server's FULL (2) reports 1 (SPEC-512 A1)"
+      ],
+      [
+        "S51266-FOREIGN-KEYS-READS-QUERY-ONLY",
+        "collection",
+        "src/sql.rs",
+        "PRAGMA foreign_keys\";",
+        "PRAGMA query_only\";",
+        "opener::the_opener_sets_each_roles_pragmas_and_stamps_the_application_id",
+        "the settings read whether foreign keys are enforced; reading query_only instead, a writer reports them off (SPEC-512 A1)"
+      ],
+      [
+        "S51267-SECURE-DELETE-READS-QUERY-ONLY",
+        "collection",
+        "src/sql.rs",
+        "PRAGMA secure_delete\";",
+        "PRAGMA query_only\";",
+        "opener::the_opener_sets_each_roles_pragmas_and_stamps_the_application_id",
+        "the settings read whether a deleted row's bytes are overwritten; reading query_only instead, a writer reports it off (SPEC-512 A1)"
+      ],
+      [
+        "S51268-QUERY-ONLY-READS-FOREIGN-KEYS",
+        "collection",
+        "src/sql.rs",
+        "PRAGMA query_only\";",
+        "PRAGMA foreign_keys\";",
+        "opener::the_opener_sets_each_roles_pragmas_and_stamps_the_application_id",
+        "the settings read whether every write is refused; reading foreign_keys instead, a writer reports itself query_only (SPEC-512 A1)"
+      ],
+      [
+        "S51269-BUSY-TIMEOUT-READS-SYNCHRONOUS",
+        "collection",
+        "src/sql.rs",
+        "PRAGMA busy_timeout",
+        "PRAGMA synchronous",
+        "opener::the_opener_sets_each_roles_pragmas_and_stamps_the_application_id",
+        "the settings read the busy timeout; reading the synchronous level instead, a 30000 ms timeout reports 2 (SPEC-512 A1)"
+      ],
+      [
+        "S51270-INTEGRITY-CHECK-ANSWERS-OK",
+        "collection",
+        "src/sql.rs",
+        "PRAGMA integrity_check",
+        "SELECT 'ok'",
+        "opener::the_health_check_reads_an_index_that_disagrees_with_its_table",
+        "the health check runs SQLite's integrity check; answering ok unchecked, an index that disagrees with its table reads healthy"
+      ],
+      [
+        "S51271-INTEGRITY-CHECK-QUICK",
+        "collection",
+        "src/sql.rs",
+        "PRAGMA integrity_check",
+        "PRAGMA quick_check",
+        "opener::the_health_check_reads_an_index_that_disagrees_with_its_table",
+        "the health check compares each index with its table; the quick check does not, so a missing index entry reads healthy"
+      ],
+      [
+        "S51272-INTEGRITY-CHECK-ONE-TABLE",
+        "collection",
+        "src/sql.rs",
+        "PRAGMA integrity_check",
+        "PRAGMA integrity_check(store_meta)",
+        "opener::the_health_check_reads_an_index_that_disagrees_with_its_table",
+        "the health check reads the whole file; checked for the store's record alone, another table's damaged index reads healthy"
+      ],
+      [
+        "S51273-FOREIGN-KEY-CHECK-ONE-TABLE",
+        "collection",
+        "src/sql.rs",
+        "PRAGMA foreign_key_check",
+        "PRAGMA foreign_key_check(store_meta)",
+        "opener::the_health_check_counts_a_dangling_reference",
+        "the health check counts every table's dangling references; checked for the store's record alone, a card of a missing note counts none"
+      ],
+      [
+        "S51274-DECK-NAMES-READS-NOTETYPES",
+        "collection",
+        "src/sql.rs",
+        "FROM decks",
+        "FROM notetypes",
+        "read_port::a_retracted_review_leaves_every_read_of_the_store_adapter",
+        "the deck names are the decks' own; read from the notetypes, the map names a notetype for a deck (SPEC-512 A6)"
+      ],
+      [
+        "S51275-DECK-NAMES-READS-THE-KEY",
+        "collection",
+        "src/sql.rs",
+        "SELECT id, name",
+        "SELECT id, name_key",
+        "read_port::a_retracted_review_leaves_every_read_of_the_store_adapter",
+        "a deck's name is the name as written; read from its folded key, Default reads default (SPEC-512 A6)"
+      ],
+      [
+        "S51276-NEWEST-REVIEW-OLDEST",
+        "collection",
+        "src/sql.rs",
+        "max(id)",
+        "min(id)",
+        "read_port::a_retracted_review_leaves_every_read_of_the_store_adapter",
+        "the newest review is the log's highest id; at min it is the oldest (SPEC-512 A6)"
+      ],
+      [
+        "S51277-CARD-COUNT-READS-NOTES",
+        "collection",
+        "src/sql.rs",
+        "FROM cards\";",
+        "FROM notes\";",
+        "read_port::each_count_of_the_store_reads_its_own_table",
+        "the card count counts cards; counted over the notes, three cards of two notes read two"
+      ],
+      [
+        "S51278-NOTE-COUNT-READS-CARDS",
+        "collection",
+        "src/sql.rs",
+        "FROM notes\";",
+        "FROM cards\";",
+        "read_port::each_count_of_the_store_reads_its_own_table",
+        "the note count counts notes; counted over the cards, two notes with three cards read three"
+      ],
+      [
+        "S51279-REVIEW-ROW-COUNT-DROPS-RESCHEDULING",
+        "collection",
+        "src/sql.rs",
+        "count(*) FROM review_log\";",
+        "count(*) FROM review_log WHERE kind < 4\";",
+        "read_port::each_count_of_the_store_reads_its_own_table",
+        "the review row count counts every row of the log; without the rescheduling rows, four rows read three"
+      ],
+      [
+        "S51280-REVIEW-ROW-COUNT-DROPS-RETRACTED",
+        "collection",
+        "src/sql.rs",
+        "count(*) FROM review_log\";",
+        "count(*) FROM review_log r WHERE NOT EXISTS (SELECT 1 FROM review_retraction x WHERE x.review_id = r.id)\";",
+        "read_port::each_count_of_the_store_reads_its_own_table",
+        "the review row count counts every row of the log, a retracted one too; without it, four rows read three"
+      ],
+      [
+        "S51281-RECORD-ID-2",
+        "collection",
+        "src/sql.rs",
+        "VALUES (1, ",
+        "VALUES (2, ",
+        "opener::the_opener_writes_the_store_record_with_its_first_values",
+        "the store's record is row 1, the one id its table admits; written as 2 it is skipped and the opener finds no record (SPEC-512 A1)"
+      ],
+      [
+        "S51282-RECORD-ID-FLOOR",
+        "collection",
+        "src/sql.rs",
+        "?3, 0, 0, NULL",
+        "?3, 1, 0, NULL",
+        "opener::the_opener_writes_the_store_record_with_its_first_values",
+        "a new store's record starts with no id floor; written as 1, the record holds a floor no import set"
+      ],
+      [
+        "S51283-RECORD-NEXT-SEQ",
+        "collection",
+        "src/sql.rs",
+        "?3, 0, 0, NULL",
+        "?3, 0, 1, NULL",
+        "opener::the_opener_writes_the_store_record_with_its_first_values",
+        "a new store's record starts its sequence at 0; written as 1, the first change's number is skipped"
+      ],
+      [
+        "S51284-RECORD-IMPORT-SOURCE",
+        "collection",
+        "src/sql.rs",
+        "0, NULL)",
+        "0, '')",
+        "opener::the_opener_writes_the_store_record_with_its_first_values",
+        "a new store's record names no import; written as an empty text, it records an import that never ran"
+      ]
+    ]
+  }
+}

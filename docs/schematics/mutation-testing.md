@@ -2,8 +2,8 @@
 
 Kind: data flow (the pull request's mutation jobs, the weekly battery) and a state machine (one
 row's proof). Read at DeckStreak `dev` 32bf1e1 (`.github/workflows/ci.yml`, `scripts/check.sh`,
-the mutation-rows pack's row shape), with cargo-mutants 27.1.0 and StrykerJS 10.0.0 as SPEC-039 §1
-measured them, and its shards as R18 sizes them. Decided by ADR-057; built by SPEC-039. The
+the mutation-rows pack's row shape), with cargo-mutants 27.1.0 and StrykerJS 10.1.1 (SPEC-039 §1
+measured 10.0.0), and its shards as R18 sizes them. Decided by ADR-057; built by SPEC-039. The
 equivalence record (ADR-070, SPEC-057) joins the verdict's step and the battery; its own path, from
 a fragment to a verdict, is drawn in `docs/schematics/mutation-equivalence-record.md`.
 
@@ -19,7 +19,7 @@ flowchart TD
   first --> plan
   plan --> classes{each changed path's class}
   classes -->|crates/*/src/**/*.rs| rust[rust]
-  classes -->|web/app/src/** less tests, paraglide, d.ts| web[web]
+  classes -->|web/app/src/** less tests, paraglide, d.ts, and web/app/scripts/build-tokens.ts| web[web]
   classes -->|tools/parity-oracle/generate.py| oracle[oracle]
   classes -->|anything else| other([not production: counted, never mutated])
   plan --> lines{each production file's changed lines}
@@ -708,3 +708,144 @@ green commit.
 | the verdict step | `.github/workflows/ci.yml:767` |
 | the Timeouts step and `scripts/mutation-timeouts.sh` | after the verdict step, `.github/workflows/ci.yml:785` (new) |
 | the derive of the budget | `tools/rust-baseline-budget/size_budget.py` (new) |
+
+## 13. On the release run, `ci` reads the mutation jobs as advisory (SPEC-500, ADR-518)
+
+Schematic for SPEC-500 and ADR-518 (band S50000-S50099, no row). It draws how `ci` reads its 17 needs before and after
+the delivery, read at the branch's base `d3b09d5e`: the release run is named once, in `base-is-dev`, by the predicate
+the plan already uses, and on that run alone each of the 8 mutation jobs' results is printed and admitted by value.
+Every job of sections 1 to 12 runs and reports as drawn there; only the aggregate's reading changes.
+
+### 13.1 Before: every run's mutation results gate `ci`
+
+```mermaid
+flowchart TD
+    NEEDS["ci, if always: RESULTS = join(needs.*.result), 17 needs, 8 of them mutation jobs"] --> SKIP["admit one skipped each from mutation-rust,<br/>mutation-rows and mutation-python-release (SPEC-290 R8, SPEC-422 R11)"]
+    SKIP --> EACH{"every other result success?"}
+    EACH -- "no: a mutation job failed or was cancelled, on any run" --> RED(["ci fails, the release pull request's run included"])
+    EACH -- "yes" --> GREEN(["ci passes"])
+```
+
+### 13.2 After: the release run is named once, and its mutation results are advisory
+
+```mermaid
+flowchart TD
+    BID["base-is-dev step 1: a pull request into main comes from this repository's dev<br/>(byte-identical)"] -- "refused: exit 1" --> EMPTY["step 2 skipped: output release is empty"]
+    BID -- "ok" --> REL["step 2, id release: release_run's predicate over EVENT, BASE, HEAD, HEAD_REPO, REPO<br/>writes release=true or release=false to GITHUB_OUTPUT"]
+    REL --> OUT["job output release"]
+    EMPTY --> OUT
+    OUT --> CI{"ci: RELEASE = needs.base-is-dev.outputs.release, is it true?"}
+    CI -- "no: false or empty" --> TODAY["today's rule: a skip admitted from the three legs, once each;<br/>every other result success"]
+    CI -- "yes" --> ADV["for each of the 8 mutation jobs, in needs order:<br/>print ci: job reads result; advisory on the release run (SPEC-500)<br/>and append it to GITHUB_STEP_SUMMARY when set"]
+    ADV --> BYVAL["admit, by value, one non-success result of RESULTS<br/>for each mutation job whose result is not success"]
+    BYVAL --> GATE{"every result left success?<br/>exactly the 9 other needs', and any need added later"}
+    TODAY --> GATE2{"every result left success?"}
+    GATE -- "no" --> RED(["ci fails"])
+    GATE -- "yes" --> GREEN(["ci passes"])
+    GATE2 -- "no" --> RED
+    GATE2 -- "yes" --> GREEN
+```
+
+- The first step of `base-is-dev` is unchanged, so a fork's head or any other branch into `main` still fails `ci`, and
+  its refusal leaves the output empty: the run is not the release run.
+- The release step writes only the literal `true` or `false`; no input reaches `$GITHUB_OUTPUT`.
+- No mutation job, condition, matrix or upload changes, and no job is added: `LEG_CEILING`'s derivation reads the same
+  jobs (SPEC-362 R3).
+
+### 13.3 What crosses each step
+
+| from | to | what | guard |
+|---|---|---|---|
+| the event | `base-is-dev`'s release step | `EVENT`, `BASE`, `HEAD`, `HEAD_REPO`, `REPO`, the first step's five expressions | `release=true` exactly where `release_run` holds (SPEC-500 A1, 108 contexts) |
+| `base-is-dev` | `ci` | the job output `release`: `true`, `false`, or empty when the first step refused | anything but `true` keeps today's rule |
+| each need | `ci` | its result, in `RESULTS` and, for the 8 mutation jobs, in one env each | on the release run, one non-success admitted by value per non-success mutation result (SPEC-500 A2) |
+| `ci` | the log and the step summary | 8 advisory lines on the release run, none on any other | the summary is written only when `GITHUB_STEP_SUMMARY` is set |
+
+### 13.4 Where each step lives
+
+Read at the branch's base `d3b09d5e`; the new lines are cited by name, and the build re-reads every line at its green
+commit.
+
+| step | where |
+|---|---|
+| `base-is-dev`, its first step | `.github/workflows/ci.yml:1102-1120` |
+| `base-is-dev`'s `outputs: release` and the step `id: release` | after `timeout-minutes` and after the first step, `.github/workflows/ci.yml:1102` (new) |
+| `ci`'s step, its env and script | `.github/workflows/ci.yml:1134-1154` |
+| `release_run`, the predicate the step evaluates | `scripts/mutation-verdict.py:232-243` |
+| the step's runner and A1 | `scripts/tests/test_ci_workflows.py`, `run_release_step` and `test_the_release_output_is_release_run` (new) |
+| the first step's runner, its cut bounded at the next step | `scripts/tests/test_ci_workflows.py:1175-1189`, `run_base_is_dev` |
+| `rendered_env` and A2 | `scripts/tests/test_not_started_legs.py:115-126`, and `test_ci_admits_every_mutation_result_on_the_release_run_and_no_gating_one` (new) |
+
+## 14. Swift mutant rows, from a package's row file to the verdict (SPEC-397, ADR-411)
+
+Kind: data flow. Read at DeckStreak `d274b8b2` (`.github/workflows/xcframework.yml`,
+`.github/workflows/apple-on-change.yml`, `.github/workflows/ci.yml`, `scripts/mutation_rows.py`
+and the two `ios/*/swift-mutants.json`), and drawn as SPEC-397 builds it. A Swift row is no band
+row: it has its own reader, `scripts/swift_mutants.py`, its own jobs and its own verdict line, and
+joins neither the `mutation-verdict` job nor the weekly battery. Two paths read it: the Linux
+checks on every pull request, and the package's macOS job when the change caller's paths match.
+
+```mermaid
+flowchart TD
+  subgraph rowfiles["the rows"]
+    hwrows[("ios/HarnessWire/swift-mutants.json")]
+    cirows[("ios/CardIsolation/swift-mutants.json")]
+    approvals[("scripts/mutation-rows.retired.json")]
+  end
+
+  subgraph linux["every pull request, on Linux"]
+    hygiene["hygiene: the python stage"] --> tsm["scripts/tests/test_swift_mutants.py"]
+    tsm --> census["swift_mutants.py census: keys, the SW id form and its uniqueness, the file under Sources, the find once, the killer resolving to one test method"]
+    hwrows --> census
+    cirows --> census
+    census -->|a problem| censusrefused(["refused by name, exit 2"])
+    census -->|no row| censusvoid(["examined 0, exit 3"])
+    census -->|every row in form| censusok(["examined N rows in M files, exit 0"])
+    rowsjob["mutation-rows: the retired step, on a diff"] --> retired["swift_mutants.py retired --base HEAD^1, on the same line as mutation_rows.py retired"]
+    hwrows --> retired
+    cirows --> retired
+    approvals --> retired
+    retired -->|an id left, its file stays, no approval| retiredrefused(["refused by id, exit 1"])
+    retired -->|every departure explained| retiredok(["examined N, exit 0"])
+  end
+
+  subgraph mac["a change to a path of apple-on-change.yml, the module's path included"]
+    caller["apple-on-change.yml calls xcframework.yml"] --> pkgjobs["harness-wire and card-isolation, each on its routed macOS runner (apple_job_runner)"]
+    pkgjobs --> pkgtests["swift test --package-path ios/package"]
+    pkgtests --> sweep["swift_mutants.py sweep --package ios/package --report REPORT --run-seconds n"]
+    hwrows --> sweep
+    cirows --> sweep
+    sweep --> unmutated["each distinct killer once, unmutated: one case started, none failed, Executed 1, exit 0"]
+    unmutated --> install["each row: the find once, replaced once"]
+    install --> killerrun["its killer alone: swift test --filter on the escaped killer, in its own session, bounded by run-seconds"]
+    killerrun --> restore["the file restored byte for byte, its sha256 checked"]
+    restore --> verdict{"the verdict, first match"}
+    verdict --> killed["KILLED"]
+    verdict --> survived["SURVIVED"]
+    verdict --> voidrow["VOID, with its reason"]
+    killed --> sweepmd[("REPORT/sweep.md and the step summary")]
+    survived --> sweepmd
+    voidrow --> sweepmd
+    sweepmd --> upload[("the job's report artifact, uploaded if always")]
+    sweep --> lastline["swift-mutants ios/package: examined N rows: K killed, S survived, V void"]
+  end
+
+  lastline --> record[("docs/red-first/SPEC-n.md of the delivery that changed the rows")]
+```
+
+| step | where |
+|---|---|
+| the two row files, `{population, mutants}`, each row `id`, `file`, `find`, `replace`, `killer`, `why` | `ios/HarnessWire/swift-mutants.json`, `ios/CardIsolation/swift-mutants.json` |
+| the reader and its verbs `census`, `retired`, `sweep` | `scripts/swift_mutants.py` (added by SPEC-397) |
+| the census on every pull request, and its planted refusals | `scripts/tests/test_swift_mutants.py` (added by SPEC-397) |
+| the approvals record, keyed by id, read by both retired checks | `scripts/mutation-rows.retired.json`; its reader `scripts/mutation_rows.py:1403-1407` |
+| the retired step, one `run:` line, on a diff | `.github/workflows/ci.yml:794-796` |
+| the change caller's paths | `.github/workflows/apple-on-change.yml:11-21`, joined by `scripts/swift_mutants.py` |
+| the jobs that sweep, their test steps and their report uploads under `always()` | `.github/workflows/xcframework.yml`, jobs `harness-wire` and `card-isolation` |
+| the routed macOS runner | `scripts/tests/test_ci_workflows.py:46` (`ADMITTED_RUNNERS`) and `:135` (`apple_job_runner`) |
+| the bound: each job's `timeout-minutes` and each sweep's `--run-seconds`, from the measured constants | the A8 test in `scripts/tests/test_ci_workflows.py` |
+| the verdict line, read by name, and where a delivery records it | the job's log; `docs/red-first/SPEC-<n>.md` |
+
+The `ci.yml`, `apple-on-change.yml`, `mutation_rows.py` and `test_ci_workflows.py:46` and `:135`
+lines are `d274b8b2`'s. SPEC-397 rewrites the sweep steps of `xcframework.yml`, which moves its
+later lines, so that file and the new module are cited by job and by name.

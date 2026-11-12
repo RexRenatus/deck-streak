@@ -453,9 +453,18 @@ fn the_context_map_declares_the_core_and_its_two_edges() {
     assert_eq!(
         declared(&map, &contexts),
         vec![
-            ("deck-streak-engine-core", Some("fsrs7".to_owned())),
-            ("deck-streak-ffi", Some("engine-core".to_owned())),
-            ("deck-streak-web-engine", Some("engine-core".to_owned())),
+            // SPEC-601 (ADR-621 D6): the core, the adapter and the web engine also name the media
+            // core, and the adapter the collection store.
+            ("deck-streak-engine-core", Some("fsrs7, media".to_owned())),
+            (
+                "deck-streak-ffi",
+                Some("engine-core, collection, media".to_owned())
+            ),
+            // SPEC-511 R13 (ADR-529 D4): the web engine also names the companion's interface.
+            (
+                "deck-streak-web-engine",
+                Some("companion, engine-core, media".to_owned())
+            ),
         ],
         "docs/CONTEXT-MAP.md's fence"
     );

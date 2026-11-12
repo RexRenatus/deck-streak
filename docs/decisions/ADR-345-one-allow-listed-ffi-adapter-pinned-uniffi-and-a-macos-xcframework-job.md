@@ -151,3 +151,67 @@ slice's headers. `cargo deny` and the lockfile check hold the pin.
 SPEC-336; ADR-022 and ADR-058 for the engine and its protobuf compiler; Amgi
 (github.com/antigluten/amgi) for the shape; mozilla/uniffi-rs#2506 and mozilla/uniffi-rs#2917 for
 the modulemap.
+
+## Amendment: the census leaves out the Kani witness features by name, behind a reach guard (ADR-531 D7, ADR-527 D7)
+
+This amends D6 (`:82-88`) and its rejected option of admitting by name (`:89-90`), for the Kani
+witness features alone. The rest of D6 stands.
+
+- **Why.** ADR-531 D7 gave the media crate four Kani mutation-witness features
+  (`kani-witness-blob-path`, `-bind`, `-sweep` and `-scan`), and ADR-527 D7 gave the sync crate
+  four (`kani-witness-sync-codec-len`, `-key-order-noseq`, `-hlc-plain-add` and
+  `-next-id-residue`). With the adapter's `bindgen` the members then declared nine features, past
+  the three whose every combination D6 compiles, and the census refused the real tree by name
+  (SPEC-336 R11). Nine features would be 512 combinations for each selection in each pass, where
+  the census now compiles 2.
+- **What changes.** The census holds a closed list of the witness features, `WITNESSES` in
+  `crates/progression/tests/xp_census.rs`, each named by its package and its feature and never by
+  a pattern. A listed feature is left out of the combinations only while no package that reaches
+  progression, progression among them, reaches the feature's crate, that crate among them. The
+  census reads this from the graph with every feature on, on every run, and prints how many
+  features it left out and which. A listed feature that fails the check is counted and compiled as
+  any feature is.
+- **Why D6's guarded property holds.** D6 guards that no code under a feature, under its absence
+  or under any mix of features calls `settle` outside coordination, and the same census holds that
+  no code outside progression names `xp_settlement` (SPEC-072 A12). A call to progression's
+  `settle` compiles only in a crate that reaches progression, and a macro the witness's crate
+  exports is expanded only in a crate that depends on it. While no package reaches both
+  progression and the witness's crate, neither that crate's own code nor any expansion of its
+  macros can call `settle`, with the feature on or off. The table's name is read as text from
+  every file of every member's `src` and from every migration, whatever the features, so a
+  feature left out of the compiles hides no writer of `xp_settlement` from that reader. The
+  guard is read on every run, so a later change that gives a witness's crate a path to progression
+  puts the witness back in the combinations, where a call under it is refused for the call. The
+  rejected option skipped a named crate's code whatever the graph held; the list skips a named
+  feature only while the graph shows that no code under it can be such a use, which is why it is
+  not the weakening D6 refused.
+- **What stays.** Every feature the list does not name is counted and compiled: a plain feature,
+  one named like a witness but not listed, and a listed name in another package alike. A fourth
+  feature that is not a left-out witness is still refused by name, and a feature another package
+  turns on is still refused, a listed witness among them, as D6 decided. The test
+  `a_kani_witness_is_left_out_by_its_name_and_only_apart_from_settle` holds both sides, each beside
+  its control, and row S33611 still holds the bound at three.
+- **The noted risk.** A witness feature is not `cfg(kani)` code: each switches the body of a
+  shipped function to its recorded defect (media's `bind.rs`, `hash.rs`, `sweep.rs` and `scan.rs`;
+  sync's `ids.rs`, `codec.rs`, `key.rs` and `clock.rs`), and a build that turned one on would ship
+  that defect. No build may turn one on; the formal check's witness run is the only use ADR-527 D7
+  and ADR-531 D7 give them. The census does not judge that: it asks only whether code under a
+  feature can call `settle` or name `xp_settlement`, never whether a shipped build turns a witness
+  on.
+
+- Chosen: the closed list behind the reach guard, because the census then still compiles every
+  feature whose code can reach `settle`, and its combinations stay those of the other features.
+- Raising the bound to nine: rejected because each selection in each pass would then compile 512
+  combinations where it compiles 2, and SPEC-336 R11 and row S33611 hold the bound at three.
+- Admitting the media and sync crates by name: rejected for the reason D6 gave, since every later
+  feature of either crate would then be skipped whatever it reached.
+- Dropping the witness features: rejected because ADR-527 D7 and ADR-531 D7 rest on them, and a
+  harness with no witness cannot fail.
+
+## Amendment: a witness whose member changes nothing a dependant compiles against is left out too (ADR-621 D6)
+This amends the first amendment's reach guard, for the Kani witness features alone; the rest of D6 and of that amendment stands.
+- **Why.** ADR-621 D6 gives the collection crate its edge to the media core, so packages that reach progression now reach the media crate, and the reach guard counts its four witnesses: five features against the bound of three, and the census refuses the tree by name (SPEC-336 R11). Under this amendment the four are left out, one feature is counted, and the census compiles two combinations, as before the edge.
+- **What changes.** A listed witness is left out also while its member reaches no progression by a dependency of any kind, is no proc-macro crate, has no build script, the witness turns on nothing, and the code a dependant compiles of the member defines and exports no macro, names no `include`, carries no `path` attribute (inside `cfg_attr` too) and names a feature only on the lines `BODY_GATES` pins, each a `cfg` line and the `let` statement or match arm it gates. That code is every Rust file under the member's folder; while the library's root is `src/lib.rs`, the files under `tests/`, `benches/` and `examples/` are left out of the read.
+- **Why D6's guarded property holds.** A call to `settle` compiles only in a crate that reaches progression, and the member's test, bench and example targets reach only what its dependencies of every kind reach, so no code of the member, its own targets included, can be one. A dependant builds the member's library alone; rooted at `src/lib.rs`, with no `path` attribute and no `include`, the library reaches no file outside `src/`, so the read holds all of it. A dependant reads the member's items, signatures and macros, and a glob import lets an item of the member shadow progression's path, so a witness that gated an item could hide a call that only its other state compiles; a witness that gates only a statement or an arm inside a function changes none of them, so every package resolves every name alike with it on and off. With no build script the member passes no metadata to a dependant's build script, and with an empty list it turns on no other package's feature.
+- **What stays.** Every other witness and every feature the list does not name is counted and compiled as before. `a_kani_witness_whose_member_changes_nothing_a_dependant_compiles_against_is_left_out` holds both sides: a member whose only `path` attribute sits in a test of its own is left out, and a `path` attribute in the library, a test file the library reaches by one, by `cfg_attr`, by a renamed `include` or by its root, a test that reaches progression through a dev-dependency, and the shadowing case each keep the witnesses counted.
+- **The noted risk.** The pins are judged by hand when added. A macro of another crate invoked around a pinned line or expanding to `include!` or a `path` module, or a third-party procedural macro that builds a feature's name from pieces, is outside what a text reader sees, as a third-party derive's expansion already is.

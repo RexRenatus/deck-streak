@@ -11,6 +11,7 @@ import io
 import json
 import re
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -133,11 +134,52 @@ class TheListingCarriesEachMutantWhole(unittest.TestCase):
 
 class TheRunPrintsAndWritesItsReport(unittest.TestCase):
     def report_of(self, tree, *args):
-        target = tree.root.parent / f"{tree.root.name}-cli.json"
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        target = Path(scratch.name) / "cli.json"
         code, out, err = call(tree, "run", *args, "--report", str(target))
         text = target.read_text(encoding="utf-8")
         target.unlink()
         return code, out, err, text
+
+    def test_the_cli_report_helper_writes_its_report_and_costs_into_a_directory_of_its_own(self):
+        """SPEC-610 A2"""
+        tree = Tree(self, {"calc": CALC})
+        recorded = []
+
+        def fake(tree, *args):
+            target = Path(args[args.index("--report") + 1])
+            recorded.append(target)
+            target.write_text('{"exit": 0, "selection": "all"}\n', encoding="utf-8")
+            with (target.parent / "costs.jsonl").open("a", encoding="utf-8") as costs:
+                costs.write('{"kind": "control"}\n')
+            return 0, "", ""
+
+        with mock.patch.object(sys.modules[__name__], "call", fake):
+            code, out, err, text = self.report_of(tree, "--all")
+            again = self.report_of(tree, "--all")
+        self.assertEqual((code, out, err, text), (0, "", "", '{"exit": 0, "selection": "all"}\n'))
+        self.assertEqual(again, (code, out, err, text))
+        self.assertEqual(len(recorded), 2)
+        home = recorded[0].parent
+        self.assertFalse(
+            home == tree.root.parent, "the report was written into the parent of the scenario tree"
+        )
+        self.assertFalse(
+            home == tree.root or tree.root in home.parents,
+            "the report was written inside the scenario tree",
+        )
+        self.assertTrue(
+            (home / "costs.jsonl").is_file(), "the costs record is not beside the report"
+        )
+        self.assertNotEqual(
+            recorded[1].parent, home, "two calls of the helper wrote into one directory"
+        )
+        self.doCleanups()
+        self.assertFalse(home.exists(), "the report directory outlived its test")
+        self.assertFalse(
+            recorded[1].parent.exists(), "the second report directory outlived its test"
+        )
 
     def test_a_clean_run_is_exit_zero_and_prints_the_counts_and_the_selection_it_ran(self):
         tree = Tree(self, {"calc": CALC})

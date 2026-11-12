@@ -1,15 +1,17 @@
 """The sync server's dependency audit (SPEC-340 R7, A8; ADR-351 D5). `scripts/audit-sync-server.sh`
 reads the fork and the commit from the engine's patch entry, as the release's build step does,
-refuses a commit that is not a full one before it fetches anything, fetches that commit, and runs
-the RustSec advisory check on the server's own manifest with the house `deny.toml`, under the
-fork's lockfile.
+refuses a commit that is not a full one before it fetches anything, fetches that commit, runs the
+FORK-LOCK GUARD over the fork's lockfile (SPEC-565 A5; ADR-583), and runs the RustSec advisory
+check on the server's own manifest with the house `deny.toml`, under the fork's lockfile.
 
     bash scripts/audit-sync-server.sh --work DIR [--manifest FILE] [--deny FILE]
 
 Stub `git` and `cargo` stand first on PATH and record their arguments, so nothing is fetched and
-no audit reaches a network."""
+no audit reaches a network. The stub `git` checks nothing out, so each test plants the lockfile the
+fetched commit would hold: a green one, unless it plants a red one or none."""
 
 import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -18,6 +20,7 @@ from pathlib import Path
 from _support import REPO, examined
 
 SCRIPT = REPO / "scripts" / "audit-sync-server.sh"
+FORK_LOCKS = REPO / "scripts" / "tests" / "fixtures" / "fork-lock"
 FORK = "https://github.com/example/anki.git"
 REV = "0123456789abcdef0123456789abcdef01234567"
 # Each stub writes its name and its arguments, one tab-separated line per call; `cargo` exits with
@@ -54,6 +57,9 @@ class TheAuditReadsThePin(unittest.TestCase):
         self.deny = self.tmp / "deny.toml"
         self.deny.write_text("[advisories]\nignore = []\n", encoding="utf-8")
         self.work = self.tmp / "work"
+        self.work.mkdir()
+        self.fork_lock = self.work / "Cargo.lock"
+        shutil.copyfile(FORK_LOCKS / "green.lock", self.fork_lock)
 
     def run_audit(self, rev=REV, cargo_exit=0):
         """One run of the audit over a manifest pinning `rev`, with its own log of the stubs'
@@ -126,6 +132,24 @@ class TheAuditReadsThePin(unittest.TestCase):
                 self.assertIn(f"pins {rev}, not a full commit", done.stderr)
                 self.assertEqual(done.returncode, 1)
                 self.assertEqual(calls, [], "a refused pin fetches and checks nothing")
+
+    def test_a_red_fork_lock_ends_the_audit_before_the_check(self):
+        """SPEC-565 A5: a block-buffer below 0.12.1 or a digest below 0.11.0 in the fetched
+        commit's lockfile ends the audit with exit 1, and the advisory check never runs."""
+        shutil.copyfile(FORK_LOCKS / "a078820-digest-line.lock", self.fork_lock)
+        done, calls = self.run_audit()
+        self.assertEqual(done.returncode, 1, "a RED fork lock must end the audit with exit 1")
+        self.assertIn("block-buffer below 0.12.1: 2 of 2", done.stdout)
+        self.assertEqual([call for call in calls if call[0] == "cargo"], [])
+
+    def test_a_missing_fork_lock_ends_the_audit_before_the_check(self):
+        """SPEC-565 A5: a fetched commit with no lockfile ends the audit VOID, exit 2, and the
+        advisory check never runs."""
+        self.fork_lock.unlink()
+        done, calls = self.run_audit()
+        self.assertEqual(done.returncode, 2, "a missing fork lock must end the audit with exit 2")
+        self.assertIn("lock-digest-line: VOID", done.stdout)
+        self.assertEqual([call for call in calls if call[0] == "cargo"], [])
 
 
 if __name__ == "__main__":

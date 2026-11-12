@@ -28,11 +28,31 @@ url.workspace = true
 # ADR-359 D1: the encoder for a face's `data:` URLs (SPEC-348 R3); the engine's own dependencies
 # already bring this version, so it adds no package.
 base64.workspace = true
-# ADR-400 D1: the isolated FSRS-7 scheduler, the core's one workspace edge, named by
-# `src/replay.rs` alone and held by the graph census (SPEC-386 R7).
+# ADR-400 D1: the isolated FSRS-7 scheduler, the core's one workspace edge until ADR-621 D6 added
+# the media core's, named by `src/replay.rs` alone and held by the graph census (SPEC-386 R7).
 deck-streak-fsrs7 = { path = "../fsrs7" }
+# ADR-621 D6 and D8: the media core's one reference grammar, which a face's rewrite reads.
+deck-streak-media.workspace = true
 
 [dev-dependencies]
+# ADR-525 D2 (SPEC-507 A2): the analytics crate's capped seconds, its review row and its study day,
+# which the card health panel's differential test compares with. Dev only: the core's own edges
+# stay the engine, the scheduler and the media core (ADR-621 D6).
+deck-streak-analytics.workspace = true
+# ADR-621 D6 (SPEC-601 A5): the face tests' readers answer through a temporary media store.
+deck-streak-collection.workspace = true
+deck-streak-ingest.workspace = true
+deck-streak-kernel.workspace = true
 # ADR-375 (SPEC-364 section 3): the runtime that runs the engine's own sync server as a child of the
 # one-way tests, on a loopback port, as the native adapter's login tests run it.
 tokio = { workspace = true, features = ["rt"] }
+# ADR-640 (SPEC-618 R9): the bench harness, for `benches/` alone.
+divan.workspace = true
+# ADR-020 and ADR-621 (SPEC-601 A5): the temporary folder each face test's media store lives in.
+tempfile.workspace = true
+
+# SPEC-618 R9: the scheduler's day queue, event check, fold and schedule step, measured
+# by CodSpeed; Divan's `main` replaces the default harness.
+[[bench]]
+name = "scheduling"
+harness = false

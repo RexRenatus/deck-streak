@@ -1,0 +1,18 @@
+{
+  "files": {
+    ".github/workflows/ci.yml": "name: ci\non:\n  pull_request:\njobs:\n  mutation-plan:\n    runs-on: ubuntu-24.04\n    steps:\n      - run: echo plan\n  mutation-python:\n    needs: [mutation-plan]\n    runs-on: ubuntu-24.04\n    steps:\n      # one leg of the runner\n      - run: python3 scripts/mutation_python.py run --shard 0/1\n  mutation-python-release:\n    needs: [mutation-plan]\n    runs-on: ubuntu-24.04\n    steps:\n      - run: python3 scripts/mutation_python.py run --shard 1/2\n  mutation-verdict:\n    runs-on: ubuntu-24.04\n    steps:\n      - run: echo verdict\n",
+    "scripts/a.py": "\"\"\"A fixture module.\"\"\"\n\n\ndef add(x, y):\n    return x + y\n",
+    "scripts/b.py": "\"\"\"A fixture module.\"\"\"\n\n\ndef sub(x, y):\n    return x - y\n",
+    "scripts/mutation_python.py": "\"\"\"A fixture runner: it names one function of mutation_rows.\"\"\"\n\nimport mutation_rows\n\n\ndef digest(data):\n    return mutation_rows.sha256(data)\n",
+    "scripts/mutation_rows.py": "\"\"\"A fixture rows module.\"\"\"\n\nimport hashlib\n\nWIDTH = 12\n\n\ndef sha256(data):\n    return hashlib.sha256(data).hexdigest()[:WIDTH]\n\n\ndef unrelated():\n    return 1\n",
+    "scripts/mutation-python.json": "{\n  \"scripts/a.py\": {\n    \"dir\": \"scripts/tests\",\n    \"modules\": [\n      \"test_a\"\n    ]\n  },\n  \"scripts/b.py\": {\n    \"dir\": \"scripts/tests\",\n    \"modules\": [\n      \"test_b\"\n    ]\n  },\n  \"scripts/mutation_python.py\": {\n    \"dir\": \"scripts/tests\",\n    \"modules\": []\n  },\n  \"scripts/mutation_rows.py\": {\n    \"dir\": \"scripts/tests\",\n    \"modules\": []\n  }\n}\n",
+    "scripts/tests/test_a.py": "\"\"\"A fixture test module of the carry's tests.\"\"\"\n\nimport sys\nimport unittest\nfrom pathlib import Path\n\nsys.path.insert(0, str(Path(__file__).resolve().parents[1]))\n\nimport a  # noqa: E402\n\n\nclass Holds(unittest.TestCase):\n    def test_it(self):\n        self.assertEqual(a.add(6, 3), 9)\n",
+    "scripts/tests/test_b.py": "\"\"\"A fixture test module of the carry's tests.\"\"\"\n\nimport sys\nimport unittest\nfrom pathlib import Path\n\nsys.path.insert(0, str(Path(__file__).resolve().parents[1]))\n\nimport b  # noqa: E402\n\n\nclass Holds(unittest.TestCase):\n    def test_it(self):\n        self.assertEqual(b.sub(6, 3), 3)\n",
+    "notes/readme.txt": "A file no read set holds.\n"
+  },
+  "edits": {
+    "scripts/a.py": "\"\"\"A fixture module.\"\"\"\n\n\ndef add(x, y):\n    return x + y\n\n\ndef twice(x):\n    return x * 2\n",
+    "scripts/b.py": "\"\"\"A fixture module.\"\"\"\n\n\ndef sub(x, y):\n    return x - y\n\n\ndef half(x):\n    return x / 2\n"
+  },
+  "head_b": "\"\"\"A fixture module.\"\"\"\n\n\ndef sub(x, y):\n    return x - y\n\n\ndef half(x):\n    return x // 2\n"
+}

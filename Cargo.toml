@@ -9,7 +9,7 @@ resolver = "3"
 [workspace.package]
 version = "0.3.0"
 edition = "2024"
-rust-version = "1.97.0"
+rust-version = "1.99.1"
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/RexRenatus/deck-streak"
 publish = false
@@ -22,6 +22,12 @@ debug = "line-tables-only"
 
 [profile.dev.package."*"]
 debug = false
+
+# SPEC-618 R9 (ADR-640): the benches build as the release build does, with line tables so a
+# profile names the file and line of each measured function. The release profile is unchanged.
+[profile.bench]
+inherits = "release"
+debug = "line-tables-only"
 
 # One home for every version. External crates are added here by the delivery whose ADR admits
 # them (docs/decisions); a member writes `name.workspace = true`.
@@ -54,14 +60,33 @@ deck-streak-daemon = { path = "crates/daemon" }
 deck-streak-ffi = { path = "crates/ffi" }
 deck-streak-engine-core = { path = "crates/engine-core" }
 deck-streak-xp = { path = "crates/xp" }
+deck-streak-study-day = { path = "crates/study-day" }
+deck-streak-search = { path = "crates/search" }
+deck-streak-companion = { path = "crates/companion" }
+deck-streak-companion-slot = { path = "crates/companion-slot" }
+deck-streak-collection = { path = "crates/collection" }
+deck-streak-media = { path = "crates/media" }
+deck-streak-sync = { path = "crates/sync" }
+deck-streak-anki-format = { path = "crates/anki-format" }
 # ADR-029: the parity oracle's golden reader. So far only a proving crate's dev-dependencies name
 # them; later ADRs cite ADR-029 rather than admitting them again.
 serde = { version = "1.0.229", features = ["derive"] }
-serde_json = "1.0.151"
+serde_json = "1.0.154"
 # ADR-003: the backend stack, admitted by the kernel (SPEC-020). sqlx carries exactly the features
 # the kernel's repository base needs; a member adds tokio's features as it uses them.
 sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "sqlite", "migrate", "macros"] }
-tokio = "~1.53"
+tokio = "~1.54"
+# ADR-530 (SPEC-512): the collection store's driver, with SQLite's own source bundled, at the version
+# and source the lock already holds through the engine. The collection crate and ingest's schema-18
+# adapter name it; only crates/collection/src/store.rs builds a connection. ADR-622 (SPEC-602): the
+# anki-format crate names it too, and its defensive opener, crates/anki-format/src/opener.rs, is the
+# second file that builds one, for every foreign file it reads. RUSTSEC-2026-0459 moved it with
+# the engine and the sqlx fork to the release line whose libsqlite3-sys bundles the fixed SQLite
+# (ADR-530's note).
+rusqlite = { version = "0.41.1", features = ["bundled"] }
+# ADR-623 (SPEC-602): the comparator of the collation schema-18 names carry, at the version the lock
+# already holds through the engine.
+unicase = "2.6.0"
 thiserror = "2.0.21"
 chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
 tracing = "0.1.44"
@@ -69,10 +94,10 @@ tracing-subscriber = { version = "0.3.23", default-features = false, features = 
 # ADR-020: a temporary database or collection, in tests only.
 tempfile = "3.27.0"
 # ADR-293: the agent's source pins read Rust as tokens (SPEC-043 R12b, R16b): proc-macro2's lexer
-# and syn's literal values, both already in the lock through the workspace's derive and query
-# macros, with no default feature. In tests only.
+# and syn's literal values, both already in the lock through the workspace's derive macros (serde's,
+# thiserror's and tokio's), with no default feature. In tests only.
 proc-macro2 = { version = "1.0.107", default-features = false }
-syn = { version = "2.0.119", default-features = false }
+syn = { version = "3.0.9", default-features = false }
 # ADR-003 and ADR-025: the API service (SPEC-025). axum carries only what a loopback HTTP/1.1
 # service behind Caddy needs; tower brings the concurrency bound, the load shed and, for tests,
 # `ServiceExt::oneshot`; tower-http brings the layers ADR-003 names. A member adds features as it
@@ -83,7 +108,7 @@ tower-http = { version = "0.7.1", default-features = false }
 anyhow = "1.0.104"
 # ADR-119 and ADR-329: the official Rust MCP SDK for the MCP adapter's server (SPEC-119 R2): its
 # server, its tool macros and its streamable HTTP server transport, and nothing else.
-rmcp = { version = "3.5.0", default-features = false, features = ["server", "macros", "transport-streamable-http-server"] }
+rmcp = { version = "3.8.0", default-features = false, features = ["server", "macros", "transport-streamable-http-server"] }
 # ADR-022 (SPEC-022): Anki's own Rust engine, for ingest only, pinned to an upstream release tag,
 # with the TLS backend Anki's own Linux build selects. SPEC-055 moved it from 26.05 to 26.09.3, and
 # the `[patch]` entry below replaces the tag with a commit of the maintainer's fork (ADR-058). An
@@ -97,22 +122,23 @@ prost = "0.13.5"
 # endpoint guard on the sync login (SPEC-347 R2).
 url = "2.5.8"
 # ADR-359 D1: the encoder for the `data:` URLs the engine core writes a face's media into
-# (SPEC-348 R3), at the version the engine's own HTTP client already resolves, so it adds no package.
-base64 = "0.22.1"
-# SPEC-022 section 7: the zstd the engine already brings, for the census's tests to read the
-# engine's compressed request bodies.
-zstd = "0.13.3"
+# (SPEC-348 R3), at the version the workspace's HTTP stack already resolves (hyper-util, reqwest 0.13
+# and rmcp), so it adds no package.
+base64 = "0.23.1"
+# SPEC-022 section 7: the zstd line the engine itself and its async-compression bring, for the
+# census's tests to read the engine's compressed request bodies.
+zstd = "0.14.3"
 # ADR-006 and ADR-024: Telegram's launch data and the owner's sessions (SPEC-024). RustCrypto's
 # hmac and sha2 of one digest generation (hmac 0.13 needs sha2 0.11), subtle for the session
 # store's constant-time compare, and getrandom for the session ids.
 hmac = "0.13.0"
-sha2 = { version = "0.11.0", default-features = false }
+sha2 = { version = "0.11.1", default-features = false }
 subtle = { version = "2.6.1", default-features = false }
 getrandom = "0.4.3"
 # ADR-370 (SPEC-359): passkeys on the web. webauthn-rs runs the relying party's ceremonies and its
 # ceremony state stays in memory, never serialized; uuid's random ids are the passkeys' user handle.
 webauthn-rs = "0.5.5"
-uuid = { version = "1.26.1", features = ["v4"] }
+uuid = { version = "1.29.0", features = ["v4"] }
 # ADR-003 and ADR-026: the Bot API client (SPEC-026), with its async client over reqwest. That
 # client brings reqwest's rustls stack; the bot reaches reqwest only through frankenstein's own
 # re-export, for the one upload frankenstein reads from a file path (ADR-026, "Decided at delivery").
@@ -127,7 +153,7 @@ sqlite-wasm-rs = "0.5.5"
 sqlite-wasm-vfs = "0.2.0"
 # ADR-040 (SPEC-040 A6): the compile-fail harness that proves an XP amount cannot be built from a
 # signed integer. A dev-dependency only; no production dependency of any context changes.
-trybuild = "1.0.121"
+trybuild = "1.0.122"
 # ADR-345 D2 (SPEC-336): UniFFI, the bindings generator behind the FFI adapter's one entry point,
 # pinned exactly to the last release whose generated Swift modulemap names no builtin clang module,
 # the lines that break a simulator XCFramework's consumers (ADR-345 records the measurement).
@@ -149,16 +175,20 @@ fsrs6 = { package = "fsrs", version = "=6.6.2" }
 # for the provider and VAPID tokens; RFC 8291's encryption from web-push-native, its own `vapid`
 # feature off; base64url for the tokens. In tests only: hkdf and aes-gcm for the push service
 # fake's own RFC 8291 decryption, beside sha2 above.
-hyper = { version = "1.11.1", default-features = false }
+hyper = { version = "1.12.0", default-features = false }
 hyper-util = { version = "0.1.21", default-features = false }
 hyper-rustls = { version = "0.27.10", default-features = false }
 rustls = { version = "0.23.45", default-features = false }
 http-body-util = "0.1.5"
-p256 = "0.13.2"
+p256 = "0.14.0"
 web-push-native = { version = "0.5.0", default-features = false }
 base64ct = { version = "1.8.3", default-features = false, features = ["alloc"] }
 hkdf = "0.13.0"
-aes-gcm = "0.10.3"
+aes-gcm = "0.11.1"
+# ADR-640 (SPEC-618 R9): CodSpeed's Divan-compatible bench harness, renamed to `divan` so a bench
+# writes Divan's own attributes, pinned exactly. A dev-dependency of the three bench packages only;
+# no production dependency of any context changes.
+divan = { package = "codspeed-divan-compat", version = "=6.0.0" }
 
 # ADR-058 (#233): the engine's upstream tag above, replaced by a commit of the maintainer's fork that
 # is that tag plus one fix, so the engine's protobuf build script stops rerunning on every cargo
@@ -170,14 +200,79 @@ aes-gcm = "0.10.3"
 # browser's sync transport and its two companion wasm32 patches, one commit each (ADR-058's note).
 # SPEC-377 moved it to the fork's tag `deckstreak-pin-26.09.3-wasm32-full-sync`: that commit plus
 # the browser's full sync files patch, one commit (ADR-058's note).
+# The zip and zstd advisories moved it twice more and the fork's lock advisories once more, one
+# commit each over the last; that last commit is tagged `deckstreak-pin-26.09.3-wasm32-rustsec`
+# (ADR-058's notes).
+# The block-buffer advisory (GHSA-qwgh-2vcv-g2f7) moved it three commits more over the last: the
+# hold guards, the sync server's move to block-buffer 0.12.1 and digest 0.11, and pulldown-cmark
+# 0.13.5; that last commit is tagged `deckstreak-pin-26.09.3-wasm32-blockbuf` (ADR-058's note,
+# ADR-583).
+# The engine's six unmaintained notices (the unic crates and rustls-pemfile) moved it to the merge
+# of RexRenatus/anki#1, which drops both crates from the engine, and one commit over it, which
+# drops their ignore entries from the fork's own deny list; that commit is tagged
+# `deckstreak-pin-26.09.3-wasm32-unmaint` (ADR-058's note).
+# RUSTSEC-2026-0459 moved it one commit more, to rusqlite's release line whose libsqlite3-sys
+# bundles the fixed SQLite, with the call sites that line forces; that commit is tagged
+# `deckstreak-pin-26.09.3-wasm32-sqlite` (ADR-058's note).
 [patch."https://github.com/ankitects/anki.git"]
-anki = { git = "https://github.com/RexRenatus/anki.git", rev = "65e053b829825f534803b2b772c507a73ba936a3" }
-anki_proto = { git = "https://github.com/RexRenatus/anki.git", rev = "65e053b829825f534803b2b772c507a73ba936a3" }
+anki = { git = "https://github.com/RexRenatus/anki.git", rev = "c1241180ae457c71ed4ca963f5673e74d1a9bf7c" }
+anki_proto = { git = "https://github.com/RexRenatus/anki.git", rev = "c1241180ae457c71ed4ca963f5673e74d1a9bf7c" }
+
+# ADR-513: web-push-native from the maintainer's fork, at the upstream change that moves it to
+# p256 0.14, so crypto-bigint 0.5.5 and RUSTSEC-2026-0387 leave the lock. Pinned by `rev`; the
+# fork's branch `deckstreak-p256-0.14` keeps the commit fetchable. ece-native comes from the same
+# commit through web-push-native's own path dependency, so it takes no entry. The entry goes when a
+# web-push-native release requires p256 0.14.
+[patch.crates-io]
+web-push-native = { git = "https://github.com/RexRenatus/web-push-native.git", rev = "71900bad58170ba09f952e1274c87490c5f65f99" }
+# ADR-583: the seven sqlx crates from the maintainer's fork, at the published sqlx 0.9.0 with sha2
+# moved to 0.11, so digest 0.10 and block-buffer 0.10.4 leave the lock (GHSA-qwgh-2vcv-g2f7). Pinned
+# by `rev`; the fork's branch `deckstreak-sha2-0.11` keeps the commit fetchable. The entries go when
+# a sqlx release requires sha2 0.11. RUSTSEC-2026-0459 moved the rev one commit along that branch,
+# which admits the libsqlite3-sys line rusqlite now takes; the entries also wait for a sqlx release
+# that admits it (ADR-583's note).
+sqlx = { git = "https://github.com/RexRenatus/sqlx.git", rev = "6e7df9289d37f673ec59a1cfb162126ab9545019" }
+sqlx-core = { git = "https://github.com/RexRenatus/sqlx.git", rev = "6e7df9289d37f673ec59a1cfb162126ab9545019" }
+sqlx-macros = { git = "https://github.com/RexRenatus/sqlx.git", rev = "6e7df9289d37f673ec59a1cfb162126ab9545019" }
+sqlx-macros-core = { git = "https://github.com/RexRenatus/sqlx.git", rev = "6e7df9289d37f673ec59a1cfb162126ab9545019" }
+sqlx-mysql = { git = "https://github.com/RexRenatus/sqlx.git", rev = "6e7df9289d37f673ec59a1cfb162126ab9545019" }
+sqlx-postgres = { git = "https://github.com/RexRenatus/sqlx.git", rev = "6e7df9289d37f673ec59a1cfb162126ab9545019" }
+sqlx-sqlite = { git = "https://github.com/RexRenatus/sqlx.git", rev = "6e7df9289d37f673ec59a1cfb162126ab9545019" }
+# ADR-657: the seven uniffi crates from the maintainer's fork, at the published 0.29.1 with
+# uniffi_bindgen's unused paste dropped, so RUSTSEC-2024-0436 loses this parent. Pinned by `rev`;
+# the fork's branch `deckstreak-no-paste` keeps the commit fetchable. uniffi_internal_macros comes
+# from the same commit at 0.29.1, the version the release names. The entries go when a uniffi
+# release that ADR-345 admits drops paste.
+uniffi = { git = "https://github.com/RexRenatus/uniffi-rs.git", rev = "bfb6dd9eb92b9febcfe00583ed57bec2ee056c34" }
+uniffi_bindgen = { git = "https://github.com/RexRenatus/uniffi-rs.git", rev = "bfb6dd9eb92b9febcfe00583ed57bec2ee056c34" }
+uniffi_core = { git = "https://github.com/RexRenatus/uniffi-rs.git", rev = "bfb6dd9eb92b9febcfe00583ed57bec2ee056c34" }
+uniffi_internal_macros = { git = "https://github.com/RexRenatus/uniffi-rs.git", rev = "bfb6dd9eb92b9febcfe00583ed57bec2ee056c34" }
+uniffi_macros = { git = "https://github.com/RexRenatus/uniffi-rs.git", rev = "bfb6dd9eb92b9febcfe00583ed57bec2ee056c34" }
+uniffi_meta = { git = "https://github.com/RexRenatus/uniffi-rs.git", rev = "bfb6dd9eb92b9febcfe00583ed57bec2ee056c34" }
+uniffi_udl = { git = "https://github.com/RexRenatus/uniffi-rs.git", rev = "bfb6dd9eb92b9febcfe00583ed57bec2ee056c34" }
+# ADR-657: rinja, rinja_derive and rinja_parser from the maintainer's fork of askama, at the
+# published rinja 0.3.5 with its config parsed by toml 0.5, so basic-toml and RUSTSEC-2026-0374
+# leave the lock. Pinned by `rev`; the fork's branch `deckstreak-rinja-toml` keeps the commit
+# fetchable. The entries go when a rinja or askama release that the bindings generator takes drops
+# basic-toml.
+rinja = { git = "https://github.com/RexRenatus/askama.git", rev = "efef71d57c2f9195da6f4c128f742b8ac865d26c" }
+rinja_derive = { git = "https://github.com/RexRenatus/askama.git", rev = "efef71d57c2f9195da6f4c128f742b8ac865d26c" }
+rinja_parser = { git = "https://github.com/RexRenatus/askama.git", rev = "efef71d57c2f9195da6f4c128f742b8ac865d26c" }
+# ADR-657: frankenstein from the maintainer's fork, at the published 0.52.1 with paste replaced by
+# pastey 0.2.3, so paste and RUSTSEC-2024-0436 leave the lock. Pinned by `rev`; the fork's branch
+# `deckstreak-pastey` keeps the commit fetchable. The entry goes when a frankenstein release drops
+# paste.
+frankenstein = { git = "https://github.com/RexRenatus/frankenstein.git", rev = "c757cbb994829a00b4fadb0c662fdf16ccd8c2a1" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
 unused_must_use = "deny"
 missing_docs = "warn"
+# ADR-531 D7: a crate's Kani harnesses sit behind `cfg(kani)`, which only the model checker sets, so
+# the name is declared here and `-D warnings` stays clean (the formal-kani pack).
+# `cfg(kani)` is set by the Kani verifier's compiler alone, around a crate's proof harnesses
+# (ADR-527 D7); declaring it keeps `-D warnings` clean for every build that never sets it.
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(kani)"] }
 
 [workspace.lints.clippy]
 # A group sits at priority -1, so a single lint below it can override it (rs.lint-group-priority).
@@ -188,6 +283,9 @@ unwrap_used = "warn"
 expect_used = "warn"
 dbg_macro = "warn"
 print_stdout = "warn"
+# SPEC-436 R1: a lock guard held across an await is denied by name, not only through `all`.
+await_holding_lock = "deny"
+await_holding_refcell_ref = "deny"
 # Pedantic lints this workspace allows, each for a reason.
 # A context's types are named for the context (readings::ReadingNote): the repetition is the
 # ubiquitous language, not noise.

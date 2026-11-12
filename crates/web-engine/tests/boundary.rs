@@ -22,7 +22,7 @@ fn examined<T>(what: &str, items: Vec<T>) -> Vec<T> {
 /// Each boundary function the census reads: its name, why it owes what it owes, and the
 /// statements its body holds for it. A statement is compared with every blank removed, so a
 /// reflow by rustfmt changes nothing.
-const OWED: [(&str, &str, &[&str]); 35] = [
+const OWED: [(&str, &str, &[&str]); 39] = [
     (
         "create_backend",
         "starts the core's dispatcher on the web transport and keeps it",
@@ -175,6 +175,7 @@ const OWED: [(&str, &str, &[&str]); 35] = [
             "grade.pick(states.again, states.good)",
             "OwnerAnswer::from_press(shown.card, pressed(grade))",
             ".run_answer(answer, &request.encode_to_vec())",
+            "&request.encode_to_vec()).map_err(refuse)?",
             "query(Read::NewestReview)?",
             "newest.card == shown.card",
             "LAST_ANSWER.with(|kept| *kept.borrow_mut() = recorded)",
@@ -336,6 +337,28 @@ const OWED: [(&str, &str, &[&str]); 35] = [
             "Refusal::Engine { error } => Uint8Array::from(error.as_slice()).into()",
             "refuse(StudyError::CallRefused { service, method })",
         ],
+    ),
+    (
+        "companion_decide",
+        "answers the web engine's own decision over the companion's frames (SPEC-511 R10)",
+        &["companion::decide(hello, epoch, preview, reply)"],
+    ),
+    (
+        "companion_restore",
+        "builds the Restore frame for a stored checkpoint through the web engine alone (SPEC-511 R9)",
+        &["companion::restore(epoch, checkpoint)"],
+    ),
+    (
+        "companion_load_check",
+        "judges a stored checkpoint by the web load check and answers its code (SPEC-511 R9)",
+        &[
+            "companion::load_check(hello, checkpoint, ack, head_named, index_count, index_head).code()",
+        ],
+    ),
+    (
+        "companion_purge",
+        "builds the Purge frame through the web engine alone (SPEC-511 R8)",
+        &["companion::purge(epoch)"],
     ),
 ];
 
@@ -1361,4 +1384,243 @@ fn the_review_records_one_change_at_a_time() {
     let functions = examined("slot function(s) of src/wasm.rs", SLOT.to_vec());
     let owed: usize = functions.iter().map(|(_, _, _, owed)| owed.len()).sum();
     println!("examined {owed} slot statement(s)");
+}
+
+// SPEC-516 R4, R10 (ADR-534 D3): back up now on the web. The export takes nothing, waits while a
+// choice's stage is held, mints its Backup-kind file through `choice_file`, which reserves the pool
+// first, writes the open collection into it through the core's `backup_now`, and names the new
+// backup by the id `files.rs` gives it. It reaches the engine through the core alone: no pair, no
+// statement and no private engine of its own.
+
+/// The back up now export: its name, the parameters it takes (none), and the statements it owes.
+const BACKUP_NOW: [(&str, &str, &[&str]); 1] = [(
+    "back_up_now",
+    "",
+    &[
+        "STAGE.with(|stage| stage.borrow().is_some())",
+        "let backup = choice_file(Kind::Backup).await?;",
+        "backup_now::back_up(&dispatcher()?, Path::new(&backup))",
+        "files::backup_id(&backup)",
+    ],
+)];
+
+/// What the back up now export may not hold: an engine call of its own, a statement or a private
+/// engine, a name it minted past the reserve or made itself, or a removal. (The exempt entry is
+/// held by the core's containment census, which refuses its name anywhere outside the entry files.)
+const BACKUP_NOW_REFUSED: [&str; 10] = [
+    "call(",
+    "query(",
+    ".run(",
+    "run_method(",
+    ".execute(",
+    ".private(",
+    "choice_name(",
+    "format!(",
+    "delete_db(",
+    "retention::",
+];
+
+/// What the back up now export owes and holds that it must not, each named with the export: an
+/// export the module does not make, a parameter, a statement it lacks, or a refused text.
+fn backup_now_problems(source: &str) -> Vec<String> {
+    let mut found = lacks(
+        source,
+        &BACKUP_NOW.map(|(name, _, owed)| {
+            (
+                name,
+                "reaches the pool through `choice_file`, `files.rs` and the core",
+                owed,
+            )
+        }),
+    );
+    let whole = squeezed(source);
+    for (name, wanted, _) in BACKUP_NOW {
+        let exported = ["pubasyncfn", "pubfn"]
+            .iter()
+            .any(|head| whole.contains(&format!("#[wasm_bindgen]{head}{name}(")));
+        if !exported {
+            found.push(format!("{name} is not an export of the module"));
+        }
+        let taken = parameters(source, name);
+        if taken.as_deref() != Some(squeezed(wanted).as_str()) {
+            found.push(format!("{name} takes `{taken:?}`, not `{wanted}` alone"));
+        }
+        if let Ok(text) = body(source, name) {
+            let text = squeezed(text);
+            for refused in BACKUP_NOW_REFUSED {
+                if text.contains(&squeezed(refused)) {
+                    found.push(format!(
+                        "{name} reaches past the core's `backup_now`, and holds `{refused}`"
+                    ));
+                }
+            }
+        }
+    }
+    found
+}
+
+#[test]
+fn the_backup_now_export_reaches_the_pool_through_files_and_the_core() {
+    let source = boundary();
+    assert_eq!(backup_now_problems(&source), Vec::<String>::new());
+
+    // an engine call, a statement, a name made in the export and a removal are each refused by the
+    // export's name, and so are a parameter, an export unmade and a stage check planted out
+    let [(name, _, _)] = BACKUP_NOW;
+    for (planted, cause) in [
+        ("call(service::SYNC, 5, &[])?;", "`call(`"),
+        (
+            "dispatcher()?.execute(\"VACUUM INTO ?\", Path::new(\"/x\"))?;",
+            "`.execute(`",
+        ),
+        ("let name = format!(\"/deck-streak/{id}\");", "`format!(`"),
+        (
+            "installed()?.delete_db(\"/deck-streak/backup-1.anki2\")?;",
+            "`delete_db(`",
+        ),
+    ] {
+        let refused = backup_now_problems(&planted_in(&source, name, planted));
+        assert!(
+            refused_by_name(&refused, name, cause),
+            "`{planted}` planted in {name} is not refused by name: {refused:?}"
+        );
+    }
+    let head = format!("fn {name}(");
+    let widened = source.replacen(&head, &format!("{head}path: String"), 1);
+    assert_ne!(widened, source, "the parameter was not planted");
+    let refused = backup_now_problems(&widened);
+    assert!(
+        refused_by_name(&refused, name, "takes"),
+        "a path parameter planted in {name} is not refused by name: {refused:?}"
+    );
+    let unexported = source.replacen(
+        "#[wasm_bindgen]\npub async fn back_up_now(",
+        "pub async fn back_up_now(",
+        1,
+    );
+    assert_ne!(unexported, source, "the export was not planted out");
+    let refused = backup_now_problems(&unexported);
+    assert!(
+        refused_by_name(&refused, name, "not an export"),
+        "an unexported back up now is not refused by name: {refused:?}"
+    );
+    let [(_, _, [stage, ..])] = BACKUP_NOW else {
+        panic!("the back up now census names its stage check first");
+    };
+    let unchecked = replaced_in(&source, name, stage, "false");
+    assert_ne!(unchecked, source, "the stage check was not planted out");
+    let refused = backup_now_problems(&unchecked);
+    assert!(
+        refused_by_name(&refused, name, "lacks"),
+        "a back up now that ignores a held stage is not refused by name: {refused:?}"
+    );
+    let exports = examined("back up now export(s) of src/wasm.rs", BACKUP_NOW.to_vec());
+    let refused_texts = examined("refused text(s)", BACKUP_NOW_REFUSED.to_vec());
+    println!(
+        "examined {} x {} refusal(s)",
+        exports.len(),
+        refused_texts.len()
+    );
+}
+
+// SPEC-516 R4 (ADR-534 D3): back up now's refusal. The export maps the core's refusal through one
+// helper, which throws the engine's error bytes as they are and names any other reason in a
+// `backup-refused:` sentence, so the page reads a refused backup by its cause.
+
+/// Back up now's refusal helper and the export that maps through it, with the statements each owes.
+const BACKUP_NOW_REFUSAL: [(&str, &str, &[&str]); 2] = [
+    (
+        "unbacked",
+        "throws the engine's bytes or names why back up now refused",
+        &[
+            "match why(reason) {",
+            "Ok(word) => refuse(format!(\"backup-refused: {word}\")),",
+            "Err(bytes) => bytes,",
+        ],
+    ),
+    (
+        "back_up_now",
+        "maps the core's refusal through its one helper",
+        &["backup_now::back_up(&dispatcher()?, Path::new(&backup)).map_err(unbacked)?;"],
+    ),
+];
+
+#[test]
+fn the_backup_now_refusal_throws_the_engines_bytes_or_names_why() {
+    let source = boundary();
+    assert_eq!(lacks(&source, &BACKUP_NOW_REFUSAL), Vec::<String>::new());
+
+    // the helper answering a constant, its body replaced whole, is refused by its name, and so is
+    // the export mapping the core's refusal past the helper
+    let held = body(&source, "unbacked").unwrap_or_else(|problem| panic!("unbacked: {problem}"));
+    let constant = source.replacen(held, "{\n    Default::default()\n}", 1);
+    assert_ne!(constant, source, "unbacked's body was not replaced");
+    let refused = lacks(&constant, &BACKUP_NOW_REFUSAL);
+    assert!(
+        refused_by_name(&refused, "unbacked", "lacks"),
+        "unbacked answering a constant is not refused by name: {refused:?}"
+    );
+    let unmapped = replaced_in(
+        &source,
+        "back_up_now",
+        ".map_err(unbacked)?",
+        ".map_err(|_| refuse(\"backup-refused\"))?",
+    );
+    assert_ne!(
+        unmapped, source,
+        "back up now's refusal was not planted past its helper"
+    );
+    let refused = lacks(&unmapped, &BACKUP_NOW_REFUSAL);
+    assert!(
+        refused_by_name(&refused, "back_up_now", "lacks"),
+        "a back up now that maps past its helper is not refused by name: {refused:?}"
+    );
+    let functions = examined(
+        "back up now refusal function(s) of src/wasm.rs",
+        BACKUP_NOW_REFUSAL.to_vec(),
+    );
+    let owed: usize = functions.iter().map(|(_, _, owed)| owed.len()).sum();
+    println!("examined {owed} owed statement(s)");
+}
+
+// SPEC-507 R1 (ADR-525 D3): the card health panel on the web. The export answers one card's health
+// as JSON, or `null` when no card has the id, from the core's own health read through the
+// dispatcher; the scheduler's port gives no readout in this build, so it asks with the absent
+// state.
+
+/// The card health export and the statements it owes.
+const CARD_HEALTH: [(&str, &str, &[&str]); 1] = [(
+    "card_health",
+    "reads one card's health through the core and answers its JSON, or null",
+    &[
+        "dispatcher()?.card_health(card_id, Readout::NotAvailable(SchedulerState::Absent))",
+        ".map_err(|_| refuse(\"the read failed\"))?",
+        ".map_or(serde_json::Value::Null, CardHealth::to_json)",
+    ],
+)];
+
+#[test]
+fn the_card_health_export_answers_the_cores_health_as_json() {
+    let source = boundary();
+    assert_eq!(lacks(&source, &CARD_HEALTH), Vec::<String>::new());
+
+    // the export answering a constant text, its body replaced whole, is refused by its name
+    let [(name, _, _)] = CARD_HEALTH;
+    let held = body(&source, name).unwrap_or_else(|problem| panic!("{name}: {problem}"));
+    let constants = examined(
+        "constant answer(s) planted",
+        vec!["Ok(\"xyzzy\".into())", "Ok(String::new())"],
+    );
+    for constant in constants {
+        let planted = source.replacen(held, &format!("{{\n    {constant}\n}}"), 1);
+        assert_ne!(planted, source, "{name}'s body was not replaced");
+        let refused = lacks(&planted, &CARD_HEALTH);
+        assert!(
+            refused_by_name(&refused, name, "lacks"),
+            "`{constant}` planted as {name}'s body is not refused by name: {refused:?}"
+        );
+    }
+    let functions = examined("card health export(s) of src/wasm.rs", CARD_HEALTH.to_vec());
+    let owed: usize = functions.iter().map(|(_, _, owed)| owed.len()).sum();
+    println!("examined {owed} owed statement(s)");
 }

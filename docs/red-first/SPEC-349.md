@@ -78,4 +78,22 @@ A7: not red: passed on both simulators at 8bb083db, a measurement of the engine 
 A8: not red: passed on both simulators at 8bb083db; the stub's view renders the card
 A9: red at ba29482e: AssertionError: Lists differ: ['harness: 0 CardProbe test steps, not one', 'card-isolation: no such job'] != [] (run 37259607130, job hygiene)
 A9: green at 8bb083db
+A10: red at 82efa61d: PlantedCardTests.swift:1253: XCTAssertNotNil failed - a page that answered after 4 s and loaded 2 s later read not loaded: card probe late page: took=none elapsed=4.13 (job 125596547173, both simulators)
+A10: green at 79e396b1
+A11: red at 82efa61d: PlantedCardTests.swift:1268: XCTAssertNil failed: "6.002672910690308" - a page that had not answered within its 3 s answer bound read loaded: card probe silent page: took=6.00 elapsed=6.00 (job 125596547173, both simulators)
+A11: green at 79e396b1
+A12: red at 0fb03bd9: FactoryTests.swift:328: XCTAssertNotNil failed - a card whose handed document committed after 4 s and loaded 2 s later read not loaded: card probe handed page: took=none elapsed=3.09 (job 125975408636, both simulators)
+A12: green at 29c0957f
+A13: red at 0fb03bd9: FactoryTests.swift:348: XCTAssertGreaterThanOrEqual failed: ("1.1102709770202637") is less than ("3.0") - the wait read the handed document not loaded before its whole answer bound: card probe uncommitted page: took=none ela (job 125975408636, both simulators)
+A13: green at 29c0957f
 ```
+
+A10 and A11 were committed with the load wait's seam and the wait itself unchanged (82efa61d),
+and read red by name on both simulators in the pull request's own run. The wait changed in
+79e396b1, with both tests unchanged, and the run at this delivery's head reads them green on
+both simulators. The commits after 79e396b1 change only documents.
+
+A12 and A13 were committed with the handed wait's seam and the wait itself unchanged
+(0fb03bd9), and read red by name on both simulators in the pull request's own run. The handed
+wait changed in 29c0957f, with both tests unchanged, and the run at this delivery's head reads
+them green on both simulators. The commits after 29c0957f change only documents.

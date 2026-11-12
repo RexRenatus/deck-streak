@@ -2,10 +2,11 @@
 # The sync server's dependency audit (SPEC-340 R7; ADR-351 D5): the RustSec advisory check over the
 # graph the release builds the sync server from. It reads the fork and the commit from the engine's
 # patch entry in Cargo.toml, as the release's build step does, refuses a commit that is not a full
-# one before it fetches anything, fetches that commit into a scratch directory, and runs cargo-deny's
-# advisory check on the server's own manifest with the house deny.toml, under the fork's lockfile.
-# An advisory the check reports fails the audit, and the release job, which needs this job, never
-# builds.
+# one before it fetches anything, fetches that commit into a scratch directory, reads the fork's
+# lockfile with the FORK-LOCK GUARD (SPEC-565), and runs cargo-deny's advisory check on the
+# server's own manifest with the house deny.toml, under the fork's lockfile. A guard verdict that
+# is not GREEN, or an advisory the check reports, fails the audit, and the release job, which needs
+# this job, never builds.
 #
 #   bash scripts/audit-sync-server.sh --work DIR [--manifest FILE] [--deny FILE]
 #
@@ -45,6 +46,10 @@ mkdir -p "$work"
 git -C "$work" init -q
 git -C "$work" fetch -q --depth 1 "$fork" "$rev"
 git -C "$work" checkout -q FETCH_HEAD
+# The FORK-LOCK GUARD (SPEC-565; ADR-583): no block-buffer below 0.12.1 and no digest below 0.11.0
+# in the lockfile the release builds the server from. A RED (exit 1) or a VOID (exit 2) ends the
+# audit here, and the advisory check never runs.
+python3 "$root/scripts/lock-digest-line.py" "$work/Cargo.lock"
 # cargo-deny takes --manifest-path, --locked and --config before its subcommand, and the check's
 # name after it.
 cargo deny --manifest-path "$work/rslib/sync/Cargo.toml" --locked --config "$deny" check advisories

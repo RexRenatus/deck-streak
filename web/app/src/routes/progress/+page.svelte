@@ -1,9 +1,9 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { api, type Answer } from '$lib/api';
-  import CourseLadder from '$lib/progress/CourseLadder.svelte';
-  import type { ProgressView } from '$lib/progress/progress';
-  import { m } from '$lib/paraglide/messages.js';
+  import { api, type Answer } from '#lib/api.js';
+  import CourseLadder from '#lib/progress/CourseLadder.svelte';
+  import type { ProgressView } from '#lib/progress/progress.js';
+  import { m } from '#lib/paraglide/messages.js';
 
   // The progress screen (SPEC-077 R17): each configured course's Road to C2 as the server answers
   // it, the same figures the bot's /progress reports. The page computes none of them.
@@ -20,7 +20,7 @@
 <main class="mx-auto max-w-prose px-6 py-12">
   <h1 class="text-3xl font-semibold tracking-tight">DeckStreak</h1>
 
-  <div class="mt-8 rounded-lg bg-card p-4 text-card-foreground">
+  <div class="mt-8 rounded-lg border bg-card p-4 text-card-foreground">
     {#if progress === undefined}
       <div role="status">{m.loading()}</div>
     {:else if progress.kind === 'ok'}

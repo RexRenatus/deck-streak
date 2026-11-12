@@ -234,3 +234,22 @@ describe('EngineClient', () => {
     expect(await unsynced).toEqual({ reviews: 2, changed: true, schema: false });
   });
 });
+
+describe('EngineClient card health', () => {
+  it("cardHealth sends the card alone and resolves to the core's health, or null for an id no card has", async () => {
+    // SPEC-507 R1: the page asks for a card's health by its id, and the read writes nothing
+    const port = new FakePort();
+    const client = new EngineClient(port, ORIGIN);
+    const health = client.cardHealth(1001n);
+    const none = client.cardHealth(7n);
+    expect(port.sent).toEqual([
+      { id: 1, op: 'card-health', card: 1001n },
+      { id: 2, op: 'card-health', card: 7n }
+    ]);
+    const value = { card: 1001n, reps: 4, lapses: 1, scheduler: { state: 'absent' } };
+    port.reply({ id: 2, ok: true, value: null }, ORIGIN);
+    port.reply({ id: 1, ok: true, value }, ORIGIN);
+    expect(await health).toEqual(value);
+    expect(await none).toBeNull();
+  });
+});

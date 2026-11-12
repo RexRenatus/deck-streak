@@ -2,13 +2,14 @@
   import './layout.css';
   import { onMount, untrack } from 'svelte';
   import { page } from '$app/state';
-  import { api, type Answer } from '$lib/api';
-  import WalletHeader from '$lib/economy/WalletHeader.svelte';
-  import type { WalletView } from '$lib/economy/wallet';
-  import TierAnimation from '$lib/ladder/TierAnimation.svelte';
-  import { celebrations, type FeedItem } from '$lib/ladder/feed';
-  import { m } from '$lib/paraglide/messages.js';
-  import { telegram } from '$lib/telegram.svelte';
+  import { api, type Answer } from '#lib/api.js';
+  import WalletHeader from '#lib/economy/WalletHeader.svelte';
+  import type { WalletView } from '#lib/economy/wallet.js';
+  import TierAnimation from '#lib/ladder/TierAnimation.svelte';
+  import { celebrations, type FeedItem } from '#lib/ladder/feed.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { telegram } from '#lib/telegram.svelte.js';
+  import { applyStoredColourMode, deviceStorage } from '#lib/settings/colour-mode.js';
 
   let { children } = $props();
 
@@ -27,9 +28,11 @@
   const open = $derived(OPEN.includes(page.url.pathname));
 
   // Telegram shows its own placeholder until the Mini App says it is ready. The root layout mounts
-  // after the first screen has rendered, so this is the moment (SPEC-028 R2).
+  // after the first screen has rendered, so this is the moment (SPEC-028 R2). It is also when the
+  // stored colour mode takes over from the stylesheet's system rule (SPEC-593 R8; ADR-616 D1).
   onMount(() => {
     telegram.ready();
+    applyStoredColourMode(document.documentElement, deviceStorage());
   });
 
   // The feed and the wallet are read once the layout is on the page, on any route but an open one.

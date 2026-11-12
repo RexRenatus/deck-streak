@@ -1,5 +1,7 @@
 """SPEC-290: a mutation leg with nothing to examine is not started, decided from the plan's listing
-and never from a leg's absence; the verdict and `ci` keep every refusal (ADR-290, #435)."""
+and never from a leg's absence; the verdict and `ci` keep every refusal (ADR-290, #435). SPEC-500:
+on the release run `ci` reads every mutation job's result as advisory and still judges every other
+need (ADR-518)."""
 
 import json
 import os
@@ -25,6 +27,20 @@ RECORDED = REPO / "scripts" / "tests" / "fixtures" / "not-started-legs"
 PLAN = "needs.mutation-plan.outputs"
 #: The two legs the plan's listing can leave with nothing to examine, and the only skips ci admits.
 LEGS = ("mutation-rust", "mutation-rows", "mutation-python-release")
+#: Every mutation job `ci` needs, in its needs' order: on the release run each one's result is
+#: advisory (SPEC-500 R2).
+MUTATION_JOBS = (
+    "mutation-plan",
+    "mutation-rust",
+    "mutation-python",
+    "mutation-python-release",
+    "mutation-rows",
+    "mutation-verdict",
+    "mutation-web-shard",
+    "mutation-web",
+)
+#: base-is-dev's output that names the release run (SPEC-500 R1), which `ci`'s step reads.
+RELEASE = "needs.base-is-dev.outputs.release"
 MERGED = "Merge pull request #7 from RexRenatus/feat/probe"
 
 
@@ -112,12 +128,17 @@ def needs_of(job):
     return [name.strip() for name in found.group(1).split(",")]
 
 
-def rendered_env(step, needs, results):
-    """The step's env as GitHub renders it from each need's result."""
+def rendered_env(step, needs, results, release=None):
+    """The step's env as GitHub renders it from each need's result, and base-is-dev's `release`
+    output from the scenario's `release` (SPEC-500 R1): `true` on the release run, `false` on any
+    other, and empty when base-is-dev refused before its release step ran."""
     env = {}
     for name, expression in step_env(step).items():
         if expression == "join(needs.*.result, ' ')":
             env[name] = " ".join(results[need] for need in needs)
+            continue
+        if expression == RELEASE and release is not None:
+            env[name] = release
             continue
         one = re.fullmatch(r"needs\.([a-z-]+)\.result", expression)
         if one is None or one.group(1) not in results:
@@ -579,7 +600,8 @@ class ALegWithNothingToExamineIsNotStarted(unittest.TestCase):
         ]
         for where, changed, expected in examined("need results", scenarios):
             results = dict(dict.fromkeys(needs, "success"), **changed)
-            env = dict(rendered_env(step, needs, results), PATH=os.environ["PATH"])
+            # Not the release run: base-is-dev's release output reads `false` (SPEC-500 R3).
+            env = dict(rendered_env(step, needs, results, "false"), PATH=os.environ["PATH"])
             done = bash(script, env, shell_of(step, aggregate, workflow(CI)))
             self.assertEqual(done.returncode, expected, f"{where}: {done.stdout}{done.stderr}")
             for leg in LEGS:
@@ -615,10 +637,81 @@ class ALegWithNothingToExamineIsNotStarted(unittest.TestCase):
                 value == "success" or (name in LEGS and value == "skipped")
                 for name, value in results.items()
             )
-            env = dict(rendered_env(step, needs, results), PATH=os.environ["PATH"])
+            # The release context: not the release run, so base-is-dev's release output reads
+            # `false`; the release run's rule is the next test's (SPEC-500 R2, R3).
+            env = dict(rendered_env(step, needs, results, "false"), PATH=os.environ["PATH"])
             done = bash(script, env, shell_of(step, aggregate, workflow(CI)))
             where = f"{need} {result}, {context}"
             self.assertEqual(done.returncode, 0 if admitted else 1, f"{where}: {done.stdout}")
+
+    def test_ci_admits_every_mutation_result_on_the_release_run_and_no_gating_one(self):
+        # SPEC-500 R2 and R3. On the release run base-is-dev's release output reads `true`, and
+        # `ci` reads each mutation job's result as advisory: it passes exactly when every other
+        # need succeeded, a need added later included, and prints one advisory line for each
+        # mutation job, in its log and in the step summary when one is set. On every other run
+        # the output reads `false`, or is empty when base-is-dev refused before its release step,
+        # and the rule is today's: a skip admitted from the three legs alone, once each.
+        aggregate = jobs(workflow(CI)).get("ci", "")
+        needs = needs_of(aggregate)
+        named = [need for need in needs if need.startswith("mutation-")]
+        self.assertEqual(named, list(MUTATION_JOBS), "ci's mutation needs")
+        (step,) = steps(aggregate)
+        script = step_script(step)
+        beside = {
+            "alone, a step summary set": False,
+            "beside every mutation job reading the same result, no step summary": True,
+        }
+        members = [
+            (need, result, release, context)
+            for need in needs
+            for result in ("success", "failure", "cancelled", "skipped")
+            for release in ("true", "false", "")
+            for context in beside
+        ]
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        population = examined("need results of ci by release output", members)
+        # Each run's verdict is judged as it runs; what it printed is judged after the last.
+        said = []
+        for index, (need, result, release, context) in enumerate(population):
+            results = dict.fromkeys(needs, "success")
+            if beside[context]:
+                results.update(dict.fromkeys(MUTATION_JOBS, result))
+            results[need] = result
+            if release == "true":
+                admitted = all(
+                    value == "success"
+                    for name, value in results.items()
+                    if name not in MUTATION_JOBS
+                )
+            else:
+                admitted = all(
+                    value == "success" or (name in LEGS and value == "skipped")
+                    for name, value in results.items()
+                )
+            env = dict(rendered_env(step, needs, results, release), PATH=os.environ["PATH"])
+            summary = Path(scratch.name) / f"summary-{index}.md"
+            if not beside[context]:
+                env["GITHUB_STEP_SUMMARY"] = str(summary)
+            done = bash(script, env, shell_of(step, aggregate, workflow(CI)))
+            where = f"{need} {result}, release {release!r}, {context}"
+            self.assertEqual(
+                done.returncode, 0 if admitted else 1, f"{where}: {done.stdout}{done.stderr}"
+            )
+            advisory = []
+            if release == "true":
+                advisory = [
+                    f"ci: {job} reads {results[job]}; advisory on the release run (SPEC-500)"
+                    for job in MUTATION_JOBS
+                ]
+            printed = [line for line in done.stdout.splitlines() if "advisory" in line]
+            said.append((where, printed, advisory, summary, beside[context]))
+        for where, printed, advisory, summary, unset in said:
+            self.assertEqual(printed, advisory, where)
+            if unset or not advisory:
+                self.assertFalse(summary.exists(), f"{where}: a summary nobody set or owed")
+            else:
+                self.assertEqual(summary.read_text(encoding="utf-8").splitlines(), advisory, where)
 
     def test_the_verdict_step_fails_on_the_legs_check(self):
         job = jobs(workflow(CI)).get("mutation-verdict", "")

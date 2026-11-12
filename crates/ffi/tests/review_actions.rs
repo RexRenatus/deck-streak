@@ -1,5 +1,6 @@
 //! The review's bury and flag through the native adapter (SPEC-358 R3, A5 and A6), and the red
-//! flag's number the app reads from it once (SPEC-358 R3).
+//! flag's number the app reads from it once (SPEC-358 R3). A bury hands back the states the card
+//! was shown with, as an answer does, for the undo's record (SPEC-515 R2).
 //!
 //! Each test builds the review fixture the app's review tests open, opens it through the adapter,
 //! chooses its deck and reads the queue's first card, the text card, whose id the fixture's builder
@@ -20,6 +21,9 @@ mod support;
 
 #[path = "support/review.rs"]
 mod review;
+
+#[path = "support/clock.rs"]
+mod clock;
 
 use std::path::Path;
 use std::sync::Arc;
@@ -56,19 +60,13 @@ struct Opened {
     fixture: review::Review,
 }
 
-fn now_secs() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("the clock reads after the epoch")
-        .as_secs()
-}
-
 fn text(bytes: Vec<u8>) -> String {
     String::from_utf8(bytes).expect("the engine's text is UTF-8")
 }
 
-/// Builds the review fixture in a scratch directory of the test's own, opens it through the
-/// adapter and chooses its deck, as the app does.
+/// Builds the review fixture in a scratch directory of the test's own, pins its cutoff before the
+/// adapter opens it (SPEC-443 R2), opens it through the adapter and chooses its deck on the clock's
+/// instant, as the app does.
 fn opened(test: &str) -> Opened {
     let stamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -83,6 +81,7 @@ fn opened(test: &str) -> Opened {
         [TEXT_CARD, IMAGE_CARD],
         "the review fixture's text and image cards carry their fixed ids"
     );
+    let clock = clock::pin(&fixture.collection);
     let engine = Engine::new(Vec::new()).expect("the engine starts from the default init message");
     let mut open = Vec::new();
     for (field, path) in [
@@ -98,7 +97,11 @@ fn opened(test: &str) -> Opened {
         .run(service, method, open)
         .expect("the adapter opens the review fixture");
     let mut tree_request = Vec::new();
-    wire::put_varint_field(&mut tree_request, 1, now_secs());
+    wire::put_varint_field(
+        &mut tree_request,
+        1,
+        u64::try_from(clock.at_secs()).expect("the clock reads after the epoch"),
+    );
     let (service, method) = DECK_TREE;
     let tree = engine
         .run(service, method, tree_request)
@@ -120,18 +123,29 @@ fn opened(test: &str) -> Opened {
 /// The queue's first card, as the engine answers it through the adapter: its id, and its flag,
 /// `Card.flags`, field 17 at the pinned rev.
 fn head(engine: &Engine) -> (i64, u64) {
+    let first = first_queued(engine);
+    let card = wire::bytes(&first, 1);
+    (wire::signed(&card, 1), wire::varint(&card, 17))
+}
+
+/// The states the queue's first card is shown with, `QueuedCard.states` (field 3), which a bury
+/// hands back as an answer does (SPEC-515 R2).
+fn head_states(engine: &Engine) -> Vec<u8> {
+    wire::bytes(&first_queued(engine), 3)
+}
+
+/// The queue's first card's bytes, `QueuedCard`, as the engine answers them through the adapter.
+fn first_queued(engine: &Engine) -> Vec<u8> {
     let mut request = Vec::new();
     wire::put_varint_field(&mut request, 1, 1);
     let (service, method) = GET_QUEUED_CARDS;
     let reply = engine
         .run(service, method, request)
         .expect("the queue is on the allow-list");
-    let queued = wire::repeated(&reply, 1);
-    let first = queued
-        .first()
-        .expect("the review fixture's deck queues a card");
-    let card = wire::bytes(first, 1);
-    (wire::signed(&card, 1), wire::varint(&card, 17))
+    wire::repeated(&reply, 1)
+        .into_iter()
+        .next()
+        .expect("the review fixture's deck queues a card")
 }
 
 /// The stored queue of each of `cards`, read through the engine's own API from the collection the
@@ -162,7 +176,7 @@ fn a_bury_buries_the_card_as_the_users_bury() {
     );
 
     engine
-        .bury(TEXT_CARD)
+        .bury(TEXT_CARD, head_states(&engine))
         .expect("the adapter buries the shown card");
 
     assert_eq!(

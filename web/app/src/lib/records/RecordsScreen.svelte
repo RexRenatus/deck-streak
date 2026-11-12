@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
+  import { m } from '#lib/paraglide/messages.js';
   import type { RecordsView } from './records';
 
   // The records screen (SPEC-073 R13, R19): each personal record with its value, the day it was

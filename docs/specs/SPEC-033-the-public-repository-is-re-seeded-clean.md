@@ -139,3 +139,22 @@ leaves a file behind.
 - **A ruleset changes on GitHub without the committed file changing.** Detected by the
   public-readiness report, which compares `gh api` output with these files, and by `test_rulesets.py`
   for the committed side.
+
+## Amendment: a listed brand binary is admitted (SPEC-579)
+
+R2 is amended by SPEC-579 and ADR-598, as section 5 deferred "an allow-list with a metadata check,
+made by the delivery that needs them"; R2's text above is kept as it was.
+
+- A binary file or blob is admitted, and not refused by the rule `binary`, only when its path, its
+  sha256 and its byte count equal one entry of `scripts/brand-files.json` at the root the scrub
+  reads. The tree scan and the history scan admit alike.
+- An admitted binary is still searched for every private literal, as R2 searches every binary.
+- Every other binary is refused by `binary` as before: the same bytes at an unlisted path, other
+  bytes at a listed path, and every binary when the list is absent.
+- A list that cannot be read, or whose entry lacks a path, a 64-digit lowercase sha256 or a byte
+  count, or names a path twice, stops the scrub as a usage error (exit 2), by name.
+- The metadata check is `scripts/tests/test_brand_files.py`: each listed file's kind, its pixel
+  sizes read from its own header, and no text, time or comment metadata in it. R3's size limit is
+  unchanged and applies to admitted files.
+
+The list holds only files that come from the DeckStreak brand source (SPEC-579).

@@ -279,7 +279,6 @@ def release_files(tag, marker):
             REPO / "deploy/scripts/effective-check.py"
         ).read_bytes(),
         f"{SYSTEMD}/{API}": unit_text(API, marker),
-        f"{SYSTEMD}/{BOT}": unit_text(BOT, marker),
         f"{SYSTEMD}/deck-streak-job@.service": unit_text("deck-streak-job@.service", marker),
         f"{SYSTEMD}/{JOB}@sync.service.d/20-sync-login.conf": (
             b"[Service]\nLoadCredential=anki-sync-username:/run/deck-streak-credentials/socket\n"
@@ -544,12 +543,12 @@ class TheDeploySwitches(Case):
             self.assertEqual((w.units / name).read_bytes(), data, f"{name} is not byte for byte")
         events = w.text("events.log").splitlines()
         self.assertEqual(
-            [e.split()[1] for e in events], [API, BOT], "the long-running units restart"
+            [e.split()[1] for e in events], [API], "the long-running unit restarts, and no bot"
         )
         self.assertTrue(all(e.endswith("current=v1.0.0") for e in events), events)
         calls = w.text("systemctl.log")
         self.assertLess(calls.index("daemon-reload"), calls.index("restart"))
-        for unit in (API, BOT, "deck-streak-job@.service"):
+        for unit in (API, "deck-streak-job@.service"):
             self.assertIn(f"cat {unit}", calls.replace("\n", " ").replace("cat ", "cat "))
         self.assertIn("http://127.0.0.1:8080/api/readyz", w.text("probes.log"))
         w.ship("v1.1.0", marker="second")
@@ -563,7 +562,7 @@ class TheDeploySwitches(Case):
         w.ship("v1.0.0")
         self.ok(w.deploy("v1.0.0"))
         w.ship("v2.0.0", marker="bad")
-        for unit in (BOT, API):
+        for unit in (API,):
             done = w.deploy("v2.0.0", STUB_BAD_UNIT=unit, STUB_BAD_TAG="v2.0.0")
             self.assertNotEqual(done.returncode, 0, f"{unit} never became ready")
             self.assertIn(unit, done.stderr, "the refusal names the unit that did not become ready")
@@ -594,10 +593,34 @@ class TheDeploySwitches(Case):
     def test_the_deploy_leaves_no_current_when_the_first_release_is_not_ready(self):
         w = self.world
         w.ship("v1.0.0")
-        done = w.deploy("v1.0.0", STUB_BAD_UNIT=BOT, STUB_BAD_TAG="v1.0.0")
+        done = w.deploy("v1.0.0", STUB_BAD_UNIT=API, STUB_BAD_TAG="v1.0.0")
         self.assertNotEqual(done.returncode, 0)
-        self.assertIn(BOT, done.stderr)
+        self.assertIn(API, done.stderr)
         self.assertIsNone(w.current(), "no release is current when none was ready")
+
+    def test_a_release_with_no_bot_unit_deploys_and_restarts_the_api_alone(self):
+        # SPEC-582 R5: the release ships no bot unit, and the deploy restarts the API, waits for
+        # its readiness and restarts no bot, so a host where a bot restart would fail still
+        # deploys; a switch back restarts the API alone.
+        w = self.world
+        w.ship("v1.0.0")
+        self.assertNotIn(BOT, unit_files("v1.0.0", "v1.0.0"), "the release ships a bot unit")
+        self.ok(w.deploy("v1.0.0", STUB_BAD_UNIT=BOT, STUB_BAD_TAG="v1.0.0"))
+        self.assertEqual(w.current(), "v1.0.0")
+        self.assertEqual(
+            w.text("events.log").splitlines(), [f"restart {API} current=v1.0.0"], "the restarts"
+        )
+        # A release whose API never becomes ready switches back, and the switch back restarts the
+        # API alone, on the kept release.
+        w.ship("v2.0.0", marker="bad")
+        before = len(w.text("events.log").splitlines())
+        done = w.deploy("v2.0.0", STUB_BAD_UNIT=API, STUB_BAD_TAG="v2.0.0")
+        self.assertNotEqual(done.returncode, 0, "a release whose API never became ready was kept")
+        self.assertEqual(w.current(), "v1.0.0", "current is switched back")
+        self.assertEqual(
+            w.text("events.log").splitlines()[before:],
+            [f"restart {API} current=v2.0.0", f"restart {API} current=v1.0.0"],
+        )
 
     def test_the_rollback_makes_a_kept_release_current_again(self):
         w = self.world
@@ -1539,6 +1562,25 @@ libc.execve(
 )
 sys.exit(f"execve failed: errno {ctypes.get_errno()}")
 """
+    # The function each Caddy step calls before anything else, which a Lean entry covers
+    # (SPEC-473), and the line the install prints when it is given no tag: a step reaches it only
+    # past that function, before it reads a setting or touches a file.
+    CALL = "refuse_unlisted_settings"
+    USAGE = b"deploy: usage: deploy.sh caddy-install TAG\n"
+    # Every unprefixed key the Lean entry's vectors hold. None is a name bash reads as code when it
+    # starts, so the settings check alone decides each vector.
+    INERT = {
+        b"",
+        b"A",
+        b"NOEQ",
+        b"a b",
+        b"\xff",
+        b"DECKSTREAK_DEPLOYX",
+        b"deckstreak_deploy_repo",
+        b"XDECKSTREAK_DEPLOY_REPO",
+        b"DECKSTREAK_DEPLOY",
+    }
+    VECTORS = REPO / "formal" / "vectors" / "deploy-entry-refusal.jsonl"
 
     @staticmethod
     def tree(root):
@@ -1767,7 +1809,13 @@ sys.exit(f"execve failed: errno {ctypes.get_errno()}")
                 runs.setdefault((run, source), []).append(command)
         settings = re.search(r"^SETTINGS='[^']*'", DEPLOY.read_text(encoding="utf-8"), re.M)
         opening = ("set -euo pipefail", settings.group(0) if settings else "", 'case "${1:-}" in ')
-        declared = {str(ROLLBACK): self.ROLLBACK_RUN, str(DEPLOY): (*opening, self.REFUSAL)}
+        # The Caddy arm calls the refusal's function, and bash's DEBUG trap under `set -T` records
+        # that call twice before the function's first command: as the arm runs it, and again as
+        # the function is entered.
+        declared = {
+            str(ROLLBACK): self.ROLLBACK_RUN,
+            str(DEPLOY): (*opening, self.CALL, self.CALL, self.REFUSAL),
+        }
         self.assertEqual({source for _, source in runs}, set(declared), "a script never ran")
         for (_, source), commands in examined("script run(s)", sorted(runs.items())):
             first = declared[source]
@@ -1776,6 +1824,150 @@ sys.exit(f"execve failed: errno {ctypes.get_errno()}")
                 first,
                 f"{Path(source).name} runs something before the refusal",
             )
+
+    def test_a_caddy_step_agrees_with_every_vector_of_its_lean_proof(self):
+        # The Lean entry that proves the settings check writes one vector per block: its entries,
+        # the names a start-up file makes as variables, and the port's answer (SPEC-473 A2). Each
+        # block that holds no empty entry reaches the step exactly, through execve, so the
+        # environment it reads holds the vector's entries and nothing else.
+        first, *lines = self.VECTORS.read_text(encoding="utf-8").splitlines()
+        header = json.loads(first)
+        self.assertEqual(
+            tuple(header[key] for key in ("schema", "entry", "covers", "anchor", "vectors")),
+            (
+                "phx.formal.vectors.v1",
+                "DeployEntryRefusal",
+                "deploy/deploy.sh",
+                "refuse_unlisted_settings",
+                len(lines),
+            ),
+        )
+        vectors = [json.loads(line) for line in lines]
+        prefix = os.fsencode(self.PREFIX)
+        shell_name = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+        # A vector holds no NUL, no unprefixed key outside the inert set, and no host setting with
+        # a value, and each name it makes is a deploy setting's shell name.
+        for i, vector in enumerate(vectors, 1):
+            for entry in (bytes.fromhex(entry) for entry in vector["entries"]):
+                key, has, value = entry.partition(b"=")
+                self.assertNotIn(b"\0", entry, f"vector {i} holds NUL")
+                if not key.startswith(prefix):
+                    self.assertIn(key, self.INERT, f"vector {i}: {key!r} is not an inert key")
+                if key == prefix + b"HOST" and has:
+                    self.assertEqual(value, b"", f"vector {i} gives the host setting a value")
+            for name in vector["made"]:
+                self.assertTrue(
+                    name.startswith(self.PREFIX) and shell_name.fullmatch(name),
+                    f"vector {i} makes {name!r}",
+                )
+        if not collation_locale_available("en_US.UTF-8"):
+            self.fail("the en_US.UTF-8 locale every non-empty block also runs under is installed")
+        # EXEC_ENTRIES, the route that hands a step its entries exactly, reads them as hex words
+        # split at spaces, so an empty entry never reaches the step by it. The vectors whose block
+        # holds one are these 3, each by its number in the file and its block: they are named here
+        # and not run, and every other vector is.
+        not_run = [
+            (1, [b""]),
+            (2, [b"", b""]),
+            (27, [b"DECKSTREAK_DEPLOY_CADDY_DIR=/x", b"", b"A=1", b"NOEQ"]),
+        ]
+        self.assertEqual(
+            [
+                (i, block)
+                for i, vector in enumerate(vectors, 1)
+                for block in [[bytes.fromhex(entry) for entry in vector["entries"]]]
+                if b"" in block
+            ],
+            not_run,
+            "the vectors whose block holds an empty entry are not the 3 named",
+        )
+        to_run = [(i, vector) for i, vector in enumerate(vectors, 1) if i not in dict(not_run)]
+        self.assertEqual(
+            (len(to_run), len(vectors)),
+            (60, 63),
+            "examined 60 of 63 deploy entry vectors: every vector runs but the 3 named",
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            work = Path(tmp) / "work"
+            work.mkdir()
+            made = Path(tmp) / "made.bash"
+            # The lead sources the made file and then the step, each by its quoted path, so its
+            # text holds no argument expansion; bash names itself "bash", as it did before.
+            lead = [
+                "-c",
+                f"set -a; . {shlex.quote(str(made))}; set +a; "
+                f". {shlex.quote(str(DEPLOY))} caddy-install",
+                "bash",
+            ]
+            # The elevation setting as the world gives every other step: a plain mapping of the
+            # value the shared test environment holds, written as each setting of a held file is.
+            elevation = {"DECKSTREAK_DEPLOY_ELEVATE": ""}
+            self.assertLessEqual(
+                elevation.items(),
+                self.world.env.items(),
+                "the world gives the elevation setting another value",
+            )
+            for i, vector in examined(f"of {len(vectors)} deploy entry vectors", to_run):
+                block = [bytes.fromhex(entry) for entry in vector["entries"]]
+                made.write_text(
+                    "".join(f"{key}={shlex.quote(value)}\n" for key, value in elevation.items())
+                    + "".join(f"{name}=made\n" for name in vector["made"]),
+                    encoding="utf-8",
+                )
+                said = (
+                    self.USAGE if vector["verdict"] == "proceed" else bytes.fromhex(vector["said"])
+                )
+                # Under the C locale, and again under two UTF-8 locales, each named by an entry
+                # appended to a block that holds one: an unprefixed entry moves no verdict there.
+                locales = [[], [b"LC_ALL=C.UTF-8"], [b"LC_ALL=en_US.UTF-8"]] if block else [[]]
+                for locale_entry in locales:
+                    entries = [*block, *locale_entry]
+                    done = launch(
+                        [
+                            sys.executable,
+                            "-c",
+                            self.EXEC_ENTRIES,
+                            " ".join(entry.hex() for entry in entries),
+                            *lead,
+                        ],
+                        entries,
+                        sourced=made,
+                        cwd=work,
+                        env=dict(entry.split(b"=", 1) for entry in entries if b"=" in entry),
+                    )
+                    self.assertEqual(
+                        (done.returncode, done.stderr),
+                        (1, said),
+                        f"vector {i}, {locale_entry}: the step departs from the Lean entry",
+                    )
+                    self.assertEqual(
+                        list(work.iterdir()), [], f"vector {i}: a step wrote where it ran"
+                    )
+        # The single-entry blocks that proceed name exactly SETTINGS' words, so the entry's listed
+        # settings are the ones the script lists. Both sides are bytes, so no key is decoded.
+        proceeding = {
+            key
+            for vector in vectors
+            if vector["verdict"] == "proceed" and len(vector["entries"]) == 1
+            for key in [bytes.fromhex(vector["entries"][0]).partition(b"=")[0]]
+            if key.startswith(prefix)
+        }
+        self.assertEqual(
+            proceeding,
+            {os.fsencode(name) for name in self.settings()},
+            "the vectors' settings are not SETTINGS'",
+        )
+        # The covered function is the one the steps run: defined once, and called by the Caddy arm
+        # as its only command.
+        text = DEPLOY.read_text(encoding="utf-8")
+        self.assertEqual(
+            (
+                len(re.findall(r"^refuse_unlisted_settings\(\) \{$", text, re.MULTILINE)),
+                text.count("caddy-install | caddy-remove)\n    refuse_unlisted_settings\n    ;;\n"),
+            ),
+            (1, 1),
+            "deploy.sh does not define refuse_unlisted_settings once and call it from the Caddy arm",
+        )
 
     @staticmethod
     def listing(*directories):

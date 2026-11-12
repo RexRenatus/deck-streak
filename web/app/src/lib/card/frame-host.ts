@@ -1,4 +1,4 @@
-import type { FrameDocument } from './frame-document';
+import { frameDocument, type FrameDocument } from './frame-document';
 import { HOST_POLICY } from './policy.js';
 
 // SPEC-407 R1 to R3; ADR-421 D1, D2, D4. The card frame's host: the document `CardFrame` sets on
@@ -13,12 +13,13 @@ const HOST_STYLE =
   '<style>html,body{margin:0;height:100%;overflow:hidden}iframe{display:block;border:0;width:100%;height:100%}</style>';
 
 /**
- * Text as a double-quoted attribute value: `&` first, then the quote. A carriage return is left as
- * written, and the parser reads it back as a line feed, so the read-back refuses a card or a title
- * that holds one rather than carrying it changed.
+ * SPEC-462 R1; ADR-479 D2. Text as a double-quoted attribute value: `&` first, then the quote, then
+ * a carriage return as its numeric reference. The parser reads a raw carriage return back as a line
+ * feed and the reference back as the carriage return itself, so a card or a title that holds one is
+ * carried byte for byte. A NUL has no reference the parser keeps, so the read-back still refuses one.
  */
 function attribute(text: string): string {
-  return text.replaceAll('&', '&amp;').replaceAll('"', '&quot;');
+  return text.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('\r', '&#13;');
 }
 
 function parse(text: string): Document {
@@ -48,5 +49,15 @@ export function frameHost(card: string, title: string, policy: string = HOST_POL
     again.head.innerHTML === meta + HOST_STYLE &&
     hosted(host) === card &&
     again.body.children[0].getAttribute('title') === title;
-  return kept ? { srcdoc: host } : { refused: 'escaped' };
+  return kept ? { srcdoc: host } : { refused: 'host-readback' };
+}
+
+/**
+ * The card as its frame shows it: the frame document, carried by its host, or the first failing
+ * check's reason. `CardFrame` renders it and the review's status reads it, so the frame's mark and
+ * the status name the same reason (SPEC-505 R3; ADR-523 D2).
+ */
+export function frameCard(html: string, css: string, title: string, classes?: string): FrameDocument {
+  const doc = frameDocument(html, css, classes);
+  return doc.srcdoc === undefined ? doc : frameHost(doc.srcdoc, title);
 }

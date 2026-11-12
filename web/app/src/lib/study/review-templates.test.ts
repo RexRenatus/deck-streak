@@ -6,10 +6,10 @@ import { resolve } from 'node:path';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { hosted } from '$lib/card/frame-host';
-import { EngineError } from '$lib/engine/client';
-import type { CardView, Faces, Head, UndoOffer } from '$lib/engine/protocol';
-import { telegram } from '$lib/telegram.svelte';
+import { hosted } from '#lib/card/frame-host.js';
+import { EngineError } from '#lib/engine/client.js';
+import type { CardView, Faces, Head, UndoOffer } from '#lib/engine/protocol.js';
+import { telegram } from '#lib/telegram.svelte.js';
 import type { StudyClient } from './review';
 import ReviewScreen from './ReviewScreen.svelte';
 
@@ -75,6 +75,7 @@ function view(index: number, extra: Partial<CardView> = {}): CardView {
     labels: LABELS,
     undo: null,
     late: false,
+    withheld: false,
     ...extra
   };
 }
@@ -328,6 +329,6 @@ describe('the review frame shows the template cards as the engine rendered them'
     const client = new FakeClient([head(view(0, { css: GOLDEN.cards[0].card_css + ESCAPES })), head(null)]);
     render(ReviewScreen, { client: async () => client });
     await settle();
-    expect(frame().getAttribute('data-card-refused'), 'the control is refused').toBe('escaped');
+    expect(frame().getAttribute('data-card-refused'), 'the control is refused').toBe('style-closed');
   });
 });

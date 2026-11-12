@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
+  import { m } from '#lib/paraglide/messages.js';
   import type { BadgesView } from './badges';
 
   // The badge gallery (SPEC-073 R16, R19): the earned badges in the server's order, newest first,

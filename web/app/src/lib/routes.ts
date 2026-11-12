@@ -26,6 +26,8 @@ export const ROUTES = [
   '/study/mapping',
   '/study/ai-decks',
   '/sync',
+  '/data',
+  '/settings',
   '/link',
   '/signin',
   '/sign-in-methods'

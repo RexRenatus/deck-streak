@@ -21,14 +21,17 @@
   // SPEC-383 R10, R11; ADR-397: the bar's undo names the change it would undo, and the
   // dialog asks for a bury with the state its card goes back to, and for a flag with what the undo
   // does to the flag.
+  // SPEC-506 R5; ADR-524: the speaker speaks only with a voice the device runs, and a clip with none
+  // leaves a line in the status region naming its language, until the next gesture.
   import { onMount } from 'svelte';
-  import CardFrame from '$lib/card/CardFrame.svelte';
-  import type { FlagChange, Returns } from '$lib/engine/protocol';
-  import { m } from '$lib/paraglide/messages.js';
-  import { snapshotOf } from '$lib/remote/gamepad';
-  import { WakeLockHolder, type Conditions } from '$lib/remote/wake-lock';
-  import { telegram } from '$lib/telegram.svelte';
+  import CardFrame from '#lib/card/CardFrame.svelte';
+  import type { CardHealth, FlagChange, Returns } from '#lib/engine/protocol.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { snapshotOf } from '#lib/remote/gamepad.js';
+  import { WakeLockHolder, type Conditions } from '#lib/remote/wake-lock.js';
+  import { telegram } from '#lib/telegram.svelte.js';
   import AnswerButtons from './AnswerButtons.svelte';
+  import CardHealthPanel from './CardHealthPanel.svelte';
   import { Player } from './audio';
   import { deviceStorage, StudyInput } from './input';
   import { MappingStore } from './mapping-store';
@@ -47,7 +50,14 @@
   let region: HTMLElement;
 
   const choices = new VoiceChoices(deviceStorage());
-  const devicePlayer = new Player(new Audio(), URL, deviceSpeaker(choices));
+  // a clip the device has no local voice for is not spoken, and the review names its language
+  const devicePlayer = new Player(
+    new Audio(),
+    URL,
+    deviceSpeaker(choices, (clip, outcome) => {
+      if (outcome === 'no-local-voice') review.unvoiced(clip.language);
+    })
+  );
 
   const updateNow = new UpdateNow(() => update, () => (offer = updateNow.face));
   let offer = $state.raw(updateNow.face);
@@ -103,6 +113,28 @@
     bury: () => m.study_undo_bury(),
     flag: () => m.study_undo_flag()
   };
+
+  /** The card health panel while it is open, with the shown card's record once read (SPEC-507 R9). */
+  let health = $state.raw<{ loading: boolean; record: CardHealth | null } | null>(null);
+  let healthPanel = $state<{ trap(event: KeyboardEvent): void }>();
+
+  /** Opens the card health panel over the shown card: the answer clock stops while it is open, and
+   * the record comes through the review's one read (SPEC-507 R1, R9). */
+  async function openHealth(): Promise<void> {
+    if (health !== null) return;
+    health = { loading: true, record: null };
+    review.openOverlay();
+    const record = await review.cardHealth();
+    if (health !== null) health = { loading: false, record };
+  }
+
+  /** Closes the panel, runs the answer clock again, and gives the focus back to the review. */
+  function closeHealth(): void {
+    if (health === null) return;
+    health = null;
+    review.closeOverlay();
+    region.focus();
+  }
 
   /** "Keep it", which takes the focus while the review asks (SPEC-371 R10). */
   let keeper = $state<HTMLButtonElement>();
@@ -164,6 +196,13 @@
   /** A key on the page: while the review asks, Escape keeps the answer; every key else is the
    * input's. */
   function key(event: KeyboardEvent): void {
+    // while the card health panel is open, Escape closes it, Tab stays inside it, and no key reaches
+    // the review (SPEC-507 R9)
+    if (health !== null) {
+      if (event.key === 'Escape') closeHealth();
+      else if (event.key === 'Tab') healthPanel?.trap(event);
+      return;
+    }
     if (shown.phase === 'confirming' && event.key === 'Escape') {
       keep();
       return;
@@ -221,17 +260,20 @@
       {shown.statusLine}
     </p>
     {#if face !== null}
-      {#if face.view.late}
-        <p class="text-sm">{m.study_late_review()}</p>
+      <!-- a withheld card shows its line in the status region alone: no late line and no frame (SPEC-380 R5) -->
+      {#if !face.view.withheld}
+        {#if face.view.late}
+          <p class="text-sm">{m.study_late_review()}</p>
+        {/if}
+        <div class="h-[55dvh] *:size-full *:border-0">
+          <CardFrame
+            html={face.side === 'answer' ? face.view.answer : face.view.question}
+            css={face.view.css}
+            title={face.side === 'answer' ? m.study_answer_frame() : m.study_question_frame()}
+            classes={`card card${face.view.ordinal + 1}${telegram.colorScheme === 'dark' ? ' nightMode night_mode' : ''}`}
+          />
+        </div>
       {/if}
-      <div class="h-[55dvh] *:size-full *:border-0">
-        <CardFrame
-          html={face.side === 'answer' ? face.view.answer : face.view.question}
-          css={face.view.css}
-          title={face.side === 'answer' ? m.study_answer_frame() : m.study_question_frame()}
-          classes={`card card${face.view.ordinal + 1}${telegram.colorScheme === 'dark' ? ' nightMode night_mode' : ''}`}
-        />
-      </div>
       {#if shown.offer !== null}
         {@const offer = shown.offer}
         <div
@@ -313,7 +355,7 @@
           >
             {m.study_show_answer()}
           </button>
-        {:else}
+        {:else if shown.controls.includes('good')}
           <AnswerButtons labels={face.view.labels} onanswer={(grade) => input.click(grade)} />
         {/if}
         <div class="flex flex-wrap gap-2">
@@ -348,6 +390,14 @@
             onclick={() => input.click('flag')}
           >
             {m.study_flag()}
+          </button>
+          <button
+            type="button"
+            class="min-h-11 min-w-11 rounded-md border px-3 transition-colors duration-150"
+            aria-haspopup="dialog"
+            onclick={() => void openHealth()}
+          >
+            {m.card_health_open()}
           </button>
         </div>
       {/if}
@@ -392,6 +442,9 @@
           </div>
         {/if}
       </div>
+    {/if}
+    {#if health !== null}
+      <CardHealthPanel bind:this={healthPanel} health={health.record} loading={health.loading} onclose={closeHealth} />
     {/if}
   </section>
 

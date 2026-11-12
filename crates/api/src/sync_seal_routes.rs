@@ -121,14 +121,14 @@ struct SealOn(Arc<SealSecret>);
 impl FromRequestParts<SealRelease> for SealOn {
     type Rejection = Response;
 
-    async fn from_request_parts(
+    fn from_request_parts(
         _parts: &mut Parts,
         release: &SealRelease,
-    ) -> Result<Self, Self::Rejection> {
-        match &release.secret {
+    ) -> impl Future<Output = Result<Self, Self::Rejection>> + Send {
+        std::future::ready(match &release.secret {
             Some(secret) => Ok(Self(Arc::clone(secret))),
             None => Err(refused(StatusCode::NOT_FOUND, "sync_seal_off")),
-        }
+        })
     }
 }
 
@@ -139,18 +139,18 @@ struct ReleaseSlot;
 impl FromRequestParts<SealRelease> for ReleaseSlot {
     type Rejection = Response;
 
-    async fn from_request_parts(
+    fn from_request_parts(
         _parts: &mut Parts,
         release: &SealRelease,
-    ) -> Result<Self, Self::Rejection> {
-        match release.bound.admit(release.access.clock().now()) {
+    ) -> impl Future<Output = Result<Self, Self::Rejection>> + Send {
+        std::future::ready(match release.bound.admit(release.access.clock().now()) {
             Ok(()) => Ok(Self),
             Err(seconds) => {
                 let mut response = refused(StatusCode::TOO_MANY_REQUESTS, "too_many_releases");
                 response.headers_mut().insert(RETRY_AFTER, seconds.into());
                 Err(response)
             }
-        }
+        })
     }
 }
 

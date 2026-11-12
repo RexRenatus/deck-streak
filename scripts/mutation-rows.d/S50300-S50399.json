@@ -1,0 +1,42 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S50300-THE-NATIVE-COLUMN-REFUSES-THE-NORMAL-SYNC",
+        "engine-core",
+        "src/table.rs",
+        "        name: \"BackendSyncService.SyncCollection\",\n        native: true,",
+        "        name: \"BackendSyncService.SyncCollection\",\n        native: false,",
+        "table::every_pair_is_admitted_held_or_refused_by_its_transport",
+        "the native column admits the normal sync; marked refused there, the iPhone and iPad client could never sync its collection (SPEC-503 R1, A1)"
+      ],
+      [
+        "S50301-THE-FACADE-DROPS-THE-STATEMENT",
+        "ffi",
+        "src/engine.rs",
+        "        if let Some(url) = native_sync::statement_url(&endpoint) {\n            self.dispatcher.handshake(read_statement(&url).as_deref());",
+        "        if let Some(url) = native_sync::statement_url(&endpoint) {\n            self.dispatcher.handshake(read_statement(&url).as_deref().filter(|_| false));",
+        "sync::a_fresh_installs_first_sync_counts_backs_up_and_downloads_then_syncs_normally",
+        "the facade hands the core the statement it read before each native normal sync; dropping what it read, the core refuses every native sync as one with no statement read (SPEC-503 R3, A4)"
+      ],
+      [
+        "S50302-THE-NATIVE-SYNC-ASKS-FOR-MEDIA",
+        "engine-core",
+        "src/native_sync.rs",
+        "        sync_media: false,",
+        "        sync_media: true,",
+        "native_sync::the_native_normal_sync_request_names_its_endpoint_and_never_asks_for_media",
+        "the core's native normal sync asks for no media; asking for it, a native normal sync would carry the media sync the client keeps off (SPEC-503 R2, A2)"
+      ],
+      [
+        "S50304-THE-WRITE-KEEPS-THE-STAGE",
+        "ffi",
+        "src/engine.rs",
+        "            Ok(()) => {\n                *self.stage() = None;\n",
+        "            Ok(()) => {\n",
+        "sync::a_fresh_installs_first_sync_counts_backs_up_and_downloads_then_syncs_normally",
+        "the facade drops the choice's stage once the write runs; kept, a second tap would run the full sync again from counts taken before the first write (SPEC-503 R4, A4)"
+      ]
+    ]
+  }
+}

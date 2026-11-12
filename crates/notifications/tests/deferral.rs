@@ -180,7 +180,7 @@ async fn a_failed_send_is_held_and_retried_twice() {
         (last.kind.as_str(), last.reason.as_deref()),
         ("celebration:withheld", Some(Reason::NoNotifier.as_str()))
     );
-    assert!(harness.queue().await.is_empty());
+    assert_eq!(harness.queue().await, Vec::<Queued>::new());
 }
 
 #[tokio::test]
@@ -225,7 +225,7 @@ async fn a_flush_renders_two_and_rolls_up_the_rest() {
         dropped.join("\n")
     );
     assert_eq!(delivered[2..], [recap], "one line names every other one");
-    assert!(harness.queue().await.is_empty());
+    assert_eq!(harness.queue().await, Vec::<Queued>::new());
 }
 
 #[tokio::test]
@@ -270,7 +270,7 @@ async fn a_failed_recap_holds_its_rolled_celebration_again() {
         Some("synthetic gem:c"),
         "delivered in full by the next flush"
     );
-    assert!(harness.queue().await.is_empty());
+    assert_eq!(harness.queue().await, Vec::<Queued>::new());
 }
 
 #[tokio::test]
@@ -306,7 +306,7 @@ async fn an_abandoned_celebration_waits_until_a_recap_names_it() {
             "\u{1f319} <b>1 held celebration(s)</b> (quiet hours)\n\u{2022} badge:unseen (expired, unseen)"
         ]
     );
-    assert!(harness.queue().await.is_empty());
+    assert_eq!(harness.queue().await, Vec::<Queued>::new());
 }
 
 #[tokio::test]

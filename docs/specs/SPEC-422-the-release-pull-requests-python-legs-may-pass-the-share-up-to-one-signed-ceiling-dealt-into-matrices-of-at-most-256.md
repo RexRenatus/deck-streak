@@ -351,3 +351,36 @@ release run's Rust legs as `PYTHON_RELEASE_CEILING` holds its Python legs, read 
   Python figure, the commit that sets the Rust figure also sets `PYTHON_RELEASE_CEILING` and its
   `#:` line, and both cite one new ruling, whose first line holds both figures; R13's test reads it
   unchanged.
+
+## Amendment: a release run's carried Python outcomes (SPEC-493)
+
+Insert-only; every earlier byte is kept. SPEC-493 lets a release run carry a Python mutant's
+outcome from one recorded release run of this repository, for a file whose whole read set,
+absent paths and directory listings included, is byte-identical at that run and here
+(ADR-511). Two things follow for this SPEC:
+
+- Section 1's sentence "A release's listing is every Python mutant `dev` gained since the
+  last release" stands: the plan still lists every such mutant, and `python-listed.json` is
+  unchanged. Part of the listing may be judged by carried outcomes, each judged at the head as
+  a re-run one is, and the verdict holds the listing to the re-run names plus the carried
+  ones, with none in both (SPEC-493 R10).
+- R4's ceiling, up to which R6 deals, bounds the legs the release run deals, and those are
+  dealt from the re-run set, `python-rerun.json`: the listing less the mutants of the files
+  that carry. A carried outcome counts in the listing and in the verdict's union, never in
+  a leg. `PYTHON_RELEASE_CEILING`, its `#:` line, `PYTHON_SHARE_CAP`, `PYTHON_MATRIX_LEGS` and
+  every bound stay as they are, and a release run that carries nothing deals exactly as
+  before.
+
+## Amendment: on the release run `ci` admits every mutation result by value (SPEC-500)
+
+Insert-only; every earlier byte is kept. Two things follow for this SPEC:
+
+- R1's predicate gains a second reader. `base-is-dev`'s release step evaluates it in shell over
+  the same five inputs and writes the job output `release` that `ci` reads (SPEC-500 R1); a test
+  runs the step over 108 contexts and compares each with `release_run` itself. R1 and R2 are
+  unchanged, and the plan still writes its own mark.
+- R11 holds on every run but the release run. There `ci` admits, by value, one non-success result
+  for each of the 8 mutation jobs whose result is not `success`, `mutation-python-release` among
+  them, in place of R11's one skip (SPEC-500 R2, ADR-518 D2). The verdict's `legs` call and its
+  `--python-release-leg` argument are unchanged, so the leg is still judged and its result
+  reported on that run.

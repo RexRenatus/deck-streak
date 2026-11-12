@@ -1,0 +1,238 @@
+{
+  "records": [
+    {
+      "file": "crates/media/src/css.rs",
+      "mutant": "replace + with * in scan_css",
+      "anchor": "length + 1..];",
+      "reason": "The next search then starts at the argument's closing ) instead of one byte after it, and no url( match can begin at a ).",
+      "evidence": "rest[open + length] is the b')' that find(')') just found, an ASCII byte and so a char boundary. The next search compares 4-byte windows against url( in ASCII case; the window that starts at that ) fails on its first byte, and every later window is a window the unmutated slice compares too, so the same matches are found in the same order and the loop still advances by at least the 4 bytes of url(.",
+      "reached_by": "css::scan_css_keeps_every_font_case_of_the_face_suite",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/media/src/hash.rs",
+      "mutant": "replace | with ^ in MediaHash::from_hex_bytes",
+      "anchor": "(nibble(pair[0])? << 4) | nibble(pair[1])?",
+      "reason": "The two operands share no bit, so OR and XOR give the same byte.",
+      "evidence": "nibble answers only 0 to 15 (digit - b'0' for 0-9, digit - b'a' + 10 for a-f, None otherwise), so the shifted high digit holds bits 4 to 7 only and the low digit bits 0 to 3 only; for operands with disjoint bits a | b == a ^ b. All 256 pairs of two digit values give the same byte under both operators.",
+      "reached_by": "hash::a_hash_reads_back_from_its_hex_form_and_its_blob_path",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/media/src/latex.rs",
+      "mutant": "replace + with * in element_end",
+      "anchor": "find('>')? + 1;",
+      "reason": "The search for the close then starts at the opening's > instead of after it, and a close (</style> or </script>) begins with <, so no match starts at that >.",
+      "evidence": "With * the search starts at after + offset, the position of the > that find('>') found: an ASCII byte, so a char boundary. find_ignoring_case tries each position from there; at the > the close's first character < does not match, so the first match is the one the unmutated search finds from the next position.",
+      "reached_by": "latex::latex_images_read_the_shapes_the_golden_does_not_draw",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/media/src/rewrite.rs",
+      "mutant": "replace > with >= in push_items",
+      "anchor": "close > at + 1\n        {\n            stack.push(",
+      "reason": "The mutant adds the empty quoted run \"\" as an item ending at at + 2, a position the closing quote's own character item reaches first.",
+      "evidence": "push_items is scan.rs's, copied. close is found from at + 1, so close >= at + 1 always holds and the mutant only adds close == at + 1, an empty run ending at at + 2. The character item at + 1 is pushed after it, so it is popped first; at + 1 holds a quote, not >, so its own character item at + 2 is tried within its subtree. If at + 1 was already marked, its subtree, at + 2 included, ran before at was popped, since every item lies after the position that pushes it. Either way the extra entry is popped marked and skipped, so tag_at tries the same positions in the same order.",
+      "reached_by": "rewrite::an_attribute_item_is_a_character_or_a_quoted_run_of_at_least_one",
+      "issue": "#1267"
+    },
+    {
+      "file": "crates/media/src/rewrite.rs",
+      "mutant": "replace + with * in push_items",
+      "anchor": "close > at + 1\n        {\n            stack.push(",
+      "reason": "close > at * 1 is close > at, which, like the >= mutant, only adds the empty quoted run whose end the closing quote's character item reaches first.",
+      "evidence": "close is found from at + 1, so close > at always holds: the condition admits exactly what close >= at + 1 admits, an empty run ending at at + 2. This file's record for replace > with >= in push_items gives why that extra item is always popped marked: at + 1 is a quote, not >, and its character item at + 2 is tried before the extra entry, or ran before at was popped.",
+      "reached_by": "rewrite::an_attribute_item_is_a_character_or_a_quoted_run_of_at_least_one",
+      "issue": "#1267"
+    },
+    {
+      "file": "crates/media/src/rewrite.rs",
+      "mutant": "replace + with - in push_items",
+      "anchor": "close > at + 1\n        {\n            stack.push(",
+      "reason": "close > at - 1 always holds, so, like the >= mutant, the mutant only adds the empty quoted run whose end the closing quote's character item reaches first.",
+      "evidence": "close is found from at + 1, so close >= at + 1 > at - 1, and at lies at or past the end of the tag's name, where tag_at first calls push_items, so at - 1 does not wrap: the condition admits exactly what the >= mutant admits, an empty run ending at at + 2, whose record in this file gives why that entry is always popped marked.",
+      "reached_by": "rewrite::an_attribute_item_is_a_character_or_a_quoted_run_of_at_least_one",
+      "issue": "#1267"
+    },
+    {
+      "file": "crates/media/src/rewrite.rs",
+      "mutant": "replace + with * in value_at",
+      "anchor": "find_byte(bytes, close + 1, b'>')",
+      "reason": "The search for the tag's > then starts at the closing quote instead of after it, and a quote is not >.",
+      "evidence": "bytes[close] is the quote find_byte just found, so find_byte(bytes, close, b'>') skips it and answers the first > after it, the same position find_byte(bytes, close + 1, b'>') answers; find_byte reads bytes, so no char boundary is involved.",
+      "reached_by": "rewrite::a_value_is_quoted_with_at_least_one_character_or_read_unquoted",
+      "issue": "#1267"
+    },
+    {
+      "file": "crates/media/src/rewrite.rs",
+      "mutant": "replace + with * in value_at",
+      "anchor": "close, end + 1))",
+      "reason": "The match then ends at the tag's > instead of after it, and each_match resumes at any < from the end on, which a > is not.",
+      "evidence": "tag_at hands value_at's end to each_match, which uses it only as resume, trying each occurrence of < that starts at or after it; the place at + 1..close is unchanged. A resume of end instead of end + 1 differs only for an occurrence starting at end, and bytes[end] is the > that find_byte found. end is the position of an ASCII byte, so a char boundary, and each_match's boundary assertion holds both ways.",
+      "reached_by": "rewrite::a_value_is_quoted_with_at_least_one_character_or_read_unquoted",
+      "issue": "#1267"
+    },
+    {
+      "file": "crates/media/src/rewrite.rs",
+      "mutant": "replace + with * in value_at",
+      "anchor": "Some((at..stop, stop + 1))",
+      "reason": "The match then ends at the tag's > instead of after it, and each_match resumes at any < from the end on, which a > is not.",
+      "evidence": "tag_at hands value_at's end to each_match, which uses it only as resume, trying each occurrence of < that starts at or after it; the place at..stop is unchanged. A resume of stop instead of stop + 1 differs only for an occurrence starting at stop, and bytes[stop] is the > this arm matched. stop is the position of an ASCII byte, so a char boundary, and each_match's boundary assertion holds both ways.",
+      "reached_by": "rewrite::a_value_is_quoted_with_at_least_one_character_or_read_unquoted",
+      "issue": "#1267"
+    },
+    {
+      "file": "crates/media/src/rewrite.rs",
+      "mutant": "replace + with - in value_at",
+      "anchor": "find_byte(bytes, stop + 1, b'>')",
+      "reason": "The search for the tag's > then starts at the name's last byte, and neither it nor the space after it is >.",
+      "evidence": "stop is the first space or > at or after at, and stop != at, so stop - 1 lies in the name and bytes[stop - 1] is neither a space nor >; bytes[stop] is the space this arm matched. So find_byte from stop - 1 answers the first > after stop, as find_byte from stop + 1 does; find_byte reads bytes, so no char boundary is involved.",
+      "reached_by": "rewrite::a_value_is_quoted_with_at_least_one_character_or_read_unquoted",
+      "issue": "#1267"
+    },
+    {
+      "file": "crates/media/src/rewrite.rs",
+      "mutant": "replace + with * in value_at",
+      "anchor": "find_byte(bytes, stop + 1, b'>')",
+      "reason": "The search for the tag's > then starts at the space that ended the name, and a space is not >.",
+      "evidence": "This arm runs only when bytes[stop] is b' ', so find_byte(bytes, stop, b'>') skips it and answers the first > after it, the position find_byte(bytes, stop + 1, b'>') answers.",
+      "reached_by": "rewrite::a_value_is_quoted_with_at_least_one_character_or_read_unquoted",
+      "issue": "#1267"
+    },
+    {
+      "file": "crates/media/src/rewrite.rs",
+      "mutant": "replace + with * in value_at",
+      "anchor": "stop, end + 1))",
+      "reason": "The match then ends at the tag's > instead of after it, and each_match resumes at any < from the end on, which a > is not.",
+      "evidence": "tag_at hands value_at's end to each_match, which uses it only as resume, trying each occurrence of < that starts at or after it; the place at..stop is unchanged. A resume of end instead of end + 1 differs only for an occurrence starting at end, and bytes[end] is the > that find_byte found after the space. end is the position of an ASCII byte, so a char boundary, and each_match's boundary assertion holds both ways.",
+      "reached_by": "rewrite::a_value_is_quoted_with_at_least_one_character_or_read_unquoted",
+      "issue": "#1267"
+    },
+    {
+      "file": "crates/media/src/rewrite.rs",
+      "mutant": "replace + with * in sound_at",
+      "anchor": "Some((open..close, close + 1))",
+      "reason": "each_match then resumes at the tag's ] instead of after it, and [sound: cannot begin at a ].",
+      "evidence": "places hands sound_at's end to each_match, which uses it only as resume, trying each occurrence of SOUND_OPEN that starts at or after it; the place open..close is unchanged. A resume of close instead of close + 1 differs only for an occurrence starting at close, and text[close] is the ] that find(']') found, while SOUND_OPEN begins with [. close is the position of an ASCII byte, so a char boundary, and each_match's boundary assertion holds both ways.",
+      "reached_by": "rewrite::a_place_inside_an_earlier_place_is_skipped_and_one_after_it_is_written",
+      "issue": "#1267"
+    },
+    {
+      "file": "crates/media/src/scan.rs",
+      "mutant": "replace > with >= in push_items",
+      "anchor": "close > at + 1\n        {\n            stack.push(",
+      "reason": "The mutant adds the empty quoted run \"\" as an item ending at at + 2, a position the closing quote's own character item reaches first.",
+      "evidence": "close is found from at + 1, so close >= at + 1 always holds and the mutant only adds close == at + 1, an empty run ending at at + 2. The character item at + 1 is pushed after it, so it is popped first; at + 1 holds a quote, not >, so its own character item at + 2 is tried within its subtree. If at + 1 was already marked, its subtree, at + 2 included, ran before at was popped, since every item lies after the position that pushes it. Either way the extra entry is popped marked and skipped, so the search tries the same positions in the same order.",
+      "reached_by": "scan_golden::scan_reads_the_engines_grammar_over_hand_cases",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/media/src/scan.rs",
+      "mutant": "replace + with * in push_items",
+      "anchor": "close > at + 1\n        {\n            stack.push(",
+      "reason": "close > at * 1 is close > at, which, like the >= mutant, only adds the empty quoted run whose end the closing quote's character item reaches first.",
+      "evidence": "close is found from at + 1, so close > at always holds: the condition admits exactly what close >= at + 1 admits, an empty run ending at at + 2. The record for replace > with >= in push_items gives why that extra item is always popped marked: at + 1 is a quote, not >, and its character item at + 2 is tried before the extra entry, or ran before at was popped.",
+      "reached_by": "scan_golden::scan_reads_the_engines_grammar_over_hand_cases",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/media/src/scan.rs",
+      "mutant": "replace + with - in push_items",
+      "anchor": "close > at + 1\n        {\n            stack.push(",
+      "reason": "close > at - 1 always holds, so, like the >= mutant, the mutant only adds the empty quoted run whose end the closing quote's character item reaches first.",
+      "evidence": "close is found from at + 1, so close >= at + 1 > at - 1, and at lies past the tag's name, so at - 1 does not wrap: the condition admits exactly what the >= mutant admits, an empty run ending at at + 2, whose record gives why that entry is always popped marked. Measured: with the hand case <img a=\"\">\" src=\"b.png\"> added to the edge cases, the unmutated scan and the mutant both read [\"b.png\"], and the mutant was missed.",
+      "reached_by": "scan_golden::scan_reads_the_engines_grammar_over_hand_cases",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/media/src/scan.rs",
+      "mutant": "replace + with * in value_at",
+      "anchor": "find_byte(bytes, close + 1, b'>')",
+      "reason": "The search for the tag's > then starts at the closing quote instead of after it, and a quote is not >.",
+      "evidence": "bytes[close] is the quote find_byte just found, so find_byte(bytes, close, b'>') skips it and answers the first > after it, the same position find_byte(bytes, close + 1, b'>') answers; find_byte reads bytes, so no char boundary is involved.",
+      "reached_by": "scan_golden::scan_reads_the_engines_grammar_over_hand_cases",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/media/src/scan.rs",
+      "mutant": "replace + with * in value_at",
+      "anchor": "close], end + 1))",
+      "reason": "The match then ends at the tag's > instead of after it, and each_match resumes at any < from the end on, which a > is not.",
+      "evidence": "each_match uses the returned end only as resume, trying each occurrence of < that starts at or after it. A resume of end instead of end + 1 differs only for an occurrence starting at end, and bytes[end] is the > that find_byte found. end is the position of an ASCII byte, so a char boundary, and each_match's boundary assertion holds both ways.",
+      "reached_by": "scan_golden::scan_reads_the_engines_grammar_over_hand_cases",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/media/src/scan.rs",
+      "mutant": "replace + with * in value_at",
+      "anchor": "find_byte(bytes, stop + 1, b'>')",
+      "reason": "The search for the tag's > then starts at the space that ended the name, and a space is not >.",
+      "evidence": "This arm runs only when bytes[stop] is b' ', so find_byte(bytes, stop, b'>') skips it and answers the first > after it, the position find_byte(bytes, stop + 1, b'>') answers.",
+      "reached_by": "scan_golden::scan_reads_the_engines_grammar_over_hand_cases",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/media/src/scan.rs",
+      "mutant": "replace + with - in value_at",
+      "anchor": "find_byte(bytes, stop + 1, b'>')",
+      "reason": "The search for the tag's > then starts at the name's last byte, and neither it nor the space after it is >.",
+      "evidence": "stop is the first space or > at or after at, and stop != at, so stop - 1 lies in the name and bytes[stop - 1] is neither a space nor >; bytes[stop] is the space this arm matched. So find_byte from stop - 1 answers the first > after stop, as find_byte from stop + 1 does; find_byte reads bytes, so no char boundary is involved.",
+      "reached_by": "scan_golden::scan_reads_the_engines_grammar_over_hand_cases",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/media/src/scan.rs",
+      "mutant": "replace + with * in value_at",
+      "anchor": "Some((&text[at..stop], stop + 1))",
+      "reason": "The match then ends at the tag's > instead of after it, and each_match resumes at any < from the end on, which a > is not.",
+      "evidence": "each_match uses the returned end only as resume, trying each occurrence of < that starts at or after it. A resume of stop instead of stop + 1 differs only for an occurrence starting at stop, and bytes[stop] is the > this arm matched. stop is the position of an ASCII byte, so a char boundary, and each_match's boundary assertion holds both ways.",
+      "reached_by": "scan_golden::scan_reads_the_grammars_edges_over_hand_cases",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/media/src/scan.rs",
+      "mutant": "replace + with * in value_at",
+      "anchor": "stop], end + 1))",
+      "reason": "The match then ends at the tag's > instead of after it, and each_match resumes at any < from the end on, which a > is not.",
+      "evidence": "each_match uses the returned end only as resume, trying each occurrence of < that starts at or after it. A resume of end instead of end + 1 differs only for an occurrence starting at end, and bytes[end] is the > that find_byte found after the space. end is the position of an ASCII byte, so a char boundary, and each_match's boundary assertion holds both ways.",
+      "reached_by": "scan_golden::scan_reads_the_engines_grammar_over_hand_cases",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/media/src/scan.rs",
+      "mutant": "replace + with * in sound_at",
+      "anchor": "Some((name, close + 1))",
+      "reason": "each_match then resumes at the tag's ] instead of after it, and [sound: cannot begin at a ].",
+      "evidence": "each_match uses the returned end only as resume, trying each occurrence of SOUND_OPEN that starts at or after it. A resume of close instead of close + 1 differs only for an occurrence starting at close, and text[close] is the ] that find(']') found, while SOUND_OPEN begins with [. close is the position of an ASCII byte, so a char boundary, and each_match's boundary assertion holds both ways.",
+      "reached_by": "scan_golden::scan_reads_the_engines_grammar_over_hand_cases",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/media/src/sha1.rs",
+      "mutant": "replace | with ^ in compress",
+      "anchor": "((second & third) | (!second & fourth), 0x5a82_7999)",
+      "reason": "The two terms of the choose function share no bit, so OR and XOR give the same word.",
+      "evidence": "In each bit position second is 1 or 0, so at most one of second & third and !second & fourth is 1 there; for operands with disjoint bits a | b == a ^ b. FIPS 180-4 section 4.1.1 writes Ch(x, y, z) = (x AND y) XOR (NOT x AND z). All 8 values of one bit of second, third and fourth give the same bit under both operators.",
+      "reached_by": "latex::sha1_gives_the_fips_examples_and_every_padding_boundary",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/media/src/sha1.rs",
+      "mutant": "replace | with ^ in compress",
+      "anchor": "(second & third) | (second & fourth)",
+      "reason": "Majority under (a ^ b) | c equals a | b | c, because a and b are both set only where c is set too.",
+      "evidence": "With a = second & third, b = second & fourth and c = third & fourth, a ^ b differs from a | b only in a bit where a and b are both 1, so second, third and fourth are all 1 there and c is 1, and the final | gives 1 either way. All 8 values of one bit of second, third and fourth give the same bit under both forms; FIPS 180-4 section 4.1.1 writes Maj with XOR throughout.",
+      "reached_by": "latex::sha1_gives_the_fips_examples_and_every_padding_boundary",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/media/src/sha1.rs",
+      "mutant": "replace | with ^ in compress",
+      "anchor": "(second & fourth) | (third & fourth)",
+      "reason": "Majority under a | (b ^ c) equals a | b | c, because b and c are both set only where a is set too.",
+      "evidence": "With a = second & third, b = second & fourth and c = third & fourth, b ^ c differs from b | c only in a bit where b and c are both 1, so second, third and fourth are all 1 there and a is 1, and the | with a gives 1 either way. All 8 values of one bit of second, third and fourth give the same bit under both forms; FIPS 180-4 section 4.1.1 writes Maj with XOR throughout.",
+      "reached_by": "latex::sha1_gives_the_fips_examples_and_every_padding_boundary",
+      "issue": "#1060"
+    }
+  ]
+}

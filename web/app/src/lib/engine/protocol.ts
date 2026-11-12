@@ -4,15 +4,17 @@
 
 /** The operations the Worker serves, and nothing else. Six are the review's (SPEC-350 R4): the deck
  * list, the current deck, the card view, and a rating, bury or flag of the shown card. `faces`, after
- * them, completes both faces of the shown card with its media (SPEC-350 R14). The next two log in to
+ * them, completes both faces of the shown card with its media (SPEC-350 R14), and `card-health` reads the
+ * shown card's own record by the core's two fixed reads, writing nothing (SPEC-507 R1, R10). The next two log in to
  * the sync server and run a normal sync (SPEC-364 R17, R18). The two after them read and forget the
  * sync credential, each answering a status word (SPEC-363 R15). The last four are the full sync's
  * choice: its counts, the owner's tap on one direction, its cancel, and the device's unsynced read;
  * the page names a direction and nothing else (SPEC-377 R6). A grade is recorded only by `rate`, on
  * the card shown: no operation answers the queue's head (SPEC-365 R9). `undo-offer` reads the
  * review's own last answer and writes nothing, and `undo` reverts only the answer an offer named, by
- * its card and its step (SPEC-371 R12). The last two list the browser's backups after retention, and
- * export one by its id alone, never a path (SPEC-377 R15, R16). */
+ * its card and its step (SPEC-371 R12). The two after them list the browser's backups after retention, and
+ * export one by its id alone, never a path (SPEC-377 R15, R16). The last makes a backup now, taking
+ * nothing: the web engine names its file (SPEC-516 R4). */
 export const OPS = [
   'open',
   'seed',
@@ -29,6 +31,7 @@ export const OPS = [
   'bury',
   'flag',
   'faces',
+  'card-health',
   'sync-login',
   'sync',
   'credential-status',
@@ -38,9 +41,41 @@ export const OPS = [
   'choice-cancel',
   'unsynced',
   'backups',
-  'backup-export'
+  'backup-export',
+  'backup-now'
 ] as const;
 export type Op = (typeof OPS)[number];
+
+/** The scheduler's part of a card's health: its estimate when Ready, else the state that says why
+ * there is none (SPEC-507 R6). */
+export type HealthReadout =
+  | { state: 'ready'; recallPpm: number; daysTo90: number }
+  | { state: 'absent' | 'fixture' | 'unready' | 'stale' };
+
+/** One review row as the card health panel shows it (SPEC-507 R2): its instant, the button pressed
+ * (0 for an entry set by hand), its type, its interval and its time capped at 60,000 ms. */
+export interface HealthReview {
+  at: number;
+  grade: number;
+  kind: number;
+  interval: number;
+  ms: number;
+}
+
+/** One card's health, as the engine core reads it from the card and its review rows (SPEC-507 R2). */
+export interface CardHealth {
+  card: bigint;
+  reps: number;
+  lapses: number;
+  logged: { answers: number; lapses: number };
+  rows: number;
+  reviews: HealthReview[];
+  totalMs: number;
+  meanMs: number | null;
+  medianMs: number | null;
+  scheduler: HealthReadout;
+  provenance: { source: 'collection'; createdMs: number };
+}
 
 /** Why the Worker refused a request. */
 export type ErrorCode =
@@ -61,7 +96,7 @@ export type Request =
   | { id: number; op: 'next' | 'undo-offer' | 'memory' | 'close' | 'decks' | 'card' }
   | { id: number; op: 'undo'; card: bigint; step: number }
   | { id: number; op: 'seed'; count: number }
-  | { id: number; op: 'snapshot' | 'bury' | 'flag' | 'faces'; card: bigint }
+  | { id: number; op: 'snapshot' | 'bury' | 'flag' | 'faces' | 'card-health'; card: bigint }
   | { id: number; op: 'study'; deck: bigint }
   | { id: number; op: 'rate'; card: bigint; rating: Rating; ms: number }
   | { id: number; op: 'credential-status' | 'credential-forget' }
@@ -70,7 +105,8 @@ export type Request =
   | { id: number; op: 'choice-count' | 'choice-cancel' | 'unsynced' }
   | { id: number; op: 'choice-confirm'; direction: Direction }
   | { id: number; op: 'backups' }
-  | { id: number; op: 'backup-export'; backup: string };
+  | { id: number; op: 'backup-export'; backup: string }
+  | { id: number; op: 'backup-now' };
 
 /** What a normal sync found the collections need, in the engine's order: the engine answers the
  * index, and this list names it (SPEC-364 R18). */
@@ -133,7 +169,9 @@ export interface Counts {
  * can be undone: `answer` when it can, `synced` when it has synced, `null` when there is none to
  * undo (SPEC-371 R7); or its last bury or flag: `bury` or `flag` when it can, `change-synced` when
  * it has synced (SPEC-383 R9); and whether the engine's day is past the card's due day, so this
- * review cannot count toward the streak for that day (SPEC-376 R4). */
+ * review cannot count toward the streak for that day (SPEC-376 R4);
+ * and whether its question is an image occlusion question whose masks this app does not draw, so
+ * the engine emptied both sides and its CSS and the review withholds it (SPEC-380 R3). */
 export interface CardView {
   id: bigint;
   ordinal: number;
@@ -144,6 +182,7 @@ export interface CardView {
   labels: string[];
   undo: 'answer' | 'synced' | 'bury' | 'flag' | 'change-synced' | null;
   late: boolean;
+  withheld: boolean;
 }
 
 /** The grade an offered answer gave, as the review names it. */
@@ -256,6 +295,7 @@ const ARGS: Record<Op, Record<string, (value: unknown) => boolean>> = {
   bury: { card: engineId },
   flag: { card: engineId },
   faces: { card: engineId },
+  'card-health': { card: engineId },
   'sync-login': { user: loginText, password: loginText },
   sync: {},
   'credential-status': {},
@@ -265,7 +305,8 @@ const ARGS: Record<Op, Record<string, (value: unknown) => boolean>> = {
   'choice-cancel': {},
   unsynced: {},
   backups: {},
-  'backup-export': { backup: backupId }
+  'backup-export': { backup: backupId },
+  'backup-now': {}
 };
 
 /** Reads a request off the wire. Anything but an operation of `OPS` with exactly its arguments,

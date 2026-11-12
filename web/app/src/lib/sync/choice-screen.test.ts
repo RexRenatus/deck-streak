@@ -4,9 +4,9 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { describe, expect, it } from 'vitest';
-import type { ChoiceConfirmed, ChoiceCounted, Direction } from '$lib/engine/protocol';
-import { m } from '$lib/paraglide/messages.js';
-import { getLocale, overwriteGetLocale } from '$lib/paraglide/runtime.js';
+import type { ChoiceConfirmed, ChoiceCounted, Direction } from '#lib/engine/protocol.js';
+import { m } from '#lib/paraglide/messages.js';
+import { getLocale, overwriteGetLocale } from '#lib/paraglide/runtime.js';
 import ChoiceScreen from './ChoiceScreen.svelte';
 import { snapshotAge, type ChoiceClient } from './status';
 

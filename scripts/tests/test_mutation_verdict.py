@@ -1,5 +1,5 @@
 """A pull request's mutation plan and verdict, and the weekly battery's survivors (SPEC-039 A12 to
-A19).
+A19; SPEC-636 A1 and A2).
 
 Each test builds a fixture repository in a temporary directory with a base commit and a head
 commit, runs `plan` over their diff, and judges synthetic reports written in each tool's own
@@ -185,7 +185,7 @@ def outcomes(caught=0, missed=(), timeout=0, unviable=0, file=LIB, total=None):
 
 
 def stryker(statuses, file="src/lib/start.ts"):
-    """A mutation-testing-elements report, as StrykerJS 10.0.0's json reporter writes it."""
+    """A mutation-testing-elements report, as StrykerJS 10.1.1's json reporter writes it."""
     mutants = [
         {
             "id": str(index),
@@ -861,7 +861,7 @@ class TheShardsFitTheirBound(unittest.TestCase):
         module = verdict_module()
         # One mutant per leg fits (2141 + 6000 <= 10800); two to a leg do not, so the fewest is the
         # ceiling itself, and a search that stops short of it would refuse the listing.
-        for key, ceiling in examined("ceilings", [("ci", 189), ("battery", 234)]):
+        for key, ceiling in examined("ceilings", [("ci", 185), ("battery", 234)]):
             costs = [6000] * ceiling
             sized = module.fewest_shards(costs, 2141, module.LEG_CEILING[key])
             self.assertEqual(sized, ceiling, key)
@@ -869,8 +869,8 @@ class TheShardsFitTheirBound(unittest.TestCase):
             beyond = module.fewest_shards([*costs, 6000], 2141, module.LEG_CEILING[key])
             self.assertIsNone(beyond, key)
         # With no ceiling named, the pull request's.
-        self.assertEqual(module.fewest_shards([6000] * 189, 2141), 189)
-        self.assertIsNone(module.fewest_shards([6000] * 190, 2141))
+        self.assertEqual(module.fewest_shards([6000] * 185, 2141), 185)
+        self.assertIsNone(module.fewest_shards([6000] * 186, 2141))
 
 
 def sharded(test):
@@ -1087,12 +1087,12 @@ class TheLegsAreSizedToTheRun(unittest.TestCase):
         self.assertEqual(module.BASELINE_SECONDS, 2141)
         self.assertEqual(module.CENSUS_SECONDS, {"deck-streak-progression": 1521})
         self.assertEqual(module.SHARD_BOUND_SECONDS, 10800)
-        self.assertEqual(module.LEG_CEILING, {"ci": 189, "battery": 234})
+        self.assertEqual(module.LEG_CEILING, {"ci": 185, "battery": 234})
         self.assertEqual((module.MUTANT_TIMEOUT_SECONDS, module.TIMEOUT_MARGIN), (2300, 1.5))
 
     def test_the_whole_tree_is_sized_at_the_batterys_ceiling(self):
         # 68 ingest mutants of 126 s fit a leg's 10800 s after its 2141 s baseline: 14213 need
-        # 210 legs, past the pull request's 189 and within the battery's 234.
+        # 210 legs, past the pull request's 185 and within the battery's 234.
         many = listing(["deck-streak-ingest"] * 14213)
         for package in examined("battery scopes", [None, "deck-streak-ingest"]):
             done, written = dispatch_size(many, package)
@@ -1115,7 +1115,7 @@ class TheLegsAreSizedToTheRun(unittest.TestCase):
         fixture.plan()
         planned, _, _ = run_shards(fixture, listing(["deck-streak-daemon"] * 113))
         self.assertEqual(planned.returncode, 0, planned.stdout + planned.stderr)
-        self.assertIn("legs 2 of ceiling 189", planned.stdout)
+        self.assertIn("legs 2 of ceiling 185", planned.stdout)
 
 
 class ALegProvesItsTimeoutCoversItsTests(unittest.TestCase):
@@ -1984,7 +1984,7 @@ class TheVerdictReadsTheRecord(unittest.TestCase):
 
 
 def stryker_mutant(text, needle, mutator, replacement, status, occurrence=1, length=None):
-    """One mutant of a mutation-testing-elements report, as StrykerJS 10.0.0 writes it."""
+    """One mutant of a mutation-testing-elements report, as StrykerJS 10.1.1 writes it."""
     line, column, end = located(text, needle, occurrence, length)
     mutant = {
         "id": f"{mutator}-{line}-{column}-{replacement}",
@@ -2969,6 +2969,88 @@ class ADocstringOnlyScriptChangeIsNamed(unittest.TestCase):
         outputs = paragraph.split("writes the step outputs", 1)[1]
         with self.subTest("the step outputs the plan writes"):
             self.assertEqual(sorted(re.findall(r"`([a-z]+)`", outputs)), written, outputs)
+
+
+class TheTokenCompilerJoinsTheWebClass(unittest.TestCase):
+    """SPEC-636 A1 and A2 (R1, R2): the token compiler is web production code at every site that
+    spells the class, and the maintainer's Mermaid recorder beside it stays outside."""
+
+    TOKENS = "web/app/scripts/build-tokens.ts"
+    RECORDER = "web/app/scripts/record-docs-mermaid-fences.js"
+    #: The seven globs of SPEC-039 R2's web class, as StrykerJS's `mutate` held them at the base.
+    BASE_GLOBS = [
+        "src/**/*.ts",
+        "src/**/*.js",
+        "src/**/*.svelte",
+        "!src/**/*.test.*",
+        "!src/**/*.spec.*",
+        "!src/**/*.d.ts",
+        "!src/lib/paraglide/**",
+    ]
+
+    @staticmethod
+    def stryker_text(mutate):
+        return json.dumps({"testRunner": "vitest", "reporters": ["json"], "mutate": mutate})
+
+    def test_the_plan_classes_the_token_compiler_web_and_the_recorder_other(self):
+        expected = {
+            self.TOKENS: "web",
+            self.RECORDER: "other",
+            "web/app/src/lib/start.ts": "web",
+        }
+        fixture = Fixture(self)
+        fixture.head({path: "export const x = 1;\n" for path in expected})
+        plan = fixture.plan()
+        found = {entry["path"]: entry["class"] for entry in plan["files"]}
+        for path in examined("web/app paths", sorted(expected)):
+            self.assertEqual(found.get(path), expected[path], path)
+        # Listed by its path from `web/app`, and the recorder never.
+        self.assertEqual(plan["stryker_mutate"], ["scripts/build-tokens.ts", "src/lib/start.ts"])
+
+    def test_the_configuration_check_and_the_walk_read_the_token_compiler(self):
+        planted = "// Stryker disable all\nexport const x = 1;\n"
+        widened = [*self.BASE_GLOBS, "scripts/build-tokens.ts"]
+        fixture = Fixture(
+            self,
+            files={
+                ".cargo/mutants.toml": 'test_tool = "nextest"\n',
+                "web/app/stryker.config.json": self.stryker_text(widened),
+                self.TOKENS: planted,
+                self.RECORDER: planted,
+            },
+        )
+        root = str(fixture.root)
+        passing = fixture.verdict("configs", "--root", root)
+        walked = fixture.verdict("exclusions", "--root", root)
+        fixture.write("web/app/stryker.config.json", self.stryker_text(self.BASE_GLOBS))
+        narrow = fixture.verdict("configs", "--root", root)
+        checks = [
+            ("the widened globs pass the configuration check", passing, 0, []),
+            (
+                "the walk names the comment in the token compiler alone",
+                walked,
+                1,
+                [
+                    f"exclusions: {self.TOKENS}:1: a Stryker disable comment leaves a mutant "
+                    "ignored, never run (SPEC-057 R11)"
+                ],
+            ),
+            (
+                "the seven base globs are refused",
+                narrow,
+                1,
+                ["configs: web/app/stryker.config.json: mutate is not R2's web production code"],
+            ),
+        ]
+        for name, done, code, findings in examined("checks over the token compiler", checks):
+            with self.subTest(name):
+                lines = [
+                    line
+                    for line in done.stdout.splitlines()
+                    if line.startswith(("configs: ", "exclusions: "))
+                ]
+                self.assertEqual(lines, findings, done.stdout + done.stderr)
+                self.assertEqual(done.returncode, code, done.stdout + done.stderr)
 
 
 if __name__ == "__main__":

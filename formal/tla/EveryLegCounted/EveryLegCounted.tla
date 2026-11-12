@@ -111,8 +111,13 @@
 \*   starts at the file's j-th position; so the legs, their projections and every refusal are the base's, each
 \*   listed mutant is still in exactly one run, and only which mutant a leg holds moves: one deal Plan already
 \*   chooses freely (dealt').
+\* Re-read for SPEC-492 (ADR-510): the whole_reports hunk below moves no variable.
+\* mutation-verdict.py::whole_reports iterates one list whose entries carry each promised report's mutant
+\*   count as a fifth field, in place of two lists built in lockstep and zipped. The promised reports, their
+\*   order, each leg's count and every VOID and not-started line are the base's, so Promised, LegVoid and
+\*   Whole read as before.
 \* @phx covers scripts/mutation-verdict.py anchor=shards digest=sha256:f02208bb1a049e3ca6ebc6812c981581d7d6d70d77a68505b2ba4e3511254f2c
-\* @phx covers scripts/mutation-verdict.py anchor=whole_reports digest=sha256:4c2a91086efb74a19dee70816f1f39aac90712652548599ce8befd94f2340983
+\* @phx covers scripts/mutation-verdict.py anchor=whole_reports digest=sha256:54b70ded44e4567887b8b0f105ff0be34a45028e31f9f650032c37c3c719f9d8
 \* @phx covers scripts/mutation-verdict.py anchor=partition digest=sha256:9b2464deb33fb55acce4bade799fac1d1d5094a4526a528d634aeb1f78f57677
 \* @phx covers scripts/mutation-verdict.py anchor=examined_sum digest=sha256:072ec1b6768a7616f7cf7b1f0e03846367d35874bcce6493458c470c4f63966e
 \* @phx covers scripts/mutation-verdict.py anchor=population_gaps digest=sha256:7c6d3867026cb32da3c8997757c7884886cbaa523a1af2b29bd260d9ca68b03f

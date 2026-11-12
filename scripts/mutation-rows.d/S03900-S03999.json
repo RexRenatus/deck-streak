@@ -2,6 +2,14 @@
   "tables": {
     "SCRIPT_MUTATIONS": [
       [
+        "S03900-AN-UNINFERRED-UNPATHED-BIN-IS-READ-BY-CARGOS-RULE",
+        "scripts/mutation_rows.py",
+        "                if path is None and kind == \"bin\":",
+        "                if False:",
+        "a `[[bin]]` table with no `path` whose name no inferred binary holds is read by cargo's own rule, never given the path of the package's main (SPEC-039 section 43, A82)",
+        "test_bin_kind_census.TheUnpathedBinIsReadAsCargoReadsIt.test_under_2015_with_no_library_target_the_binarys_own_name_file_is_read"
+      ],
+      [
         "S03901-A-RUST-DIFF-THAT-EXAMINED-NOTHING-IS-VOID",
         "scripts/mutation-verdict.py",
         "    if verdict.examined == 0:\n        verdict.void(\"production code changed and nothing was examined\")\n\n\ndef klass_rows",
@@ -404,10 +412,74 @@
       [
         "S03951-A-BIN-KILLER-BESIDE-A-TESTS-BIN-RS-IS-REFUSED",
         "scripts/mutation_rows.py",
-        "            if \"bin\" in cargo_targets(root, row.crate)[1]:\n",
+        "            if \"bin\" in cargo_targets(root, row_crate)[1]:\n",
         "            if False:\n",
         "a crate holding `tests/bin.rs` or `tests/bin/main.rs` is refused for a `bin::` killer by name, so a killer written for that file never runs the binary's own test of the same path (SPEC-039 section 15, A45)",
         "test_mutation_rows.TheBinKillerFollowsRustcAndRefusesAShadow.test_a_bin_killer_beside_a_tests_bin_rs_is_refused"
+      ],
+      [
+        "S03952-THE-OLDER-PATHS-ARE-READ-ONLY-UNDER-EDITION-2015",
+        "scripts/mutation_rows.py",
+        "    if edition_of(root, crate, package) == \"2015\":",
+        "    if True:",
+        "cargo reads an unpathed `[[bin]]` from its older paths only under edition 2015, and refuses it under every later edition (SPEC-039 section 43, A84)",
+        "test_bin_kind_census.TheUnpathedBinIsReadAsCargoReadsIt.test_after_2015_an_unpathed_bin_cargo_finds_no_file_for_is_refused_by_name"
+      ],
+      [
+        "S03953-WITH-NO-LIBRARY-THE-NAMES-OWN-FILE-IS-READ-FIRST",
+        "scripts/mutation_rows.py",
+        "        older = [] if library else [f\"src/{name}.rs\"]",
+        "        older = []",
+        "under edition 2015, with no library target, an unpathed `[[bin]]` is read from its own name's file first (SPEC-039 section 43, A82)",
+        "test_bin_kind_census.TheUnpathedBinIsReadAsCargoReadsIt.test_under_2015_with_no_library_target_the_binarys_own_name_file_is_read"
+      ],
+      [
+        "S03954-A-LIBRARY-TARGET-SKIPS-THE-NAMES-OWN-FILE",
+        "scripts/mutation_rows.py",
+        "        older = [] if library else [f\"src/{name}.rs\"]",
+        "        older = [f\"src/{name}.rs\"]",
+        "under edition 2015 a library target skips an unpathed `[[bin]]`'s own name file (SPEC-039 section 43, A83)",
+        "test_bin_kind_census.TheUnpathedBinIsReadAsCargoReadsIt.test_under_2015_a_library_target_skips_the_name_file_and_main_comes_first"
+      ],
+      [
+        "S03955-A-LIB-TABLE-IS-A-LIBRARY-TARGET",
+        "scripts/mutation_rows.py",
+        "        library = \"lib\" in manifest or (autolib and (crate_dir / \"src\" / \"lib.rs\").is_file())",
+        "        library = autolib and (crate_dir / \"src\" / \"lib.rs\").is_file()",
+        "a `[lib]` table is a library target, so it skips the name's own file (SPEC-039 section 43, A83)",
+        "test_bin_kind_census.TheUnpathedBinIsReadAsCargoReadsIt.test_under_2015_a_library_target_skips_the_name_file_and_main_comes_first"
+      ],
+      [
+        "S03956-SRC-LIB-RS-IS-A-LIBRARY-TARGET",
+        "scripts/mutation_rows.py",
+        "        library = \"lib\" in manifest or (autolib and (crate_dir / \"src\" / \"lib.rs\").is_file())",
+        "        library = \"lib\" in manifest",
+        "`src/lib.rs` is a library target, so it skips the name's own file (SPEC-039 section 43, A83)",
+        "test_bin_kind_census.TheUnpathedBinIsReadAsCargoReadsIt.test_under_2015_a_library_target_skips_the_name_file_and_main_comes_first"
+      ],
+      [
+        "S03957-AUTOLIB-OFF-LEAVES-SRC-LIB-RS-NO-LIBRARY",
+        "scripts/mutation_rows.py",
+        "        library = \"lib\" in manifest or (autolib and (crate_dir / \"src\" / \"lib.rs\").is_file())",
+        "        library = \"lib\" in manifest or (crate_dir / \"src\" / \"lib.rs\").is_file()",
+        "`src/lib.rs` under `autolib = false` is no library target, so the name's own file is still read first (SPEC-039 section 43, A82)",
+        "test_bin_kind_census.TheUnpathedBinIsReadAsCargoReadsIt.test_under_2015_with_no_library_target_the_binarys_own_name_file_is_read"
+      ],
+      [
+        "S03958-SRC-MAIN-RS-IS-AN-OLDER-PATH",
+        "scripts/mutation_rows.py",
+        "        for path in [*older, \"src/main.rs\", \"src/bin/main.rs\"]:",
+        "        for path in [*older, \"src/bin/main.rs\"]:",
+        "`src/main.rs` is an older path cargo reads for an unpathed `[[bin]]` under edition 2015 (SPEC-039 section 43, A83)",
+        "test_bin_kind_census.TheUnpathedBinIsReadAsCargoReadsIt.test_under_2015_a_library_target_skips_the_name_file_and_main_comes_first"
+      ],
+      [
+        "S03959-SRC-BIN-MAIN-RS-IS-AN-OLDER-PATH",
+        "scripts/mutation_rows.py",
+        "        for path in [*older, \"src/main.rs\", \"src/bin/main.rs\"]:",
+        "        for path in [*older, \"src/main.rs\"]:",
+        "`src/bin/main.rs` is the last older path cargo reads for an unpathed `[[bin]]` under edition 2015 (SPEC-039 section 43, A83)",
+        "test_bin_kind_census.TheUnpathedBinIsReadAsCargoReadsIt.test_under_2015_a_library_target_skips_the_name_file_and_main_comes_first"
       ],
       [
         "S03960-A66-MISSING-TOOL-READS-AS-A-SURVIVOR",
@@ -592,6 +664,30 @@
         "import signal\nimport subprocess\nimport subprocess as sp\n",
         "an import that reaches a spawner under another name is a spawn the site census cannot see (SPEC-039 A67)",
         "test_mutation_rows_missing_tool.TheMissingToolPopulation.test_no_code_outside_the_helpers_spawns_a_process_by_any_other_name"
+      ],
+      [
+        "S03983-SRC-MAIN-RS-COMES-BEFORE-SRC-BIN-MAIN-RS",
+        "scripts/mutation_rows.py",
+        "        for path in [*older, \"src/main.rs\", \"src/bin/main.rs\"]:",
+        "        for path in [*older, \"src/bin/main.rs\", \"src/main.rs\"]:",
+        "`src/main.rs` is read before `src/bin/main.rs`, in cargo's order (SPEC-039 section 43, A83)",
+        "test_bin_kind_census.TheUnpathedBinIsReadAsCargoReadsIt.test_under_2015_a_library_target_skips_the_name_file_and_main_comes_first"
+      ],
+      [
+        "S03984-AN-UNPATHED-BIN-CARGO-FINDS-NO-FILE-FOR-IS-REFUSED",
+        "scripts/mutation_rows.py",
+        "    raise KillerUnresolved(\n        f\"{where} declares the binary {name} with no path, and cargo finds no file for it\"\n    )",
+        "    return \"src/main.rs\"",
+        "an unpathed `[[bin]]` cargo finds no file for is refused by name, never read from the package's main (SPEC-039 section 43, A84)",
+        "test_bin_kind_census.TheUnpathedBinIsReadAsCargoReadsIt.test_after_2015_an_unpathed_bin_cargo_finds_no_file_for_is_refused_by_name"
+      ],
+      [
+        "S03985-AN-AUTOLIB-NOT-A-BOOLEAN-IS-REFUSED",
+        "scripts/mutation_rows.py",
+        "        if not isinstance(autolib, bool):",
+        "        if False:",
+        "an `autolib` that is not a boolean is refused by name, as cargo refuses it (SPEC-039 section 43, A85)",
+        "test_bin_kind_census.TheUnpathedBinIsReadAsCargoReadsIt.test_under_2015_what_cargo_cannot_read_is_refused_by_name"
       ],
       [
         "S03986-A-CARGO-INFERS-TARGETS-ONLY-WHILE-AUTODISCOVERY-IS-ON",

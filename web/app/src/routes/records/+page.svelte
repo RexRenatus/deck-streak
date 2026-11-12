@@ -1,11 +1,11 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { api, type Answer } from '$lib/api';
-  import RecordsScreen from '$lib/records/RecordsScreen.svelte';
-  import type { RecordsView } from '$lib/records/records';
-  import BoardSection from '$lib/records/BoardSection.svelte';
-  import type { BoardView } from '$lib/records/board';
-  import { m } from '$lib/paraglide/messages.js';
+  import { api, type Answer } from '#lib/api.js';
+  import RecordsScreen from '#lib/records/RecordsScreen.svelte';
+  import type { RecordsView } from '#lib/records/records.js';
+  import BoardSection from '#lib/records/BoardSection.svelte';
+  import type { BoardView } from '#lib/records/board.js';
+  import { m } from '#lib/paraglide/messages.js';
 
   // The records screen (SPEC-073 R13, R19): the owner's personal records and today's distance to
   // each, as the server answers them, the same figures the bot's /records reports.
@@ -29,7 +29,7 @@
 <main class="mx-auto max-w-prose px-6 py-12">
   <h1 class="text-3xl font-semibold tracking-tight">DeckStreak</h1>
 
-  <div class="mt-8 rounded-lg bg-card p-4 text-card-foreground">
+  <div class="mt-8 rounded-lg border bg-card p-4 text-card-foreground">
     {#if records === undefined}
       <div role="status">{m.loading()}</div>
     {:else if records.kind === 'ok'}

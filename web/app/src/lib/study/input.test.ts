@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { Action, Side } from '$lib/remote/actions';
-import type { PadSnapshot } from '$lib/remote/gamepad';
-import type { KeyInput } from '$lib/remote/keys';
+import type { Action, Side } from '#lib/remote/actions.js';
+import type { PadSnapshot } from '#lib/remote/gamepad.js';
+import type { KeyInput } from '#lib/remote/keys.js';
 import { deviceStorage, KEY_SWITCH, StudyInput, type SwitchStorage } from './input';
 
 // SPEC-350 R8, A14, A15; ADR-361. Every source reaches the review's one handler through #663's

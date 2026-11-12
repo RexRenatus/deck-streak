@@ -1,8 +1,8 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { TODAY } from '$lib/routes';
-  import { m } from '$lib/paraglide/messages.js';
-  import { signIn, webauthn, wordingText, type Wording } from '$lib/passkeys';
+  import { TODAY } from '#lib/routes.js';
+  import { m } from '#lib/paraglide/messages.js';
+  import { signIn, webauthn, wordingText, type Wording } from '#lib/passkeys.js';
 
   /**
    * The sign-in page (SPEC-385 R5, R8, R11; ADR-399 D2). Outside Telegram it offers a passkey where

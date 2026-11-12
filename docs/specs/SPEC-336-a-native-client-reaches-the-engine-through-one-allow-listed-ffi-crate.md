@@ -96,6 +96,7 @@ R12. The adapter passes the workspace's censuses as they stand: the log-capture 
 | A12 | members declaring three features are compiled in every combination and accepted; four are refused by name | `cargo test -p deck-streak-progression --test xp_census -- --exact a12_the_census_compiles_every_combination_up_to_its_feature_limit_and_refuses_past_it` |
 | A13 | the log-capture census over the real tree, the adapter included, finds every capture going through the helper | `cargo test -p deck-streak-kernel --test log_capture_class -- --exact every_capture_in_the_workspace_goes_through_the_helper` |
 | A14 | the settle census over the real tree, the adapter and its feature included, finds only coordination settling | `cargo test -p deck-streak-progression --test xp_census -- --exact only_progression_writes_xp_settlement_and_only_coordination_settles` |
+| A15 | a witness whose member changes nothing a dependant compiles against is left out, a `path` attribute in a test of the member's own among them; a macro, a proc-macro crate, a path to progression of any kind, an unnamed feature, a gated item or a library that reaches a test file keeps it counted | `cargo test -p deck-streak-progression --test xp_census -- --exact a_kani_witness_whose_member_changes_nothing_a_dependant_compiles_against_is_left_out` |
 
 ```acceptance
 A1: cargo test -p deck-streak-ffi --test round_trip -- --exact a1_opens_a_synthetic_collection
@@ -112,6 +113,7 @@ A11: cargo test -p deck-streak-progression --test xp_census -- --exact a11_a_fea
 A12: cargo test -p deck-streak-progression --test xp_census -- --exact a12_the_census_compiles_every_combination_up_to_its_feature_limit_and_refuses_past_it
 A13: cargo test -p deck-streak-kernel --test log_capture_class -- --exact every_capture_in_the_workspace_goes_through_the_helper
 A14: cargo test -p deck-streak-progression --test xp_census -- --exact only_progression_writes_xp_settlement_and_only_coordination_settles
+A15: cargo test -p deck-streak-progression --test xp_census -- --exact a_kani_witness_whose_member_changes_nothing_a_dependant_compiles_against_is_left_out
 ```
 
 Every test builds its own synthetic collection with the engine's API; no real collection data is
@@ -210,3 +212,10 @@ Amendment (SPEC-339): The figures below are run 37188070120's, at commit 0e7c507
 | slice `ios-arm64` | 81.0 MiB (84,957,000 bytes) |
 | slice `ios-arm64-simulator` | 81.0 MiB (84,899,224 bytes) |
 | runner CPUs | 3 |
+
+## 8. Amendments
+
+- Advisory exception: `deny.toml` carries RUSTSEC-2026-0374 for `basic-toml` (unmaintained, not vulnerable) because the pinned `uniffi` bindings generator depends on it through `rinja`; issue #1001 tracks the move that drops it.
+- Advisory moves: RUSTSEC-2026-0381 (`webpki-roots`), RUSTSEC-2026-0382 (`rustls-webpki`) and RUSTSEC-2026-0383 (`webpki-root-certs`) are cleared by a dependency-only `Cargo.lock` move, each package to the lowest patch release that clears its advisory, with no `Cargo.toml` change and no `deny.toml` exception.
+- Self-hosted runner (SPEC-621, ADR-643): R9's macOS runner stays the one admitted to this workflow by file name, and three of its jobs, `xcframework`, `harness-wire` and `card-isolation`, hold instead one `runs-on` expression that picks the labels `self-hosted`, `macOS`, `ARM64` and `ds-mini` for a push, a `workflow_dispatch` and a pull request whose head repository is this repository, when the repository variable `DS_MINI` is `on` and the actor is not `dependabot[bot]`, and `xcode-27` otherwise. The workflow hardening test admits that expression to those three jobs alone and refuses it under any other job or workflow.
+- Witness rule (ADR-345's second amendment): R11's combinations leave out a listed Kani witness also while its member reaches no progression by a dependency of any kind, defines no macro, is no proc-macro crate, has no build script, the witness turns on nothing, and the code a dependant compiles of the member names no `include`, carries no `path` attribute and names a feature only on the lines the census pins, each a cfg of a let statement or a match arm; that code leaves out the member's `tests/`, `benches/` and `examples/` while its library's root is `src/lib.rs`. A15 holds it.

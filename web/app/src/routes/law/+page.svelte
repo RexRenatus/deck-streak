@@ -1,9 +1,9 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { api, type Answer } from '$lib/api';
-  import LawBlock from '$lib/law/LawBlock.svelte';
-  import type { LawTiersView, LawView } from '$lib/law/law';
-  import { m } from '$lib/paraglide/messages.js';
+  import { api, type Answer } from '#lib/api.js';
+  import LawBlock from '#lib/law/LawBlock.svelte';
+  import type { LawTiersView, LawView } from '#lib/law/law.js';
+  import { m } from '#lib/paraglide/messages.js';
 
   // The law tab (SPEC-077 R17): the law block and SPEC-072's law cards by tier, as the server
   // answers them. The block shows without the tiers when only they cannot be read; the page
@@ -22,7 +22,7 @@
 <main class="mx-auto max-w-prose px-6 py-12">
   <h1 class="text-3xl font-semibold tracking-tight">DeckStreak</h1>
 
-  <div class="mt-8 rounded-lg bg-card p-4 text-card-foreground">
+  <div class="mt-8 rounded-lg border bg-card p-4 text-card-foreground">
     {#if read === undefined}
       <div role="status">{m.loading()}</div>
     {:else if read.law.kind === 'ok'}

@@ -480,6 +480,54 @@
         "                | BARE_DYNAMIC\n",
         "a builtin exception class is placed by its value, so dropping the derived set from the placement check leaves every class the hand list lacks unplaced (SPEC-190 A12)",
         "test_ci_workflows.WorkflowFilesAreReadAsBytes.test_every_builtin_exception_class_is_placed_by_its_value"
+      ],
+      [
+        "S19061-THE-ARM-COMPARES-THE-WHOLE-LOGIN",
+        ".github/workflows/changelog.yml",
+        "if [ \"$AUTHOR\" = \"dependabot[bot]\" ]; then\n",
+        "if [[ $AUTHOR == dependabot[bot] ]]; then\n",
+        "the fragment arm compares the author of the pull request whole with the Dependabot login, never as a pattern, so a login that only resembles it reads as before (SPEC-190 R13)",
+        "test_changelog_fragment.EveryOtherPullRequestReadsAsItDid.test_a_login_that_only_resembles_dependabots_is_refused"
+      ],
+      [
+        "S19062-THE-ARM-READS-BOTH-SIDES-OF-A-MOVE",
+        ".github/workflows/changelog.yml",
+        "--name-only --no-renames \"$BASE\" HEAD)",
+        "--name-only \"$BASE\" HEAD)",
+        "the fragment arm lists both paths of a moved file, so a source file moved onto a dependency file path is not read as a dependency change (SPEC-190 R13)",
+        "test_changelog_fragment.EveryOtherPullRequestReadsAsItDid.test_a_dependabot_pull_request_that_changes_another_path_is_refused"
+      ],
+      [
+        "S19063-THE-ARM-MATCHES-WHOLE-PATHS",
+        ".github/workflows/changelog.yml",
+        "grep -v -x -E \"$cargo|$npm|$actions|$pip\"",
+        "grep -v -E \"$cargo|$npm|$actions|$pip\"",
+        "the fragment arm matches each changed path whole, so a manifest no ecosystem updates is not read as a dependency file (SPEC-190 R13)",
+        "test_changelog_fragment.EveryOtherPullRequestReadsAsItDid.test_a_dependabot_pull_request_that_changes_another_path_is_refused"
+      ],
+      [
+        "S19064-THE-ARM-NEEDS-A-CHANGED-PATH",
+        ".github/workflows/changelog.yml",
+        "if [ -n \"$changed\" ] && [ -z \"$other\" ]; then\n",
+        "if [ -z \"$other\" ]; then\n",
+        "the fragment arm passes only a pull request that changes at least one path, so a Dependabot pull request that changes none reads as before (SPEC-190 R13)",
+        "test_changelog_fragment.EveryOtherPullRequestReadsAsItDid.test_a_dependabot_pull_request_that_changes_another_path_is_refused"
+      ],
+      [
+        "S19065-ONLY-THE-DEPENDABOT-LOGIN-TAKES-THE-ARM",
+        ".github/workflows/changelog.yml",
+        "\"dependabot[bot]\" ]; then",
+        "\"$AUTHOR\" ]; then",
+        "only a pull request whose author is the Dependabot login takes the fragment arm, so a dependency update by a person still needs a fragment (SPEC-190 R14)",
+        "test_changelog_fragment.EveryOtherPullRequestReadsAsItDid.test_every_other_author_reads_as_before"
+      ],
+      [
+        "S19066-THE-ARM-READS-THE-AUTHOR-FROM-THE-EVENT",
+        ".github/workflows/changelog.yml",
+        "AUTHOR: ${{ github.event.pull_request.user.login }}\n",
+        "AUTHOR: ${{ github.actor }}\n",
+        "the fragment step reads the author from the pull request of the event, never the actor of the run, which a re-run changes (SPEC-190 R13)",
+        "test_changelog_fragment.ADependabotDependencyPullRequestNeedsNoFragment.test_the_author_is_read_from_the_event_pull_request"
       ]
     ]
   }

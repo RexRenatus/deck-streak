@@ -7,6 +7,14 @@ with no dependency and its own lockfile, built into the fixture's own `target/`.
 killers append what they observed to an untracked `observed.log`, so a test can see whether a
 killer ran, and against which bytes. A9 reads the committed rows, and A11 plants rows the census
 must refuse.
+
+SPEC-465's tests close the module: a retired list of the wrong shape refused by name (A1 to A5),
+a runner process signalled at each edge of a killer's run (A6 to A9), `main()` run in this
+process and leaving its handlers as it found them (A10 to A12), and the reader driven through
+every vector of its Lean proof (A14).
+SPEC-645's tests follow them: a `--rows-from` plan of the wrong shape refused by name by `prove`,
+`legs` and `merge` as processes and by its reader as a function (A1 to A5), and a well-formed
+plan read as before (A6).
 """
 
 import argparse
@@ -22,6 +30,8 @@ import signal
 import subprocess
 import sys
 import tempfile
+import textwrap
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -422,6 +432,88 @@ class TheCensusRefusesARowThatCanProveNothing(unittest.TestCase):
         held = census(twice.root)
         self.assertEqual(held.returncode, 1, held.stdout + held.stderr)
         self.assertIn("the row id S00041-FIRST is held twice", held.stdout)
+
+
+# --------------------------------------------------------------------------- SPEC-646
+
+POPULATION_HEADER = "scripts/mutation-rows.json"
+POPULATION_BAND = "scripts/mutation-rows.d/S00000-S00099.json"
+#: A well-formed row set before each wrong one, so that every refusal names the wrong row's place.
+WELL_SHAPED = script_row(
+    "S00080-SHAPED", "x * 2", "x * 3", "test_fixmod.Double.test_two_doubles_to_four"
+)
+#: Where a row is planted: the header's table, or the band file's.
+PLACES = {"header": POPULATION_HEADER, "band": POPULATION_BAND}
+
+
+class ThePopulationReaderRefusesAMisshapenTableOrRow(unittest.TestCase):
+    """SPEC-646 A1 to A4 (R1 to R4): a header table that is not an array, a row that is not an
+    array and a row holding a cell that is not a string are each refused by the sentence naming
+    the file, the place and the shape it needed, exit 2, with no traceback, by `count` as a
+    process and by the reader in this process. A well-formed population reads as it did, and the
+    refusals the reader made before of a band file's table and of a row with no id stand."""
+
+    def planted(self, place, rows):
+        """A fixture whose `SCRIPT_MUTATIONS` table in the header or in the band file holds
+        `rows`, written over the committed fixture."""
+        fixture = Fixture(self)
+        if place == "header":
+            header = json.loads(json.dumps(HEADER))
+            header["tables"]["SCRIPT_MUTATIONS"] = rows
+            fixture.write(POPULATION_HEADER, json.dumps(header, indent=2) + "\n")
+        else:
+            tables = {"MUTATIONS": [], "CARGO_KILLED_SCRIPT_MUTATIONS": []}
+            tables["SCRIPT_MUTATIONS"] = rows
+            fixture.write(POPULATION_BAND, json.dumps({"tables": tables}) + "\n")
+        return fixture
+
+    def assert_refused(self, fixture, sentence):
+        done = fixture.run("count")
+        self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+        self.assertIn(f"mutation_rows: REFUSED: {sentence}", done.stderr.splitlines())
+        self.assertNotIn("Traceback", done.stderr)
+        runner = load_runner()
+        with self.assertRaises(runner.PopulationRefused) as refused:
+            runner.rows_of(runner.load_tree(fixture.root))
+        self.assertEqual(str(refused.exception), sentence)
+
+    def test_a_header_table_that_is_not_an_array_is_refused_naming_it(self):
+        sentence = f"{POPULATION_HEADER}: SCRIPT_MUTATIONS is not an array of rows"
+        for value in examined("planted header tables", [1, {}, "rows", None]):
+            with self.subTest(value=value):
+                self.assert_refused(self.planted("header", value), sentence)
+
+    def test_a_row_that_is_not_an_array_is_refused_naming_its_place(self):
+        planted = [(place, value) for place in PLACES for value in (1, "S00081-ROW", {})]
+        for place, value in examined("planted rows", planted):
+            with self.subTest(place=place, value=value):
+                sentence = f"{PLACES[place]}: SCRIPT_MUTATIONS[1] is not an array of cells"
+                self.assert_refused(self.planted(place, [WELL_SHAPED, value]), sentence)
+
+    def test_a_row_holding_a_cell_that_is_not_a_string_is_refused_naming_its_place(self):
+        wrong = {0: 7, 1: None, 2: 5}
+        planted = [(place, cell) for place in PLACES for cell in sorted(wrong)]
+        for place, cell in examined("planted cells", planted):
+            with self.subTest(place=place, cell=cell):
+                row = ["S00082-CELL", *WELL_SHAPED[1:]]
+                row[cell] = wrong[cell]
+                sentence = f"{PLACES[place]}: SCRIPT_MUTATIONS[1] holds a cell that is not a string"
+                self.assert_refused(self.planted(place, [WELL_SHAPED, row]), sentence)
+
+    def test_a_well_formed_population_reads_as_before_beside_the_refusals_it_kept(self):
+        fixture = Fixture(self, [("SCRIPT_MUTATIONS", WELL_SHAPED)])
+        done = fixture.run("count")
+        self.assertEqual((done.returncode, done.stdout), (0, "1\n"), done.stderr)
+        runner = load_runner()
+        rows = runner.rows_of(runner.load_tree(fixture.root))
+        self.assertEqual([row.id for row in rows], ["S00080-SHAPED"])
+        kept = [
+            ({}, f"{POPULATION_BAND}: SCRIPT_MUTATIONS is not an array of rows"),
+            ([WELL_SHAPED, []], f"{POPULATION_BAND}: a SCRIPT_MUTATIONS row has no id"),
+        ]
+        for planted_rows, sentence in examined("kept refusals", kept):
+            with self.subTest(sentence=sentence):
+                self.assert_refused(self.planted("band", planted_rows), sentence)
 
 
 class TheRunnerProvesEverySelectedRow(unittest.TestCase):
@@ -1437,6 +1529,675 @@ class TheLegsAndMergeAnswerWithTheirOwnExitCodes(unittest.TestCase):
             ],
         ):
             self.assertIn(text, flat)
+
+
+# --------------------------------------------------------------------------- SPEC-465
+
+RETIRED_LIST = "scripts/mutation-rows.retired.json"
+#: The sentences SPEC-465 R1 to R4 refuse a wrongly shaped list with, each spelt whole.
+NOT_AN_OBJECT = "scripts/mutation-rows.retired.json must hold a top-level object"
+NOT_AN_ARRAY = "scripts/mutation-rows.retired.json: `retired` is not an array of records"
+SECOND_IS_NOT_AN_OBJECT = "scripts/mutation-rows.retired.json: retired[1] is not an object"
+SECOND_HAS_NO_STRING_ID = "scripts/mutation-rows.retired.json: retired[1] has no string id"
+#: The row that leaves while its target stays, and its approved entry.
+LEAVING = "S00030-DOUBLE"
+APPROVED = {"id": LEAVING, "reason": "moved", "approval": "the maintainer, in #1"}
+#: A well-formed entry for a row the fixture never held, placed before a wrong one.
+OTHER = {"id": "S00031-OTHER", "reason": "moved", "approval": "the maintainer, in #1"}
+#: The fixture's passing killer, as the runner reads a script killer.
+PASSING = ("script", "test_fixmod.Double.test_two_doubles_to_four", "scripts/tests/test_fixmod.py")
+
+
+def leaving_row(test):
+    """A fixture whose one row leaves while its target stays, and the base it leaves from."""
+    row = script_row(LEAVING, "x * 2", "x * 3", "test_fixmod.Double.test_two_doubles_to_four")
+    fixture = Fixture(test, [("SCRIPT_MUTATIONS", row)])
+    base = git(fixture.root, "rev-parse", "HEAD").strip()
+    fixture.rows([])
+    fixture.commit("the row leaves, its target stays")
+    return fixture, base
+
+
+class TheRetiredListRefusesAWrongShape(unittest.TestCase):
+    """SPEC-465 A1 to A5 (R1 to R5): a retired list of the wrong shape is refused by the sentence
+    naming its shape, exit 2, with no traceback and nothing retired, by `retired` as a process and
+    as a function; a well-formed list admits its row as it did."""
+
+    def retired_over(self, document):
+        """`retired --base` over the leaving row's fixture, `document` committed as its list."""
+        fixture, base = leaving_row(self)
+        fixture.write(RETIRED_LIST, json.dumps(document) + "\n")
+        fixture.commit("a retired list")
+        return fixture, base, fixture.run("retired", "--base", base)
+
+    def assert_refused(self, document, sentence):
+        fixture, base, done = self.retired_over(document)
+        self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+        self.assertIn(f"mutation_rows: REFUSED: {sentence}", done.stderr.splitlines())
+        self.assertNotIn("Traceback", done.stderr)
+        self.assertNotIn(LEAVING, done.stdout, "a refused list retires nothing")
+        runner = load_runner()
+        with contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(runner.PopulationRefused) as refused:
+                runner.retired(fixture.root, base)
+        self.assertEqual(str(refused.exception), sentence)
+
+    def test_a_top_level_list_is_refused_naming_the_shape(self):
+        self.assert_refused([APPROVED], NOT_AN_OBJECT)
+
+    def test_a_retired_value_that_is_not_an_array_is_refused_naming_the_shape(self):
+        for value in examined("planted retired values", [1, {}]):
+            with self.subTest(value=value):
+                self.assert_refused({"retired": value}, NOT_AN_ARRAY)
+
+    def test_an_entry_that_is_not_an_object_is_refused_naming_its_place(self):
+        self.assert_refused({"retired": [OTHER, 1]}, SECOND_IS_NOT_AN_OBJECT)
+
+    def test_an_entry_without_a_string_id_is_refused_naming_its_place(self):
+        idless = {"reason": "moved", "approval": "the maintainer, in #1"}
+        self.assert_refused({"retired": [OTHER, idless]}, SECOND_HAS_NO_STRING_ID)
+
+    def test_a_well_formed_list_still_admits_its_row_beside_an_unapproved_entry(self):
+        unapproved = {"id": "S00031-OTHER", "reason": "moved", "approval": ""}
+        _, _, done = self.retired_over({"_": ["a note"], "retired": [unapproved, APPROVED]})
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        lines = done.stdout.splitlines()
+        self.assertIn(
+            f"retired: {LEAVING}: its target stays; retired with approval: the maintainer, in #1",
+            lines,
+        )
+        self.assertIn("examined 1", lines)
+
+
+class TheRetiredListReaderAgreesWithItsProof(unittest.TestCase):
+    """SPEC-465 A14 (R11): `retired` answers every vector `lean/RetiredListShape`'s writer derived
+    as the proof's port answers it, the refusal's sentence or whether the leaving row is
+    approved."""
+
+    VECTORS = REPO / "formal" / "vectors" / "retired-list-shape.jsonl"
+
+    def test_the_reader_agrees_with_every_vector_of_its_proof(self):
+        header, *lines = self.VECTORS.read_text(encoding="utf-8").splitlines()
+        vectors = [json.loads(line) for line in lines]
+        self.assertEqual(json.loads(header)["vectors"], len(vectors), "the header's count")
+        runner = load_runner()
+        fixture, base = leaving_row(self)
+        for vector in examined("vectors of the proof", vectors):
+            fixture.write(RETIRED_LIST, json.dumps(vector["document"]) + "\n")
+            try:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    outcome = ("read", runner.retired(fixture.root, base))
+            except runner.PopulationRefused as refused:
+                outcome = ("refused", str(refused))
+            except Exception as error:
+                outcome = ("crashed", type(error).__name__)
+            if "refused" in vector:
+                expected = ("refused", vector["refused"])
+            else:
+                expected = ("read", 0 if vector["approves"] else 1)
+            self.assertEqual(outcome, expected, json.dumps(vector["document"]))
+
+
+#: How long a signal test waits for a marker, a pid file, a process's end or the runner's exit.
+SIGNAL_BOUND = 20.0
+#: The killer the signal tests run: its test starts a grandchild, writes its own pid and the
+#: grandchild's to the files two environment variables name, then hangs past any bound.
+SIGNALLED_KILLER = textwrap.dedent(
+    """\
+    import os
+    import subprocess
+    import time
+    import unittest
+    from pathlib import Path
+
+
+    class Killer(unittest.TestCase):
+        def test_hangs_with_a_grandchild(self):
+            grandchild = subprocess.Popen(["sleep", "300"])
+            Path(os.environ["LEADER_PID_FILE"]).write_text(str(os.getpid()))
+            Path(os.environ["GRANDCHILD_PID_FILE"]).write_text(str(grandchild.pid))
+            time.sleep(300)
+    """
+)
+#: The runner as a process of its own, run as `driver.py <scripts> <directory> <edge>`: `main()`
+#: and the real `run_killer` on the killer above, with the row proof replaced by that one run.
+#: The edge selects one patch, by the runner's base names: `starting` holds the killer's start
+#: (after its fork, before its output is collected) until the test's `sent` marker, `cleaning`
+#: holds the first group kill until the test's `sent-again` marker, and `ignored` starts the
+#: runner with SIGHUP ignored; `interrupt-ignored` starts it with SIGINT ignored, and every other
+#: edge starts it with the interpreter's own SIGINT handler, whatever the test process inherited.
+#: Each held step ends in 20 short sleeps, whose backward jumps run a pending handler.
+SIGNALLED_DRIVER = textwrap.dedent(
+    """\
+    import os
+    import signal
+    import sys
+    import time
+    from pathlib import Path
+
+    sys.path.insert(0, sys.argv[1])
+    import mutation_rows as runner
+
+    DIRECTORY = Path(sys.argv[2])
+    EDGE = sys.argv[3]
+
+
+    def wait_for(path):
+        deadline = time.monotonic() + 20
+        while not path.exists():
+            if time.monotonic() > deadline:
+                raise SystemExit(f"the driver waited 20 s for {path.name}")
+            time.sleep(0.01)
+
+
+    def settle():
+        for _ in range(20):
+            time.sleep(0.01)
+
+
+    def prove(root, args, leg=None):
+        killer = runner.Killer(
+            "script", "signalled_killer.Killer.test_hangs_with_a_grandchild", "signalled_killer.py", cwd="."
+        )
+        return 0 if runner.run_killer(root, killer, root).passed else 1
+
+
+    class Starting(runner.subprocess.Popen):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            wait_for(Path(os.environ["GRANDCHILD_PID_FILE"]))
+            (DIRECTORY / "starting").write_text("")
+            wait_for(DIRECTORY / "sent")
+            settle()
+
+
+    group_kill = runner.kill_group
+
+
+    def cleaning(process):
+        if not (DIRECTORY / "cleaning").exists():
+            (DIRECTORY / "cleaning").write_text("")
+            wait_for(DIRECTORY / "sent-again")
+            settle()
+        group_kill(process)
+
+
+    runner.BUILD_SECONDS = 0
+    runner.TEST_SECONDS = 30
+    runner.prove = prove
+    if EDGE == "starting":
+        runner.subprocess.Popen = Starting
+    if EDGE == "cleaning":
+        runner.kill_group = cleaning
+    signal.signal(signal.SIGHUP, signal.SIG_IGN if EDGE == "ignored" else signal.SIG_DFL)
+    interrupt = signal.SIG_IGN if EDGE == "interrupt-ignored" else signal.default_int_handler
+    signal.signal(signal.SIGINT, interrupt)
+    sys.exit(runner.main(["prove", "--all", "--root", str(DIRECTORY)]))
+    """
+)
+
+
+def running(pid):
+    """Whether process `pid` runs, read from `/proc/<pid>/stat`: a zombie awaiting its parent does
+    not."""
+    try:
+        stat = Path(f"/proc/{pid}/stat").read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return stat.rsplit(")", 1)[1].split()[0] != "Z"
+
+
+def stop_by_number(pid):
+    """SIGKILL to the one pid this test started, if it still runs; never a pattern."""
+    if running(pid):
+        with contextlib.suppress(ProcessLookupError):
+            os.kill(pid, signal.SIGKILL)
+
+
+class TheRunnerEndsTheKillersGroupOnEverySignal(unittest.TestCase):
+    """SPEC-465 A6 to A9 (R6 to R8): a runner process, signalled from outside at each edge of its
+    killer's run, leaves neither the killer nor its grandchild running and exits 128 plus the
+    first signal's number. The test and the runner each wait, within a bound, for the marker the
+    other writes; neither waits on a bare sleep."""
+
+    def start(self, edge):
+        """The runner in a group of its own, driven at `edge`, once its killer and the killer's
+        grandchild run: (the killer's pid, the grandchild's)."""
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        self.directory = Path(scratch.name)
+        (self.directory / "signalled_killer.py").write_text(SIGNALLED_KILLER, encoding="utf-8")
+        (self.directory / "driver.py").write_text(SIGNALLED_DRIVER, encoding="utf-8")
+        env = dict(
+            os.environ,
+            LEADER_PID_FILE=str(self.directory / "leader.pid"),
+            GRANDCHILD_PID_FILE=str(self.directory / "grandchild.pid"),
+            PYTHONDONTWRITEBYTECODE="1",
+        )
+        self.runner = subprocess.Popen(
+            [
+                sys.executable,
+                str(self.directory / "driver.py"),
+                str(REPO / "scripts"),
+                str(self.directory),
+                edge,
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env=env,
+            process_group=0,
+        )
+        self.addCleanup(self.runner.wait)
+        self.addCleanup(stop_by_number, self.runner.pid)
+        grandchild = self.pid_in("grandchild.pid")
+        self.addCleanup(stop_by_number, grandchild)
+        leader = self.pid_in("leader.pid")
+        self.addCleanup(stop_by_number, leader)
+        self.assertTrue(running(leader), "the killer runs before the signal")
+        self.assertTrue(running(grandchild), "the grandchild runs before the signal")
+        return leader, grandchild
+
+    def pid_in(self, name):
+        """The pid the killer wrote to `name`, once it reads whole, within the bound."""
+        deadline = time.monotonic() + SIGNAL_BOUND
+        while time.monotonic() < deadline:
+            with contextlib.suppress(OSError, ValueError):
+                return int((self.directory / name).read_text(encoding="utf-8"))
+            time.sleep(0.05)
+        self.fail(f"the killer never wrote {name}")
+
+    def wait_for(self, name):
+        """Until the runner writes the marker `name`, within the bound."""
+        deadline = time.monotonic() + SIGNAL_BOUND
+        while not (self.directory / name).exists():
+            if time.monotonic() > deadline:
+                self.fail(f"the runner never wrote {name}")
+            time.sleep(0.01)
+
+    def mark(self, name):
+        (self.directory / name).write_text("", encoding="utf-8")
+
+    def assert_ended(self, pids, how, status):
+        """The killer and its grandchild gone within the bound, then the runner's exit status."""
+        leader, grandchild = pids
+        deadline = time.monotonic() + SIGNAL_BOUND
+        while (running(leader) or running(grandchild)) and time.monotonic() < deadline:
+            time.sleep(0.05)
+        self.assertFalse(running(leader), f"the killer {leader} still runs after {how}")
+        self.assertFalse(running(grandchild), f"the grandchild {grandchild} still runs after {how}")
+        try:
+            code = self.runner.wait(SIGNAL_BOUND)
+        except subprocess.TimeoutExpired:
+            self.fail(f"the runner still runs {SIGNAL_BOUND:.0f} s after {how}")
+        self.assertEqual(code, status, f"the runner's exit status after {how}")
+
+    def test_a_sighup_of_the_runner_ends_the_killers_group(self):
+        pids = self.start("hangup")
+        os.kill(self.runner.pid, signal.SIGHUP)
+        self.assert_ended(pids, "a SIGHUP of the runner", 129)
+
+    def test_a_sigterm_while_the_killer_starts_is_held_until_its_group_can_end(self):
+        pids = self.start("starting")
+        self.wait_for("starting")
+        os.kill(self.runner.pid, signal.SIGTERM)
+        self.mark("sent")
+        self.assert_ended(pids, "a SIGTERM while the killer starts", 143)
+
+    def test_a_second_sigterm_during_the_cleanup_is_ignored_and_the_group_ends(self):
+        pids = self.start("cleaning")
+        os.kill(self.runner.pid, signal.SIGTERM)
+        self.wait_for("cleaning")
+        os.kill(self.runner.pid, signal.SIGTERM)
+        self.mark("sent-again")
+        self.assert_ended(pids, "a second SIGTERM during the cleanup", 143)
+
+    def test_a_runner_started_with_sighup_ignored_keeps_it_ignored(self):
+        pids = self.start("ignored")
+        os.kill(self.runner.pid, signal.SIGHUP)
+        os.kill(self.runner.pid, signal.SIGTERM)
+        self.assert_ended(pids, "a SIGHUP, then a SIGTERM, of a runner that ignores SIGHUP", 143)
+
+    def test_a_sigint_while_the_killer_starts_is_held_until_its_group_can_end(self):
+        """SPEC-647 A1 (R1, R2): an interrupt during the killer's start waits for the group kill,
+        and the runner still ends by SIGINT."""
+        pids = self.start("starting")
+        self.wait_for("starting")
+        os.kill(self.runner.pid, signal.SIGINT)
+        self.mark("sent")
+        self.assert_ended(pids, "a SIGINT while the killer starts", -signal.SIGINT)
+
+    def test_a_second_signal_during_the_cleanup_is_ignored_whichever_came_first(self):
+        """SPEC-647 A2 (R3): once a cleanup has begun, a later signal is ignored whichever signal
+        began it, so the group ends and the runner ends as its first signal says."""
+        orders = [
+            (signal.SIGINT, signal.SIGINT),
+            (signal.SIGINT, signal.SIGTERM),
+            (signal.SIGTERM, signal.SIGINT),
+        ]
+        for first, second in examined("signal orders", orders):
+            with self.subTest(first=first.name, second=second.name):
+                pids = self.start("cleaning")
+                os.kill(self.runner.pid, first)
+                self.wait_for("cleaning")
+                os.kill(self.runner.pid, second)
+                self.mark("sent-again")
+                self.assert_ended(
+                    pids,
+                    f"a {second.name} during the cleanup a {first.name} began",
+                    -signal.SIGINT if first == signal.SIGINT else 128 + signal.SIGTERM,
+                )
+
+    def test_a_runner_started_with_sigint_ignored_keeps_it_ignored(self):
+        """SPEC-647 A3 (R1): a runner started with SIGINT ignored is not ended by one."""
+        pids = self.start("interrupt-ignored")
+        os.kill(self.runner.pid, signal.SIGINT)
+        os.kill(self.runner.pid, signal.SIGTERM)
+        self.assert_ended(pids, "a SIGINT, then a SIGTERM, of a runner that ignores SIGINT", 143)
+
+    def test_a_sigint_of_the_runner_still_ends_it_by_sigint_through_its_cleanup(self):
+        """SPEC-647 A6 (R2, R4, R5): a single interrupt still ends the group and the run by
+        SIGINT."""
+        pids = self.start("interrupt")
+        os.kill(self.runner.pid, signal.SIGINT)
+        self.assert_ended(pids, "a SIGINT of the runner", -signal.SIGINT)
+
+
+class TheRunEndsOnASigintAsOnItsOtherSignals(unittest.TestCase):
+    """SPEC-647 A4 and A5 (R1, R2, R4): `main()` run in this process takes SIGINT through its own
+    handler, ends an interrupted run as `KeyboardInterrupt`, keeps an ignored SIGINT ignored, and
+    reinstalls the SIGINT handler it found on every way out."""
+
+    def setUp(self):
+        for signum in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT):
+            found = signal.getsignal(signum)
+            self.addCleanup(signal.signal, signum, signal.SIG_DFL if found is None else found)
+        self.heard = []
+
+        def on_signal(signum, _frame):
+            self.heard.append(signum)
+
+        self.on_signal = on_signal
+        for signum in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT):
+            signal.signal(signum, on_signal)
+        self.runner = load_runner()
+        self.fixture, _ = leaving_row(self)
+        self.root = str(self.fixture.root)
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        self.scratch = Path(scratch.name)
+        self.killer = self.runner.Killer(*PASSING, cwd="scripts/tests")
+
+    def main(self, *argv):
+        """`main(argv)`'s way out, its output kept from the test's own: ("returned", code),
+        ("exited", code), ("interrupted", "KeyboardInterrupt") or ("raised", the class)."""
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            try:
+                return ("returned", self.runner.main(list(argv)))
+            except SystemExit as stop:
+                return ("exited", stop.code)
+            except KeyboardInterrupt:
+                return ("interrupted", "KeyboardInterrupt")
+            except Exception as error:
+                return ("raised", type(error).__name__)
+
+    def raise_sigint(self, *_args):
+        signal.raise_signal(signal.SIGINT)
+
+    def test_main_takes_sigint_and_restores_its_handler_on_every_way_out(self):
+        ways = [
+            ("a return", "count", contextlib.nullcontext, ("returned", 0)),
+            ("an argument error", "retired", contextlib.nullcontext, ("exited", 2)),
+            (
+                "an exception",
+                "census",
+                lambda: mock.patch.object(
+                    self.runner, "census", side_effect=RuntimeError("planted")
+                ),
+                ("raised", "RuntimeError"),
+            ),
+            (
+                "a SIGINT",
+                "count",
+                lambda: mock.patch.object(self.runner, "rows_of", side_effect=self.raise_sigint),
+                ("interrupted", "KeyboardInterrupt"),
+            ),
+        ]
+        for way, verb, patched, outcome in examined("ways out of main", ways):
+            signal.signal(signal.SIGINT, self.on_signal)
+            with patched():
+                self.assertEqual(self.main(verb, "--root", self.root), outcome, way)
+            self.assertIs(signal.getsignal(signal.SIGINT), self.on_signal, way)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        during = []
+
+        def read_sigint(*_args):
+            during.append(signal.getsignal(signal.SIGINT))
+            raise RuntimeError("planted")
+
+        with mock.patch.object(self.runner, "rows_of", side_effect=read_sigint):
+            self.assertEqual(
+                self.main("count", "--root", self.root), ("raised", "RuntimeError"), "ignored"
+            )
+        self.assertEqual(during, [signal.SIG_IGN], "an ignored SIGINT was taken during the run")
+        self.assertIs(signal.getsignal(signal.SIGINT), signal.SIG_IGN, "an ignored SIGINT")
+        signal.signal(signal.SIGINT, self.on_signal)
+        with mock.patch.object(signal, "getsignal", return_value=None):
+            self.assertEqual(self.main("count", "--root", self.root), ("returned", 0))
+        self.assertIs(signal.getsignal(signal.SIGINT), signal.SIG_DFL)
+        self.assertEqual(self.heard, [], "a signal main() handled reached the handler it found")
+
+    def test_a_sigint_held_while_a_killer_fails_to_start_still_ends_the_run(self):
+        def prove(root, _args, _leg=None):
+            return 0 if self.runner.run_killer(root, self.killer, self.scratch).passed else 1
+
+        def resolve_tool(command, _env, _cwd=None):
+            signal.raise_signal(signal.SIGINT)
+            raise self.runner.ToolMissing(command[0], "a planted refusal")
+
+        with (
+            mock.patch.object(self.runner, "prove", prove),
+            mock.patch.object(self.runner, "resolve_tool", resolve_tool),
+        ):
+            outcome = self.main("prove", "--all", "--root", self.root)
+        self.assertEqual(outcome, ("interrupted", "KeyboardInterrupt"))
+        self.assertEqual(self.heard, [], "a SIGINT main() held reached the handler it found")
+
+
+class MainLeavesTheProcessAsItFoundIt(unittest.TestCase):
+    """SPEC-465 A10 to A12 (R7, R9): `main()` run in this process reinstalls the SIGTERM and
+    SIGHUP handlers it found on every way out, leaves no signal state behind it, and ends with
+    the exit of a signal it held while a killer failed to start."""
+
+    def setUp(self):
+        for signum in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT):
+            found = signal.getsignal(signum)
+            self.addCleanup(signal.signal, signum, signal.SIG_DFL if found is None else found)
+        self.heard = []
+
+        def on_term(signum, _frame):
+            self.heard.append(signum)
+
+        def on_hup(signum, _frame):
+            self.heard.append(signum)
+
+        self.on_term, self.on_hup = on_term, on_hup
+        signal.signal(signal.SIGTERM, on_term)
+        signal.signal(signal.SIGHUP, on_hup)
+        self.runner = load_runner()
+        self.fixture, _ = leaving_row(self)
+        self.root = str(self.fixture.root)
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        self.scratch = Path(scratch.name)
+        self.killer = self.runner.Killer(*PASSING, cwd="scripts/tests")
+
+    def main(self, *argv):
+        """`main(argv)`'s way out, its output kept from the test's own: ("returned", code),
+        ("exited", code) or ("raised", the exception's class)."""
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            try:
+                return ("returned", self.runner.main(list(argv)))
+            except SystemExit as stop:
+                return ("exited", stop.code)
+            except Exception as error:
+                return ("raised", type(error).__name__)
+
+    def raise_sigterm(self, *_args):
+        signal.raise_signal(signal.SIGTERM)
+
+    def test_main_restores_the_handlers_it_found_on_every_way_out(self):
+        ways = [
+            ("a return", "count", contextlib.nullcontext, ("returned", 0)),
+            ("an argument error", "retired", contextlib.nullcontext, ("exited", 2)),
+            (
+                "an exception",
+                "census",
+                lambda: mock.patch.object(
+                    self.runner, "census", side_effect=RuntimeError("planted")
+                ),
+                ("raised", "RuntimeError"),
+            ),
+            (
+                "a signal",
+                "count",
+                lambda: mock.patch.object(self.runner, "rows_of", side_effect=self.raise_sigterm),
+                ("exited", 143),
+            ),
+        ]
+        for way, verb, patched, outcome in examined("ways out of main", ways):
+            with patched():
+                self.assertEqual(self.main(verb, "--root", self.root), outcome, way)
+            self.assertIs(signal.getsignal(signal.SIGTERM), self.on_term, way)
+            self.assertIs(signal.getsignal(signal.SIGHUP), self.on_hup, way)
+        with mock.patch.object(signal, "getsignal", return_value=None):
+            self.assertEqual(self.main("count", "--root", self.root), ("returned", 0))
+        self.assertIs(signal.getsignal(signal.SIGTERM), signal.SIG_DFL)
+        self.assertIs(signal.getsignal(signal.SIGHUP), signal.SIG_DFL)
+        self.assertEqual(self.heard, [], "a signal main() handled reached the handler it found")
+
+    def test_main_leaves_no_signal_state_behind(self):
+        for run in ("the first", "the second"):
+            with mock.patch.object(self.runner, "rows_of", side_effect=self.raise_sigterm):
+                self.assertEqual(self.main("count", "--root", self.root), ("exited", 143), run)
+        done = self.runner.run_killer(self.fixture.root, self.killer, self.scratch)
+        self.assertEqual(done, self.runner.Run(1, True))
+
+    def test_a_signal_held_while_a_killer_fails_to_start_still_ends_the_run(self):
+        def prove(root, _args, _leg=None):
+            return 0 if self.runner.run_killer(root, self.killer, self.scratch).passed else 1
+
+        def resolve_tool(command, _env, _cwd=None):
+            signal.raise_signal(signal.SIGTERM)
+            raise self.runner.ToolMissing(command[0], "a planted refusal")
+
+        with (
+            mock.patch.object(self.runner, "prove", prove),
+            mock.patch.object(self.runner, "resolve_tool", resolve_tool),
+        ):
+            outcome = self.main("prove", "--all", "--root", self.root)
+        self.assertEqual(outcome, ("exited", 143))
+
+
+PLAN_NOT_AN_OBJECT = "{plan} must hold a top-level object"
+PLAN_ROWS_NOT_AN_ARRAY = "{plan}: `rows` is not an array of row ids"
+PLAN_ENTRY_NOT_A_STRING = "{plan}: rows[{index}] is not a string"
+
+
+class TheRowsPlanRefusesAWrongShape(unittest.TestCase):
+    """SPEC-645 A1 to A6 (R1 to R5): a `--rows-from` plan of the wrong shape is refused by the
+    sentence naming the file and the shape it needed, as one `mutation_rows: REFUSED:` line on
+    stderr, exit 2, an empty stdout and nothing written, by `prove`, `legs` and `merge` as
+    processes and by the reader as a function; a well-formed plan reads as it did."""
+
+    IDS = ("S00001-FIRST", "S00002-SECOND", "S00003-THIRD")
+
+    def setUp(self):
+        self.fixture = Fixture(self, [unproved_row(identifier) for identifier in self.IDS])
+
+    def assert_refused(self, document, said_for):
+        """`document` as the plan of each verb that reads one, refused with the sentence
+        `said_for` spells from the plan's path, and by the reader in this process."""
+        plan = self.fixture.write("plan.json", json.dumps(document))
+        said = said_for(plan)
+        report = self.fixture.root / "merged.json"
+        sink = self.fixture.write("legs-output", "")
+        verbs = [
+            ("prove", lambda: self.fixture.run("prove", "--rows-from", str(plan))),
+            ("legs", lambda: self.fixture.run("legs", "--rows-from", str(plan), output=sink)),
+            (
+                "merge",
+                lambda: self.fixture.run(
+                    "merge",
+                    "--rows-from",
+                    str(plan),
+                    "--legs",
+                    "1",
+                    "--from",
+                    str(self.fixture.root / "legs"),
+                    "--report",
+                    str(report),
+                ),
+            ),
+        ]
+        for verb, run in examined("verbs that read a plan", verbs):
+            done = run()
+            first = (done.stderr.splitlines() or [""])[0]
+            self.assertEqual(done.returncode, 2, f"{verb} ended {done.returncode}: {first}")
+            self.assertEqual(done.stderr, f"mutation_rows: REFUSED: {said}\n", verb)
+            self.assertEqual(done.stdout, "", verb)
+        self.assertFalse(report.exists(), "a refused merge wrote a report")
+        self.assertEqual(outputs(sink), {}, "a refused plan wrote outputs")
+        runner = load_runner()
+        with self.assertRaises(runner.PlanRefused) as refused:
+            runner.plan_rows(str(plan), document)
+        self.assertEqual(str(refused.exception), said)
+
+    def test_a_plan_that_is_an_array_is_refused_naming_the_shape(self):
+        self.assert_refused(["S00001-FIRST"], lambda plan: PLAN_NOT_AN_OBJECT.format(plan=plan))
+
+    def test_a_plan_that_is_a_string_is_refused_naming_the_shape(self):
+        self.assert_refused("S00001-FIRST", lambda plan: PLAN_NOT_AN_OBJECT.format(plan=plan))
+
+    def test_a_plan_that_is_a_number_a_boolean_or_null_is_refused_naming_the_shape(self):
+        for value in examined("planted scalar plans", [7, 1.5, True, False, None]):
+            with self.subTest(value=value):
+                self.assert_refused(value, lambda plan: PLAN_NOT_AN_OBJECT.format(plan=plan))
+
+    def test_a_rows_value_that_is_not_an_array_is_refused_naming_the_shape(self):
+        planted = [7, "S00001-FIRST", None, {"S00001-FIRST": 1}]
+        for value in examined("planted rows values", planted):
+            with self.subTest(value=value):
+                self.assert_refused(
+                    {"rows": value}, lambda plan: PLAN_ROWS_NOT_AN_ARRAY.format(plan=plan)
+                )
+
+    def test_a_row_id_that_is_not_a_string_is_refused_naming_its_place(self):
+        planted = [(["S00001-FIRST", 1], 1), ([["S00001-FIRST"]], 0)]
+        for rows, index in examined("planted row ids", planted):
+            with self.subTest(rows=rows):
+                self.assert_refused(
+                    {"rows": rows},
+                    lambda plan, index=index: PLAN_ENTRY_NOT_A_STRING.format(
+                        plan=plan, index=index
+                    ),
+                )
+
+    def test_a_well_formed_plan_still_selects_its_rows(self):
+        plans = [
+            (
+                {"_": ["a note"], "rows": list(self.IDS), "scope": {"decision": "run"}},
+                0,
+                "legs: 1 leg(s) for 3 row(s), the largest 3 row(s)",
+            ),
+            ({"_": ["a note"]}, 0, "legs: 1 leg(s) for 0 row(s), the largest 0 row(s)"),
+            ({"rows": ["S99999-GHOST"]}, 2, "legs: REFUSED: no row holds the id(s) S99999-GHOST"),
+        ]
+        for document, code, line in examined("well-formed plans", plans):
+            plan = self.fixture.write("plan.json", json.dumps(document))
+            done = self.fixture.run("legs", "--rows-from", str(plan))
+            self.assertEqual(done.returncode, code, done.stdout + done.stderr)
+            self.assertIn(line, done.stdout)
+            self.assertEqual(done.stderr, "")
 
 
 if __name__ == "__main__":

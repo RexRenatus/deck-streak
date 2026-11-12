@@ -239,7 +239,10 @@ async fn a_comeback_switched_off_at_zero_is_withheld_as_disabled() {
             reason: Reason::NudgesDisabled
         }
     );
-    assert!(harness.bot.pushes().is_empty());
+    assert_eq!(
+        harness.bot.pushes(),
+        Vec::<(String, deck_streak_notifications::Pushed)>::new()
+    );
 }
 
 #[tokio::test]

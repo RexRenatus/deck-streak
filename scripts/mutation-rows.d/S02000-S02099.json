@@ -4,7 +4,7 @@
       [
         "S02001-ROLLOVER-HOUR-IS-FOUR",
         "kernel",
-        "src/study_day.rs",
+        "../study-day/src/study_day.rs",
         "pub const DEFAULT_ROLLOVER_HOUR: u8 = 4;",
         "pub const DEFAULT_ROLLOVER_HOUR: u8 = 0;",
         "constants::the_kernel_constants_equal_the_predecessors",
@@ -12,7 +12,7 @@
       ],
       [
         "S02002-AN-HOUR-RUNS-TO-23",
-        "kernel",
+        "study-day",
         "src/study_day.rs",
         "        if hour <= 23 { Some(Self(hour)) } else { None }",
         "        if hour <= 22 { Some(Self(hour)) } else { None }",
@@ -39,7 +39,7 @@
       ],
       [
         "S02005-THE-DAY-HAS-NO-HOUR-24",
-        "kernel",
+        "study-day",
         "src/study_day.rs",
         "        if hour <= 23 { Some(Self(hour)) } else { None }",
         "        if hour <= 24 { Some(Self(hour)) } else { None }",

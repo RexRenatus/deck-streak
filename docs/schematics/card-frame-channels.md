@@ -3,9 +3,9 @@
 Kind: component (the layers and what each sits between) and data flow (every channel a card's
 markup can open, and the layer that closes it), with one planted pair as a sequence. Read at
 DeckStreak `dev` c56bbd11 (`web/app/svelte.config.js`, the page policy;
-`deploy/caddy/deck-streak.caddy`, the edge's header). The iOS half's seam is #616's harness, which
-is not on `dev` yet. Both deliveries cite this one schematic: the web delivery (SPEC-341) adds it,
-and the iPhone and iPad delivery amends its iOS tables with what its suite measured.
+`deploy/caddy/deck-streak.caddy`, the edge's header). The page policy now sits in `web/app/sveltekit.config.js`.
+The iOS half's seam is #616's harness, which is not on `dev` yet. Both deliveries cite this one schematic: the web
+delivery (SPEC-341) adds it, and the iPhone and iPad delivery amends its iOS tables with what its suite measured.
 
 - **SPECs:** SPEC-341 (the web card frame) and the iPhone and iPad delivery's own SPEC (the card
   view).
@@ -33,7 +33,7 @@ suite that plants a different set.
 
 ```mermaid
 flowchart LR
-  subgraph page["the Mini App page (origin: the app), page policy from svelte.config.js"]
+  subgraph page["the Mini App page (origin: the app), page policy from sveltekit.config.js"]
     app["app code: study screen (row 1.4)"]
     fd["frameDocument(html, css)<br/>parse inert, strip link meta base template<br/>and every srcset and target attribute,<br/>prepend frame policy, re-parse check"]
     fh["frameHost(frame document, title)<br/>host policy meta, one srcdoc frame,<br/>re-parse check"]
@@ -86,8 +86,8 @@ The card frame is `<iframe sandbox="" srcdoc="...">`, and its document is the ho
 | W1 | the sandbox with no token: an opaque origin, no script, no forms, no popups, no top navigation, no downloads, no plugins | `CardFrame.svelte` |
 | W2 | the frame policy, at two points: the host policy `img-src data:; script-src 'none'; object-src 'none'; base-uri 'none'`, which the card document inherits from its host, so it is in force from the card document's creation, before its first byte is parsed; and a `Content-Security-Policy` meta element placed first in the card document's head: `default-src 'none'; img-src data:; media-src data:; font-src data:; style-src 'unsafe-inline'; form-action 'none'; base-uri 'none'` | `policy.js` `HOST_POLICY`, written by `frameHost`, and `FRAME_POLICY`, written by `frameDocument` |
 | W3 | the strip: the card's `link`, `meta`, `base` and `template` elements removed (a `template` can declare a shadow root whose `link` the inert parse never sees, and with no script a card has no use for one), the `srcset` attribute removed from every element that carries one (an image-set candidate is fetched from what that attribute lists, and the element's `src` still shows its image), the `target` attribute removed from every element that carries one (a link's follow is then the frame's own navigation, for which WebKit's click handler starts no preconnect), `x-dns-prefetch-control` off, and a re-parse of the composed document that refuses the card if any of those elements came back or any element, the root included, carries a `srcset` or a `target` | `frame-document.ts` |
-| W4 | the page's `frame-src 'none'`: a frame's own navigation, including one the frame starts itself, is checked against the embedding page's `frame-src`. A `srcdoc` document is not fetched, so the card frame itself still renders | `svelte.config.js`, from `policy.js` `PAGE_FRAME_SRC` |
-| P | the page policy the srcdoc document inherits: hash-mode `script-src`, `object-src 'none'`, `base-uri 'self'`, `connect-src 'self'` | `svelte.config.js` (not this work's layer; listed because it closes channels too) |
+| W4 | the page's `frame-src 'none'`: a frame's own navigation, including one the frame starts itself, is checked against the embedding page's `frame-src`. A `srcdoc` document is not fetched, so the card frame itself still renders | `sveltekit.config.js`, from `policy.js` `PAGE_FRAME_SRC` |
+| P | the page policy the srcdoc document inherits: hash-mode `script-src`, `object-src 'none'`, `base-uri 'self'`, `connect-src 'self'` | `sveltekit.config.js` (not this work's layer; listed because it closes channels too) |
 
 "Layer alone" names the one layer whose removal, with every other layer on, opens the channel. A
 dash means at least two layers hold it, so no single-layer variant opens it.
@@ -110,7 +110,7 @@ dash means at least two layers hold it, so no single-layer variant opens it.
 | `base` | `base href` at the listener, then a relative `img` | W3, W2, P | - |
 | `nav-self` | a full-frame link at the listener, clicked | W4 | W4 (SEC01-F13) |
 | `nav-top` | a full-frame link with `target=_top`, clicked | W4, W3 (the target removed, the follow is the frame's own navigation); W1 refuses the top navigation if the target returns | W4 |
-| `nav-blank` | a full-frame link with `target=_blank`, clicked | W4, W3 (the target removed, the follow is the frame's own navigation); W1 refuses the popup if the target returns | W4 |
+| `nav-blank` | a full-frame link with `target=_blank`, clicked | W4, W3 (the target removed, the follow is the frame's own navigation); W1 refuses the popup if the target returns | W4 (BARE in WebKit with W3 off: its click handler preconnects to the link's host when the sandbox refuses the popup) |
 | `nav-blank-area` | a full-frame image map whose `area` has `target=_blank`, at the TCP listener, clicked | W4, W3 (the target removed); W1 refuses the popup if the target returns | W4 (BARE in WebKit with W3 off: its click handler preconnects to the area's host when the sandbox refuses the popup) |
 | `nav-blank-svg` | a full-frame SVG `a` with `target=_blank`, at the TCP listener, clicked (the control: SVG `a`'s handler starts no preconnect) | W4, W3 (the target removed); W1 refuses the popup if the target returns | W4 |
 | `nav-show-new` | a full-frame SVG `a` whose `xlink:show` is `new`, with no `target`, at the TCP listener, clicked (W1's own channel: the link asks for a new window, which the strip leaves and the sandbox refuses) | W1 | W1 |
@@ -902,3 +902,150 @@ line 42 (cited as `:38`, in the prose and in the diagram's node), the strip at l
 `:39`) with the `srcset` removal at line 45, the composed document at line 51 (cited as `:45`), the
 re-parse at line 52 (cited as `:46`), the kept check at lines 53 to 57 with its `srcset` conjunct
 at line 56 (cited as `:47-50`), and the refusal at line 58 (cited as `:51`).
+
+## 13. The web's followed links, read at the connection (SPEC-461, ADR-478)
+
+Read at `83846ea3`. Every planted card that acts on a click (`nav-self`, `nav-top`, `nav-blank`,
+`download`, `ping`, `form`, `external-scheme` and `javascript-url`, built by `clicks()` in
+`web/app/tests-card/planted.ts`) points its link, form action or ping at the TCP listener, and
+expects `tcp` and its own path key. Before SPEC-461 they pointed at the HTTP listener, which counts
+requests by path only (`web/app/tests-card/listeners.ts:45-51`), so a connection that carried no
+request reached no count the suite reads (#761). The TCP listener counts every connection it
+accepts, before a byte and with or without a request, and records each request's path (SPEC-461 R2); the
+reading names that count `tcp` (`listeners.ts:108`). Section 3's channels, layers and cells are
+unchanged: a clicked card is still "at the listener", now the TCP one.
+
+A followed link's path, from the suite's click to the network, with each observer. The thick edge is
+SPEC-461's aim; the two edges marked "control" are the readings that show the counter can see a
+followed link's connection; the dotted edge is the connection the card frame must not open.
+
+```mermaid
+flowchart LR
+  T[("TCP listener: counts every accepted connection, reading key tcp")]
+  H[("HTTP listener: counts requests by path")]
+  U[("UDP socket: counts datagrams")]
+  B[("the harness page's bridge counters")]
+  S["the suite: one mouse click at the frame's centre"] --> L["a clicked card's full-frame link, form or ping"]
+  L ==>|"SPEC-461: aimed at the TCP listener"| T
+  L --> CF["the card frame, index.html, every layer on"]
+  L --> RF["the reference frame, open.html, every layer off"]
+  L --> VF["the shipped frame with its own layer alone removed, variant.html with W4 off or W1 off"]
+  CF --> LY{"the card frame's layers: W1 the sandbox, W2 the frame policy, W4 the page's frame-src none, P the page policy"}
+  LY -->|"each refuses before a request"| X["refused: no request is sent"]
+  CF -.->|"a bare connection an engine might open before the refusal"| T
+  RF -->|"control: the follow connects"| T
+  VF -->|"control: the follow connects with one refusal removed"| T
+  P["the harness page, after each settle window"] -->|"the sentinel request"| H
+  T --> R["one reading per visit: the card frame must read empty, each control must read tcp and its path"]
+  H --> R
+  U --> R
+  B --> R
+```
+
+The observers the suite holds, and what each one counts for a clicked card after SPEC-461:
+
+| observer | where it is | what it counts | for a clicked card |
+|---|---|---|---|
+| TCP listener | `listeners.ts:52-61` | every accepted connection, with or without a request (key `tcp`), and each request by its path, with no sentinel (SPEC-461 R2) | the observable: the card's link, form action or ping names it |
+| HTTP listener | `listeners.ts:45-51` | requests by path, and the harness's sentinel (`listeners.ts:132-142`) | nothing the card names; the sentinel proves the listeners still count |
+| UDP socket | `listeners.ts:62-64` | datagrams (key `udp`) | nothing the card names |
+| bridge counters | `web/app/tests-card/harness/main.ts:18-44` | the page's stand-ins (keys `bridge:*`) | nothing the card reaches |
+
+What each test of the suite reads for a clicked card (`web/app/tests-card/card.spec.ts`):
+
+| test | frame | reading |
+|---|---|---|
+| the pair, first leg (`card.spec.ts:113-119`) | the reference frame | `tcp` above 0 and the card's own path (control), or `{}` where the card is UNOBSERVABLE |
+| the pair, second leg (`card.spec.ts:124-125`) | the card frame | `{}`: no connection, no request, no datagram, no bridge counter |
+| a variant whose layer alone holds the card (`card.spec.ts:136`) | the shipped frame with that layer removed | `tcp` above 0 and the card's own path (control): `nav-self` and `download` with W4 off, `nav-top` and `nav-blank` with W1 off |
+| every other variant (`card.spec.ts:137`) | the shipped frame with another layer removed | `{}` |
+
+Per engine, as the `card-sandbox` job runs them:
+
+| engine | the build the suite runs | the TCP listener sees a connection | a speculative connection path live under the suite | UNOBSERVABLE among the clicked cards |
+|---|---|---|---|---|
+| Chromium | the headless shell the job installs | yes, at the loopback socket, outside the engine | no: it opens no `preconnect` connection under the suite | `external-scheme` |
+| WebKit | the build the job installs | yes, at the loopback socket, outside the engine | yes: it opens a `preconnect` connection under the suite | `external-scheme` |
+| Firefox | the build the job installs | yes, at the loopback socket, outside the engine | no: it opens no `preconnect` connection under the suite | `external-scheme` and `ping` |
+
+The counter cannot see a DNS lookup, which a followed link here does not make (its destination is
+an address literal), nor a connection an engine build the suite does not run would open (#761).
+
+Predicted readings at SPEC-461's red commit, where each clicked card declares `tcp` and its path but its markup
+still names the HTTP listener: every control above reads nothing at `tcp`, 20 pair tests and 12
+variant tests in all, and the card frame still reads `{}`. At its head every reading is as the
+tables above give it.
+
+**Re-read on the target ward (ADR-498; ADR-478 D8).** The ward moved `nav-top` and `nav-blank` to W4
+alone, so the variant reading above that names them with W1 off reads with W4 off, and the three
+clicked cards it planted, `nav-blank-area`, `nav-blank-svg` and `nav-show-new`, are built by
+`clicks()` and read as the other clicked cards do, `tcp` and their own path, `nav-show-new` with W1
+off. Section 3's cells are unchanged but one: with W3 off, WebKit reads one bare connection for
+`nav-blank`, as for `nav-blank-area`, because the target returns, the sandbox refuses the popup and
+the handler preconnects; section 3 holds it as the `BARE in WebKit with W3 off` cell of
+`nav-blank`'s row.
+
+## 14. A carriage return from a card's field to the host's read-back (SPEC-462, ADR-479)
+
+Kind: data flow, of one character from the collection to the frame. Read at DeckStreak `dev`
+83846ea3. A note field or a template can hold a carriage return written as a numeric character
+reference, `&#13;` or `&#xD;`. The engine completes the face without parsing it as HTML
+(`crates/engine-core/src/face.rs:188-211`, `crates/engine-core/src/media.rs:170`), so the reference
+reaches `frameDocument` as written. Its inert parse (`web/app/src/lib/card/frame-document.ts:42`)
+resolves the reference to U+000D, and the composed document (`:51`) serialises the body with
+U+000D raw, which `frameDocument`'s read-back (`:53-58`) does not compare. `CardFrame.svelte:16`
+hands that document to `frameHost`. Before SPEC-462 the host's escaping (`frame-host.ts:20-22`)
+wrote only `&` and `"`, so the host held U+000D raw, its parse (`:46`) read it as a line feed, the
+one frame gave back a line feed, and the comparison at `:49` refused the card: `CardFrame.svelte:19`
+rendered a frame with no document, and the status region, which reads only `frameDocument`'s
+refusal (`web/app/src/lib/study/review.ts:247-252`), said nothing. SPEC-462 writes U+000D as its
+reference in the host, after `&` and `"`; the parse resolves it to U+000D, the comparison is
+unchanged and holds, and the nested frame parses the frame document as the card frame parsed it
+before SPEC-407.
+
+```mermaid
+flowchart TD
+  field["a note field or template holding a carriage return reference"]
+  engine["the engine completes the face<br/>face.rs, media.rs: no HTML parse,<br/>the reference kept as written"]
+  inert["frameDocument parses the card as a body<br/>frame-document.ts:42: the reference becomes U+000D"]
+  composed["the composed frame document<br/>frame-document.ts:51: U+000D written raw"]
+  docCheck{"frameDocument read-back<br/>head, stripped elements, srcset, body attributes<br/>frame-document.ts:53-58"}
+  escapeOld["the host's escaping before SPEC-462<br/>ampersand and quote only, U+000D raw"]
+  escapeNew["the host's escaping after SPEC-462<br/>ampersand, quote, then U+000D as its reference<br/>frame-host.ts:20-22"]
+  hostParse["the host parsed as the frame will parse it<br/>frame-host.ts:46"]
+  hostCheck{"host read-back, unchanged<br/>head as written, card document and title exactly<br/>frame-host.ts:47-50"}
+  refusedFrame["refused as escaped: a frame with no document<br/>CardFrame.svelte:19, the status region quiet"]
+  nested["the nested frame parses the frame document<br/>U+000D read as a line feed, as before SPEC-407"]
+  field --> engine
+  engine --> inert
+  inert --> composed
+  composed --> docCheck
+  docCheck -->|kept| escapeOld
+  docCheck -->|kept| escapeNew
+  escapeOld --> hostParse
+  escapeNew --> hostParse
+  hostParse --> hostCheck
+  hostCheck -->|before: a line feed came back| refusedFrame
+  hostCheck -->|after: U+000D came back| nested
+```
+
+What each SPEC-462 test reads on this path. Every oracle is a parse the test makes itself with
+`DOMParser`, never the module's own reader.
+
+| the test | where on the path | at `dev` | after SPEC-462 |
+|---|---|---|---|
+| A1, `frame-host.test.ts` | the host's escaping and its read-back, given a card document or a title holding U+000D | refused | kept, read back byte for byte |
+| A2, `frame-host.test.ts` | a field's reference through `frameDocument`, then the host | refused | kept, the frame document in the one frame byte for byte |
+| A3, `card-frame.test.ts` | `CardFrame` with a field holding a reference | a frame marked refused | a frame with a `srcdoc` and the card's text |
+| A4, `frame-host.test.ts` | the read-back's population, U+0000 to U+00FF, card document and title | U+0000 and U+000D refused | U+0000 refused, the rest kept |
+| A5, `frame-host.test.ts` | SPEC-407's A2, its plants a NUL in the card, a NUL in the title, a quote in the policy | refused | refused |
+
+The characters the host's escaping leaves as written and the parser changes inside a double-quoted
+attribute value are two. U+000D is read as a line feed, and its reference carries it. U+0000 is
+read as U+FFFD, its reference too, so no attribute value carries it and the read-back refuses it;
+no parsed card document holds one. The iPhone and iPad card view (section 4) hands the card to its
+web view as one string and builds no host, so this path has no counterpart there.
+
+Rebuilt onto `dev` at `0ef74a05`: the host's refusal is now named `host-readback`, and the
+status region reads `frameCard`'s reason (SPEC-505, ADR-523), so the quiet status in the diagram
+above is the state at `83846ea3`. The path of the carriage return is unchanged.

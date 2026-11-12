@@ -1,8 +1,11 @@
 import SwiftUI
 
 /// A gesture on the review screen, which `ReviewModel.perform` takes (SPEC-348 R16); bury and
-/// flag act on the shown card (SPEC-358 R5).
-enum ReviewAction: Equatable, Sendable { case showAnswer, rate(Rating), replay, stop, bury, flag }
+/// flag act on the shown card (SPEC-358 R5); undo asks for the undo's offer, keep drops it, and
+/// confirmUndo runs it (SPEC-515 R6).
+enum ReviewAction: Equatable, Sendable {
+    case showAnswer, rate(Rating), replay, stop, bury, flag, undo, keep, confirmUndo
+}
 
 /// The bottom bar, the width of the detail pane (SPEC-348 R10, R11, R16): Show Answer, one
 /// button the width of the bar; then Again and Good, the two grades a press records, Good the
@@ -35,7 +38,11 @@ struct AnswerBar: View {
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
-        .background(.bar)
+        .background(Color.tideCard)
+        .overlay(alignment: .top) {
+            Color.tideBorder.frame(height: 1)
+        }
+        .tint(Color.tideAccent)
     }
 
     /// One rating's button: its title is its accessible name, and its interval, shown under the

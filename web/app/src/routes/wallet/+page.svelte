@@ -1,8 +1,8 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { api, type Answer } from '$lib/api';
-  import { signed, type Movement, type WalletView } from '$lib/economy/wallet';
-  import { m } from '$lib/paraglide/messages.js';
+  import { api, type Answer } from '#lib/api.js';
+  import { signed, type Movement, type WalletView } from '#lib/economy/wallet.js';
+  import { m } from '#lib/paraglide/messages.js';
 
   // The wallet screen (SPEC-082 R15, R17; ADR-315 ruling 3): the balance, today's loss limit and
   // the coin movements in the server's order, newest first, a page at a time. The screen computes
@@ -48,7 +48,7 @@
 <main class="mx-auto max-w-prose px-6 py-12">
   <h1 class="text-3xl font-semibold tracking-tight">{m.wallet_title()}</h1>
 
-  <div class="mt-8 rounded-lg bg-card p-4 text-card-foreground">
+  <div class="mt-8 rounded-lg border bg-card p-4 text-card-foreground">
     {#if wallet === undefined}
       <div role="status">{m.loading()}</div>
     {:else if wallet.kind === 'ok'}

@@ -10,7 +10,7 @@ public enum CardLayer: String, CaseIterable, Sendable {
 }
 
 /// Why the factory built no view.
-public enum CardViewRefusal: Error, Equatable, Sendable {
+public enum CardViewRefusal: Error, Equatable, Sendable, CaseIterable {
     /// The rule list did not compile, so no view is built: fail closed.
     case ruleListDidNotCompile
 }

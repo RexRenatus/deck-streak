@@ -97,6 +97,9 @@ pub enum Refusal {
     LinkingOff,
     /// No method has that id (SPEC-359 R9).
     IdentityUnknown,
+    /// Neither Telegram credential is held, so the Telegram launch and its link code are off
+    /// (SPEC-582 R4).
+    TelegramOff,
 }
 
 impl Refusal {
@@ -122,16 +125,18 @@ impl Refusal {
             Self::LastMethod => "last_method",
             Self::LinkingOff => "linking_off",
             Self::IdentityUnknown => "identity_unknown",
+            Self::TelegramOff => "telegram_off",
         }
     }
 
     /// The answer's status: 401 for who the caller is not proved to be and for a ceremony or code
     /// that does not verify, 403 for a proved caller who is not the owner, 409 for a credential or
-    /// a method the account holds, and 404 for linking off or a method no one holds (SPEC-359 R8).
+    /// a method the account holds, and 404 for linking off or a method no one holds (SPEC-359 R8),
+    /// and for Telegram off (SPEC-582 R4).
     #[must_use]
     #[allow(
         clippy::match_same_arms,
-        reason = "counter_regressed answers 401 on its own line, the line row S35927 mutates"
+        reason = "counter_regressed answers 401 and telegram_off 404 each on its own line, the lines rows S35927 and S58205 mutate"
     )]
     pub const fn status(self) -> StatusCode {
         match self {
@@ -151,6 +156,7 @@ impl Refusal {
             Self::NotOwner => StatusCode::FORBIDDEN,
             Self::AlreadyLinked | Self::LastMethod => StatusCode::CONFLICT,
             Self::LinkingOff | Self::IdentityUnknown => StatusCode::NOT_FOUND,
+            Self::TelegramOff => StatusCode::NOT_FOUND,
         }
     }
 }

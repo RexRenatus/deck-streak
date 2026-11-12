@@ -1,10 +1,12 @@
 //! The read (SPEC-023 R1 to R5, R7): the private copy of the collection, read-only, inside the
 //! owner's deck scope, as this workspace's own types.
 //!
-//! [`CollectionReader`] opens the copy with the kernel's [`Db::open_foreign_read_only`] (`mode=ro`
-//! and `query_only`) under the shared collection lock, on the kernel's [`Offload`]. So a read never
-//! sees the copy mid-swap, never stalls the async runtime, never runs beside another collection read
-//! on a small host, and never writes the copy: any write through it is refused by `SQLite` itself.
+//! [`CollectionReader`] opens the copy with the kernel's [`Db::open_foreign_read_only_with`]
+//! (`mode=ro`, `query_only` and the engine's `unicase` collation) under the shared collection lock,
+//! on the kernel's [`Offload`]. So a read never sees the copy mid-swap, never stalls the async
+//! runtime, never runs beside another collection read on a small host, and never writes the copy:
+//! any write through it is refused by `SQLite` itself. The collation's comparator counts its calls
+//! on that open, and a read that called it is refused: names are never compared in SQL (R4).
 //!
 //! It ports the predecessor's `anki_reader.py:read_collection` and `deck_filter.py` (predecessor
 //! `27ee2bc`): a card is read when its ORIGINAL deck's top-level name starts with an included prefix
@@ -13,10 +15,14 @@
 //! the collection's name columns use a `unicase` collation `SQLite` does not ship (R4). The study
 //! day is the kernel's configured rule: no rollover hour is taken from the collection (R7).
 
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::future::Future;
 use std::path::PathBuf;
+use std::sync::Arc;
+use std::sync::atomic::{self, AtomicU64};
 
+use deck_streak_anki_format::opener::{COLLATION, unicase_order};
 use deck_streak_kernel::{
     CourseCode, Courses, Db, ForeignDb, KernelError, Offload, Track, UtcMillis,
 };
@@ -25,32 +31,13 @@ use tokio::runtime::Handle;
 
 use crate::lock::CollectionLock;
 use crate::memory_state::{MemoryState, parse as parse_memory};
+use crate::schema18::{CARDS, CREATED, DECK_NAMES, REVIEWS};
 use crate::settings::{DECK_SEPARATOR, ScopeSettings, SyncSettings};
 use crate::tier::{Tier, parse_tier};
 
 /// `SQLite`'s primary result code for a write refused because the database is read-only
 /// (`SQLITE_READONLY`); every extended code of it keeps this in its low byte.
 const SQLITE_READONLY: i32 = 8;
-
-/// Every deck's id and stored name. The name is only ever read, by id: it is never compared,
-/// ordered or aggregated in SQL (R4).
-const DECK_NAMES: &str = "SELECT id, name FROM decks ORDER BY id";
-/// The cards whose home deck (the original deck while a filtered deck borrows the card) is one of
-/// the ids in `?1`, a JSON array: [`Card::home_deck_id`] in SQL, as the predecessor's recount
-/// wrote it.
-const CARDS: &str = "SELECT id, nid, did, odid, queue, type, due, ivl, factor, reps, lapses, \
-     (SELECT n.tags FROM notes n WHERE n.id = cards.nid), cards.data \
-     FROM cards WHERE (CASE WHEN odid != 0 THEN odid ELSE did END) IN (SELECT value FROM json_each(?1)) \
-     ORDER BY id";
-/// The revlog rows newer than the floor `?1` of the cards whose home deck is one of the ids in
-/// `?2`, oldest first. The study-event rule is applied to them here, not in SQL.
-const REVIEWS: &str = "SELECT r.id, r.cid, r.ease, r.ivl, r.lastIvl, r.factor, r.time, r.type \
-     FROM revlog r JOIN cards c ON c.id = r.cid \
-     WHERE r.id > ?1 AND (CASE WHEN c.odid != 0 THEN c.odid ELSE c.did END) \
-     IN (SELECT value FROM json_each(?2)) ORDER BY r.id";
-/// The collection's creation stamp, in epoch seconds (the predecessor's `read_config` reads
-/// `col.crt`); no rollover hour is read with it (R7).
-const CREATED: &str = "SELECT crt FROM col ORDER BY id LIMIT 1";
 
 /// A card row as [`CARDS`] selects it.
 type CardRow = (
@@ -226,6 +213,32 @@ pub enum ReadError {
     Copy(#[source] KernelError),
 }
 
+impl ReadError {
+    /// The collation tripwire's refusal this error carries, when a read was refused for calling
+    /// the copy's comparator (R4).
+    #[must_use]
+    pub fn tripwire(&self) -> Option<CollationTripwire> {
+        let mut source: Option<&(dyn std::error::Error + 'static)> = Some(self);
+        while let Some(cause) = source {
+            if let Some(fired) = cause.downcast_ref::<CollationTripwire>() {
+                return Some(*fired);
+            }
+            source = cause.source();
+        }
+        None
+    }
+}
+
+/// The collation tripwire's refusal (R4): a read's statements called the copy's `unicase`
+/// comparator, so one of them compared or sorted names in SQL. The read is refused after its rows
+/// are read, and [`ReadError::tripwire`] finds this among the error's sources.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, thiserror::Error)]
+#[error("the collation tripwire fired: the read called the unicase comparator {calls} times")]
+pub struct CollationTripwire {
+    /// How many times the comparator was called during the read.
+    pub calls: u64,
+}
+
 /// Reads the private copy, read-only, inside the owner's scope (R1 to R5).
 #[derive(Clone, Debug)]
 pub struct CollectionReader {
@@ -381,7 +394,11 @@ impl CollectionReader {
     /// Runs `work` on the copy, open read-only, under the shared collection lock, on the offload
     /// (R1): every read of this crate goes through here. `work` receives the open copy and runs to
     /// its end on the offload's blocking thread; the copy is closed after it, and the lock released
-    /// explicitly.
+    /// explicitly. The lock and the read go to a task of their own (SPEC-648 R1): a caller who
+    /// stops waiting leaves the read to end and the lock to be released after it, and a task its
+    /// runtime drops keeps the lock until the process exits. The copy's `unicase` comparator counts
+    /// its calls on this open, and a read that called it is refused once its rows are read, with a
+    /// [`CollationTripwire`] (R4).
     pub(crate) async fn with_copy<T, W, Fut>(
         &self,
         operation: &'static str,
@@ -394,24 +411,58 @@ impl CollectionReader {
     {
         let held = self.lock.shared().await.map_err(ReadError::Lock)?;
         let copy = self.copy.clone();
+        let offload = self.offload.clone();
         let runtime = Handle::current();
-        let outcome = self
-            .offload
-            .run(operation, move || {
-                on_this_thread(&runtime, async move {
-                    let db = Db::open_foreign_read_only(&copy)
-                        .await
-                        .map_err(ReadError::Copy)?;
-                    let read = work(db.clone()).await;
-                    db.close().await;
-                    read
+        let reading = async move {
+            offload
+                .run(operation, move || {
+                    on_this_thread(&runtime, async move {
+                        let tripwire = Tripwire::default();
+                        let compare = tripwire.comparator();
+                        let db = Db::open_foreign_read_only_with(&copy, COLLATION, compare)
+                            .await
+                            .map_err(ReadError::Copy)?;
+                        let read = work(db.clone()).await;
+                        db.close().await;
+                        tripwire.check(read)
+                    })
                 })
-            })
-            .await;
-        // An explicit unlock before the lock file closes (SPEC-022 R7); a failed unlock is released
-        // by the close that follows it.
-        let _ = held.release();
+                .await
+        };
+        // The task keeps the lock until the read has ended, then unlocks it before the lock file
+        // closes (SPEC-022 R7); a failed unlock is released by the close that follows it.
+        let (outcome, released) = held.hold_to_end(reading).await.map_err(ReadError::Lock)?;
+        let _ = released;
         outcome.map_err(ReadError::Copy)?
+    }
+}
+
+/// The count of the copy's `unicase` comparator calls on one open (R4): never a process-wide
+/// count, since reads can run at once.
+#[derive(Debug, Default)]
+struct Tripwire {
+    calls: Arc<AtomicU64>,
+}
+
+impl Tripwire {
+    /// The comparator `with_copy` registers as [`COLLATION`]: the engine's order, each call
+    /// counted on this open.
+    fn comparator(&self) -> impl Fn(&str, &str) -> Ordering + Send + Sync + 'static {
+        let calls = Arc::clone(&self.calls);
+        move |a: &str, b: &str| {
+            let _ = calls.fetch_add(1, atomic::Ordering::SeqCst);
+            unicase_order(a, b)
+        }
+    }
+
+    /// `read`, refused when the comparator was called during it.
+    fn check<T>(&self, read: Result<T, ReadError>) -> Result<T, ReadError> {
+        let calls = self.calls.load(atomic::Ordering::SeqCst);
+        if calls == 0 {
+            return read;
+        }
+        let fired = Box::new(CollationTripwire { calls });
+        Err(read_failed(sqlx::Error::Decode(fired)))
     }
 }
 
@@ -454,5 +505,196 @@ fn refusal(error: sqlx::Error) -> ReadError {
         ReadError::WriteRefused
     } else {
         read_failed(error)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    //! SPEC-648 A1 to A3: a collection read keeps its shared collection lock until the read has
+    //! ended, whoever still waits for it. A gated read waits for a gate its test opens, a bounded
+    //! wait, and the gate's guard opens it when it drops, so no red hangs.
+
+    use std::fs::{File, OpenOptions, TryLockError};
+    use std::future::{Ready, ready};
+    use std::path::Path;
+    use std::sync::Arc;
+    use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
+    use std::time::Duration;
+
+    use deck_streak_kernel::{
+        Courses, Environment, ManualClock, Offload, OffloadWorkers, UtcMillis,
+    };
+
+    use super::{CollectionReader, ForeignDb, ReadError};
+    use crate::lock::CollectionLock;
+    use crate::settings::{INCLUDE_DECKS, ScopeSettings};
+
+    /// The longest a gated read waits for its gate, and a test for the read's end.
+    const BOUND: Duration = Duration::from_secs(30);
+
+    /// The value a read's work returns.
+    const VALUE: u32 = 7;
+
+    /// A gate a read waits for; it opens when its test opens it, or when it drops.
+    struct Gate(Option<SyncSender<()>>);
+
+    impl Gate {
+        /// Opens the gate, so the read's wait ends.
+        fn open(&mut self) {
+            if let Some(gate) = self.0.take() {
+                let _ = gate.send(());
+            }
+        }
+    }
+
+    impl Drop for Gate {
+        fn drop(&mut self) {
+            self.open();
+        }
+    }
+
+    /// A reader of a zero-length copy in `dir`, with its lock file beside it, on an offload of one
+    /// worker, its scope and courses built as the crate's test support builds them.
+    fn reader_in(dir: &Path) -> CollectionReader {
+        let copy = dir.join("collection.anki2");
+        File::create(&copy).expect("a zero-length copy");
+        let scope = ScopeSettings::from_env(&Environment::from_vars(vec![(INCLUDE_DECKS, "Law")]))
+            .expect("the scope parses");
+        let clock = Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(0)));
+        CollectionReader {
+            copy,
+            lock: CollectionLock::new(dir.join("collection.lock")),
+            offload: Offload::new(OffloadWorkers::new(1).expect("one worker"), clock),
+            scope,
+            courses: Courses::default(),
+        }
+    }
+
+    /// The work of a gated read: it says it started, waits for its gate, says it ended and returns
+    /// [`VALUE`]. It runs on the offload's blocking thread, so its waits block no runtime.
+    fn gated(
+        started: SyncSender<()>,
+        gate: Receiver<()>,
+        ended: SyncSender<()>,
+    ) -> impl FnOnce(ForeignDb) -> Ready<Result<u32, ReadError>> + Send + 'static {
+        move |_copy| {
+            let _ = started.send(());
+            let _ = gate.recv_timeout(BOUND);
+            let _ = ended.send(());
+            ready(Ok(VALUE))
+        }
+    }
+
+    /// Polls `done` until it holds, and says whether it did; the polling bounds a wait for another
+    /// thread, and no assertion reads the time it took.
+    async fn until(mut done: impl FnMut() -> bool) -> bool {
+        for _ in 0..10_000 {
+            if done() {
+                return true;
+            }
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        }
+        false
+    }
+
+    /// Whether another holder has the lock file at `path`, read by a fresh open of the file and a
+    /// lock that never waits, which needs no runtime; a lock it takes, it unlocks at once.
+    fn held_elsewhere(path: &Path) -> bool {
+        let file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(path)
+            .expect("the lock file opens");
+        match file.try_lock() {
+            Ok(()) => {
+                file.unlock().expect("the probe unlocks");
+                false
+            }
+            Err(TryLockError::WouldBlock) => true,
+            Err(TryLockError::Error(error)) => panic!("the probe failed: {error}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn a_read_whose_caller_is_dropped_keeps_the_collection_lock_until_it_ends() {
+        let dir = tempfile::tempdir().expect("a directory");
+        let reader = reader_in(dir.path());
+        let lock = CollectionLock::new(dir.path().join("collection.lock"));
+        let (started_tx, started) = sync_channel(1);
+        let (ended_tx, ended) = sync_channel(1);
+        let (gate_tx, gate_rx) = sync_channel(1);
+        let mut gate = Gate(Some(gate_tx));
+        let work = gated(started_tx, gate_rx, ended_tx);
+        let caller = tokio::spawn(async move { reader.with_copy("dropped_read", work).await });
+        let began = until(|| started.try_recv().is_ok()).await;
+        // The caller is dropped while its read waits for the gate, as the request limit drops a
+        // handler.
+        caller.abort();
+        let cancelled = caller.await.is_err_and(|error| error.is_cancelled());
+        let kept = lock.try_exclusive().await.expect("the take").is_none();
+        gate.open();
+        let finished = until(|| ended.try_recv().is_ok()).await;
+        let mut free = false;
+        for _ in 0..10_000 {
+            if let Some(again) = lock.try_exclusive().await.expect("the take") {
+                again.release().expect("the release");
+                free = true;
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        }
+        assert_eq!(
+            (began, cancelled, kept, finished, free),
+            (true, true, true, true, true),
+            "(the read started, its caller dropped, the lock held while the read ran, the read \
+             ended, the lock free after it)"
+        );
+    }
+
+    #[test]
+    fn a_read_its_runtime_drops_keeps_the_collection_lock_until_the_process_ends() {
+        let dir = tempfile::tempdir().expect("a directory");
+        let path = dir.path().join("collection.lock");
+        let reader = reader_in(dir.path());
+        let (started_tx, started) = sync_channel(1);
+        let (ended_tx, ended) = sync_channel(1);
+        let (gate_tx, gate_rx) = sync_channel(1);
+        let mut gate = Gate(Some(gate_tx));
+        let work = gated(started_tx, gate_rx, ended_tx);
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("a runtime");
+        drop(runtime.spawn(async move { reader.with_copy("stopped_read", work).await }));
+        let began = runtime.block_on(until(|| started.try_recv().is_ok()));
+        // The runtime stops while the read waits for the gate, as a stopping process's does.
+        runtime.shutdown_timeout(Duration::from_millis(100));
+        let kept = held_elsewhere(&path);
+        gate.open();
+        let finished = ended.recv_timeout(BOUND).is_ok();
+        let still = held_elsewhere(&path);
+        assert_eq!(
+            (began, kept, finished, still),
+            (true, true, true, true),
+            "(the read started, the lock held after the runtime stopped while the read ran, the \
+             read ended, the lock still held after the read ended)"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_read_that_ends_releases_the_collection_lock_and_returns_its_value() {
+        let dir = tempfile::tempdir().expect("a directory");
+        let reader = reader_in(dir.path());
+        let lock = CollectionLock::new(dir.path().join("collection.lock"));
+        let value = reader
+            .with_copy("ended_read", |_copy| ready(Ok(VALUE)))
+            .await
+            .map_err(|error| error.to_string());
+        let free = lock.try_exclusive().await.expect("the take").is_some();
+        assert_eq!(
+            (value, free),
+            (Ok(VALUE), true),
+            "(the read's value, the lock free after it)"
+        );
     }
 }

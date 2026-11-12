@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { CardView, Clip, Faces, FaceView, Head, UndoOffer } from '$lib/engine/protocol';
+import type { CardView, Clip, Faces, FaceView, Head, UndoOffer } from '#lib/engine/protocol.js';
 import { Player, type AudioOut, type ObjectUrls, type Speaker, type SpeechClip } from './audio';
 import { Review, type StudyClient } from './review';
 
@@ -86,7 +86,8 @@ function view(id: number): CardView {
     css: '',
     labels: ['<1m', '<6m', '<10m', '4d'],
     undo: null,
-    late: false
+    late: false,
+    withheld: false
   };
 }
 

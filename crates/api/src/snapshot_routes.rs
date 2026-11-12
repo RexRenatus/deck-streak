@@ -185,14 +185,14 @@ struct SnapshotOn(Arc<dyn SnapshotLister>);
 impl FromRequestParts<SnapshotRead> for SnapshotOn {
     type Rejection = Response;
 
-    async fn from_request_parts(
+    fn from_request_parts(
         _parts: &mut Parts,
         read: &SnapshotRead,
-    ) -> Result<Self, Self::Rejection> {
-        match &read.lister {
+    ) -> impl Future<Output = Result<Self, Self::Rejection>> + Send {
+        std::future::ready(match &read.lister {
             Some(lister) => Ok(Self(Arc::clone(lister))),
             None => Err(unknown()),
-        }
+        })
     }
 }
 
@@ -203,11 +203,11 @@ struct ReadSlot;
 impl FromRequestParts<SnapshotRead> for ReadSlot {
     type Rejection = Response;
 
-    async fn from_request_parts(
+    fn from_request_parts(
         _parts: &mut Parts,
         read: &SnapshotRead,
-    ) -> Result<Self, Self::Rejection> {
-        match read.bound.admit(read.access.clock().now()) {
+    ) -> impl Future<Output = Result<Self, Self::Rejection>> + Send {
+        std::future::ready(match read.bound.admit(read.access.clock().now()) {
             Ok(()) => Ok(Self),
             Err(seconds) => {
                 let mut response =
@@ -215,7 +215,7 @@ impl FromRequestParts<SnapshotRead> for ReadSlot {
                 response.headers_mut().insert(RETRY_AFTER, seconds.into());
                 Err(response)
             }
-        }
+        })
     }
 }
 

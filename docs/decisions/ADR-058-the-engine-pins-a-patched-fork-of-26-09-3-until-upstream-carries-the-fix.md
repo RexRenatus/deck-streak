@@ -287,3 +287,112 @@ which this note leaves as they stand.
 | patch | commit | reason | removal condition |
 |---|---|---|---|
 | `zip` | `65e053b829825f534803b2b772c507a73ba936a3` | the engine's `zip` requirement moves to its next major line, which clears the three advisories #931 names; the commit takes only the API changes that line forces | upstream requires that line or a later one |
+
+## Note, appended for the zstd and lock advisories: the pin moves two commits along the fork
+
+This note leaves the body above as it was decided. The fork's branch `wasm32-26.09.3-zstd` takes
+two commits over `65e053b829825f534803b2b772c507a73ba936a3`, the zip commit. The first moves the engine's zstd requirement and the
+`wasm32` target's own zstd line from 0.13.3 to 0.14.3, which clears the thirteen advisories zstd
+0.13.3 and zstd-safe 7.3.0 carry, and the fork's lock moves only its compression entries: those
+that line forces, and async-compression with them; the tag `deckstreak-pin-26.09.3-wasm32-zstd`
+names it. The second changes only the fork's
+lock: rustls, rustls-webpki, webpki-roots, quinn-proto, tokio, rand and ammonia move to patched
+versions, which clears sixteen advisories in the sync server's crates, read from that lock by the release's
+sync server build and audit. A new tag, `deckstreak-pin-26.09.3-wasm32-rustsec`, names it; the
+earlier tags stay where they are. The root manifest's `[patch]` entry takes `anki` and `anki_proto`
+by `rev` from the second commit. Neither commit changes a source file, and the native engine is
+the one this ADR pinned. Read with ADR-336 and ADR-348, which this note leaves as they stand.
+
+| record | measured |
+|---|---|
+| the pinned commit | `a078820fd4fec3068ed7863344cd50effddabc6b`, the head of branch `wasm32-26.09.3-zstd`, tagged `deckstreak-pin-26.09.3-wasm32-rustsec` (`git ls-remote`) |
+| its range | seventeen commits over `57382da`, one per patch; none adds a workflow file (`git diff --stat 57382da a078820 -- .github` is empty) |
+| `git diff --stat 26.09.3 a078820` on the fork | 30 files changed, 686 insertions(+), 226 deletions(-) |
+
+| patch | commit | reason | removal condition |
+|---|---|---|---|
+| `zstd` | `cfd5f4fe006b7fad948cdf2bf15dd672cdc7afb7` | the engine's zstd requirement moves from 0.13.3 to 0.14.3, which clears the thirteen advisories zstd 0.13.3 and zstd-safe 7.3.0 carry; no source file changes | upstream requires zstd 0.14.3 or a later line |
+| lock advisories | `a078820fd4fec3068ed7863344cd50effddabc6b` | the fork's lock moves rustls, rustls-webpki, webpki-roots, quinn-proto, tokio, rand and ammonia to patched versions, which clears sixteen advisories in the sync server's crates; no manifest or source file changes | upstream's lock carries these versions or later |
+
+## Note, appended by SPEC-565: the pin moves three commits along the fork for block-buffer
+
+This note leaves the body above as it was decided. The fork's branch `deckstreak-blockbuf` takes
+three commits over `a078820fd4fec3068ed7863344cd50effddabc6b`, the lock advisories commit. The first
+adds tests only: hold guards that pin the values of `field_checksum`, `sha1_of_data` and
+`derive_hkey` over fixed inputs, a PHC string the sync server's hash path made at `a078820`, and the
+sync header's decoding with its 400 "bad sync header". The second moves the sync server off
+block-buffer 0.12.0 and digest 0.10 (GHSA-qwgh-2vcv-g2f7): block-buffer moves to 0.12.1, `sha1` to
+0.11 and `pbkdf2` to 0.13 with password-hash 0.6.1 and the same algorithm, rounds, output length and
+salt; `axum-extra` leaves, and the server reads the sync header itself with the same decode and the
+same 400; and the `linkchecker` member leaves the fork's workspace, the last path to sha2 0.10. The
+third changes only the fork's lock: pulldown-cmark moves from 0.13.0 to 0.13.5, which clears
+RUSTSEC-2026-0414. A new tag, `deckstreak-pin-26.09.3-wasm32-blockbuf`, names the third; the earlier
+tags stay where they are. The root manifest's `[patch]` entry takes `anki` and `anki_proto` by `rev`
+from it. The hold guards read the same after the moves as before them, so the native engine keeps
+the values this ADR pinned. Read with ADR-336 and ADR-348, which this note leaves as they stand, and
+with ADR-583, which takes the sqlx crates from a fork in the same change.
+
+| record | measured |
+|---|---|
+| the pinned commit | `dca72f352730abb4222389cc148e46387c17f97f`, the head of branch `deckstreak-blockbuf`, tagged `deckstreak-pin-26.09.3-wasm32-blockbuf` (`git ls-remote`) |
+| its range | twenty commits over `57382da`, one per patch; none adds a workflow file (`git diff --stat 57382da dca72f3 -- .github` is empty) |
+| `git diff --stat 26.09.3 dca72f3` on the fork | 38 files changed, 1045 insertions(+), 1360 deletions(-) |
+
+| patch | commit | reason | removal condition |
+|---|---|---|---|
+| hold guards | `62f267049e5ea70f5afe599c32ce5f9e430fe95d` | tests only: the checksum, host key and PHC values and the sync header's decoding, taken at `a078820`, which the next commit must keep | the moves below leave the fork |
+| block-buffer | `327d41d2e4d73adb7425289621ae5716e2c76870` | block-buffer 0.12.0 moves to 0.12.1 and digest 0.10 leaves the sync server's graph (GHSA-qwgh-2vcv-g2f7): sha1 0.11, pbkdf2 0.13, `axum-extra` and the `linkchecker` member removed | upstream requires sha1 0.11 and pbkdf2 0.13 and carries no digest 0.10 path |
+| pulldown-cmark | `dca72f352730abb4222389cc148e46387c17f97f` | the fork's lock moves pulldown-cmark from 0.13.0 to 0.13.5, which clears RUSTSEC-2026-0414; no manifest or source file changes | upstream's lock carries pulldown-cmark 0.13.5 or later |
+
+## Note, appended by SPEC-055's amendment: the pin moves to the fork's unmaintained-crate commits
+
+This note leaves the body above as it was decided. The fork's branch `deckstreak-blockbuf` takes the
+six commits of RexRenatus/anki#1 over `dca72f352730abb4222389cc148e46387c17f97f` by a merge commit,
+`15c1cba6631aed653b255543b794c625dfbf9e1f`, and one commit after it. Two add tests only: the frozen Unicode 10 predicates against
+`unic-ucd-category` on every code point, and the PEM item count against `rustls-pemfile`'s
+`read_all` over eight goldens. The next generates the tables, the next two move the call sites and
+drop `unic-ucd-category` and `rustls-pemfile` from both fork manifests, and the last drops them from
+the fork's licence list. The commit after the merge drops from the fork's own `.deny.toml` the six
+ignore entries those crates needed. A new tag, `deckstreak-pin-26.09.3-wasm32-unmaint`, names that
+commit, the branch's head; the earlier tags stay where they are. The root manifest's `[patch]` entry
+takes `anki` and `anki_proto` by `rev` from it. Read with ADR-336 and ADR-348, which this note leaves
+as they stand, with ADR-583, whose sqlx fork stays, and with ADR-657, whose three forks stay.
+
+| record | measured |
+|---|---|
+| the pinned commit | `2d8e3150f5e392f5cfaa7bfe8485c479186307a9`, the head of branch `deckstreak-blockbuf`, tagged `deckstreak-pin-26.09.3-wasm32-unmaint` (`git ls-remote`) |
+| `git diff --stat 26.09.3 2d8e315` on the fork | 45 files changed, 2247 insertions(+), 1500 deletions(-) |
+
+| patch | commit | reason | removal condition |
+|---|---|---|---|
+| Unicode 10 guard | `bc8d3e87b66730f86e408e155fbe0ca78db3c78b` | tests only: the predicates equal `unic-ucd-category` on every code point | an engine release drops `unic` |
+| PEM guard | `85cb770632b131263dd210217a7c59aa38b959ed` | tests only: the item count equals `read_all` over eight goldens | an engine release drops `rustls-pemfile` |
+| Unicode 10 tables | `75ba1157fedc01f60b2f94651ce5e2491cfdff11` | the tables, generated from `unic-ucd-category` | as the guard |
+| unic | `7cfb68530aa4f34ba552fbd45d06887f6918da68` | the media name and type-answer call sites use the tables; RUSTSEC-2025-0075, 0080, 0081, 0094 and 0098 leave the lock | as the guard |
+| rustls-pemfile | `3555a27ade8b5181e3fe8c7eb1e9f5792c47c596` | the PEM count uses `rustls-pki-types`; RUSTSEC-2025-0134 leaves the lock | as the guard |
+| licence list | `e68c6b50e4be6511400064a1e2e6fccfdd97f079` | the fork's licence list drops the removed crates; no source file changes | as the guards |
+| deny list | `2d8e3150f5e392f5cfaa7bfe8485c479186307a9` | the fork's `.deny.toml` drops the six ignore entries the removed crates needed; no build file changes | as the guards |
+
+## Note, appended for RUSTSEC-2026-0459: the pin moves one commit along the fork for the bundled SQLite
+
+This note leaves the body above as it was decided. The fork's branch `deckstreak-blockbuf` takes
+one commit over the deny list commit the note above pinned. It moves the
+engine's rusqlite requirement, for both targets, to the release line whose libsqlite3-sys bundles
+the SQLite release that fixes RUSTSEC-2026-0459, and takes only the call sites that line forces:
+the collection's connection is mutable where the statement trace is installed and the trace's
+result is returned, and on `wasm32` the connection that serializes the collection is mutable.
+The fork's lock moves rusqlite, libsqlite3-sys and hashlink with it. A new tag,
+`deckstreak-pin-26.09.3-wasm32-sqlite`, names the commit, the branch's head; the earlier tags stay
+where they are. The root manifest's `[patch]` entry takes `anki` and `anki_proto` by `rev` from
+it. Read with ADR-336, which this note leaves as it stands, with ADR-348, whose SQLite route moves
+by its own note, with ADR-583, whose sqlx fork moves in the same change, and with ADR-530, whose
+driver moves with the engine.
+
+| record | measured |
+|---|---|
+| the pinned commit | `c1241180ae457c71ed4ca963f5673e74d1a9bf7c`, the head of branch `deckstreak-blockbuf`, tagged `deckstreak-pin-26.09.3-wasm32-sqlite` (`git ls-remote`) |
+| `git diff --stat 26.09.3 c124118` on the fork | 48 files changed, 2258 insertions(+), 1502 deletions(-) |
+
+| patch | commit | reason | removal condition |
+|---|---|---|---|
+| bundled SQLite | `c1241180ae457c71ed4ca963f5673e74d1a9bf7c` | the engine's rusqlite moves to the release line whose libsqlite3-sys bundles the fixed SQLite, which clears RUSTSEC-2026-0459 in this workspace's lock and in the fork's; the trace and serialize call sites take the mutable connection that line requires | upstream requires that rusqlite line or a later one |

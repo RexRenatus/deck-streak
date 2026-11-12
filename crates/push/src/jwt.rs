@@ -26,7 +26,7 @@ impl Signer {
 
     /// The public key, uncompressed (SEC1), in base64url: VAPID's `k`.
     pub(crate) fn public_key(&self) -> String {
-        let point = self.key.verifying_key().to_encoded_point(false);
+        let point = self.key.verifying_key().to_sec1_point(false);
         Base64UrlUnpadded::encode_string(point.as_bytes())
     }
 

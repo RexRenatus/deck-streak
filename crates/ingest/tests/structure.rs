@@ -139,7 +139,10 @@ async fn a_failed_structure_read_is_named() {
     let reader = synthetic::reader(&fixture.settings(), "Law", None, support::clock_at(0));
     let broken = reader.read_structure().await.expect("the copy still opens");
     assert_eq!(broken.failed_reads, vec![READ_DECLARED_FIELDS.to_owned()]);
-    assert!(broken.fields.is_empty());
+    assert_eq!(
+        broken.fields,
+        Vec::<deck_streak_ingest::structure::DeclaredField>::new()
+    );
     assert_eq!(
         broken.templates, whole.templates,
         "the reads that worked kept their rows"
@@ -306,5 +309,5 @@ async fn a_presence_read_that_fails_in_every_batch_is_named_once() {
             READ_FIELD_PRESENCE.to_owned()
         ]
     );
-    assert!(broken.presence_batches.is_empty());
+    assert_eq!(broken.presence_batches, Vec::<usize>::new());
 }

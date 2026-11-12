@@ -126,6 +126,12 @@ class KillerUnresolved(ValueError):
     """A killer that does not name exactly one test the tree holds."""
 
 
+class PlanRefused(ValueError):
+    """A `--rows-from` plan of a shape no plan has: its sentence names the file and the shape
+    the plan needed, and `dispatch` prints it as `mutation_rows: REFUSED: ...` on stderr
+    (SPEC-645 R1 to R4)."""
+
+
 # --------------------------------------------------------------------------- the reader
 
 
@@ -150,6 +156,17 @@ def _row_id(row: object) -> str | None:
     return None
 
 
+def _refuse_misshapen_rows(where: str, table: str, rows: list) -> None:
+    """Refuse the first row of `table` in `where` that is not an array of strings, by its index
+    from 0. Every reader of a row indexes it and reads each cell as text, so a row of another
+    shape would end there in a traceback (SPEC-646 R2, R3)."""
+    for index, cells in enumerate(rows):
+        if not isinstance(cells, list):
+            raise PopulationRefused(f"{where}: {table}[{index}] is not an array of cells")
+        if not all(isinstance(cell, str) for cell in cells):
+            raise PopulationRefused(f"{where}: {table}[{index}] holds a cell that is not a string")
+
+
 def assemble(monolith: object, fragments: list[tuple[str, object]]) -> object:
     """The population: the header's document with each fragment's rows appended, table by table,
     fragments in band order. Raises `PopulationRefused` naming the file for every refusal the
@@ -170,6 +187,10 @@ def assemble(monolith: object, fragments: list[tuple[str, object]]) -> object:
     for (earlier, first, _), (later, second, _) in zip(banded, banded[1:]):
         if later[0] <= earlier[1]:
             raise PopulationRefused(f"{FRAGMENTS}/{first} and {FRAGMENTS}/{second} overlap")
+    for table, header_rows in tables.items():
+        if not isinstance(header_rows, list):
+            raise PopulationRefused(f"{MONOLITH}: {table} is not an array of rows")
+        _refuse_misshapen_rows(MONOLITH, table, header_rows)
     held: dict[str, str] = {}
     merged = {name: list(rows) for name, rows in tables.items()}
     for rows in tables.values():
@@ -191,6 +212,7 @@ def assemble(monolith: object, fragments: list[tuple[str, object]]) -> object:
                 raise PopulationRefused(f"{where} holds the table {table}, which {MONOLITH} lacks")
             if not isinstance(rows, list):
                 raise PopulationRefused(f"{where}: {table} is not an array of rows")
+            _refuse_misshapen_rows(where, table, rows)
             for row in rows:
                 identifier = _row_id(row)
                 if identifier is None:
@@ -404,7 +426,7 @@ def declared_spellings(document: object) -> dict[str, str]:
         if not isinstance(line, str) or not line.startswith(SPELLING_PREFIX):
             continue
         table, separator, rest = line[len(SPELLING_PREFIX) :].partition(" is ")
-        word = rest.split(",", 1)[0].strip()
+        word = rest.partition(",")[0].strip()
         if not separator or not table or word not in (CRATE_RELATIVE, REPO_ROOTED):
             raise UnresolvableTarget(f"the line {line!r} declares no spelling this reader knows")
         if table in spellings:
@@ -560,13 +582,38 @@ def edition_of(root: pathlib.Path, crate: str, package: dict) -> str:
     return edition
 
 
+def unpathed_binary(root: pathlib.Path, crate: str, manifest: dict, name: str) -> str:
+    """The source of a `[[bin]]` table named `name` with no `path`, when no inferred binary has
+    that name, read as cargo reads it (issue #527). Under the 2015 edition cargo still takes the
+    first file of its older paths: `src/<name>.rs`, tried only when the package has no library
+    target (no `[lib]` table, and no `src/lib.rs` with `autolib` on), then `src/main.rs`, then
+    `src/bin/main.rs`. Under every later edition, and under 2015 when none of them is a file,
+    cargo refuses the manifest, and the reader refuses it by name rather than read a fallback."""
+    where = f"crates/{crate}"
+    crate_dir = root / where
+    package = manifest["package"]
+    if edition_of(root, crate, package) == "2015":
+        autolib = package.get("autolib", True)
+        if not isinstance(autolib, bool):
+            raise KillerUnresolved(f"{where} sets autolib to something other than a boolean")
+        library = "lib" in manifest or (autolib and (crate_dir / "src" / "lib.rs").is_file())
+        older = [] if library else [f"src/{name}.rs"]
+        for path in [*older, "src/main.rs", "src/bin/main.rs"]:
+            if (crate_dir / path).is_file():
+                return path
+    raise KillerUnresolved(
+        f"{where} declares the binary {name} with no path, and cargo finds no file for it"
+    )
+
+
 def cargo_targets(root: pathlib.Path, crate: str) -> tuple[list[tuple[str, str]], list[str]]:
     """The binaries (name, path) and the test target names of `crates/<crate>`, as cargo builds
     them: the manifest's `[[bin]]` and `[[test]]` tables, then the auto-discovered targets unless
     `autobins` or `autotests` is false, an inferred target dropped when an explicit one has its
     name or its declared path (`path_key`). A table with no path takes the auto-discovered path of
-    its name. With no `autobins` or `autotests` key, a declared table switches its kind's
-    inference off in the 2015 edition (`edition_of`) and leaves it on in every later one."""
+    its name, and a `[[bin]]` whose name has none is read as cargo reads it (`unpathed_binary`).
+    With no `autobins` or `autotests` key, a declared table switches its kind's inference off in
+    the 2015 edition (`edition_of`) and leaves it on in every later one."""
     where = f"crates/{crate}"
     manifest = manifest_of(root, crate)
     package = manifest["package"]
@@ -576,9 +623,9 @@ def cargo_targets(root: pathlib.Path, crate: str) -> tuple[list[tuple[str, str]]
         bins[package["name"]] = "src/main.rs"
     tests = inferred_targets(crate_dir, "tests")
     targets: dict[str, list[tuple[str, str]]] = {}
-    for kind, table, inferred, switch, fallback in (
-        ("bin", "bin", bins, "autobins", "src/main.rs"),
-        ("test", "test", tests, "autotests", None),
+    for kind, table, inferred, switch in (
+        ("bin", "bin", bins, "autobins"),
+        ("test", "test", tests, "autotests"),
     ):
         auto = package.get(switch, True)
         if not isinstance(auto, bool):
@@ -590,7 +637,11 @@ def cargo_targets(root: pathlib.Path, crate: str) -> tuple[list[tuple[str, str]]
             if isinstance(path, str):
                 paths.add(path_key(crate_dir, path))
             if path is None and isinstance(name, str):
-                path = inferred.get(name, fallback or f"tests/{name}.rs")
+                path = inferred.get(name)
+                if path is None and kind == "bin":
+                    path = unpathed_binary(root, crate, manifest, name)
+                elif path is None:
+                    path = f"tests/{name}.rs"
             if not isinstance(name, str) or not isinstance(path, str):
                 raise KillerUnresolved(f"{where} declares a {kind} with no name or path")
             explicit.append((name, path))
@@ -841,45 +892,57 @@ def locate_killer(root: pathlib.Path, row: Row) -> Killer:
     """Where a row's killer runs: its package and test target, or its unittest root. The runner
     counts what it selects from the killer's own output (R9); `resolve_killer` is the census's
     static check that it names exactly one test."""
-    if row.crate is not None:
-        if "::" not in row.killer:
-            raise KillerUnresolved(f"the killer {row.killer!r} is not <target>::<test path>")
-        target, path = row.killer.split("::", 1)
+    return locate_test(root, row.crate, row.killer)
+
+
+def locate_test(root: pathlib.Path, row_crate: str | None, row_killer: str) -> Killer:
+    """`locate_killer` over a row's crate and killer cells alone, for a caller that holds no
+    row."""
+    if row_crate is not None:
+        if "::" not in row_killer:
+            raise KillerUnresolved(f"the killer {row_killer!r} is not <target>::<test path>")
+        target, path = row_killer.split("::", 1)
         try:
-            package = package_of(root, row.crate)
+            package = package_of(root, row_crate)
         except KillerUnresolved:
             package = None
-        crate = root / "crates" / row.crate
+        crate = root / "crates" / row_crate
         binary = None
         if target == "lib":
-            where = f"crates/{row.crate}/src"
+            where = f"crates/{row_crate}/src"
         elif target == "bin":
-            if "bin" in cargo_targets(root, row.crate)[1]:
+            if "bin" in cargo_targets(root, row_crate)[1]:
                 raise KillerUnresolved(
-                    f"crates/{row.crate} has a test target bin, which the bin kind shadows"
+                    f"crates/{row_crate} has a test target bin, which the bin kind shadows"
                 )
-            binary, where = binary_of(root, row.crate)
+            binary, where = binary_of(root, row_crate)
         else:
             candidates = [crate / "tests" / f"{target}.rs", crate / "tests" / target / "main.rs"]
             files = [candidate for candidate in candidates if candidate.is_file()]
             if not files:
-                raise KillerUnresolved(f"crates/{row.crate} has no test target {target}")
+                raise KillerUnresolved(f"crates/{row_crate} has no test target {target}")
             where = files[0].relative_to(root).as_posix()
         return Killer("cargo", path, where, package=package, target=target, binary=binary)
-    module = row.killer.split(".", 1)[0]
+    module = row_killer.partition(".")[0]
     homes = [base for base in TEST_ROOTS if (root / base / f"{module}.py").is_file()]
     if len(homes) != 1:
         raise KillerUnresolved(f"names no test: {len(homes)} unittest roots hold {module}.py")
-    return Killer("script", row.killer, f"{homes[0]}/{module}.py", cwd=homes[0])
+    return Killer("script", row_killer, f"{homes[0]}/{module}.py", cwd=homes[0])
 
 
 def resolve_killer(root: pathlib.Path, row: Row) -> Killer:
     """The one test a row's killer names, found statically; raises `KillerUnresolved`."""
-    killer = locate_killer(root, row)
+    return resolve_test(root, row.crate, row.killer)
+
+
+def resolve_test(root: pathlib.Path, row_crate: str | None, row_killer: str) -> Killer:
+    """`resolve_killer` over a row's crate and killer cells alone, for a caller that holds no
+    row; raises `KillerUnresolved`."""
+    killer = locate_test(root, row_crate, row_killer)
     if killer.kind == "cargo":
-        if not CARGO_KILLER.fullmatch(row.killer):
-            raise KillerUnresolved(f"the killer {row.killer!r} is not <target>::<test path>")
-        name = killer.name.rsplit("::", 1)[-1]
+        if not CARGO_KILLER.fullmatch(row_killer):
+            raise KillerUnresolved(f"the killer {row_killer!r} is not <target>::<test path>")
+        name = killer.name.rpartition("::")[2]
         if killer.target == "lib":
             sources = sorted((root / killer.file).rglob("*.rs"))
             count = sum(test_functions(s.read_text(encoding="utf-8"), name) for s in sources)
@@ -891,9 +954,9 @@ def resolve_killer(root: pathlib.Path, row: Row) -> Killer:
         if count != 1:
             raise KillerUnresolved(f"names no test: {killer.file} declares {name} {count} times")
         return killer
-    if not SCRIPT_KILLER.fullmatch(row.killer):
-        raise KillerUnresolved(f"the killer {row.killer!r} is not <module>.<Class>.<method>")
-    _module, klass, method = row.killer.split(".")
+    if not SCRIPT_KILLER.fullmatch(row_killer):
+        raise KillerUnresolved(f"the killer {row_killer!r} is not <module>.<Class>.<method>")
+    _module, klass, method = row_killer.split(".")
     tree = ast.parse((root / killer.file).read_text(encoding="utf-8"))
     methods = [
         node
@@ -989,6 +1052,7 @@ def run_in_own_group(
     Raises:
         subprocess.TimeoutExpired: The command outran `timeout`; its group is already dead.
     """
+    hold_signals()
     judged = resolve_tool(command, env, cwd)
     try:
         process = subprocess.Popen(
@@ -1007,7 +1071,7 @@ def run_in_own_group(
             raise
         raise refusal from error
     try:
-        stdout, stderr = process.communicate(timeout=timeout)
+        stdout, stderr = released(process).communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
         kill_group(process)
         process.wait()
@@ -1040,7 +1104,7 @@ def run_killer(root: pathlib.Path, killer: Killer, scratch: pathlib.Path) -> Run
         cwd = root
     else:
         command = [sys.executable, "-m", "unittest", killer.name]
-        cache = tempfile.mkdtemp(prefix="pycache-", dir=scratch)
+        cache = tempfile.mkdtemp(dir=scratch)
         env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", PYTHONPYCACHEPREFIX=cache)
         cwd = root / killer.cwd
     try:
@@ -1061,7 +1125,7 @@ def run_killer(root: pathlib.Path, killer: Killer, scratch: pathlib.Path) -> Run
 def shell_parser(target: str, text: bytes) -> str | None:
     """`bash` or `sh` when the target is a shell script, else None. The shebang decides when it
     names a shell, since a `.sh` file may be bash; else the extension does, and `.bash` is bash."""
-    first = text.split(b"\n", 1)[0].decode("utf-8", errors="replace")
+    first = text.partition(b"\n")[0].decode("utf-8", errors="replace")
     named = SHELL_SHEBANG.match(first)
     if named:
         return "bash" if named.group(1) == "bash" else "sh"
@@ -1178,6 +1242,28 @@ def prove_row(root: pathlib.Path, row: Row, scratch: pathlib.Path) -> dict:
             raise RestoreFailed(f"{row.target} was not restored byte for byte after {row.id}")
 
 
+def plan_rows(path: str, plan: object) -> list[str]:
+    """The row ids a `--rows-from` plan selects, from its parsed text (SPEC-645 R1 to R3).
+
+    The plan is an object, its `rows` (an absent key, no row) an array and each of its entries a
+    string; anything else is refused by the sentence naming the file and the shape it needed,
+    the first wrong entry by its index from 0, where the base's `plan.get` crashed with a
+    traceback or read an object's keys as row ids (#950).
+
+    Raises:
+        PlanRefused: The plan, its `rows` value or one of its entries is of another shape.
+    """
+    if not isinstance(plan, dict):
+        raise PlanRefused(f"{path} must hold a top-level object")
+    planned = plan.get("rows", [])
+    if not isinstance(planned, list):
+        raise PlanRefused(f"{path}: `rows` is not an array of row ids")
+    for index, identifier in enumerate(planned):
+        if not isinstance(identifier, str):
+            raise PlanRefused(f"{path}: rows[{index}] is not a string")
+    return planned
+
+
 def chosen(rows: list[Row], args: argparse.Namespace) -> list[Row]:
     """Every row the selectors name together, each once: `--all`, or a band's, each `--row` and a
     plan's `--rows-from`. No selector drops another's rows."""
@@ -1192,7 +1278,7 @@ def chosen(rows: list[Row], args: argparse.Namespace) -> list[Row]:
     wanted += list(args.row)
     if args.rows_from:
         plan = json.loads(pathlib.Path(args.rows_from).read_text(encoding="utf-8"))
-        wanted += plan.get("rows", [])
+        wanted += plan_rows(args.rows_from, plan)
     by_id = {row.id: row for row in rows}
     missing = [identifier for identifier in wanted if identifier not in by_id]
     if missing:
@@ -1214,7 +1300,7 @@ def prove(root: pathlib.Path, args: argparse.Namespace, leg: tuple[int, int] | N
     if leg is not None:
         rows = dealt(rows, leg)
     report = []
-    with tempfile.TemporaryDirectory(prefix="mutation-rows-") as scratch:
+    with tempfile.TemporaryDirectory() as scratch:
         for row in rows:
             try:
                 entry = prove_row(root, row, pathlib.Path(scratch))
@@ -1380,6 +1466,36 @@ def merge(root: pathlib.Path, args: argparse.Namespace) -> int:
 # --------------------------------------------------------------------------- retirement
 
 
+def retirement_records(listed: object) -> dict[str, dict]:
+    """The retirements `scripts/mutation-rows.retired.json` approves, keyed by row id (SPEC-465
+    R1 to R5).
+
+    `parse_document` has refused a repeated key and a text that is not JSON; this reads the list's
+    shape, which the base's loop never checked, so a wrong one crashed `retired` with a traceback
+    (#421). The list is an object, its `retired` (an absent key, no entry) an array, and each
+    entry an object with a string `id`; anything else is a refusal naming the shape the list
+    needed, the first wrong entry by its index from 0. An entry is kept, as before, when its
+    reason and its approval are both non-blank.
+
+    Raises:
+        PopulationRefused: The list, its `retired` value or one of its entries is of another shape.
+    """
+    if not isinstance(listed, dict):
+        raise PopulationRefused(f"{RETIRED} must hold a top-level object")
+    entries = listed.get("retired", [])
+    if not isinstance(entries, list):
+        raise PopulationRefused(f"{RETIRED}: `retired` is not an array of records")
+    record = {}
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            raise PopulationRefused(f"{RETIRED}: retired[{index}] is not an object")
+        if not isinstance(entry.get("id"), str):
+            raise PopulationRefused(f"{RETIRED}: retired[{index}] has no string id")
+        if str(entry.get("reason", "")).strip() and str(entry.get("approval", "")).strip():
+            record[entry["id"]] = entry
+    return record
+
+
 def retired(root: pathlib.Path, base: str) -> int:
     before = load_revision(root, base)
     if before is None:
@@ -1391,9 +1507,7 @@ def retired(root: pathlib.Path, base: str) -> int:
     path = root / RETIRED
     if path.is_file():
         listed = parse_document(RETIRED, path.read_text(encoding="utf-8"))
-        for entry in listed.get("retired", []):
-            if str(entry.get("reason", "")).strip() and str(entry.get("approval", "")).strip():
-                record[entry["id"]] = entry
+        record = retirement_records(listed)
     base_rows = rows_of(before)
     refused = 0
     for row in base_rows:
@@ -1417,18 +1531,94 @@ def retired(root: pathlib.Path, base: str) -> int:
 # --------------------------------------------------------------------------- the command line
 
 
-def end_on_sigterm() -> None:
-    """A SIGTERM ends the runner through its `finally` blocks, so a killer's group ends with it.
+@dataclass
+class RunSignals:
+    """One run of `main()`'s signal state: the signal ending it, once one arrived, and whether a
+    killer is being started (SPEC-465 R6 to R8, SPEC-647 R1 to R4).
 
-    The killer leads a group of its own, so a SIGTERM to the runner, or to the runner's group as
-    `timeout -s TERM` and a job cancel send it, no longer reaches the killer; the default action
-    would end the runner with no cleanup and leave the killer's group running (#409).
+    `handle` is the run's one handler for SIGTERM, SIGHUP and SIGINT. A signal after the first
+    is ignored, whichever it is, so a cleanup the first began runs to its end. The first is
+    recorded and ends the run at once, by `SystemExit(128 + signum)` or, for SIGINT, by the
+    interpreter's own `KeyboardInterrupt`, unwinding every `finally`, unless a killer is being
+    started: then it waits for `released`, inside the `try` whose `finally` ends the killer's
+    group.
     """
-    signal.signal(signal.SIGTERM, lambda signum, _frame: sys.exit(128 + signum))
+
+    signum: int | None = None
+    holding: bool = False
+
+    def handle(self, signum: int, _frame: object) -> None:
+        if self.signum is not None:
+            return
+        self.signum = signum
+        if not self.holding:
+            if signum == signal.SIGINT:
+                raise KeyboardInterrupt
+            raise SystemExit(128 + signum)
 
 
-def main(argv: list[str] | None = None) -> int:
-    end_on_sigterm()
+#: The signal state of the run `main()` is making, or None outside `main()` (SPEC-465 R9).
+RUN_SIGNALS: RunSignals | None = None
+
+
+def hold_signals() -> None:
+    """Hold the run's signals until `released`: a killer is about to start (SPEC-465 R7)."""
+    if RUN_SIGNALS is not None:
+        RUN_SIGNALS.holding = True
+
+
+def released(process: subprocess.Popen[str]) -> subprocess.Popen[str]:
+    """`process`, with the hold its start began ended; a signal held meanwhile ends the run here,
+    inside the `try` whose `finally` ends the killer's group (SPEC-465 R7, SPEC-647 R2)."""
+    run = RUN_SIGNALS
+    if run is not None:
+        run.holding = False
+        if run.signum is not None:
+            if run.signum == signal.SIGINT:
+                raise KeyboardInterrupt
+            raise SystemExit(128 + run.signum)
+    return process
+
+
+@contextlib.contextmanager
+def ending_on_signals():
+    """A run of `main()`, ended by SIGTERM, SIGHUP or SIGINT through every cleanup, that leaves
+    the process as it found it (SPEC-465 R6 to R9, SPEC-647 R1 to R5).
+
+    The killer leads a group of its own, so a signal to the runner, or to the runner's group as
+    `timeout -s TERM`, a job cancel and a closed terminal send it, never reaches the killer, and a
+    default action would end the runner with no cleanup and leave the killer's group running
+    (#409, #432). The run's own handler takes SIGTERM, SIGHUP unless SIGHUP was ignored when the
+    run began, as `nohup` leaves it, and SIGINT unless SIGINT was ignored, as a shell leaves it
+    for a job it starts in the background (#952). A signal still held when the command returns,
+    after a killer that failed to start, ends the run there. On every way out each handler found
+    is reinstalled, the default action for one set outside Python, and so is the run state before.
+    """
+    global RUN_SIGNALS
+    found = {
+        signum: signal.getsignal(signum)
+        for signum in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT)
+    }
+    outer, state = RUN_SIGNALS, RunSignals()
+    RUN_SIGNALS = state
+    try:
+        signal.signal(signal.SIGTERM, state.handle)
+        if found[signal.SIGHUP] is not signal.SIG_IGN:
+            signal.signal(signal.SIGHUP, state.handle)
+        if found[signal.SIGINT] is not signal.SIG_IGN:
+            signal.signal(signal.SIGINT, state.handle)
+        yield
+        if state.signum is not None:
+            if state.signum == signal.SIGINT:
+                raise KeyboardInterrupt
+            raise SystemExit(128 + state.signum)
+    finally:
+        for signum, handler in found.items():
+            signal.signal(signum, signal.SIG_DFL if handler is None else handler)
+        RUN_SIGNALS = outer
+
+
+def dispatch(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument(
         "verb", choices=["count", "ids", "census", "prove", "retired", "legs", "merge"]
@@ -1474,14 +1664,25 @@ def main(argv: list[str] | None = None) -> int:
         except ToolMissing as refusal:
             print(f"prove: REFUSED: {refusal}")
             return EXIT_REFUSED
+        except PlanRefused as refusal:
+            print(f"mutation_rows: REFUSED: {refusal}", file=sys.stderr)
+            return EXIT_REFUSED
     if args.verb == "legs":
         if not args.rows_from:
             parser.error("legs needs --rows-from")
-        return legs(root, args)
+        try:
+            return legs(root, args)
+        except PlanRefused as refusal:
+            print(f"mutation_rows: REFUSED: {refusal}", file=sys.stderr)
+            return EXIT_REFUSED
     if args.verb == "merge":
         if not (args.rows_from and args.legs is not None and args.source and args.report):
             parser.error("merge needs --rows-from, --legs, --from and --report")
-        return merge(root, args)
+        try:
+            return merge(root, args)
+        except PlanRefused as refusal:
+            print(f"mutation_rows: REFUSED: {refusal}", file=sys.stderr)
+            return EXIT_REFUSED
     if not args.base:
         parser.error("retired needs --base")
     try:
@@ -1492,6 +1693,13 @@ def main(argv: list[str] | None = None) -> int:
     except ToolMissing as refusal:
         print(f"retired: REFUSED: {refusal}")
         return EXIT_REFUSED
+
+
+def main(argv: list[str] | None = None) -> int:
+    """The command line, `dispatch`, run with SIGTERM, SIGHUP and SIGINT ending it through every
+    cleanup and the process's handlers left as they were found (SPEC-465 R6 to R9, SPEC-647)."""
+    with ending_on_signals():
+        return dispatch(argv)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,9 @@
 """SPEC-295: the repository declares its formal-check settings in `config/formal.json`, holding the
-fields the formal checker reads and no other, with each value and type as ADR-295 decided."""
+fields the formal checker reads and no other, with each value and type as ADR-295 decided.
+
+SPEC-426: `formal/lean/lakefile.toml` makes every warning the Formal library raises an error. The
+class `LakefileWarnings`, outside `FormalConfig` and so outside SPEC-295's presence harness, reads
+the lakefile as the tree stores it and holds it to the declared document `LAKEFILE` (ADR-440 D2)."""
 
 import ast
 import copy
@@ -7,6 +11,7 @@ import itertools
 import json
 import os
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -26,12 +31,14 @@ EXPECTED = {
     "budgets": {
         "tla_seconds": 480,
         "lean_seconds": 600,
+        "kani_seconds": 300,
         "entry_seconds": 300,
         "entries": {
             "tla/FullSyncChoice": 60,
             "tla/HabitXpFollowsItsLog": 300,
             "tla/LandmarkOnce": 420,
             "tla/MintReadsTheFinalBase": 180,
+            "tla/OpLog": 1260,
             "tla/RelightOrder": 360,
             "tla/SecondRoute": 480,
             "tla/StagedNoJournal": 120,
@@ -52,6 +59,7 @@ FIELDS = [
     (("k",), "posint", True),
     (("budgets", "tla_seconds"), "posint", True),
     (("budgets", "lean_seconds"), "posint", True),
+    (("budgets", "kani_seconds"), "posint", False),
     (("budgets", "entry_seconds"), "posint", False),
     (("budgets", "entries"), "posint-map", False),
     (("axioms",), "strings", True),
@@ -215,6 +223,42 @@ def slot_reading(doc):
             raise Refused("slot-range", "tlc_slot." + key + " is past its range")
         reading.append(lever[key])
     return tuple(reading)
+
+
+# SPEC-611 R1 and R2 (#802): the largest value the formal checker's reader takes for each bounded
+# field outside `tlc_slot`, an unsigned 32-bit integer for `k` and an unsigned 64-bit integer for
+# each budget and each per-entry budget, and the prefix every per-entry key carries, which names a
+# TLA+ entry.
+K_BOUND = 2**32 - 1
+BUDGET_BOUND = 2**64 - 1
+ENTRY_PREFIX = "tla/"
+
+
+def bounded_reading(doc):
+    """The bounded values as the formal checker reads them from a document `read` admits
+    (SPEC-611): `k`, each budget and each per-entry budget, keyed by its dotted name and read as
+    stated. A value past its reader's range, or a per-entry key that names no TLA+ entry, is
+    refused, because the checker would refuse the whole file and read none of it."""
+    reading = {}
+    for path, kind, _ in FIELDS:
+        value, present = get(doc, path)
+        if path[0] == "tlc_slot" or not present:
+            continue
+        name = ".".join(path)
+        if kind == "posint":
+            bound = K_BOUND if path == ("k",) else BUDGET_BOUND
+            if value > bound:
+                raise Refused("bound-range", name + " is past its range")
+            reading[name] = value
+        if kind == "posint-map":
+            for key, seconds in value.items():
+                entry = name + "." + key
+                if not key.startswith(ENTRY_PREFIX):
+                    raise Refused("entry-unnamed", entry + " names no TLA+ entry")
+                if seconds > BUDGET_BOUND:
+                    raise Refused("bound-range", entry + " is past its range")
+                reading[entry] = seconds
+    return reading
 
 
 def toolchain_sources(doc, root):
@@ -444,6 +488,74 @@ def reader_arms():
     ]
 
 
+class BoundedReading(unittest.TestCase):
+    """SPEC-611 A1 and A2: the bounded rule over documents built from the expected table. Neither
+    test reads the committed file, so neither sits in `FormalConfig`, the class the presence
+    harness runs against each refused file; each call of the reader here is still held to the
+    harness's rule that a refusal fails the test by assertion."""
+
+    def test_each_bounded_value_is_one_the_checkers_reader_takes(self):
+        """A1 (SPEC-611): for `k`, each budget and one per-entry budget, the document holding the
+        bound is admitted and read as that value, and the document holding the first integer past
+        it is refused by the range arm naming the field. The values are spelled here, never
+        derived from the rule."""
+        values = [
+            (("k",), 4294967295, True),
+            (("k",), 4294967296, False),
+            (("budgets", "tla_seconds"), 18446744073709551615, True),
+            (("budgets", "tla_seconds"), 18446744073709551616, False),
+            (("budgets", "lean_seconds"), 18446744073709551615, True),
+            (("budgets", "lean_seconds"), 18446744073709551616, False),
+            (("budgets", "entry_seconds"), 18446744073709551615, True),
+            (("budgets", "entry_seconds"), 18446744073709551616, False),
+            (("budgets", "entries", "tla/OpLog"), 18446744073709551615, True),
+            (("budgets", "entries", "tla/OpLog"), 18446744073709551616, False),
+        ]
+        reached = 0
+        for path, value, admitted in values:
+            name = ".".join(path)
+            plant = with_value(path, value)
+            try:
+                read(plant)
+            except Refused as refusal:
+                self.fail(f"presence control: {name} = {value} is refused by the reader: {refusal}")
+            if admitted:
+                try:
+                    reading = bounded_reading(plant)
+                except Refused as refusal:
+                    self.fail(f"{name} = {value} is within the range, yet refused: {refusal}")
+                self.assertEqual(reading[name], value)
+            else:
+                with self.assertRaises(Refused, msg=f"{name} = {value} was read") as caught:
+                    bounded_reading(plant)
+                self.assertEqual(caught.exception.arm, "bound-range")
+                self.assertEqual(str(caught.exception), f"{name} is past its range")
+            reached += 1
+        print(f"examined {reached} of {len(values)} bounded values")
+        self.assertEqual(reached, len(values), "a bounded value did not reach its assertion")
+
+    def test_a_budget_entry_key_that_names_no_tla_entry_is_refused(self):
+        """A2 (SPEC-611): a per-entry budget whose key lacks the `tla/` prefix, planted beside the
+        declared entries with a value within the range, is admitted by the test's reader and
+        refused by the rule's entry arm naming the key. The keys are spelled here."""
+        keys = ["OpLog", "lean/OpLog", "TLA/OpLog", "tla-OpLog"]
+        reached = 0
+        for key in keys:
+            name = "budgets.entries." + key
+            plant = with_value(("budgets", "entries", key), 60)
+            try:
+                read(plant)
+            except Refused as refusal:
+                self.fail(f"presence control: {name} is refused by the reader: {refusal}")
+            with self.assertRaises(Refused, msg=f"{name} was read as a budget") as caught:
+                bounded_reading(plant)
+            self.assertEqual(caught.exception.arm, "entry-unnamed")
+            self.assertEqual(str(caught.exception), f"{name} names no TLA+ entry")
+            reached += 1
+        print(f"examined {reached} of {len(keys)} entry keys")
+        self.assertEqual(reached, len(keys), "an entry key did not reach its assertion")
+
+
 class FormalConfig(unittest.TestCase):
     def test_every_value_type_a_kind_refuses_is_planted_and_refused_by_name(self):
         """A4: for each field kind the reader judges, the object kind included at every object
@@ -644,6 +756,28 @@ class FormalConfig(unittest.TestCase):
         print(f"examined {reached} of {len(values)} slot values")
         self.assertEqual(reached, len(values), "a slot value did not reach its assertion")
 
+    def test_the_bounded_reading_is_the_files_own_values(self):
+        """A3 (SPEC-611): the committed file's bounded reading is its own `k`, each of its budgets
+        and each of its per-entry budgets, read from the loaded file and never from the expected
+        table, and the rule admits every per-entry key the committed file names."""
+        doc = load()
+        try:
+            read(doc)
+        except Refused as refusal:
+            self.fail(f"presence control: the committed file is refused by the reader: {refusal}")
+        try:
+            reading = bounded_reading(doc)
+        except Refused as refusal:
+            self.fail(f"the bounded rule refuses the committed file: {refusal}")
+        budgets = doc["budgets"]
+        entries = budgets.get("entries", {})
+        expected = {"k": doc["k"]}
+        expected.update({"budgets." + key: v for key, v in budgets.items() if key != "entries"})
+        expected.update({"budgets.entries." + key: v for key, v in entries.items()})
+        self.assertEqual(reading, expected)
+        print(f"examined {len(reading)} bounded values of the committed file")
+        self.assertGreater(len(entries), 0, "the committed file names no per-entry budget")
+
     def test_the_toolchain_identity_is_named_and_a_malformed_one_is_refused(self):
         """A6: the committed file names the checker's toolchain by one 64-digit lowercase hex
         identity, and the test's own reader admits it and refuses every fault generated from the
@@ -801,6 +935,195 @@ class FormalConfig(unittest.TestCase):
                 with mock.patch.dict(globals(), {"CONFIG": path, "ROOT": Path(scratch)}):
                     with self.assertRaises(AssertionError, msg=label):
                         globals()["load"]()
+
+
+# SPEC-426 R2: the Lean package's lakefile, read as the tree stores it.
+LAKEFILE_PATH = Path("formal") / "lean" / "lakefile.toml"
+# SPEC-426 R2: the declared lakefile, as data: one library, Formal, the package's one default
+# target, whose own options make every warning Lean raises an error (ADR-440 D1).
+LAKEFILE = {
+    "name": "formal",
+    "defaultTargets": ["Formal"],
+    "lean_lib": [
+        {"name": "Formal", "globs": ["Formal.*"], "leanOptions": {"warningAsError": True}},
+    ],
+}
+# The library the key is read on, the key, and the argument arrays that could carry it as text.
+LIBRARY = "Formal"
+WARNING_KEY = "warningAsError"
+ARGUMENT_ARRAYS = ("moreLeanArgs", "weakLeanArgs")
+
+
+def lakefile_text(root):
+    """The committed lakefile's text, read as the tree stores it: a link at `formal`, at
+    `formal/lean` or at the file is refused by assertion naming that component."""
+    refuse_link_components(root / LAKEFILE_PATH, root)
+    return (root / LAKEFILE_PATH).read_text(encoding="utf-8")
+
+
+def warnings_are_errors(doc):
+    """Every reason the Formal library's warnings would not be errors, as (arm, message), each
+    message opening with the place it names; none for the declared document (SPEC-426 R2)."""
+    problems = []
+    libraries = [lib for lib in doc.get("lean_lib", []) if lib.get("name") == LIBRARY]
+    holders = [("the package", doc)] + [(f"lean_lib {LIBRARY}", lib) for lib in libraries]
+    for place, table in holders:
+        for array in ARGUMENT_ARRAYS:
+            for argument in table.get(array, []):
+                if WARNING_KEY in str(argument):
+                    problems.append(("key-in-args", f"{place}'s {array}: {argument!r}"))
+    if not libraries:
+        problems.append(("no-formal-library", f"the package's lean_lib: none is {LIBRARY}"))
+    if len(libraries) > 1:
+        problems.append(("formal-library-twice", f"the package's lean_lib: {len(libraries)}"))
+    for library in libraries:
+        options = library.get("leanOptions", {})
+        where = f"lean_lib {LIBRARY}'s leanOptions"
+        if WARNING_KEY not in options:
+            problems.append(("key-absent", f"{where}: {WARNING_KEY} is not set"))
+        elif options[WARNING_KEY] is not True:
+            problems.append(("key-not-true", f"{where}: {WARNING_KEY} is {options[WARNING_KEY]!r}"))
+    return problems
+
+
+def lakefile_plants():
+    """SPEC-426 A2's planted faults, as (label, arm, doc): each doc is a deep copy of `LAKEFILE`
+    given one edit, and each label opens with the place its refusal names."""
+    plants = []
+
+    def plant(label, arm, edit):
+        doc = copy.deepcopy(LAKEFILE)
+        edit(doc)
+        plants.append((label, arm, doc))
+
+    def options(doc):
+        return doc["lean_lib"][0]["leanOptions"]
+
+    def argument(table, array):
+        table[array] = ["-DwarningAsError=false"]
+
+    where = "lean_lib Formal's leanOptions"
+    plant(f"{where}: the key absent", "key-absent", lambda doc: options(doc).clear())
+    plant(f"{where}: false", "key-not-true", lambda doc: options(doc).update(warningAsError=False))
+    plant(
+        f"{where}: the string",
+        "key-not-true",
+        lambda doc: options(doc).update(warningAsError="true"),
+    )
+    plant(
+        f"{where}: the integer", "key-not-true", lambda doc: options(doc).update(warningAsError=1)
+    )
+    plant(
+        f"{where}: set only in the package's own leanOptions",
+        "key-absent",
+        lambda doc: doc.update(leanOptions=doc["lean_lib"][0].pop("leanOptions")),
+    )
+    plant(
+        "the package's lean_lib: the library renamed",
+        "no-formal-library",
+        lambda doc: doc["lean_lib"][0].update(name="Other"),
+    )
+    plant(
+        "the package's lean_lib: no library", "no-formal-library", lambda doc: doc.pop("lean_lib")
+    )
+    plant(
+        "the package's lean_lib: a second Formal library",
+        "formal-library-twice",
+        lambda doc: doc["lean_lib"].append(copy.deepcopy(doc["lean_lib"][0])),
+    )
+    plant(
+        "the package's moreLeanArgs: an argument naming the key",
+        "key-in-args",
+        lambda doc: argument(doc, "moreLeanArgs"),
+    )
+    plant(
+        "lean_lib Formal's moreLeanArgs: an argument naming the key",
+        "key-in-args",
+        lambda doc: argument(doc["lean_lib"][0], "moreLeanArgs"),
+    )
+    plant(
+        "lean_lib Formal's weakLeanArgs: an argument naming the key",
+        "key-in-args",
+        lambda doc: argument(doc["lean_lib"][0], "weakLeanArgs"),
+    )
+    return plants
+
+
+def lakefile_arms():
+    """Every arm `warnings_are_errors` appends, found in its own source by its syntax tree."""
+    source = ast.parse(Path(__file__).read_text(encoding="utf-8"))
+    reader = next(
+        node
+        for node in ast.walk(source)
+        if isinstance(node, ast.FunctionDef) and node.name == "warnings_are_errors"
+    )
+    return sorted(
+        {
+            node.args[0].elts[0].value
+            for node in ast.walk(reader)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "append"
+            and node.args
+            and isinstance(node.args[0], ast.Tuple)
+        }
+    )
+
+
+class LakefileWarnings(unittest.TestCase):
+    """SPEC-426 A1 to A3, outside `FormalConfig`, so SPEC-295's presence harness, which runs that
+    class's tests alone under planted settings files, never answers for the lakefile."""
+
+    def test_the_formal_library_makes_every_warning_an_error(self):
+        """A1: the committed lakefile, read as the tree stores it and parsed, equals `LAKEFILE`,
+        whose Formal library's `leanOptions` holds `warningAsError` as the boolean true, and the
+        reader answers no problem for it."""
+        doc = tomllib.loads(lakefile_text(ROOT))
+        examined("keys of the lakefile", sorted(doc))
+        self.assertTrue(same(doc, LAKEFILE), f"{doc!r} != {LAKEFILE!r}")
+        library = next(lib for lib in doc["lean_lib"] if lib["name"] == LIBRARY)
+        self.assertIs(library["leanOptions"][WARNING_KEY], True)
+        self.assertEqual(warnings_are_errors(doc), [])
+
+    def test_the_lakefile_reader_refuses_each_planted_fault_by_its_arm(self):
+        """A2: each planted lakefile fault, derived from `LAKEFILE` by one edit, is refused by its
+        arm naming its place and is unequal to `LAKEFILE`; the planted arms are exactly the arms
+        the reader's source names, found by its syntax tree."""
+        plants = examined("planted lakefile faults", lakefile_plants())
+        wrong = []
+        for label, arm, doc in plants:
+            place = label.split(": ", 1)[0]
+            problems = warnings_are_errors(doc)
+            if [found for found, _ in problems] != [arm] or not problems[0][1].startswith(place):
+                wrong.append(f"{label}: {problems}")
+            if same(doc, LAKEFILE):
+                wrong.append(f"{label}: equal to LAKEFILE")
+        self.assertEqual(wrong, [], "a planted fault the reader did not refuse by its arm")
+        self.assertEqual(sorted({arm for _, arm, _ in plants}), lakefile_arms())
+
+    def test_the_lakefile_is_read_as_the_tree_stores_it(self):
+        """A3: in a scratch tree, a link at each component of the lakefile's path is refused by
+        assertion naming that component, and the same tree with no link is read."""
+        components = examined(
+            "components of the lakefile's path",
+            [LAKEFILE_PATH.parent.parent, LAKEFILE_PATH.parent, LAKEFILE_PATH],
+        )
+        text = 'name = "formal"\n'
+        with tempfile.TemporaryDirectory() as scratch:
+            for index, component in enumerate(components):
+                root = Path(scratch) / f"linked-{index}"
+                held = Path(scratch) / f"held-{index}"
+                (held / LAKEFILE_PATH.parent).mkdir(parents=True)
+                (held / LAKEFILE_PATH).write_text(text, encoding="utf-8")
+                (root / component).parent.mkdir(parents=True, exist_ok=True)
+                os.symlink(held / component, root / component)
+                with self.assertRaises(AssertionError, msg=component.as_posix()) as caught:
+                    lakefile_text(root)
+                self.assertIn(f"{component.as_posix()} is a link", str(caught.exception))
+            plain = Path(scratch) / "plain"
+            (plain / LAKEFILE_PATH.parent).mkdir(parents=True)
+            (plain / LAKEFILE_PATH).write_text(text, encoding="utf-8")
+            self.assertEqual(lakefile_text(plain), text)
 
 
 if __name__ == "__main__":

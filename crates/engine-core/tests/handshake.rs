@@ -251,6 +251,14 @@ fn a_client_below_the_minimum_is_refused_every_sync_before_the_engine() {
                 &normal_sync(&endpoint),
             )),
         ),
+        (
+            "the native normal sync (SPEC-503 R3)",
+            refused(native.run(
+                SYNC_COLLECTION.0,
+                SYNC_COLLECTION.1,
+                &normal_sync(&endpoint),
+            )),
+        ),
     ];
     let expected: Vec<_> = calls
         .iter()
@@ -446,5 +454,54 @@ fn the_statement_url_is_the_stated_path_at_the_logins_origin() {
         handshake::statement_url(&no_endpoint),
         None,
         "a login naming no endpoint gives no statement URL"
+    );
+}
+
+/// The variable that makes a re-executed copy of this binary the planted child of
+/// `a_stopped_server_child_exits_on_its_own_before_any_kill`: it names the file the child writes
+/// once its exit's work is done.
+const STOP_PLANT: &str = "DECKSTREAK_TEST_STOP_PLANT";
+/// How long the planted child's exit takes once its standard input closes: the time a child's exit
+/// handlers spend writing its raw profile under the coverage run, made long enough here that a
+/// kill sent at once always lands inside it.
+const STOP_PLANT_EXIT: std::time::Duration = std::time::Duration::from_millis(500);
+
+/// A server child, stopped the way the sync server is (its standard input closed), exits on its
+/// own with its exit's work done before any kill. The planted child takes [`STOP_PLANT_EXIT`] to
+/// exit, as an exit handler's write does, so a stop that kills at once ends it by a signal with
+/// its work cut short.
+#[test]
+fn a_stopped_server_child_exits_on_its_own_before_any_kill() {
+    const TEST: &str = "a_stopped_server_child_exits_on_its_own_before_any_kill";
+    if let Some(done) = std::env::var_os(STOP_PLANT) {
+        let _ = std::io::Read::read_to_end(&mut std::io::stdin(), &mut Vec::new());
+        std::thread::sleep(STOP_PLANT_EXIT);
+        std::fs::write(&done, "exited on its own")
+            .unwrap_or_else(|error| panic!("the planted child records its exit: {error}"));
+        std::process::exit(0);
+    }
+    let done = std::path::Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("{TEST}-{}", std::process::id()));
+    let binary = std::env::current_exe().unwrap_or_else(|error| panic!("the test binary: {error}"));
+    let mut child = std::process::Command::new(binary)
+        .args([TEST, "--exact", "--nocapture", "--test-threads", "1"])
+        .env(STOP_PLANT, &done)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::null())
+        .spawn()
+        .unwrap_or_else(|error| panic!("the planted child starts: {error}"));
+    let stdin = child.stdin.take();
+    let status = sync_server::stop(&mut child, stdin)
+        .unwrap_or_else(|error| panic!("the planted child is waited for: {error}"));
+    let record = std::fs::read_to_string(&done).ok();
+    let _ = std::fs::remove_file(&done);
+    assert!(
+        status.success(),
+        "the stopped child was killed ({status}) before its exit's work was done"
+    );
+    assert_eq!(
+        record.as_deref(),
+        Some("exited on its own"),
+        "the stopped child never finished its exit's work"
     );
 }

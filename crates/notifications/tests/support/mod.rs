@@ -88,7 +88,7 @@ impl BotTransport for Recording {
         Box::pin(async move {
             let left = self
                 .delivers
-                .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |left| {
+                .try_update(Ordering::SeqCst, Ordering::SeqCst, |left| {
                     Some(if left > 0 { left - 1 } else { left })
                 })
                 .unwrap_or(-1);

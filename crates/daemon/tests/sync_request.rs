@@ -69,10 +69,13 @@ impl Script {
 }
 
 impl RequestLedger for Script {
-    async fn request(&self, _at: UtcMillis) -> Result<(), KernelError> {
-        Ok(())
+    fn request(&self, _at: UtcMillis) -> impl Future<Output = Result<(), KernelError>> + Send {
+        std::future::ready(Ok(()))
     }
-    async fn progress(&self, _since: UtcMillis) -> Result<Progress, KernelError> {
+    fn progress(
+        &self,
+        _since: UtcMillis,
+    ) -> impl Future<Output = Result<Progress, KernelError>> + Send {
         let mut polls = self.polls.lock().expect("the poll count locks");
         *polls += 1;
         assert!(*polls <= 200, "the wait never ends");
@@ -83,7 +86,7 @@ impl RequestLedger for Script {
             .expect("the script locks")
             .pop_front()
             .unwrap_or(Progress::Waiting);
-        Ok(next)
+        std::future::ready(Ok(next))
     }
 }
 
@@ -484,12 +487,13 @@ impl Flushes {
 }
 
 impl Flush for Flushes {
-    async fn flush(&self) -> Result<(), KernelError> {
+    fn flush(&self) -> impl Future<Output = Result<(), KernelError>> + Send {
         *self.calls.lock().expect("the count locks") += 1;
-        if self.broken {
-            return Err(KernelError::Offload { operation: "flush" });
-        }
-        Ok(())
+        std::future::ready(if self.broken {
+            Err(KernelError::Offload { operation: "flush" })
+        } else {
+            Ok(())
+        })
     }
 }
 
@@ -633,11 +637,14 @@ async fn the_real_router_flush_delivers_a_celebration_quiet_hours_held() {
 struct Unstored;
 
 impl RequestLedger for Unstored {
-    async fn request(&self, _at: UtcMillis) -> Result<(), KernelError> {
-        Err(KernelError::LoggingInstalled)
+    fn request(&self, _at: UtcMillis) -> impl Future<Output = Result<(), KernelError>> + Send {
+        std::future::ready(Err(KernelError::LoggingInstalled))
     }
-    async fn progress(&self, _since: UtcMillis) -> Result<Progress, KernelError> {
-        Ok(Progress::Waiting)
+    fn progress(
+        &self,
+        _since: UtcMillis,
+    ) -> impl Future<Output = Result<Progress, KernelError>> + Send {
+        std::future::ready(Ok(Progress::Waiting))
     }
 }
 

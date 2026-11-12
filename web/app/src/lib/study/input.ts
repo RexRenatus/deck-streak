@@ -4,9 +4,9 @@
 // switch kept per device turns the single-character keys off (WCAG 2.1.4), and focus returns to the
 // review after every action and when a pointer moves it into the card frame.
 // SPEC-350 R18: the readers take this device's stored mapping, through #663's defaulted parameters.
-import { resolve, type Action, type Intent, type Side } from '$lib/remote/actions';
-import { GamepadReader, type PadSnapshot } from '$lib/remote/gamepad';
-import { readKey, type KeyInput } from '$lib/remote/keys';
+import { resolve, type Action, type Intent, type Side } from '#lib/remote/actions.js';
+import { GamepadReader, type PadSnapshot } from '#lib/remote/gamepad.js';
+import { readKey, type KeyInput } from '#lib/remote/keys.js';
 import type { Mapping } from './mapping-store';
 
 /** The one local-storage key the key switch is kept under, on this device. */
@@ -138,7 +138,7 @@ export class StudyInput {
 
   #intent(intent: Intent | null): void {
     // `resolve` fires only show answer on the question side, and replay plays on either side
-    // (SPEC-350 R15), so the review maps it here and `$lib/remote` stays as #663 left it
+    // (SPEC-350 R15), so the review maps it here and `#lib/remote` stays as #663 left it
     const action = intent === 'replay' ? 'replay' : intent && resolve(intent, this.#target.side());
     if (action === null) return;
     this.#target.act(action);

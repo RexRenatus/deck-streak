@@ -1,0 +1,126 @@
+{
+  "_": "The one list of what the coverage report does not measure, and the paths of each lane (SPEC-592, ADR-613 D3); read by scripts/coverage-report.py alone.",
+  "shared": [
+    ".github/workflows/coverage.yml",
+    "config/coverage.json",
+    "scripts/coverage-report.py",
+    "scripts/tests/test_coverage_report.py",
+    "scripts/tests/fixtures/coverage/**"
+  ],
+  "lanes": {
+    "rust": {
+      "measures": ["crates/**/*.rs"],
+      "configures": ["Cargo.toml", "Cargo.lock", "rust-toolchain.toml", ".config/nextest.toml", ".cargo/**"],
+      "sf_bases": ["."],
+      "group_depth": 2
+    },
+    "web": {
+      "measures": ["web/app/src/**/*.{ts,js,svelte}"],
+      "configures": ["web/app/**", "vitest.config.ts", "package.json", "pnpm-workspace.yaml", "pnpm-lock.yaml", ".nvmrc"],
+      "sf_bases": ["web/app", "."],
+      "group_depth": 4
+    },
+    "python": {
+      "measures": ["scripts/**/*.py", "tools/parity-oracle/**/*.py", "agent/**/*.py"],
+      "configures": ["scripts/check.sh", "tools/coverage/**"],
+      "sf_bases": ["."],
+      "group_depth": 2
+    }
+  },
+  "exclusions": [
+    {
+      "glob": "crates/bot/**",
+      "lane": "rust",
+      "kind": "deprecated",
+      "reason": "The deprecated Telegram bot crate, left out of the instrumented build until its removal.",
+      "cite": "ADR-589",
+      "package": "deck-streak-bot"
+    },
+    {
+      "glob": "crates/identity/src/init_data.rs",
+      "lane": "rust",
+      "kind": "deprecated",
+      "reason": "The Mini App sign-in data check, deprecated with the Mini App.",
+      "cite": "ADR-589"
+    },
+    {
+      "glob": "web/app/src/lib/telegram.svelte.ts",
+      "lane": "web",
+      "kind": "deprecated",
+      "reason": "The Mini App bridge of the web app, deprecated with the Mini App.",
+      "cite": "ADR-589"
+    },
+    {
+      "glob": "web/app/src/lib/telegram-launch.ts",
+      "lane": "web",
+      "kind": "deprecated",
+      "reason": "The Mini App launch reader of the web app, deprecated with the Mini App.",
+      "cite": "ADR-589"
+    },
+    {
+      "glob": "crates/ingest/tests/engine_budget.rs",
+      "lane": "rust",
+      "kind": "timing",
+      "reason": "The engine wall-clock budget, which an instrumented build distorts; the gate runs it apart.",
+      "cite": "SPEC-022",
+      "binary": "deck-streak-ingest::engine_budget"
+    },
+    {
+      "glob": "crates/*/tests/**",
+      "lane": "rust",
+      "kind": "test",
+      "reason": "Test code, which the report does not measure."
+    },
+    {
+      "glob": "web/app/src/**/*.{test,spec}.{js,ts}",
+      "lane": "web",
+      "kind": "test",
+      "reason": "Test code, which the report does not measure."
+    },
+    {
+      "glob": "crates/*/benches/**",
+      "lane": "rust",
+      "kind": "bench",
+      "reason": "Benchmark code, which CodSpeed measures and the report does not.",
+      "cite": "SPEC-618"
+    },
+    {
+      "glob": "web/app/bench/**",
+      "lane": "web",
+      "kind": "bench",
+      "reason": "Benchmark code, which CodSpeed measures and the report does not.",
+      "cite": "SPEC-618"
+    },
+    {
+      "glob": "web/app/src/**/*.d.ts",
+      "lane": "web",
+      "kind": "declaration",
+      "reason": "Type declarations, which hold no executable line."
+    },
+    {
+      "glob": "web/app/src/lib/paraglide/**",
+      "lane": "web",
+      "kind": "generated",
+      "reason": "The message functions the message compile generates, untracked.",
+      "generated_by": "the paraglide-js compile of the web/app check script"
+    },
+    {
+      "glob": "scripts/tests/**",
+      "lane": "python",
+      "kind": "test",
+      "reason": "Test code, which the report does not measure."
+    },
+    {
+      "glob": "tools/parity-oracle/test_*.py",
+      "lane": "python",
+      "kind": "test",
+      "reason": "Test code, which the report does not measure."
+    },
+    {
+      "glob": "agent/tests/**",
+      "lane": "python",
+      "kind": "test",
+      "reason": "Test code, which the report does not measure."
+    }
+  ]
+}

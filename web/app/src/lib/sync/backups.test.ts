@@ -4,10 +4,10 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { BackupsClient } from '$lib/engine/backups';
-import type { BackupsListed } from '$lib/engine/protocol';
-import { m } from '$lib/paraglide/messages.js';
-import { getLocale } from '$lib/paraglide/runtime.js';
+import type { BackupsClient } from '#lib/engine/backups.js';
+import type { BackupsListed } from '#lib/engine/protocol.js';
+import { m } from '#lib/paraglide/messages.js';
+import { getLocale } from '#lib/paraglide/runtime.js';
 import BackupList from './BackupList.svelte';
 import { snapshotAge } from './status';
 

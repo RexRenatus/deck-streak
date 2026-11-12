@@ -1,0 +1,9 @@
+{"schema":"phx.formal.vectors.v1","entry":"ReleaseCarry","covers":"scripts/mutation_carry.py","anchor":"union_rule","digest":"sha256:2347dc5048bffb5776d6681ed521d2476ed92c58181f41f2b0155e5cec36b8c9","vectors":8}
+{"listed":[],"rerun":[],"carried":[],"accepts":true}
+{"listed":["a"],"rerun":["a"],"carried":[],"accepts":true}
+{"listed":["a"],"rerun":[],"carried":["a"],"accepts":true}
+{"listed":["a","a"],"rerun":["a"],"carried":["a"],"accepts":false}
+{"listed":["a","b"],"rerun":["a"],"carried":["b"],"accepts":true}
+{"listed":["a"],"rerun":["b"],"carried":[],"accepts":false}
+{"listed":["a","b"],"rerun":["a","b"],"carried":[],"accepts":true}
+{"listed":["a"],"rerun":[],"carried":[],"accepts":false}

@@ -1,0 +1,20 @@
+{
+  "total_count": 3,
+  "artifacts": [
+    {
+      "id": 1,
+      "name": "mutation-plan",
+      "expired": false
+    },
+    {
+      "id": 2,
+      "name": "mutation-python-shard-0",
+      "expired": false
+    },
+    {
+      "id": 3,
+      "name": "mutation-outcomes",
+      "expired": false
+    }
+  ]
+}

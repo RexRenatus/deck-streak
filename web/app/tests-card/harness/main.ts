@@ -13,7 +13,7 @@ import CardFrame from '../../src/lib/card/CardFrame.svelte';
 import { frameDocument } from '../../src/lib/card/frame-document';
 import { frameHost } from '../../src/lib/card/frame-host';
 import { FRAME_POLICY, FRAME_SANDBOX } from '../../src/lib/card/policy.js';
-import { PLANTED, RENDER, type Listener } from '../planted';
+import { CARRIAGE, PLANTED, RENDER, type Listener } from '../planted';
 
 const counts = { call: 0, message: 0, broadcast: 0, storage: 0, port: 0, origins: [] as string[], fromFrame: [] as boolean[] };
 const host = document.getElementById('card') as HTMLElement;
@@ -50,9 +50,11 @@ const planted = PLANTED.find((card) => card.id === id);
 const card =
   id === 'render' && RENDER !== null
     ? RENDER
-    : planted === undefined
-      ? { html: '', css: '' }
-      : { html: planted.html(listener), css: planted.css(listener) };
+    : id === 'carriage-return'
+      ? CARRIAGE
+      : planted === undefined
+        ? { html: '', css: '' }
+        : { html: planted.html(listener), css: planted.css(listener) };
 const page = location.pathname.split('/').pop();
 const off = page === 'variant.html' ? params.get('off') : null;
 

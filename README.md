@@ -1,10 +1,13 @@
 # DeckStreak
 
-DeckStreak turns your Anki reviews into XP, levels, streaks, quests and badges in a Telegram Mini
-App, with daily pre-study readings written by a mentor for each subject you study. It reads the
-reviews you already do in Anki, through your own Anki sync server, and scores every study day.
-The bot sends a daily digest and celebrates what you earned, under one policy that knows when to
-stay quiet.
+<a href="docs/assets/deckstreak-hero-tide-light.gif"><img src="docs/assets/deckstreak-hero-poster-tide-light.png" width="960" height="360" alt="DeckStreak"></a>
+
+A spaced-repetition study game for the web, iPhone and iPad: XP, streaks, quests and a morning
+reading from a mentor per subject that primes the day's new cards. Rex, DeckStreak's own memory
+model, becomes its only scheduler before 1.0.
+
+Until then, the stock scheduler of the engine DeckStreak is built on schedules every review, and
+it is the yardstick Rex is measured against ([CHARTER.md](CHARTER.md), item 22).
 
 > Status: early development. The repository holds the architecture, the plan and the skeleton;
 > features land wave by wave (see [the plan](docs/specs/SPEC-001-campaign-prd-parity-and-waves.md)).
@@ -18,12 +21,13 @@ stay quiet.
 - [Support](#support)
 - [Contributing](#contributing)
 - [Source code](#source-code)
+- [Built on](#built-on)
 - [License](#license)
 
 ## Install
 
 DeckStreak is a Rust workspace (the backend) and a SvelteKit Mini App (the front end). You need the
-Rust toolchain pinned in `rust-toolchain.toml`, Node 24 (`.nvmrc`), pnpm 11 (pinned by
+Rust toolchain pinned in `rust-toolchain.toml`, Node 24 (`.nvmrc`), pnpm 12 (pinned by
 `packageManager` in `package.json`), Python 3.11 or later for the gate's probes, and
 `cargo-nextest`.
 
@@ -93,12 +97,26 @@ DeckStreak is free software under the GNU Affero General Public License. If you 
 network, you are offered its complete source code at
 <https://github.com/RexRenatus/deck-streak>.
 
+## Built on
+
+DeckStreak is built on Anki, the open-source spaced-repetition program. These parts of it are
+still Anki's:
+
+- **The engine.** DeckStreak's study engine is Anki's own Rust engine, pinned in `Cargo.toml` to an
+  upstream release and patched to a commit of the maintainer's fork. It is free software under the
+  GNU Affero General Public License, version 3 or later, as DeckStreak is, and its copyright
+  notices are its own, kept with its source.
+- **The collection format and the sync protocol.** DeckStreak studies an Anki collection and syncs
+  it over Anki's own sync protocol, so the same cards and the same review history reach every
+  client.
+- **DeckStreak's own sync server.** The sync server a deployment runs is the engine's own server,
+  built from the engine's pin and shipped in each release.
+- **AnkiMobile, until the switch.** Until Rex is DeckStreak's only scheduler, AnkiMobile, Anki's
+  iPhone and iPad app, can study the same collection through the same sync server.
+- **The name.** Anki® is a registered trademark, and DeckStreak is not affiliated with or endorsed
+  by its holder.
+
 ## License
 
 Licensed under the GNU Affero General Public License, version 3 or (at your option) any later
 version (`AGPL-3.0-or-later`). See [LICENSE](LICENSE).
-
----
-
-Anki® is a registered trademark of Ankitects Pty Ltd. DeckStreak is not affiliated with or
-endorsed by Anki.

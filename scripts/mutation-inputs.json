@@ -1,0 +1,38 @@
+{
+  "schema": "deckstreak.mutation-inputs.v1",
+  "about": "SPEC-493: each Python class's read-set rule, the leg jobs of its key and its runner files; a closure read set is computed at the head by scripts/mutation_carry.py read_set",
+  "classes": {
+    "scripts": {
+      "rule": "closure",
+      "workflow": ".github/workflows/ci.yml",
+      "leg_jobs": [
+        "mutation-python",
+        "mutation-python-release"
+      ],
+      "runner": [
+        "scripts/mutation_python.py"
+      ],
+      "runner_digest": {
+        "file": "scripts/mutation_rows.py",
+        "module": "mutation_rows",
+        "named_by": "scripts/mutation_python.py"
+      }
+    },
+    "oracle": {
+      "rule": "closure",
+      "workflow": ".github/workflows/ci.yml",
+      "leg_jobs": [
+        "mutation-python",
+        "mutation-python-release"
+      ],
+      "runner": [
+        "scripts/mutation_python.py"
+      ],
+      "runner_digest": {
+        "file": "scripts/mutation_rows.py",
+        "module": "mutation_rows",
+        "named_by": "scripts/mutation_python.py"
+      }
+    }
+  }
+}

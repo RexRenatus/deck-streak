@@ -108,6 +108,7 @@ from dataclasses import dataclass, field
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
+import mutation_carry  # noqa: E402
 import mutation_python  # noqa: E402
 import mutation_rows  # noqa: E402
 
@@ -115,6 +116,8 @@ EXIT_OK, EXIT_FAIL, EXIT_USAGE, EXIT_VOID = 0, 1, 2, 3
 RUST = re.compile(r"crates/[^/]+/src/.+\.rs")
 WEB = re.compile(r"web/app/src/.+\.(?:ts|js|svelte)")
 WEB_NOT_PRODUCTION = re.compile(r"\.(?:test|spec)\.[^/]+$|\.d\.ts$|^web/app/src/lib/paraglide/")
+#: The token compiler every web build runs, web production code by its exact path (SPEC-636 R1).
+WEB_SCRIPTS = ("web/app/scripts/build-tokens.ts",)
 ORACLE = frozenset({"tools/parity-oracle/generate.py"})
 #: A guard script: one path segment under `scripts/`, so nothing under `scripts/tests/` (SPEC-087 R1).
 SCRIPTS = re.compile(r"scripts/[^/]+\.py")
@@ -127,8 +130,8 @@ PYTHON_SHARD_MUTANTS = 20
 PYTHON_MAX_SHARDS = 32
 #: The ceiling no signed share may pass: a share outside 1 to it is refused before any deal.
 PYTHON_SHARE_CAP = 128
-#: Signed in docs/rulings/OWNER-RULING-2026-10-16-release-legs-python-305-rust-192.md (SPEC-422 R4).
-PYTHON_RELEASE_CEILING = 305
+#: Signed in docs/rulings/OWNER-RULING-2026-10-21-release-legs-python-489.md (SPEC-422 R4).
+PYTHON_RELEASE_CEILING = 489
 #: A Python leg's projected time may reach half its job's `timeout-minutes` of 60, the margin the
 #: Rust legs keep under theirs, since a projection is a price and not a measurement (SPEC-418 R1).
 PYTHON_LEG_BOUND_SECONDS = 1800
@@ -155,22 +158,27 @@ PYTHON_CONTROL_SECONDS: dict[str, int] = {
 #: under `scripts/tests/fixtures/`, and names the run, attempt and job its figures came from.
 # fmt: off
 PYTHON_SCOPED_SECONDS: dict[str, tuple[int, int, int]] = {
-    "scripts/audit-web-verdict.py": (3, 3, 1),  # run 38432909235 attempt 1 job 115419489219: 19 scoped mutant record(s)
-    "scripts/create-issues.py": (1, 1, 1),  # run 38432909235 attempt 1 job 115419489210: 0 scoped mutant record(s)
-    "scripts/dynamic-imports-check.py": (2, 2, 1),  # run 38432909235 attempt 1 job 115419489573: 18 scoped mutant record(s)
-    "scripts/ios_icon.py": (1, 2, 1),  # run 38432909235 attempt 1 job 115419489248: 14 scoped mutant record(s)
-    "scripts/ios_lane.py": (10, 11, 4),  # run 38432909235 attempt 1 job 115419489348: 20 scoped mutant record(s)
-    "scripts/memory_scope.py": (36, 52, 13),  # run 38432909235 attempt 1 job 115419489225: 20 scoped mutant record(s)
-    "scripts/mutation-verdict.py": (152, 158, 107),  # run 38432909235 attempt 1 job 115419489314: 20 scoped mutant record(s)
-    "scripts/mutation_python.py": (184, 204, 53),  # run 38432909235 attempt 1 job 115419489320: 20 scoped mutant record(s)
-    "scripts/mutation_rows.py": (172, 171, 58),  # run 38432909235 attempt 1 job 115419489293: 20 scoped mutant record(s)
-    "scripts/public-scrub.py": (53, 60, 17),  # run 38432909235 attempt 1 job 115419489252: 20 scoped mutant record(s)
-    "scripts/testflight_age.py": (6, 5, 2),  # run 38432909235 attempt 1 job 115419489382: 20 scoped mutant record(s)
-    "scripts/threat_model.py": (1, 1, 1),  # run 38432909235 attempt 1 job 115419489378: 20 scoped mutant record(s)
-    "scripts/web-engine-size.py": (13, 13, 5),  # run 38432909235 attempt 1 job 115419489199: 18 scoped mutant record(s)
-    "scripts/web_mutation_shards.py": (12, 14, 2),  # run 38432909235 attempt 1 job 115419489341: 20 scoped mutant record(s)
-    "scripts/write-back-issues.py": (1, 1, 1),  # run 38432909235 attempt 1 job 115419489261: 0 scoped mutant record(s)
-    "tools/parity-oracle/generate.py": (2, 2, 1),  # run 38432909235 attempt 1 job 115419489457: 19 scoped mutant record(s)
+    "scripts/audit-web-verdict.py": (3, 3, 1),  # run 41760230352 attempt 1 job 126345980277: 19 scoped mutant record(s)
+    "scripts/companion-site-census.py": (3, 4, 2),  # run 41760230352 attempt 1 job 126345980242: 16 scoped mutant record(s)
+    "scripts/coverage-report.py": (5, 6, 5),  # run 41760230352 attempt 1 job 126345980396: 20 scoped mutant record(s)
+    "scripts/create-issues.py": (1, 1, 1),  # run 41760230352 attempt 1 job 126345980335: 0 scoped mutant record(s)
+    "scripts/dynamic-imports-check.py": (2, 2, 1),  # run 41760230352 attempt 1 job 126345980228: 18 scoped mutant record(s)
+    "scripts/ios_icon.py": (1, 2, 1),  # run 41760230352 attempt 1 job 126345980295: 14 scoped mutant record(s)
+    "scripts/ios_lane.py": (11, 11, 4),  # run 41760230352 attempt 1 job 126345980316: 20 scoped mutant record(s)
+    "scripts/lock-digest-line.py": (4, 4, 1),  # run 41760230352 attempt 1 job 126345980331: 19 scoped mutant record(s)
+    "scripts/memory_scope.py": (25, 39, 11),  # run 41760230352 attempt 1 job 126345980233: 20 scoped mutant record(s)
+    "scripts/mutation-verdict.py": (247, 270, 81),  # run 41760230352 attempt 1 job 126345980515: 20 scoped mutant record(s)
+    "scripts/mutation_carry.py": (51, 55, 1),  # run 41760230352 attempt 1 job 126345980414: 20 scoped mutant record(s)
+    "scripts/mutation_python.py": (259, 280, 81),  # run 41760230352 attempt 1 job 126345980274: 20 scoped mutant record(s)
+    "scripts/mutation_rows.py": (195, 200, 68),  # run 41760230352 attempt 1 job 126345980602: 20 scoped mutant record(s)
+    "scripts/public-scrub.py": (70, 79, 7),  # run 41760230352 attempt 1 job 126345980482: 19 scoped mutant record(s)
+    "scripts/release_gates.py": (8, 9, 2),  # run 41760230352 attempt 1 job 126345980436: 19 scoped mutant record(s)
+    "scripts/testflight_age.py": (6, 6, 2),  # run 41760230352 attempt 1 job 126345980545: 20 scoped mutant record(s)
+    "scripts/threat_model.py": (1, 1, 1),  # run 41760230352 attempt 1 job 126345980556: 20 scoped mutant record(s)
+    "scripts/web-engine-size.py": (20, 20, 6),  # run 41760230352 attempt 1 job 126345980592: 19 scoped mutant record(s)
+    "scripts/web_mutation_shards.py": (9, 10, 2),  # run 41760230352 attempt 1 job 126345980539: 20 scoped mutant record(s)
+    "scripts/write-back-issues.py": (1, 1, 1),  # run 41760230352 attempt 1 job 126345980554: 18 scoped mutant record(s)
+    "tools/parity-oracle/generate.py": (8, 8, 1),  # run 41760230352 attempt 1 job 126345980431: 19 scoped mutant record(s)
 }
 # fmt: on
 #: The weekly battery's Python shards, each `run --all --shard k/16` (R14).
@@ -214,7 +222,7 @@ def scope_of(event: str, base_ref: str, subject: str) -> tuple[str, str]:
         return "diff", f"the pull request into {base_ref or 'its base'} is judged on its diff"
     if event == "push":
         merged = MERGE_SUBJECT.match(subject)
-        squashed = SQUASH_SUBJECT.search(subject.splitlines()[0].rstrip() if subject else "")
+        squashed = SQUASH_SUBJECT.search(subject.splitlines()[0].rstrip()) if subject else None
         if merged or squashed:
             number, how = (merged.group(1), "") if merged else (squashed.group(1), " by squash")
             return (
@@ -261,6 +269,9 @@ def classify(path: str) -> str:
     if RUST.fullmatch(path):
         return "rust"
     if WEB.fullmatch(path) and not WEB_NOT_PRODUCTION.search(path):
+        return "web"
+    # SPEC-636 R1: the token compiler joins the web class by its exact path, never by a glob.
+    if path in WEB_SCRIPTS:
         return "web"
     if path in ORACLE:
         return "oracle"
@@ -379,13 +390,13 @@ def rust_literal(text: str, start: int) -> int | None:
             return None
         closing = '"' + "#" * (hashes - at - 1)
         end = text.find(closing, hashes + 1)
-        return len(text) if end < 0 else end + len(closing)
+        return len(text) if end == -1 else end + len(closing)
     if text[at] == '"':
         return quoted_end(text, at, '"', multiline=True)
     if text[at] == "'":
         if text[at + 1 : at + 2] == "\\":
             end = text.find("'", at + 3)
-            return len(text) if end < 0 else end + 1
+            return len(text) if end == -1 else end + 1
         if text[at + 2 : at + 3] == "'" and text[at + 1 : at + 2] not in ("", "\n"):
             return at + 3
     return None
@@ -451,12 +462,12 @@ def c_code_lines(text: str, language: str) -> set[int]:
             at += 1
         elif text.startswith("//", at):
             end = text.find("\n", at)
-            at = len(text) if end < 0 else end
+            at = len(text) if end == -1 else end
         elif text.startswith("/*", at):
             at = block_end(text, at, nested=rust)
         elif language == "svelte" and text.startswith("<!--", at):
             end = text.find("-->", at + 4)
-            at = len(text) if end < 0 else end + 3
+            at = len(text) if end == -1 else end + 3
         elif not rust and (char == "`" or (char == "}" and templates and depth == templates[-1])):
             if char == "}":
                 templates.pop()
@@ -523,7 +534,7 @@ def rust_tokens(text: str) -> list[tuple[int, int]]:
             continue
         if text.startswith("//", at):
             stop = text.find("\n", at)
-            at = len(text) if stop < 0 else stop
+            at = len(text) if stop == -1 else stop
             continue
         if text.startswith("/*", at):
             at = block_end(text, at, nested=True)
@@ -959,8 +970,10 @@ CENSUS_SECONDS = {"deck-streak-progression": 1521}
 #: projection (SPEC-039 R18, SPEC-362 R2).
 SHARD_BOUND_SECONDS = 10800
 #: The most legs each workflow's run holds: the 256 jobs of one run, less the most every other job
-#: of that workflow can generate, 67 in `ci.yml` and 22 in `mutation-weekly.yml` (SPEC-362 R3).
-LEG_CEILING = {"ci": 189, "battery": 234}
+#: of that workflow can generate, 71 in `ci.yml` (67 and the four bench jobs) and 22 in
+#: `mutation-weekly.yml` (SPEC-362 R3). The `ci` figure is signed in
+#: docs/rulings/OWNER-RULING-2026-11-05-rust-ceiling-185.md (SPEC-618).
+LEG_CEILING = {"ci": 185, "battery": 234}
 #: Signed in docs/rulings/OWNER-RULING-2026-10-16-release-legs-python-305-rust-192.md (SPEC-423 R9).
 RUST_RELEASE_CEILING = 192
 #: The legs one matrix generates, the most a release Rust ceiling may reach (SPEC-423 R7).
@@ -1567,7 +1580,36 @@ def judge_rows(verdict: Verdict, plan: dict, rows: object, klass: str) -> int:
             path = plan["row_overlaps"].get(identifier)
             if path is not None and classify(path) == klass:
                 carried += 1
+    leave_rows_to_the_leg_report(verdict, plan, proved, klass)
     return carried
+
+
+#: The classes whose verdict credits a KILLED row to its examined count (`klass_rows`): a row of any
+#: other path, or of no changed line, is counted by none of them (SPEC-625 R1).
+ROW_CREDITING = frozenset({"rust", "oracle", "scripts"})
+
+
+def leave_rows_to_the_leg_report(verdict: Verdict, plan: dict, proved: dict, klass: str) -> None:
+    """SPEC-625 R1, R2: the scripts class names, in plan order, each selected row the leg killed
+    that no class credits, with the path of its changed line or the words that it covers none. It
+    returns nothing, so no row it names reaches a count (R3)."""
+    if klass != "scripts":
+        return
+    uncredited = []
+    for ident in plan["rows"]:
+        overlap = plan["row_overlaps"].get(ident)
+        killed = proved.get(ident, {}).get("verdict") == "KILLED"
+        if killed and (overlap is None or classify(overlap) not in ROW_CREDITING):
+            uncredited.append((ident, overlap))
+    if uncredited:
+        verdict.say(
+            f"rows left to the leg report: {len(uncredited)} of {len(plan['rows'])} selected"
+        )
+    for ident, overlap in uncredited:
+        reason = (
+            "it covers no changed line" if overlap is None else f"its changed line is in {overlap}"
+        )
+        verdict.say(f"row left to the leg report: {ident}: {reason}")
 
 
 def partial_reason(report: object, code: int | None, source: str) -> str | None:
@@ -1597,15 +1639,14 @@ def whole_reports(verdict: Verdict, plan: dict, args: argparse.Namespace) -> lis
     is not started when no shard has one (SPEC-290 R4); else the one --outcomes names."""
     if not args.shard_reports:
         promised = [
-            ("", read_json(args.outcomes), args.tool_exit, args.outcomes or "no --outcomes")
+            ("", read_json(args.outcomes), args.tool_exit, args.outcomes or "no --outcomes", None)
         ]
-        listed = [None]
     else:
         planned = (plan.get("shards") or {}).get("shards") or []
         if not planned:
             verdict.void("the plan names no shards, so no shard's report was promised")
         root = pathlib.Path(args.shard_reports)
-        promised, listed = [], []
+        promised = []
         for shard in range(len(planned)):
             name = root / f"mutation-rust-shard-{shard}"
             promised.append(
@@ -1614,11 +1655,11 @@ def whole_reports(verdict: Verdict, plan: dict, args: argparse.Namespace) -> lis
                     read_json(str(name / "mutants.out" / "outcomes.json")),
                     read_exit(name / "cargo-mutants.exit"),
                     "its outcomes.json",
+                    len(planned[shard]["mutants"]),
                 )
             )
-            listed.append(len(planned[shard]["mutants"]))
     whole = []
-    for (where, report, code, source), mutants in zip(promised, listed, strict=True):
+    for where, report, code, source, mutants in promised:
         if report is None and code is None and mutants == 0:
             # A leg the listing gave nothing is not started, so it leaves no artifact; a shard
             # that lists a mutant and left nothing is still VOID below (SPEC-290 R4).
@@ -1971,7 +2012,8 @@ def python_reports(verdict: Verdict, plan: dict, directory: str | None) -> list[
     """(where, report) for each Python shard report the plan promised, from 0 to n-1: one missing,
     unreadable, not of the runner's schema, that records a failed restore, whose shard field is not
     its slot's, that `read_python_shard` refuses, or that examined other mutants than the plan
-    lists for that shard is VOID by name (SPEC-087 R11; SPEC-126 A8 and A9)."""
+    lists for that shard is VOID by name (SPEC-087 R11; SPEC-126 A8 and A9). The whole legs are
+    then held to the plan's listing with the carried outcomes beside them (SPEC-493 R10)."""
     planned = (plan.get("python") or {}).get("count") or 0
     if not planned:
         verdict.void("the plan names no python shards, so no shard's report was promised")
@@ -2006,7 +2048,7 @@ def python_reports(verdict: Verdict, plan: dict, directory: str | None) -> list[
             verdict.void(f"{where}: {drift}")
         else:
             whole.append((where, report))
-    return whole
+    return mutation_carry.held_to_listing(verdict, plan, directory, whole, classify)
 
 
 def read_python_shard(plan: dict, report: dict) -> tuple[list[dict], str | None]:
@@ -2396,9 +2438,9 @@ def survivors_in(reports: pathlib.Path, root: pathlib.Path) -> tuple[dict[str, l
         if isinstance(document, dict)
         for outcome in document.get("outcomes", [])
     ]
-    tested = [cargo_mutant(outcome_mutant(outcome)) for outcome in outcomes]
-    rust.bind([mutant for mutant in tested if mutant], lambda _: None)
-    for outcome, mutant in zip(outcomes, tested, strict=True):
+    tested = [(outcome, cargo_mutant(outcome_mutant(outcome))) for outcome in outcomes]
+    rust.bind([mutant for _, mutant in tested if mutant], lambda _: None)
+    for outcome, mutant in tested:
         if outcome.get("summary") == "MissedMutant" and mutated_file(outcome):
             if len(rust.of(mutant)) == 1:
                 excused += 1
@@ -2680,6 +2722,8 @@ STRYKER_MUTATE = (
     "!src/**/*.spec.*",
     "!src/**/*.d.ts",
     "!src/lib/paraglide/**",
+    # SPEC-636 R1: the token compiler, by its exact path.
+    "scripts/build-tokens.ts",
 )
 
 
@@ -2835,7 +2879,9 @@ def exclusions(root: pathlib.Path) -> int:
                     "from cargo-mutants' listing (SPEC-057 R11)"
                 )
     web = root / "web" / "app" / "src"
-    for path in sorted(web.rglob("*")) if web.is_dir() else []:
+    # SPEC-636 R1: the walk reads the token compiler beside `web/app/src`, by its exact path.
+    web_scripts = [root / path for path in WEB_SCRIPTS]
+    for path in [*(sorted(web.rglob("*")) if web.is_dir() else []), *web_scripts]:
         if path.suffix not in WEB_SOURCES or not path.is_file():
             continue
         examined += 1
@@ -3192,18 +3238,8 @@ def record_problems(
             )
     reached = record.get("reached_by")
     if record.klass == "rust" and reached:
-        row = mutation_rows.Row(
-            id=f"{record.fragment}:{record.index}",
-            table="MUTATIONS",
-            target=file or "",
-            find="",
-            replace="",
-            killer=reached,
-            crate=crate,
-            description="",
-        )
         try:
-            mutation_rows.resolve_killer(root, row)
+            mutation_rows.resolve_test(root, crate, reached)
         except mutation_rows.KillerUnresolved as refusal:
             problems.append(f"reached_by: {refusal}")
     if record.klass == "python" and reached:
@@ -3692,6 +3728,7 @@ def prices(directory: str) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    mutation_carry.verbs(argv, python_reports, classify, mutation_python.census_problems)
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument(
         "verb",

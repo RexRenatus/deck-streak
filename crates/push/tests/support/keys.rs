@@ -2,9 +2,9 @@
 //! R10). Nothing here is real or copied from any vendor's documentation, and nothing is written to
 //! disk: a key's PEM text lives in a `String` for the life of the test.
 
+use aes_gcm::aead::Generate;
 use base64ct::{Base64UrlUnpadded, Encoding};
 use p256::ecdsa::{SigningKey, VerifyingKey};
-use p256::elliptic_curve::rand_core::{OsRng, RngCore};
 use p256::pkcs8::{EncodePrivateKey, LineEnding};
 use p256::{PublicKey, SecretKey};
 
@@ -35,7 +35,7 @@ pub struct TestKey {
 impl TestKey {
     /// A new P-256 key.
     pub fn generate() -> Self {
-        let secret = SecretKey::random(&mut OsRng);
+        let secret = SecretKey::generate();
         let pem = secret
             .to_pkcs8_pem(LineEnding::LF)
             .expect("the key encodes")
@@ -78,10 +78,9 @@ pub struct TestSubscriber {
 impl TestSubscriber {
     /// A new key pair and secret.
     pub fn generate() -> Self {
-        let mut auth = [0u8; 16];
-        OsRng.fill_bytes(&mut auth);
+        let auth = <[u8; 16]>::generate();
         Self {
-            secret: SecretKey::random(&mut OsRng),
+            secret: SecretKey::generate(),
             auth,
         }
     }

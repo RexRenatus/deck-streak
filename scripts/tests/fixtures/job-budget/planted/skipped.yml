@@ -1,0 +1,17 @@
+name: skipped
+on:
+  push:
+    branches: [dev]
+jobs:
+  always:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo always
+  never:
+    if: ${{ false }}
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        n: [1, 2, 3]
+    steps:
+      - run: echo never

@@ -2,7 +2,9 @@
 // sound it cannot play (section 10), and the end of a sound the player already replaced, which
 // leaves the new list where it is. Each model opens its own fresh copy of the fixture, whose deck
 // `Review` holds a text card, an image card, a sound card and a speech card, in that order. The
-// model's VoiceOver reading and installed voices are handed in, so a test decides both.
+// model's VoiceOver reading and installed voices are handed in, so a test decides both. The
+// fixture's second collection holds one image occlusion card, which the model withholds: no
+// reveal and no rating, only a flag and a bury (SPEC-380 A14).
 import AVFoundation
 import Foundation
 import XCTest
@@ -101,6 +103,96 @@ final class ReviewModelTests: XCTestCase {
             player.queue, [.sound(name: "d.wav", bytes: quiet)],
             "the replaced sound's end leaves the second list's queue where it was")
         XCTAssertTrue(player.sound === current, "the second list's first sound still plays")
+    }
+
+    @MainActor
+    func test_an_undo_asks_first_keep_writes_nothing_and_the_confirmation_returns_the_card()
+        async throws
+    {
+        // SPEC-515 A5: the review's undo of its own last answer, from the model's one entry.
+        let (model, _) = try await started(voiceOver: true, installed: [])
+        let opened = model.undo.label
+        await answeredGood(model, cards: 1)
+        let answered = model.undo.label
+        let next = model.face.document
+        await model.perform(.undo)
+        let offered = model.undo.offer
+        await model.perform(.keep)
+        let kept = [model.undo.offer == nil, model.face.document == next]
+        await model.perform(.undo)
+        await model.perform(.confirmUndo)
+
+        XCTAssertEqual(opened, "", "when the review opens, it has nothing of its own to undo")
+        XCTAssertEqual(answered, "Undo answer", "after the answer, the control names its undo")
+        XCTAssertEqual(offered?.title, "Undo this answer?", "the press asks first")
+        XCTAssertEqual(
+            offered?.lines,
+            [
+                "Card: a text card", "Your answer: Good", "Goes back to: New, in today's queue",
+                "This answer has not synced yet. Undoing it removes it from your review history; "
+                    + "nothing else changes.",
+            ],
+            "the dialog names the card as text, the answer and the state it goes back to")
+        XCTAssertEqual(kept, [true, true], "Keep drops the offer and writes nothing")
+        XCTAssertEqual(model.phase, .question, "the confirmation shows the next queued card")
+        XCTAssertTrue(
+            model.face.document.contains("a text card"), "the undone card is queued first again")
+        XCTAssertEqual(model.undo.label, "", "the undo emptied the review's slot")
+    }
+
+    @MainActor
+    func test_a_refused_undo_says_why() async throws {
+        // SPEC-515 A5: a confirmation after a later change is refused, and the review says why.
+        let (model, _) = try await started(voiceOver: true, installed: [])
+        await answeredGood(model, cards: 1)
+        await model.perform(.undo)
+        // A later change before the confirmation: the image card, shown now, is flagged red.
+        await model.perform(.flag)
+        await model.perform(.confirmUndo)
+
+        XCTAssertEqual(
+            model.undo.said,
+            ["This answer can no longer be undone: something changed after it."],
+            "the refused confirmation says why")
+        XCTAssertEqual(model.undo.label, "Undo flag", "the flag is what the review offers now")
+        XCTAssertTrue(model.flagged, "the later flag stands")
+    }
+
+    @MainActor
+    func test_a_withheld_card_reveals_nothing_and_takes_no_rating() async throws {
+        let (engine, occlusion) = try await openedOcclusion()
+        let session = ReviewSession(engine: engine)
+        let model = ReviewModel(
+            deck: occlusion, session: session, voiceOverRunning: { true }, installed: { [] })
+        await model.start()
+        let shown = model.face
+
+        // Show Answer on the withheld card: no answer face, and no reveal.
+        await model.perform(.showAnswer)
+        XCTAssertEqual(
+            "\(model.phase) revealed \(model.revealed) face kept \(model.face == shown)",
+            "withheld revealed false face kept true",
+            "A14: Show Answer on a withheld card reveals nothing")
+
+        // Every rating: nothing sent, and the engine still holds the card new.
+        for rating in Rating.allCases {
+            await model.perform(.rate(rating))
+        }
+        let sent = await session.sentAnswers
+        let after = try await ReviewSession(engine: engine).next(autoplay: false, installed: [])
+        XCTAssertEqual(
+            "\(model.phase) answered \(model.answered) sent \(sent) "
+                + "new \(after.counts.new) learning \(after.counts.learning)",
+            "withheld answered 0 sent 0 new 1 learning 0",
+            "A14: no rating is taken on a withheld card, and it stays due")
+
+        // A flag marks the card and returns to it; a bury moves on, here to the designed end.
+        await model.perform(.flag)
+        let flag = "\(model.phase) \(model.flagged)"
+        await model.perform(.bury)
+        XCTAssertEqual(
+            "flag \(flag) bury \(model.phase)", "flag withheld true bury finished",
+            "A14: a flag keeps the withheld card, and a bury moves on to the designed end")
     }
 
     // MARK: - Steps

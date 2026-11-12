@@ -1,0 +1,342 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S61800-CI-NEEDS-BENCH-RUST-BUILD",
+        ".github/workflows/ci.yml",
+        "web-engine, bench-rust-build, bench-rust, ",
+        "web-engine, bench-rust, ",
+        "the aggregate ci job needs bench-rust-build; dropped from its needs, a red Rust bench build no longer reds ci (SPEC-618 R1)",
+        "test_ci_workflows.TheBenchLanes.test_the_four_bench_jobs_are_needs_of_ci"
+      ],
+      [
+        "S61801-CI-NEEDS-BENCH-RUST",
+        ".github/workflows/ci.yml",
+        "bench-rust-build, bench-rust, bench-web-build",
+        "bench-rust-build, bench-web-build",
+        "the aggregate ci job needs bench-rust; dropped from its needs, a failed Rust upload no longer reds ci (SPEC-618 R1)",
+        "test_ci_workflows.TheBenchLanes.test_the_four_bench_jobs_are_needs_of_ci"
+      ],
+      [
+        "S61802-CI-NEEDS-BENCH-WEB-BUILD",
+        ".github/workflows/ci.yml",
+        "bench-rust, bench-web-build, bench-web, workflow-lint",
+        "bench-rust, bench-web, workflow-lint",
+        "the aggregate ci job needs bench-web-build; dropped from its needs, a red web bench build no longer reds ci (SPEC-618 R1)",
+        "test_ci_workflows.TheBenchLanes.test_the_four_bench_jobs_are_needs_of_ci"
+      ],
+      [
+        "S61803-CI-NEEDS-BENCH-WEB",
+        ".github/workflows/ci.yml",
+        "bench-web-build, bench-web, workflow-lint",
+        "bench-web-build, workflow-lint",
+        "the aggregate ci job needs bench-web; dropped from its needs, a failed web upload no longer reds ci (SPEC-618 R1)",
+        "test_ci_workflows.TheBenchLanes.test_the_four_bench_jobs_are_needs_of_ci"
+      ],
+      [
+        "S61804-THE-RUST-UPLOAD-NEEDS-ITS-BUILD",
+        ".github/workflows/ci.yml",
+        "    needs: [bench-rust-build]",
+        "    needs: [bench-web-build]",
+        "bench-rust needs bench-rust-build, whose archive and plan it reads; pointed at the web build it reads outputs it never waited for (SPEC-618 R1)",
+        "test_ci_workflows.TheBenchLanes.test_the_four_bench_jobs_are_needs_of_ci"
+      ],
+      [
+        "S61805-THE-WEB-UPLOAD-NEEDS-ITS-BUILD",
+        ".github/workflows/ci.yml",
+        "    needs: [bench-web-build]",
+        "    needs: [bench-rust-build]",
+        "bench-web needs bench-web-build, whose archive and plan it reads; pointed at the Rust build it reads outputs it never waited for (SPEC-618 R1)",
+        "test_ci_workflows.TheBenchLanes.test_the_four_bench_jobs_are_needs_of_ci"
+      ],
+      [
+        "S61806-THE-RUST-BUILD-HOLDS-NO-OIDC-GRANT",
+        ".github/workflows/ci.yml",
+        "every build script and proc macro runs here, with no OIDC grant.\n    permissions:\n      contents: read",
+        "every build script and proc macro runs here, with no OIDC grant.\n    permissions:\n      contents: read\n      id-token: write",
+        "bench-rust-build runs every build script and proc macro, so it holds contents read alone; an OIDC grant there would sit beside third-party build code (SPEC-618 R2)",
+        "test_ci_workflows.TheBenchLanes.test_only_the_two_upload_jobs_hold_an_id_token_grant"
+      ],
+      [
+        "S61807-THE-WEB-BUILD-HOLDS-NO-OIDC-GRANT",
+        ".github/workflows/ci.yml",
+        "every install script runs here, with no OIDC grant.\n    permissions:\n      contents: read",
+        "every install script runs here, with no OIDC grant.\n    permissions:\n      contents: read\n      id-token: write",
+        "bench-web-build runs every install script, so it holds contents read alone; an OIDC grant there would sit beside third-party install code (SPEC-618 R2)",
+        "test_ci_workflows.TheBenchLanes.test_only_the_two_upload_jobs_hold_an_id_token_grant"
+      ],
+      [
+        "S61808-THE-RUST-UPLOAD-HOLDS-THE-OIDC-GRANT",
+        ".github/workflows/ci.yml",
+        "    timeout-minutes: 60\n    # OIDC to CodSpeed, with no secret; this job runs no install and no build script.\n    permissions:\n      contents: read\n      id-token: write",
+        "    timeout-minutes: 60\n    # OIDC to CodSpeed, with no secret; this job runs no install and no build script.\n    permissions:\n      contents: read",
+        "bench-rust uploads to CodSpeed by OIDC with no secret; without its id-token grant the upload cannot authenticate (SPEC-618 R3)",
+        "test_ci_workflows.TheBenchLanes.test_only_the_two_upload_jobs_hold_an_id_token_grant"
+      ],
+      [
+        "S61809-THE-WEB-UPLOAD-HOLDS-THE-OIDC-GRANT",
+        ".github/workflows/ci.yml",
+        "    timeout-minutes: 30\n    # OIDC to CodSpeed, with no secret; this job runs no install and no build script.\n    permissions:\n      contents: read\n      id-token: write",
+        "    timeout-minutes: 30\n    # OIDC to CodSpeed, with no secret; this job runs no install and no build script.\n    permissions:\n      contents: read",
+        "bench-web uploads to CodSpeed by OIDC with no secret; without its id-token grant the upload cannot authenticate (SPEC-618 R3)",
+        "test_ci_workflows.TheBenchLanes.test_only_the_two_upload_jobs_hold_an_id_token_grant"
+      ],
+      [
+        "S61810-THE-HEADER-NAMES-THE-RUST-UPLOAD-JOB",
+        ".github/workflows/ci.yml",
+        "upload jobs, bench-rust and bench-web, alone",
+        "upload jobs, and bench-web, alone",
+        "the ci.yml header names bench-rust as one of the two jobs holding the OIDC grant (SPEC-618 R2)",
+        "test_ci_workflows.TheBenchLanes.test_only_the_two_upload_jobs_hold_an_id_token_grant"
+      ],
+      [
+        "S61811-THE-HEADER-NAMES-THE-WEB-UPLOAD-JOB",
+        ".github/workflows/ci.yml",
+        "bench-rust and bench-web, alone add",
+        "bench-rust, alone, add",
+        "the ci.yml header names bench-web as one of the two jobs holding the OIDC grant (SPEC-618 R2)",
+        "test_ci_workflows.TheBenchLanes.test_only_the_two_upload_jobs_hold_an_id_token_grant"
+      ],
+      [
+        "S61812-THE-HEADER-NAMES-THE-GRANT",
+        ".github/workflows/ci.yml",
+        "alone add `id-token: write`, for",
+        "alone add an extra grant, for",
+        "the ci.yml header names the one grant the two upload jobs add, id-token write (SPEC-618 R2)",
+        "test_ci_workflows.TheBenchLanes.test_only_the_two_upload_jobs_hold_an_id_token_grant"
+      ],
+      [
+        "S61813-THE-HEADER-CITES-SPEC-618",
+        ".github/workflows/ci.yml",
+        "no install and no build script (SPEC-618).",
+        "no install and no build script.",
+        "the ci.yml header sentence on the upload grant cites SPEC-618, the requirement it states (SPEC-618 R2)",
+        "test_ci_workflows.TheBenchLanes.test_only_the_two_upload_jobs_hold_an_id_token_grant"
+      ],
+      [
+        "S61814-THE-TOOL-INSTALL-IS-LOCKED",
+        ".github/workflows/ci.yml",
+        "cargo install --locked cargo-codspeed",
+        "cargo install cargo-codspeed",
+        "the Rust build job installs cargo-codspeed with its own lock file; without it the tool's dependencies float (SPEC-618 R14)",
+        "test_ci_workflows.TheBenchLanes.test_an_upload_job_unpacks_and_uploads_and_builds_nothing"
+      ],
+      [
+        "S61815-THE-TOOL-INSTALL-PINS-6-0-0",
+        ".github/workflows/ci.yml",
+        "cargo-codspeed --version 6.0.0 --root",
+        "cargo-codspeed --version 6.0.1 --root",
+        "the Rust build job installs cargo-codspeed 6.0.0, the version the bench crates' compat layer matches (SPEC-618 R14)",
+        "test_ci_workflows.TheBenchLanes.test_an_upload_job_unpacks_and_uploads_and_builds_nothing"
+      ],
+      [
+        "S61816-THE-RUST-ARCHIVE-CARRIES-THE-TOOL",
+        ".github/workflows/ci.yml",
+        " -C \"$RUNNER_TEMP\" codspeed-tool/bin/cargo-codspeed",
+        "",
+        "the Rust archive carries the built cargo-codspeed binary, so bench-rust installs nothing beside the token (SPEC-618 R14)",
+        "test_ci_workflows.TheBenchLanes.test_an_upload_job_unpacks_and_uploads_and_builds_nothing"
+      ],
+      [
+        "S61817-THE-RUST-UPLOAD-PUTS-THE-TOOL-ON-PATH",
+        ".github/workflows/ci.yml",
+        "        run: echo \"$GITHUB_WORKSPACE/codspeed-tool/bin\" >> \"$GITHUB_PATH\"",
+        "        run: echo \"$GITHUB_WORKSPACE/codspeed/bin\" >> \"$GITHUB_PATH\"",
+        "bench-rust puts the unpacked cargo-codspeed folder on the path; another folder leaves the action without the tool (SPEC-618 R14)",
+        "test_ci_workflows.TheBenchLanes.test_an_upload_job_unpacks_and_uploads_and_builds_nothing"
+      ],
+      [
+        "S61818-THE-RUST-UPLOAD-INSTALLS-NO-TOOL",
+        ".github/workflows/ci.yml",
+        "        run: echo \"$GITHUB_WORKSPACE/codspeed-tool/bin\" >> \"$GITHUB_PATH\"",
+        "        uses: taiki-e/install-action@v2",
+        "bench-rust takes its tool from the archive; an install action there would fetch and maybe compile code beside the token (SPEC-618 R3)",
+        "test_ci_workflows.TheBenchLanes.test_an_upload_job_unpacks_and_uploads_and_builds_nothing"
+      ],
+      [
+        "S61819-THE-RUST-UPLOAD-UNPACKS-THE-ARCHIVE",
+        ".github/workflows/ci.yml",
+        "run: tar -xf \"$RUNNER_TEMP/bench-rust.tar\"",
+        "run: ls \"$RUNNER_TEMP/bench-rust.tar\"",
+        "bench-rust unpacks the archive its build job made; without the unpack it has no bench binary to run (SPEC-618 R3)",
+        "test_ci_workflows.TheBenchLanes.test_an_upload_job_unpacks_and_uploads_and_builds_nothing"
+      ],
+      [
+        "S61820-THE-WEB-UPLOAD-UNPACKS-THE-ARCHIVE",
+        ".github/workflows/ci.yml",
+        "run: tar -xf \"$RUNNER_TEMP/bench-web.tar\"",
+        "run: ls \"$RUNNER_TEMP/bench-web.tar\"",
+        "bench-web unpacks the installed trees its build job made; without the unpack it has no dependencies to run (SPEC-618 R3)",
+        "test_ci_workflows.TheBenchLanes.test_an_upload_job_unpacks_and_uploads_and_builds_nothing"
+      ],
+      [
+        "S61821-THE-RUST-UPLOAD-RUNS-IN-SIMULATION",
+        ".github/workflows/ci.yml",
+        "mode: simulation\n          run: cargo codspeed run",
+        "mode: walltime\n          run: cargo codspeed run",
+        "bench-rust measures in CodSpeed's simulation mode, the one mode a shared hosted runner measures steadily (SPEC-618 R3)",
+        "test_ci_workflows.TheBenchLanes.test_an_upload_job_unpacks_and_uploads_and_builds_nothing"
+      ],
+      [
+        "S61822-THE-WEB-UPLOAD-RUNS-IN-SIMULATION",
+        ".github/workflows/ci.yml",
+        "mode: simulation\n          run: pnpm exec vitest bench",
+        "mode: walltime\n          run: pnpm exec vitest bench",
+        "bench-web measures in CodSpeed's simulation mode, the one mode a shared hosted runner measures steadily (SPEC-618 R3)",
+        "test_ci_workflows.TheBenchLanes.test_an_upload_job_unpacks_and_uploads_and_builds_nothing"
+      ],
+      [
+        "S61823-THE-RUST-UPLOAD-RUNS-THE-BUILT-BENCHES",
+        ".github/workflows/ci.yml",
+        "          run: cargo codspeed run",
+        "          run: cargo codspeed run --bench scheduling",
+        "bench-rust runs every built bench with the one fixed command; a narrowed run drops benches from the report (SPEC-618 R3)",
+        "test_ci_workflows.TheBenchLanes.test_an_upload_job_unpacks_and_uploads_and_builds_nothing"
+      ],
+      [
+        "S61824-THE-WEB-UPLOAD-RUNS-THE-BENCH-CONFIG",
+        ".github/workflows/ci.yml",
+        "run: pnpm exec vitest bench --run --config vitest.bench.config.ts",
+        "run: pnpm exec vitest bench --config vitest.bench.config.ts",
+        "bench-web runs the bench config once with the one fixed command; without --run vitest waits in watch mode (SPEC-618 R3)",
+        "test_ci_workflows.TheBenchLanes.test_an_upload_job_unpacks_and_uploads_and_builds_nothing"
+      ],
+      [
+        "S61825-THE-RUST-UPLOAD-RUNS-NO-INSTALL",
+        ".github/workflows/ci.yml",
+        "echo \"bench-rust: upload=$UPLOAD ($REASON)\"",
+        "echo \"bench-rust: upload=$UPLOAD ($REASON)\" && cargo install --locked cargo-codspeed --version 6.0.0",
+        "bench-rust runs no install beside the token; a cargo install there compiles third-party code with the OIDC grant (SPEC-618 R3)",
+        "test_ci_workflows.TheBenchLanes.test_an_upload_job_unpacks_and_uploads_and_builds_nothing"
+      ],
+      [
+        "S61826-THE-WEB-UPLOAD-RUNS-NO-INSTALL",
+        ".github/workflows/ci.yml",
+        "echo \"bench-web: upload=$UPLOAD ($REASON)\"",
+        "echo \"bench-web: upload=$UPLOAD ($REASON)\" && pnpm install --frozen-lockfile",
+        "bench-web runs no install beside the token; a pnpm install there runs third-party install scripts with the OIDC grant (SPEC-618 R3)",
+        "test_ci_workflows.TheBenchLanes.test_an_upload_job_unpacks_and_uploads_and_builds_nothing"
+      ],
+      [
+        "S61827-THE-RUST-PLAN-READS-THE-RUST-LANE",
+        ".github/workflows/ci.yml",
+        "scripts/perf-plan.py --lane rust",
+        "scripts/perf-plan.py --lane web",
+        "bench-rust-build plans the Rust lane; planned as the web lane it would measure on the wrong paths (SPEC-618 R4)",
+        "test_ci_workflows.TheBenchLanes.test_each_bench_job_starts_and_its_plan_gates_every_step"
+      ],
+      [
+        "S61828-THE-WEB-PLAN-READS-THE-WEB-LANE",
+        ".github/workflows/ci.yml",
+        "scripts/perf-plan.py --lane web",
+        "scripts/perf-plan.py --lane rust",
+        "bench-web-build plans the web lane; planned as the Rust lane it would measure on the wrong paths (SPEC-618 R4)",
+        "test_ci_workflows.TheBenchLanes.test_each_bench_job_starts_and_its_plan_gates_every_step"
+      ],
+      [
+        "S61829-THE-RUST-PLAN-READS-THE-EVENT",
+        ".github/workflows/ci.yml",
+        "--metadata \"$RUNNER_TEMP/metadata.json\" --event \"$EVENT\" ",
+        "--metadata \"$RUNNER_TEMP/metadata.json\" ",
+        "the Rust plan reads the event, so a push to dev or main always applies; without it the plan cannot tell a push from a pull request (SPEC-618 R4)",
+        "test_ci_workflows.TheBenchLanes.test_each_bench_job_starts_and_its_plan_gates_every_step"
+      ],
+      [
+        "S61830-THE-TOOL-INSTALL-WAITS-ON-THE-PLAN",
+        ".github/workflows/ci.yml",
+        "      - name: cargo-codspeed 6.0.0, locked, into the runner's temporary folder\n        if: ${{ steps.plan.outputs.applicable == 'true' }}",
+        "      - name: cargo-codspeed 6.0.0, locked, into the runner's temporary folder\n        if: ${{ steps.plan.outputs.applicable == 'false' }}",
+        "the cargo-codspeed install runs only when the plan says a Rust bench applies; inverted it runs on every unrelated pull request (SPEC-618 R4)",
+        "test_ci_workflows.TheBenchLanes.test_each_bench_job_starts_and_its_plan_gates_every_step"
+      ],
+      [
+        "S61831-THE-RUST-BUILD-WAITS-ON-THE-PLAN",
+        ".github/workflows/ci.yml",
+        "      - name: build the benches\n        if: ${{ steps.plan.outputs.applicable == 'true' }}",
+        "      - name: build the benches\n        if: ${{ steps.plan.outputs.applicable == 'false' }}",
+        "the Rust bench build runs only when the plan says a Rust bench applies; inverted it runs on every unrelated pull request (SPEC-618 R4)",
+        "test_ci_workflows.TheBenchLanes.test_each_bench_job_starts_and_its_plan_gates_every_step"
+      ],
+      [
+        "S61832-THE-RUST-ARCHIVE-WAITS-ON-THE-UPLOAD-PLAN",
+        ".github/workflows/ci.yml",
+        "      - name: archive the bench binaries (an artifact drops the executable bit; tar keeps it)\n        if: ${{ steps.plan.outputs.upload == 'true' }}",
+        "      - name: archive the bench binaries (an artifact drops the executable bit; tar keeps it)\n        if: ${{ steps.plan.outputs.upload == 'false' }}",
+        "the Rust archive is made only when the plan says to upload; inverted it archives a build that never ran (SPEC-618 R4)",
+        "test_ci_workflows.TheBenchLanes.test_each_bench_job_starts_and_its_plan_gates_every_step"
+      ],
+      [
+        "S61833-THE-RUST-TOOL-PATH-WAITS-ON-THE-UPLOAD-PLAN",
+        ".github/workflows/ci.yml",
+        "      - name: the cargo-codspeed binary from the archive, on the path\n        if: ${{ needs.bench-rust-build.outputs.upload == 'true' }}",
+        "      - name: the cargo-codspeed binary from the archive, on the path\n        if: ${{ needs.bench-rust-build.outputs.upload == 'false' }}",
+        "bench-rust puts the tool on the path only when its build job says to upload; inverted it runs with no archive unpacked (SPEC-618 R4)",
+        "test_ci_workflows.TheBenchLanes.test_each_bench_job_starts_and_its_plan_gates_every_step"
+      ],
+      [
+        "S61834-THE-RUST-UPLOAD-WAITS-ON-THE-UPLOAD-PLAN",
+        ".github/workflows/ci.yml",
+        "# v5.6.1\n        if: ${{ needs.bench-rust-build.outputs.upload == 'true' }}",
+        "# v5.6.1\n        if: ${{ needs.bench-rust-build.outputs.upload == 'false' }}",
+        "bench-rust uploads to CodSpeed only when its build job says to upload; inverted it uploads with nothing built (SPEC-618 R4)",
+        "test_ci_workflows.TheBenchLanes.test_each_bench_job_starts_and_its_plan_gates_every_step"
+      ],
+      [
+        "S61835-THE-WEB-UPLOAD-WAITS-ON-THE-UPLOAD-PLAN",
+        ".github/workflows/ci.yml",
+        "# v5.6.1\n        if: ${{ needs.bench-web-build.outputs.upload == 'true' }}",
+        "# v5.6.1\n        if: ${{ needs.bench-web-build.outputs.upload == 'false' }}",
+        "bench-web uploads to CodSpeed only when its build job says to upload; inverted it uploads with nothing installed (SPEC-618 R4)",
+        "test_ci_workflows.TheBenchLanes.test_each_bench_job_starts_and_its_plan_gates_every_step"
+      ],
+      [
+        "S61836-THE-RUST-UPLOAD-PRINTS-THE-PLAN-REASON",
+        ".github/workflows/ci.yml",
+        "REASON: ${{ needs.bench-rust-build.outputs.reason }}",
+        "REASON: none",
+        "bench-rust prints the reason its build job planned, so a skipped upload says why (SPEC-618 R4)",
+        "test_ci_workflows.TheBenchLanes.test_each_bench_job_starts_and_its_plan_gates_every_step"
+      ],
+      [
+        "S61837-THE-RECORD-CHECK-READS-CHANGED-RECORDS",
+        ".github/workflows/ci.yml",
+        "--diff-filter=AM HEAD^1",
+        "--diff-filter=A HEAD^1",
+        "the record check reads the records a pull request adds or changes; added only, an edited record is never checked (SPEC-618 R8)",
+        "test_ci_workflows.TheBenchLanes.test_the_record_check_reads_the_records_a_pull_request_adds"
+      ],
+      [
+        "S61838-THE-RECORD-CHECK-READS-THE-BENCH-LIST",
+        ".github/workflows/ci.yml",
+        " --benchmarks perf/benchmarks.txt",
+        "",
+        "the record check reads the committed benchmark list; without it a record may name a bench the tree does not hold (SPEC-618 R8)",
+        "test_ci_workflows.TheBenchLanes.test_the_record_check_reads_the_records_a_pull_request_adds"
+      ],
+      [
+        "S61839-THE-RECORD-CHECK-READS-THE-BRANCH",
+        ".github/workflows/ci.yml",
+        " --branch \"$HEAD_REF\"",
+        "",
+        "the record check reads the pull request's own branch; without it a record made for another branch passes (SPEC-618 R8)",
+        "test_ci_workflows.TheBenchLanes.test_the_record_check_reads_the_records_a_pull_request_adds"
+      ],
+      [
+        "S61840-THE-RECORD-BRANCH-IS-THE-HEAD-REF",
+        ".github/workflows/ci.yml",
+        "HEAD_REF: ${{ github.head_ref }}\n        run: |\n          mkdir -p \"$RUNNER_TEMP/records\"",
+        "HEAD_REF: ${{ github.ref }}\n        run: |\n          mkdir -p \"$RUNNER_TEMP/records\"",
+        "the record check's branch is the pull request's head ref; the merge ref is never the branch a record names (SPEC-618 R8)",
+        "test_ci_workflows.TheBenchLanes.test_the_record_check_reads_the_records_a_pull_request_adds"
+      ],
+      [
+        "S61841-THE-RECORD-CHECK-RUNS-ON-PULL-REQUESTS",
+        ".github/workflows/ci.yml",
+        "      - name: the regression records this pull request adds or changes\n        if: ${{ github.event_name == 'pull_request' }}",
+        "      - name: the regression records this pull request adds or changes\n        if: ${{ github.event_name == 'push' }}",
+        "the record check runs on every pull request; on pushes alone a pull request's records go unchecked (SPEC-618 R8)",
+        "test_ci_workflows.TheBenchLanes.test_the_record_check_reads_the_records_a_pull_request_adds"
+      ]
+    ]
+  }
+}

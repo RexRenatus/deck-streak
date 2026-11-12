@@ -135,3 +135,55 @@ A3: pnpm exec vitest run web/app/src/lib/card/planted-coverage.test.ts -t "the e
 - R6: insert-only, by `cmp -n <the cut's size> <the cut's copy> <the head's copy>`, silent with
   rc 0, and the new section is the file's last.
 - R7: the file manifest against the delivery's diff, which holds no shipped file.
+
+## 8. Amendment for #805: an unclosed projects array is refused by its own reason
+
+`configuredEngines` in `web/app/src/lib/card/planted-coverage.test.ts` refuses a card
+configuration whose `projects` array it cannot read in two places: when the text holds no
+`projects: [` at all, and when it holds one that never closes. Both gave the same refusal,
+`no projects array`, and A3 plants only the first, so the second could be deleted with every
+assertion still green (#805, raised by the verify of #803). This section adds R8, which ADR-413
+D6 decides and A4 (section 10) holds. Sections 1 to 7, R1 to R7 and A1 to A3 stand as written.
+
+- **R8. An unclosed projects array has a refusal of its own (#805).** A configuration text whose
+  `projects: [` has no matching `]` is refused as `projects array never closes`, with no engine
+  read; a text with no `projects: [` is still refused as `no projects array`. The test plants two
+  unclosed arrays, one of them holding a nested pair of brackets that does close, and reads each
+  refused by the new reason, beside the missing array refused by the old one.
+- **Red first.** A4's test is committed with the parse unchanged, where an unclosed plant reads
+  the old refusal, so A4 reads red by assertion. The next commit changes the refusal of that one arm and
+  nothing else. With the arm then deleted from a local copy, A4 reads red again: the parse reads
+  the unclosed array to the last character before the final newline and returns its engine.
+- **Risks of the #805 amendment.** A bracket inside a string or a comment within the `projects`
+  array is counted as code, as it was before this amendment; the card configuration holds none.
+  The new refusal is read by this test alone: no other file names it.
+- **The #805 amendment touches these paths:**
+  `web/app/src/lib/card/planted-coverage.test.ts`,
+  `docs/specs/SPEC-399-the-card-coverage-test-holds-every-unobservable-cell-per-engine-equal-to-the-planted-table-both-ways.md`,
+  `docs/decisions/ADR-413-each-unobservable-cell-expands-over-the-card-suites-configured-engines-and-must-equal-the-planted-table-exactly.md`,
+  `docs/red-first/SPEC-399.md` and `changelog.d/card-unclosed-projects-805.md`.
+
+## 9. What this does NOT do, in the #805 amendment
+
+- It changes no shipped file: the card configuration, the planted suite, the card frame and CI
+  are read and never edited (R7).
+- It changes no other refusal and no assertion of A1 to A3: A3's missing-array case still reads
+  `no projects array` (#805).
+- It adds no mutation row, as ADR-413 D3 says: the web mutation tool skips test files, so A4's
+  plants are the counterexamples a weakened parse meets, on every run (#805).
+- It does not read strings or comments inside the configuration's text apart from its code
+  (#805).
+
+## 10. Acceptance criteria of the #805 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A4 | a configuration whose projects array never closes, with or without a nested pair of brackets that closes, is refused as `projects array never closes` with no engine read, and one with no projects array is still refused as `no projects array` | `planted-coverage.test.ts` "an unclosed projects array is refused apart from a missing one" |
+
+```acceptance
+A4: pnpm exec vitest run web/app/src/lib/card/planted-coverage.test.ts -t "an unclosed projects array is refused apart from a missing one"
+```
+
+A4's test is committed with the parse unchanged and read red by assertion in a local run of the
+whole file, before the refusal changes; `docs/red-first/SPEC-399.md` quotes the red, names the
+green, and records the red read with the arm deleted.

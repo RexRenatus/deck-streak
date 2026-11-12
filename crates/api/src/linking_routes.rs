@@ -15,7 +15,9 @@
 //! strict, living as long as the ceremony, and every finish clears it, refused or not. The two
 //! ceremony starts and the redeem share one bound of [`CEREMONIES_PER_MINUTE`] a minute, a window
 //! of their own apart from the handshake's. With no public origin configured, every route answers
-//! 404 `linking_off` before it judges a session.
+//! 404 `linking_off` before it judges a session. With Telegram off (SPEC-582 R4), the two
+//! link-code routes answer 404 `telegram_off` after the state-change guard and the ceremony bound
+//! and before `linking_off`.
 
 use std::sync::{Arc, Mutex, PoisonError};
 
@@ -66,7 +68,7 @@ const COOKIE_ATTRIBUTES: &str = "Path=/; Secure; HttpOnly; SameSite=Strict";
 const MINUTE_MS: i64 = 60_000;
 
 /// What the linking routes share: the use cases when linking is on, the owner's sessions, the
-/// database's readiness, the clock and the ceremony bound.
+/// database's readiness, the clock, the ceremony bound and whether Telegram is on.
 #[derive(Clone)]
 struct Linking {
     passkeys: Option<Passkeys>,
@@ -74,6 +76,7 @@ struct Linking {
     readiness: Readiness,
     clock: Arc<dyn Clock>,
     bound: Arc<CeremonyBound>,
+    telegram: bool,
 }
 
 impl FromRef<Linking> for Sessions {
@@ -111,6 +114,7 @@ pub(crate) fn routes(
             readiness,
             clock,
             bound: Arc::default(),
+            telegram: access.telegram_on(),
         })
 }
 
@@ -121,7 +125,12 @@ struct Redeem {
 }
 
 /// `POST /api/link/code`.
-async fn mint_code(_state_change: StateChange, ready: Ready, headers: HeaderMap) -> Response {
+async fn mint_code(
+    _state_change: StateChange,
+    _telegram: TelegramOn,
+    ready: Ready,
+    headers: HeaderMap,
+) -> Response {
     let token = presented(&headers).unwrap_or_default();
     match ready.passkeys.mint_link_code(token) {
         Ok(code) => answer(StatusCode::OK, &json!({ "code": code.expose() })),
@@ -133,6 +142,7 @@ async fn mint_code(_state_change: StateChange, ready: Ready, headers: HeaderMap)
 async fn redeem(
     _state_change: StateChange,
     _slot: CeremonySlot,
+    _telegram: TelegramOn,
     ready: Ready,
     headers: HeaderMap,
     body: Bytes,
@@ -260,20 +270,40 @@ struct Ready {
 impl FromRequestParts<Linking> for Ready {
     type Rejection = Response;
 
-    async fn from_request_parts(
+    fn from_request_parts(
         _parts: &mut Parts,
         linking: &Linking,
-    ) -> Result<Self, Self::Rejection> {
+    ) -> impl Future<Output = Result<Self, Self::Rejection>> + Send {
         let Some(passkeys) = linking.passkeys.clone() else {
-            return Err(failed(&Refusal::LinkingOff.into()));
+            return std::future::ready(Err(failed(&Refusal::LinkingOff.into())));
         };
         let Some(db) = linking.readiness.database().cloned() else {
-            return Err(refused(
+            return std::future::ready(Err(refused(
                 StatusCode::SERVICE_UNAVAILABLE,
                 "database_not_open",
-            ));
+            )));
         };
-        Ok(Self { passkeys, db })
+        std::future::ready(Ok(Self { passkeys, db }))
+    }
+}
+
+/// Telegram is on: the link code is minted from a Telegram session and redeemed into one, so with
+/// Telegram off the two link-code routes answer 404 `telegram_off` (SPEC-582 R4). A route takes it
+/// after the state-change guard and the ceremony bound and before [`Ready`], so the answer comes
+/// before `linking_off`.
+struct TelegramOn;
+
+impl FromRequestParts<Linking> for TelegramOn {
+    type Rejection = Response;
+
+    fn from_request_parts(
+        _parts: &mut Parts,
+        linking: &Linking,
+    ) -> impl Future<Output = Result<Self, Self::Rejection>> + Send {
+        if !linking.telegram {
+            return std::future::ready(Err(failed(&Refusal::TelegramOff.into())));
+        }
+        std::future::ready(Ok(Self))
     }
 }
 
@@ -284,18 +314,18 @@ struct CeremonySlot;
 impl FromRequestParts<Linking> for CeremonySlot {
     type Rejection = Response;
 
-    async fn from_request_parts(
+    fn from_request_parts(
         _parts: &mut Parts,
         linking: &Linking,
-    ) -> Result<Self, Self::Rejection> {
-        match linking.bound.admit(linking.clock.now()) {
+    ) -> impl Future<Output = Result<Self, Self::Rejection>> + Send {
+        std::future::ready(match linking.bound.admit(linking.clock.now()) {
             Ok(()) => Ok(Self),
             Err(seconds) => {
                 let mut response = refused(StatusCode::TOO_MANY_REQUESTS, "too_many_ceremonies");
                 response.headers_mut().insert(RETRY_AFTER, seconds.into());
                 Err(response)
             }
-        }
+        })
     }
 }
 

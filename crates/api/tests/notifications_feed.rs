@@ -256,5 +256,5 @@ async fn the_feed_waits_for_the_database() {
     let answer = feed(&app, Some(&cookie)).await;
 
     assert_eq!(answer.status, StatusCode::SERVICE_UNAVAILABLE);
-    assert!(answer.body.is_empty());
+    assert_eq!(answer.body, "");
 }

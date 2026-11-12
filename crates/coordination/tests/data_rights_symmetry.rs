@@ -19,7 +19,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use deck_streak_coordination::data_rights::CRON_FIRES_TABLE;
-use deck_streak_coordination::data_rights_registry::{erase_all, export_all, ports};
+use deck_streak_coordination::data_rights_registry::{
+    erase_all, export_all, export_document, ports,
+};
 use deck_streak_coordination::jobs::FireDate;
 use deck_streak_coordination::ledger::{CronLedger, SqliteCronLedger};
 use deck_streak_ingest::data_rights::WRITE_CLASS_STOP_TABLE;
@@ -32,8 +34,10 @@ use tempfile::TempDir;
 
 /// Statements that leave every table of the schema holding rows no erase leaves: 101 rows in each
 /// table that takes rows, so an export that pages or limits its read comes up short (the
-/// predecessor's lesson), and every column a reset writes moved off its reset value.
-const SEEDS: [&str; 45] = [
+/// predecessor's lesson), and every column a reset writes moved off its reset value. The queue
+/// holds one row more, abandoned with its claim kept, so the export carries a claim that is not
+/// null and is measured by its value (SPEC-041 R18).
+const SEEDS: [&str; 46] = [
     "UPDATE settings_generation SET generation = 7, courses_digest = '0123456789abcdef' \
      WHERE id = 1",
     "UPDATE ingest_state SET anchor_newest_review_id = 1700000000123, anchor_card_count = 57, \
@@ -136,6 +140,10 @@ const SEEDS: [&str; 45] = [
      SELECT 'celebration', 'synthetic:' || i, 'bot', 'T4', 'T2', 'synthetic ' || i, \
      CASE i % 2 WHEN 0 THEN 'quiet' ELSE 'send' END, i % 3, \
      CASE i % 5 WHEN 0 THEN 'abandoned' ELSE 'held' END, 1000 * i, 20000 + i, 1000 * i FROM n",
+    "INSERT INTO notification_queue (kind, dedupe_key, surface, tier_requested, tier_pending, \
+     text, hold, tries, state, claim, deferred_at, study_day, created_at) \
+     VALUES ('celebration', 'synthetic:claimed', 'bot', 'T4', 'T2', 'synthetic claimed', 'send', \
+     1, 'abandoned', '1700000000500', 102000, 20102, 102000)",
     "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
      INSERT INTO in_app_feed (dedupe_key, kind, tier, text, seen_at, created_at) \
      SELECT 'synthetic:' || i, 'celebration', 'T2', 'synthetic ' || i, \
@@ -435,6 +443,28 @@ impl Probe {
 }
 
 #[tokio::test]
+async fn the_export_document_is_the_exports_one_compact_line_and_its_newline() {
+    let (_directory, db) = migrated().await;
+    let document = export_document(&db).await.expect("the export document");
+    let exported = export_all(&db).await.expect("the export");
+    let Some(line) = document.strip_suffix('\n') else {
+        panic!("the export document ends in no newline: {document:?}");
+    };
+    let read: Value = serde_json::from_str(line).expect("the document's line is JSON");
+    assert_eq!(
+        (line.contains('\n'), &read, line),
+        (
+            false,
+            exported.as_json(),
+            serde_json::to_string(exported.as_json())
+                .expect("compact")
+                .as_str()
+        ),
+        "the export document is the export's one compact line"
+    );
+}
+
+#[tokio::test]
 async fn the_exported_tables_equal_the_erased_tables_over_every_port() {
     let probe = Probe::run().await;
     let declarations = examined("port(s) in the registry", declarations());
@@ -469,6 +499,39 @@ async fn the_exported_tables_equal_the_erased_tables_over_every_port() {
     assert_eq!(
         keys, exported,
         "a key of the export holds a table's rows short"
+    );
+    probe.db.close().await;
+}
+
+/// A queue row abandoned with its claim kept, as a flush whose push may have reached the owner
+/// leaves it, is exported with that claim by its value, never as null (SPEC-041 R18, A30).
+#[tokio::test]
+async fn the_export_carries_the_claim_an_abandoned_queue_row_kept() {
+    let probe = Probe::run().await;
+    let claims = |rows: &[Value]| -> Vec<Value> {
+        rows.iter()
+            .filter(|row| row["dedupe_key"] == "synthetic:claimed")
+            .map(|row| row["claim"].clone())
+            .collect()
+    };
+    let seeded = examined(
+        "seeded queue row(s) abandoned with a kept claim",
+        claims(&probe.before["notification_queue"]),
+    );
+    assert_eq!(
+        seeded,
+        [Value::from("1700000000500")],
+        "the seeded row read from the table carries the kept claim"
+    );
+    let exported = probe
+        .export
+        .get("notification_queue")
+        .and_then(Value::as_array)
+        .expect("the export carries the queue");
+    assert_eq!(
+        claims(exported),
+        [Value::from("1700000000500")],
+        "the export carries the claim an abandoned queue row kept, by its value"
     );
     probe.db.close().await;
 }
@@ -652,12 +715,35 @@ fn named_tables(inventory: &Value) -> BTreeMap<String, Vec<&Value>> {
     named
 }
 
+/// Every table the collection store's migrations create (SPEC-512 R10): the store is a file of its
+/// own with its own data-rights port, so a category naming one of them is judged by the store's
+/// census (`crates/collection/tests/data_rights.rs`), not against the service database's ports.
+fn store_tables() -> BTreeSet<String> {
+    let dir = root().join("crates/collection/migrations");
+    let mut tables = BTreeSet::new();
+    for entry in fs::read_dir(dir).into_iter().flatten().flatten() {
+        let text = fs::read_to_string(entry.path()).unwrap_or_default();
+        for line in text.lines() {
+            if let Some(rest) = line.trim_start().strip_prefix("CREATE TABLE ") {
+                let name: String = rest
+                    .chars()
+                    .take_while(|character| character.is_ascii_alphanumeric() || *character == '_')
+                    .collect();
+                tables.insert(name);
+            }
+        }
+    }
+    tables
+}
+
 /// Every refusal of `privacy.json` against the ports: a table a port exports or erases that no
 /// category names, or more than one does, or whose category exports it not or erases it by another
-/// mode; and a table a category names that no port exports or erases.
+/// mode; and a table a category names that no port exports or erases, unless it is one of the
+/// collection store's, which the store's own census judges.
 fn judge(inventory: &Value, declarations: &[Declaration]) -> Vec<String> {
     let modes = erase_modes(declarations);
     let named = named_tables(inventory);
+    let store = store_tables();
     let mut refused = Vec::new();
     for (table, mode) in &modes {
         match named.get(*table).map(Vec::as_slice) {
@@ -681,7 +767,7 @@ fn judge(inventory: &Value, declarations: &[Declaration]) -> Vec<String> {
         }
     }
     for table in named.keys() {
-        if !modes.contains_key(table.as_str()) {
+        if !modes.contains_key(table.as_str()) && !store.contains(table) {
             refused.push(format!(
                 "{table} is named by a category, and no port exports or erases it"
             ));

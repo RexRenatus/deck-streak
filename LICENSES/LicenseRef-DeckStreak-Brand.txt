@@ -1,0 +1,11 @@
+Copyright 2026 RexRenatus. All rights reserved.
+
+The set of brand files that REUSE.toml lists under LicenseRef-DeckStreak-Brand holds the DeckStreak brand: its logo concepts, their SVG sources, their renders and
+the scripts that render them. No licence is granted to copy, modify, distribute, display or
+otherwise use any of it, in whole or in part, without the prior written permission of the
+copyright holder.
+
+The DeckStreak name and logo are trademarks of DeckStreak. The DeckStreak application's source
+code is published under the GNU Affero General Public License, version 3 or later. That licence
+covers the application's code only: it does not extend to the set of brand files that REUSE.toml lists under LicenseRef-DeckStreak-Brand, to the DeckStreak logo,
+or to any other brand asset kept here, and it grants no right to use the DeckStreak name or logo.

@@ -12,12 +12,15 @@ on:
       - "crates/ffi/**"
       - "crates/engine-core/**"
       - "crates/fsrs7/**"
+      - "crates/collection/**"
+      - "crates/media/**"
       - "ios/**"
       - "Cargo.lock"
       - "Cargo.toml"
       - "rust-toolchain.toml"
       - ".github/workflows/xcframework.yml"
       - ".github/workflows/apple-on-change.yml"
+      - "scripts/swift_mutants.py"
 
 permissions:
   contents: read

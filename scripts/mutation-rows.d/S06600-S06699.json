@@ -40,38 +40,6 @@
     ],
     "SCRIPT_MUTATIONS": [
       [
-        "S06605-THE-ALERT-REFUSES-AN-EMPTY-CREDENTIAL",
-        "deploy/scripts/alert-telegram.sh",
-        "    '')\n",
-        "    'unset')\n",
-        "an empty credential of the alert unit refuses the page before the journal is read or a request is made (SPEC-066 R3)",
-        "test_alert_unit.AnEmptyCredentialFailsTheAlertUnit.test_an_empty_credential_fails_the_alert_unit_before_any_request"
-      ],
-      [
-        "S06606-THE-ALERT-REFUSAL-FAILS-ITS-UNIT",
-        "deploy/scripts/alert-telegram.sh",
-        "      exit 1\n",
-        "      exit 0\n",
-        "the refusal exits 1, so the alert instance is failed and listed by systemctl --failed, the route of its own refusal (SPEC-066 R3)",
-        "test_alert_unit.AnEmptyCredentialFailsTheAlertUnit.test_an_empty_credential_fails_the_alert_unit_before_any_request"
-      ],
-      [
-        "S06607-THE-ALERT-CHECKS-ITS-TOKEN",
-        "deploy/scripts/alert-telegram.sh",
-        "refuse_empty telegram-bot-token \"$token\"\n",
-        ": refuse_empty telegram-bot-token \"$token\"\n",
-        "the bot token is checked before any request (SPEC-066 R3)",
-        "test_alert_unit.AnEmptyCredentialFailsTheAlertUnit.test_an_empty_credential_fails_the_alert_unit_before_any_request"
-      ],
-      [
-        "S06608-THE-ALERT-CHECKS-ITS-CHAT",
-        "deploy/scripts/alert-telegram.sh",
-        "refuse_empty owner-user-id \"$chat\"\n",
-        ": refuse_empty owner-user-id \"$chat\"\n",
-        "the owner's id, the chat the page goes to, is checked before any request (SPEC-066 R3)",
-        "test_alert_unit.AnEmptyCredentialFailsTheAlertUnit.test_an_empty_credential_fails_the_alert_unit_before_any_request"
-      ],
-      [
         "S06609-A-PAGING-UNIT-ADMITS-ONE-RESTART-VALUE",
         "scripts/tests/_units.py",
         "    (\"Service\", \"Restart\"): (\"on-failure\",),\n",

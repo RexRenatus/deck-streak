@@ -1,6 +1,6 @@
 // SPEC-350 R4; ADR-361. The engine's languages for the app's locale. The engine's own translations
 // name Chinese by region, where the app names it by script; every other locale is the same tag.
-import { getLocale, type Locale } from '$lib/paraglide/runtime.js';
+import { getLocale, type Locale } from '#lib/paraglide/runtime.js';
 
 /** The engine's language for each of the app's locales. */
 const ENGINE: Record<Locale, string> = {

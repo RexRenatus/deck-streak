@@ -56,7 +56,7 @@ pure, keeps every send on the router, and makes the product with no provider the
   `Unsupported` as withheld under a reason of its own, `photo_unsupported`, so `withhold.reasons` in
   `notifications-policy.json` gains that one entry and the policy records the deviation.
 - **The credential.** `image-provider-key`, optional through the kernel's loader, named by no unit
-  until #169's delivery binds it.
+  under the owner's decision on #169 (below), which wires no provider.
 
 Delivered so far (2026-09-29): the withhold reason, by SPEC-132 (`Router::route_photo`). The port,
 the draw, the gate, the job and the credential are SPEC-135's, which accepts this record when it
@@ -70,9 +70,13 @@ The options for #169, recorded for the owner's decision:
   changes.
 - No provider: the default stands, and the product is the text ceremony and no share card.
 
+The owner's decision on #169, recorded from the comment that settled it
+(https://github.com/RexRenatus/deck-streak/issues/169#issuecomment-5937808370): share cards and
+keepsakes are templated, with no AI-generated art: no new vendor, no new secret and no new spend.
+
 ### Consequences
 
-- Good, because the product with no provider is what every test and every deploy runs until #169.
+- Good, because every test and every deploy runs the product with no provider, as #169 decided.
 - Good, because a draw is counted before its call, so a crash mid-call cannot exceed the cap.
 - Bad, because an image reaches the owner up to an hour after its milestone.
 

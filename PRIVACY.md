@@ -49,6 +49,18 @@ inventory, in the form the repository's privacy checks read.
 | `writing-log` | each study day you confirmed writing in a writing course: the course, the study day, and when it was confirmed | earning the writing XP and counting the writing streaks | contract | until account deletion |
 | `passkeys` | each passkey you registered for signing in on the web: its credential id, the random user handle your passkeys share, the stored credential with its public key, the signature counter, the backup state, and when it was added and last used | signing you in on the web with a passkey | contract | until account deletion |
 | `sensitive-decks` | the ids of the decks you keep away from AI, and when each was marked; never a deck's name or its cards | keeping every card of a deck you marked, and of the decks under it, away from every AI feature; after an erase every deck is readable again until you keep one away | contract | until account deletion |
+| `collection-notes` | in DeckStreak's own collection store: your notetypes with their fields, templates and CSS, each note's fields as you wrote them (MathJax source included), its tags, and every earlier version of a field with who wrote it and when | keeping your notes, rendering their cards, and showing a field's history | contract | until account deletion |
+| `collection-cards` | in the collection store: your decks and their presets, each card's note, ordinal, deck, new-card position, suspension, burial day and flag, and your study day's rollover hour and offset | organising your cards into decks and building each day's study | contract | until account deletion |
+| `collection-review-log` | in the collection store: each answer you gave, with its card, note, deck and preset, its kind, the button, how long it took, its study day, the due dates shown and committed, the scheduler version that committed it, its key and order, and each retraction of an answer you undid | scheduling your cards from their history, and counting the study the game rewards | contract | until account deletion |
+| `collection-client-record` | in the collection store: which client made each answer (the web client, the iPhone and iPad client, or stock Anki), one row beside the answer; an answer with no row reads unknown | telling apart the answers each client made, so a client's defect can be traced; erasing this record alone keeps every answer | contract | until account deletion |
+| `collection-store-record` | the collection store's own record: whether it is the server's or a device's, its writer id and slot, its id floor and operation counter, and the digest of the collection it was imported from | opening each store in its own role and never making an id twice; an erase clears the import digest and keeps the rest | contract | until account deletion |
+| `collection-device-state` | in the collection store, a device's own working state: the changes it has not yet sent and their outcome, the changes it applied, its undo journal, each card's schedule as the scheduler computed it there, and its settings such as the current deck | sending the device's changes, undoing your last action, and showing the day's queue on the device | contract | until account deletion |
+| `collection-media` | in the collection store, the media files your notes name, kept in your own blob folder under the SHA-256 of their bytes, and the names bound to them | showing each card's images, sounds and videos on every device you study on | contract | until account deletion |
+
+The collection store is not in use yet: no DeckStreak client or service reads or writes it until a
+later release moves your collection into it. On a device an erase removes the store's file; on the
+server it empties every table but the store's record, then rebuilds the file so no erased value
+stays in it.
 
 The lawful basis of each is the contract (GDPR Article 6(1)(b)): the service you run needs it. None
 is kept for a fixed period. Each is kept until you erase it, which is how an account is deleted here.
@@ -73,7 +85,13 @@ and only your browser holds it.
 The web app also keeps backups in your browser: saved copies of this device's collection and saved
 copies of the server's collection, at most three of each kind, the oldest of a kind removed first.
 They stay on your device alone, are never sent to the service, and leave your device only when you
-export one from the sync screen.
+export one from the sync screen or the data screen.
+
+The iPhone and iPad app keeps backups on your device too: saved copies of this device's collection,
+made before a full sync replaces it or when you tap Back up now, and saved copies of the server's
+collection a full sync counted, at most three of each kind, the oldest of a kind removed first.
+They are kept in the app's own folder on your device, are never sent to the service, and leave your
+device only when you export one from the app's data screen through the system's save dialog.
 
 ## Your copy of your data, and erasing it
 
@@ -84,6 +102,11 @@ From Telegram, the bot answers two commands, and only yours:
   in Telegram.
 - `/delete` asks you to confirm with a button, and erases exactly as the host's erase below does
   once you tap it. Only the button on the latest question erases, and only once.
+
+In the web app, the data screen downloads a JSON copy of your data, the same document
+`/export` sends, fetched in your own signed-in session and saved by your browser as a file on your
+device. Inside Telegram on a phone the download may not be saved, so the screen names `/export`
+beside it.
 
 You can also export and erase on the host that runs DeckStreak:
 
@@ -96,15 +119,23 @@ You can also export and erase on the host that runs DeckStreak:
 
 ## What an erase does not reach
 
-- **The backup replica** keeps erased data for at most 3 days (`P3D`): Litestream takes a
-  snapshot every 24 hours and keeps each for 48 hours, so an erased row leaves the replica within
-  72 hours.
-- **The daily copies of the database** keep erased data for at most 3 days (`P3D`): one copy is
-  made each day, the newest three are kept, and the oldest is removed when a fourth is in place, so
-  an erased row leaves them within 3 days. They hold the database and nothing else: not the
-  private copy of your collection.
+- **The backup replica** keeps erased data for at most 7 days (`P7D`), the backup window. Today
+  Litestream takes a snapshot every 24 hours and keeps each for 48 hours, so an erased row leaves
+  the replica within 72 hours.
+- **The daily copies of the database** keep erased data for at most 7 days (`P7D`), the backup
+  window. Today one copy is made each day, the newest three are kept, and the oldest is removed
+  when a fourth is in place, so an erased row leaves them within 3 days. They hold the database
+  and nothing else: not the private copy of your collection.
+- **Disk snapshots of the service's data disk**, when the service keeps them, are taken once a
+  day, and each is deleted 6 days after it is taken, so erased data leaves them within 7 days
+  (`P7D`). A snapshot holds everything on that disk, the database and its daily copies
+  included.
+- **The second-region copy** of the service's shared records and of its directory of accounts,
+  when the service keeps one, is held in a second region. Each copy in it is deleted 4 days
+  after it is written, so erased data leaves it within 7 days (`P7D`).
 - **The service journal** keeps its log lines for at most 14 days (`P14D`), and journald then
-  deletes them.
+  deletes them. When the monitoring service that pages the owner is set up, it receives a copy of
+  the lines of DeckStreak's own services and keeps that copy for at most 14 days (`P14D`) too.
 - **The edge's log of the sync route** records, for each request to the sync route, the client's
   address, the method, the path without its key and the status, and none of your Anki data. It is
   kept in the service journal for at most 14 days (`P14D`), and journald then deletes it.
@@ -118,7 +149,7 @@ You can also export and erase on the host that runs DeckStreak:
   server's store. The host keeps the newest three archives and removes the oldest when a fourth is
   in place; each archive is also sealed to a key that is never on the host, and only the sealed
   copy goes to an offsite bucket that admits no public access and no listing. It is deleted there
-  30 days (`P30D`) after it is written, by a rule the owner sets on the bucket and the cutover
+  within 7 days (`P7D`) of being written, by a rule the owner sets on the bucket and the cutover
   runbook checks. Removing them is a step of the owner's setup.
 - **The cron-fire ledger** records which scheduled jobs ran, and none of your data. It is kept
   after an erase and pruned after 90 days, so an erase can never make a notification send twice.
@@ -133,3 +164,21 @@ default. Each run sends the cards that duty covers and a summary of your leeches
 practice, not your journal, as the context of that one run, and DeckStreak's database keeps neither
 the prompt nor the reply. A reply that passes its checks is written to your own vault. What the
 model's provider keeps is set by that provider's terms.
+
+## Measuring use
+
+- **The server counts its requests.** From its own request log lines, DeckStreak counts the
+  requests each of its services answered, by the route's pattern (such as `/api/me`, never the
+  address a request named), the method and the class of the status (such as 2xx or 5xx). A count
+  holds no account, no address, no device, no request id and no request's content, so no count
+  says who made a request. These counts need no choice of yours: nothing is read from your device
+  for them.
+- **The apps measure nothing about how you use them.** Neither the web app nor the iPhone and iPad
+  app sends an event about what you open, tap or study, and nothing in them tracks you.
+- **Any measurement of use the apps add is off until you turn it on.** It will be one switch, the
+  same in the web app and in the iPhone and iPad app, off by default at every age. When it is on,
+  the apps will send only a fixed list of events and coarse daily learning measures, under an id
+  your device makes anew each day and never links to your account; never your account, your
+  cards, your notes, your decks' names or your reviews one by one. Turning it off stops the
+  sending at once. Before the switch exists, this page will name each event, its lawful basis and
+  how long it is kept.

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { m } from '$lib/paraglide/messages.js';
+  import { m } from '#lib/paraglide/messages.js';
   import type { BoardView } from './board';
 
   // The personal board (SPEC-075 R3, #79): the owner's best day, today, the language streak and

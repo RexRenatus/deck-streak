@@ -24,6 +24,12 @@ Generated families close five classes (SPEC-039 section 21): every spelling carg
 declared path by, `..` and an absolute path among them; every dotfile and dot directory cargo's
 inference skips; every edition a manifest may state or inherit, since 2015 switches inference off
 beside a declared table; and every delimiter of a macro invocation that holds a `mod`.
+
+The unpathed family (SPEC-039 section 43, issue #527) crosses a `[[bin]]` table with no `path` and
+no inferred file with every subset of the older paths cargo's 2015 edition reads, four library
+shapes and every edition stated or inherited, judged by the same `cargo metadata`: where cargo
+refuses the layout, the reader must refuse it by name. Four planted tests read the same layouts
+without the oracle.
 """
 
 import concurrent.futures
@@ -229,6 +235,31 @@ ROOTS = {
     "src/bin/a.rs": {"src/bin/a.rs": None},
     "src/bin/a/main.rs": {"src/bin/a/main.rs": None},
 }
+
+#: The paths cargo's 2015 edition still reads for a `[[bin]]` named `tool` with no `path`, when no
+#: inferred binary has that name, in its order: the name's own file, tried only when the package
+#: has no library target, then the package's main, then a main under `src/bin`.
+OLDER_PATHS = ("src/tool.rs", "src/main.rs", "src/bin/main.rs")
+#: The library targets beside it, as (package keys, tables, files). `src/lib.rs` under
+#: `autolib = false` is no library target.
+LIBRARIES = {
+    "no library": ("", "", {}),
+    "src/lib.rs": ("", "", {"src/lib.rs": LEAF}),
+    "a [lib] elsewhere": ("", '[lib]\npath = "core/lib.rs"\n', {"core/lib.rs": LEAF}),
+    "src/lib.rs with autolib off": ("autolib = false\n", "", {"src/lib.rs": LEAF}),
+}
+UNPATHED = '[[bin]]\nname = "tool"\n'
+#: What the reader names when it refuses an unpathed `[[bin]]` cargo finds no file for.
+UNPATHED_REFUSAL = "declares the binary tool with no path, and cargo finds no file for it"
+
+
+def older_files():
+    """Every subset of `OLDER_PATHS`, the empty one included, by name: the files it lays out."""
+    return {
+        ", ".join(chosen) or "no older file": dict.fromkeys(chosen, MAIN)
+        for size in range(len(OLDER_PATHS) + 1)
+        for chosen in itertools.combinations(OLDER_PATHS, size)
+    }
 
 
 def at(home, relative):
@@ -600,9 +631,12 @@ def workspace_manifest(edition):
 class Member:
     """One generated crate laid out under `<root>/crates/fix`, removed when the test ends. Its
     manifest states `edition` (a line under `[package]`), `@CRATE@` in a table is the crate's
-    absolute directory, and `workspace`, when given, is the manifest written at the root."""
+    absolute directory, `workspace`, when given, is the manifest written at the root, and
+    `library`, when false, leaves out the `src/lib.rs` every other member carries."""
 
-    def __init__(self, case, name, parts, edition=EDITIONS["edition 2021"], workspace=None):
+    def __init__(
+        self, case, name, parts, edition=EDITIONS["edition 2021"], workspace=None, library=True
+    ):
         scratch = tempfile.TemporaryDirectory()
         case.addCleanup(scratch.cleanup)
         self.name = name
@@ -614,7 +648,8 @@ class Member:
         self.write("Cargo.toml", manifest.replace("@CRATE@", self.crate.as_posix()))
         if workspace is not None:
             (self.root / "Cargo.toml").write_text(workspace, encoding="utf-8")
-        self.write("src/lib.rs", LEAF)
+        if library:
+            self.write("src/lib.rs", LEAF)
         for _keys, _tables, files in parts:
             for relative, text in files.items():
                 self.write(relative, text)
@@ -666,6 +701,15 @@ def cargo_targets(member):
     )
     tests = sorted(t["name"] for t in targets if "test" in t["kind"])
     return binaries, tests
+
+
+def cargo_reading(member):
+    """The oracle of the unpathed family: (binaries, None) when cargo reads the layout, or
+    (None, the refusal `cargo_targets` raises) when cargo refuses it."""
+    try:
+        return cargo_targets(member)[0], None
+    except AssertionError as refusal:
+        return None, str(refusal)
 
 
 def compiler_sources(member, root_file):
@@ -751,10 +795,33 @@ class TheBinKindReadsWhatTheCompilerBuilds(unittest.TestCase):
                 )
                 member.unread, member.undecidable, member.root_file = unread, undecidable, root
                 members.append(("modules", member))
+        stated = [(name, line, None) for name, line in EDITIONS.items()]
+        inheriting = [
+            (
+                f"edition {edition} inherited from the workspace",
+                "edition.workspace = true\n",
+                workspace_manifest(edition),
+            )
+            for edition in INHERITED_EDITIONS
+        ]
+        for (older, files), (library, shape), (edition, line, workspace) in itertools.product(
+            older_files().items(), LIBRARIES.items(), stated + inheriting
+        ):
+            keys, tables, beside = shape
+            member = Member(
+                self,
+                f"an unpathed [[bin]] beside [{older}] and [{library}], {edition}",
+                [(keys, UNPATHED, files), ("", tables, beside)],
+                edition=line,
+                workspace=workspace,
+                library=False,
+            )
+            members.append(("unpathed", member))
         derived = (
             len(BINARY_LAYOUTS) * len(TEST_LAYOUTS) * len(EDITIONS)
             + len(BINARY_LAYOUTS) * len(INHERITED_EDITIONS)
             + len(ROOTS) * len(module_layouts("src"))
+            + len(older_files()) * len(LIBRARIES) * (len(stated) + len(inheriting))
         )
         self.assertEqual(len(examined("generated crate layouts", members)), derived)
 
@@ -764,24 +831,34 @@ class TheBinKindReadsWhatTheCompilerBuilds(unittest.TestCase):
             max_workers=min(16, os.cpu_count() or 1)
         ) as pool:
             oracles = [
-                pool.submit(cargo_targets, member)
-                if kind == "targets"
-                else pool.submit(compiler_sources, member, member.root_file)
+                pool.submit(compiler_sources, member, member.root_file)
+                if kind == "modules"
+                else pool.submit(cargo_targets if kind == "targets" else cargo_reading, member)
                 for kind, member in members
             ]
         agreed = refused = 0
+        unpathed = {}
         for (kind, member), oracle in zip(members, oracles, strict=True):
             with self.subTest(member=member.name):
                 if kind == "targets":
                     agreed += self.judge_targets(runner, member, oracle.result())
+                elif kind == "unpathed":
+                    read = self.judge_unpathed(runner, member, oracle.result())
+                    unpathed[read] = unpathed.get(read, 0) + 1
                 else:
                     outcome = self.judge_modules(runner, member, oracle.result())
                     agreed, refused = agreed + outcome[0], refused + outcome[1]
+        agreed += sum(count for read, count in unpathed.items() if read != "refused")
+        refused += unpathed.get("refused", 0)
         print(f"agreed with the oracle {agreed}, refused by name {refused}")
         self.assertEqual(agreed + refused, derived, "a member was neither agreed nor refused")
         # The presence controls: the population holds both outcomes, so neither arm is vacuous.
         self.assertGreater(refused, 0)
         self.assertGreater(agreed, refused)
+        # The unpathed family's own (issue #527): cargo reads each older path for some member and
+        # refuses some member, so no arm of the older rule or of its refusal is vacuous.
+        print(f"unpathed [[bin]] layouts by outcome: {sorted(unpathed.items())}")
+        self.assertEqual(set(unpathed), {*OLDER_PATHS, "refused"})
 
     def judge_targets(self, runner, member, oracle):
         binaries, tests = oracle
@@ -796,6 +873,22 @@ class TheBinKindReadsWhatTheCompilerBuilds(unittest.TestCase):
             name, path = binaries[0]
             self.assertEqual((killer.binary, killer.file), (name, f"crates/{PACKAGE}/{path}"))
         return 1
+
+    def judge_unpathed(self, runner, member, oracle):
+        """The path cargo reads the `tool` table from, which the reader must name with it, or
+        "refused" when cargo refuses the layout, which the reader must refuse by name."""
+        binaries, refused_by_cargo = oracle
+        refusal = self.refusal(runner, member)
+        if binaries is None:
+            self.assertIn("`tool`", refused_by_cargo, "cargo refused the layout for another reason")
+            self.assertIn(UNPATHED_REFUSAL, refusal or "")
+            return "refused"
+        self.assertIsNone(refusal, f"cargo reads the layout: {binaries}")
+        self.assertEqual(len(binaries), 1, binaries)
+        killer = runner.locate_killer(member.root, killer_row(runner))
+        name, path = binaries[0]
+        self.assertEqual((killer.binary, killer.file), (name, f"crates/{PACKAGE}/{path}"))
+        return path
 
     def judge_modules(self, runner, member, oracle):
         try:
@@ -1018,6 +1111,72 @@ class ThePlantedShapesOfTheIssue(unittest.TestCase):
         for text, expected in examined("block comments left open", texts):
             if runner.rust_tokens(text) != expected:
                 self.fail(f"{text!r} reads {runner.rust_tokens(text)}, where {expected} is due")
+
+
+class TheUnpathedBinIsReadAsCargoReadsIt(unittest.TestCase):
+    """Issue #527, read without the oracle: a `[[bin]]` table named `tool` with no `path`, which no
+    inferred binary is named for. Under edition 2015 cargo reads the first of its older paths, the
+    name's own file only with no library target; under every later edition, and with no file on
+    those paths, it refuses the manifest, and so does the reader, by name (SPEC-039 section 43)."""
+
+    def read(self, keys, tables, files, edition="", workspace=None, library=False):
+        """The binary and file the reader finds for the `tool` table, or its refusal's text. No
+        `edition` line is edition 2015."""
+        member = Member(
+            self,
+            "planted",
+            [(keys, UNPATHED, files), ("", tables, {})],
+            edition=edition,
+            workspace=workspace,
+            library=library,
+        )
+        runner = runner_module()
+        try:
+            found = runner.locate_killer(member.root, killer_row(runner))
+        except runner.KillerUnresolved as refusal:
+            return str(refusal)
+        return found.binary, found.file
+
+    def test_under_2015_with_no_library_target_the_binarys_own_name_file_is_read(self):
+        older = {"src/tool.rs": MAIN, "src/main.rs": MAIN, "src/bin/main.rs": MAIN}
+        own = ("tool", f"crates/{PACKAGE}/src/tool.rs")
+        self.assertEqual(self.read("", "", older), own)
+        # Under `autolib = false`, `src/lib.rs` is no library target, so the name's file leads.
+        beside = dict(older, **{"src/lib.rs": LEAF})
+        self.assertEqual(self.read("autolib = false\n", "", beside), own)
+
+    def test_under_2015_a_library_target_skips_the_name_file_and_main_comes_first(self):
+        older = {"src/tool.rs": MAIN, "src/main.rs": MAIN, "src/bin/main.rs": MAIN}
+        main = ("tool", f"crates/{PACKAGE}/src/main.rs")
+        lib_table = '[lib]\npath = "core/lib.rs"\n'
+        self.assertEqual(self.read("", "", dict(older, **{"src/lib.rs": LEAF})), main)
+        self.assertEqual(self.read("", lib_table, dict(older, **{"core/lib.rs": LEAF})), main)
+        # With no `src/main.rs`, the main under `src/bin` is the next older path.
+        no_main = {"src/tool.rs": MAIN, "src/bin/main.rs": MAIN, "src/lib.rs": LEAF}
+        bin_main = ("tool", f"crates/{PACKAGE}/src/bin/main.rs")
+        self.assertEqual(self.read("", "", no_main), bin_main)
+
+    def test_after_2015_an_unpathed_bin_cargo_finds_no_file_for_is_refused_by_name(self):
+        refused = f"crates/{PACKAGE} {UNPATHED_REFUSAL}"
+        files = {"src/tool.rs": MAIN, "src/main.rs": MAIN}
+        stated = EDITIONS["edition 2021"]
+        # With `autobins` off the table is the crate's one binary, and with it on `src/main.rs` is
+        # the package's own: cargo refuses the manifest either way, for the table alone.
+        self.assertEqual(self.read("autobins = false\n", "", files, stated, library=True), refused)
+        self.assertEqual(self.read("", "", files, stated, library=True), refused)
+        inherited = ("edition.workspace = true\n", workspace_manifest("2021"))
+        self.assertEqual(self.read("", "", files, *inherited, library=True), refused)
+
+    def test_under_2015_what_cargo_cannot_read_is_refused_by_name(self):
+        refused = f"crates/{PACKAGE} {UNPATHED_REFUSAL}"
+        # A library target skips the name's file, and no other older path holds a file.
+        self.assertEqual(self.read("", "", {"src/tool.rs": MAIN}, library=True), refused)
+        self.assertEqual(self.read("", "", {}), refused)
+        # An `autolib` that is not a boolean, which cargo refuses.
+        self.assertEqual(
+            self.read('autolib = "no"\n', "", {"src/main.rs": MAIN}, library=True),
+            f"crates/{PACKAGE} sets autolib to something other than a boolean",
+        )
 
 
 class TheCfgPredicatesAgreeWithTheCompiler(unittest.TestCase):

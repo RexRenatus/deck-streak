@@ -21,17 +21,24 @@ final class HarnessMeasureTests: XCTestCase {
         subsystem: "deck-streak.harness", category: "launch", name: "open-to-deck-list")
 
     /// M1: the launch to the first responsive frame, and the harness's interval from its first
-    /// line to the deck names shown. Each pass launches the app afresh, since `launch()` ends a
-    /// running instance first, and waits for the deck list so the interval ends inside the pass.
+    /// line to the deck names shown. Each pass starts measuring, launches the app, waits for the
+    /// deck list so the interval ends inside the pass, stops measuring, and only then ends the
+    /// app. So the next pass's `launch()` finds no running instance to end, and each measured
+    /// window holds one launch alone.
     @MainActor
     func test_m1_cold_start() {
         let app = XCUIApplication()
+        let options = fivePasses()
+        options.invocationOptions = [.manuallyStart, .manuallyStop]
         measure(
             metrics: [XCTApplicationLaunchMetric(waitUntilResponsive: true), openToDeckList],
-            options: fivePasses()
+            options: options
         ) {
+            startMeasuring()
             app.launch()
             _ = app.staticTexts["deck-row-Default"].waitForExistence(timeout: engineWait)
+            stopMeasuring()
+            app.terminate()
         }
     }
 

@@ -75,20 +75,20 @@ impl AnkiEngine for Engine {
         Ok(NewCardQueue::default())
     }
 
-    async fn normal_sync(
+    fn normal_sync(
         &self,
         _collection: &Path,
         _login: &SyncLogin,
-    ) -> Result<SyncOutcome, EngineError> {
-        Ok(SyncOutcome::NoChanges)
+    ) -> impl Future<Output = Result<SyncOutcome, EngineError>> + Send {
+        std::future::ready(Ok(SyncOutcome::NoChanges))
     }
 
-    async fn full_download(
+    fn full_download(
         &self,
         _collection: &Path,
         _login: &SyncLogin,
-    ) -> Result<(), EngineError> {
-        Ok(())
+    ) -> impl Future<Output = Result<(), EngineError>> + Send {
+        std::future::ready(Ok(()))
     }
 }
 
