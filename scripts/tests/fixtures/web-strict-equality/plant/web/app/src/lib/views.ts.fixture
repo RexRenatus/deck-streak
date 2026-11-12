@@ -1,0 +1,23 @@
+// A planted module the API imports a type from: a boundary (SPEC-656). See api.ts.fixture.
+export interface View {
+  readonly count: number;
+  readonly best: number | null; // accepted: null spells an absent value
+  readonly note?: string; // planted: absent-spelling
+  readonly since: string | undefined; // planted: absent-spelling
+}
+
+interface Raw {
+  readonly note?: unknown; // accepted: not exported
+}
+
+/* a == b, or a/b != c, in a block comment is prose */
+function viewOf(value: unknown): View | undefined {
+  const raw = (value ?? {}) as Raw;
+  return raw.note === undefined ? undefined : { count: 1, best: null, since: undefined };
+}
+
+export function readView(value: unknown): View | null {
+  const pattern = /a==b/; // accepted: a regular expression
+  const shown = `${value == null ? 'none' : 'some'} == text`; // planted: loose-equality
+  return pattern.test(shown) ? null : (viewOf(value) ?? null);
+}
