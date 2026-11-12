@@ -57,14 +57,16 @@ A test proves something only when it fails on code that is wrong (SPEC-039, ADR-
 stays the rule; beyond it, every behaviour change proves that its tests kill mutants of the changed
 code.
 
-- **Six CI jobs judge every pull request,** a release into `main` included, each a need of `ci`.
+- **Eight CI jobs judge every pull request,** a release into `main` included, each a need of `ci`.
   `mutation-plan` reads the diff and sizes the shards from cargo-mutants' own listing;
   `mutation-rust` runs cargo-mutants over the diff (`--in-diff`, `--in-place`), one job per shard;
   `mutation-rows` proves the hand-proved rows the diff selects and checks that no row left while
   its target stayed; `mutation-verdict` counts every shard's report, binds every equivalence record
-  against the whole tree's listing, and judges; `mutation-web` runs StrykerJS over every changed Mini
-  App file, whole; `mutation-python` runs `scripts/mutation_python.py` over the changed guard
-  scripts and the parity oracle's Python, one job per shard (ADR-073). Read the verdict's counts, never only its colour: a class of production code the
+  against the whole tree's listing, and judges; `mutation-web-shard` runs StrykerJS over every
+  changed Mini App file, whole, one job per shard, and `mutation-web` unites the shards' reports
+  and judges; `mutation-python` runs `scripts/mutation_python.py` over the changed guard
+  scripts and the parity oracle's Python, one job per shard, and `mutation-python-release` for the
+  legs a release run deals past that matrix (ADR-073). Read the verdict's counts, never only its colour: a class of production code the
   diff changed that examined nothing is VOID, a shard that never reported is VOID by name, and VOID
   fails the job. A diff of comments and blank lines reads `not-applicable`, by name.
 - **A surviving mutant is yours.** Kill it with a test that asserts the behaviour: in the mutated
@@ -103,8 +105,8 @@ code.
   (`--in-diff`), on a committed tree, then `cargo clean`. `--in-place` runs one mutant at a time,
   the rule's `-j 1`, and cargo-mutants refuses a `-j` flag beside it. Heavy runs belong in CI; the
   weekly battery sweeps the whole repository and files each file's survivors as an issue, and a
-  dispatch of it with `package` set sweeps one crate, or `miniapp`, and ends with that scope's
-  `python3 scripts/mutation-verdict.py table` line (SPEC-057 R13, R14).
+  dispatch of it with `package` set sweeps one crate, `miniapp` or `python`, and ends with that
+  scope's `python3 scripts/mutation-verdict.py table` line (SPEC-057 R13, R14).
 
 ## Land it
 
