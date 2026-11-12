@@ -67,8 +67,8 @@ REGEX_KEYWORDS = {"return", "typeof", "case", "do", "else", "in", "of", "new", "
 REGEX_KEYWORDS |= {"throw", "instanceof", "yield", "await"}
 WORD = re.compile(r"[A-Za-z0-9_$]")
 LOOSE = re.compile(r"(?<![=!<>])(==|!=)(?!=)")
-SCRIPT = re.compile(r"<script\b[^>]*>(.*?)</script>", re.S)
-STYLE = re.compile(r"<style\b[^>]*>.*?</style>", re.S)
+SCRIPT = re.compile(r"<script\b[^>]*>(.*?)</script\b[^>]*>", re.I | re.S)
+STYLE = re.compile(r"<style\b[^>]*>.*?</style\b[^>]*>", re.I | re.S)
 HTML_COMMENT = re.compile(r"<!--.*?-->", re.S)
 HIDDEN = (SCRIPT, STYLE, HTML_COMMENT)
 IMPORT = re.compile(r"""\bimport\s+(type\s+)?\{([^}]*)\}\s*from\s*['"](\.[^'"]*)['"]""")
