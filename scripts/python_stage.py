@@ -10,6 +10,10 @@ ran N test(s), OK` (`FAILED (exit c)` for a module that exits c, not 0), then th
 line, `python: <suite> ran N test(s), exit c; ...`. A suite that ran no test, or one whose module
 exited non-zero, fails the stage (SPEC-054 R7). `python3` is the one on PATH, so a stand-in there
 answers every module run.
+
+When PYTHON_STAGE_JUNIT_FILE names a file, the stage also writes its JUnit results there after its
+last line: one test suite per suite and one test case per module, a module that exits c failing
+with `exit c` and its output (SPEC-038 R21). No module is handed that variable.
 """
 
 import fnmatch
@@ -19,6 +23,7 @@ import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from xml.etree import ElementTree
 
 # The modules that never share a run, each with its reason (SPEC-633 R3, SPEC-635 R1).
 SERIAL_MODULES = (
@@ -26,6 +31,10 @@ SERIAL_MODULES = (
     ("test_engine_pin.py", "spawns cargo"),
 )
 RAN = re.compile(r"^Ran (\d+) tests?\b", re.M)
+# The variable that names the stage's JUnit file, and each character XML 1.0 cannot hold, which
+# the file carries as `?`.
+JUNIT_FILE = "PYTHON_STAGE_JUNIT_FILE"
+NOT_XML = re.compile(r"[^\t\n\r\x20-\ud7ff\ue000-\ufffd\U00010000-\U0010ffff]")
 
 
 def reason(name):
@@ -34,9 +43,10 @@ def reason(name):
 
 def run(module):
     suite, name = module
+    env = {key: value for key, value in os.environ.items() if key != JUNIT_FILE}
     done = subprocess.run(
         ["python3", "-m", "unittest", "discover", "-s", suite, "-p", name],
-        env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
+        env={**env, "PYTHONDONTWRITEBYTECODE": "1"},
         capture_output=True,
         text=True,
         check=False,
@@ -44,6 +54,26 @@ def run(module):
     output = done.stdout + done.stderr
     found = RAN.findall(output)
     return output, done.returncode, int(found[-1]) if found else 0
+
+
+def write_junit(path, suites, modules, results):
+    """Write the stage's JUnit results to `path`: one test suite per suite and one test case per
+    module, a module that exited non-zero failing with its exit and its output."""
+    root = ElementTree.Element("testsuites", name="python")
+    for suite in suites:
+        own = [module for module in modules if module[0] == suite]
+        failures = sum(1 for module in own if results[module][1])
+        tests = ElementTree.SubElement(
+            root, "testsuite", name=suite, tests=str(len(own)), failures=str(failures)
+        )
+        for module in own:
+            output, returned, _ = results[module]
+            case = ElementTree.SubElement(tests, "testcase", classname=suite, name=module[1])
+            if returned:
+                failure = ElementTree.SubElement(case, "failure", message=f"exit {returned}")
+                failure.text = NOT_XML.sub("?", output)
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    ElementTree.ElementTree(root).write(path, encoding="utf-8")
 
 
 def main(suites):
@@ -73,6 +103,9 @@ def main(suites):
         failed = failed or code != 0 or ran == 0
         verdicts.append(f"{suite} ran {ran} test(s), exit {code}")
     print("python: " + "; ".join(verdicts))
+    junit = os.environ.get(JUNIT_FILE)
+    if junit:
+        write_junit(junit, suites, modules, results)
     return 1 if failed else 0
 
 

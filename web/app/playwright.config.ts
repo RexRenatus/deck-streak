@@ -26,9 +26,16 @@ function phone(name: string, viewport: Size, colorScheme: Scheme, textScale: num
 // run renders under the stage logs, by its committed name, and fails the test that wrote it.
 const RENDER = process.env.VERIFY_RENDER === '1' && process.env.CHECK_LOG_DIR ? `${process.env.CHECK_LOG_DIR}/baselines` : '';
 
+// CI's web job names a file here, and the run then writes its JUnit results to it beside the
+// reporter Playwright picks by itself, named below (SPEC-038 R21). Unset, as on a builder's
+// machine, the reporter stays that one.
+const JUNIT = process.env.PLAYWRIGHT_JUNIT_OUTPUT_FILE;
+const REPORTER = process.env.CI ? 'dot' : 'list';
+
 export default defineConfig<VerifyOptions>({
   testDir: 'tests',
   forbidOnly: !!process.env.CI,
+  reporter: JUNIT ? [[REPORTER], ['junit', { outputFile: JUNIT }]] : REPORTER,
   // The images a run renders, a failed comparison's included, go with the run's stage logs.
   ...(process.env.CHECK_LOG_DIR ? { outputDir: `${process.env.CHECK_LOG_DIR}/playwright` } : {}),
   // A baseline is committed with the platform in its name; outside the render mode no run writes one.

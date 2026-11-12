@@ -25,6 +25,10 @@ process.env.ENGINE_SYNC_USER ??= ['engine', 'sync', 'tester'].join('-');
 process.env.ENGINE_SYNC_PASSWORD ??= randomBytes(18).toString('base64url');
 process.env.ENGINE_SYNC_BASE ??= mkdtempSync(join(tmpdir(), 'deck-streak-engine-sync-'));
 
+// CI names a file here, and the run then writes its JUnit results to it beside the list
+// reporter (SPEC-038 R21). Unset, as on a builder's machine, the list reporter stays alone.
+const JUNIT = process.env.PLAYWRIGHT_JUNIT_OUTPUT_FILE;
+
 export default defineConfig({
   testDir: 'tests-engine',
   forbidOnly: !!process.env.CI,
@@ -32,7 +36,7 @@ export default defineConfig({
   workers: 1,
   fullyParallel: false,
   timeout: 120_000,
-  reporter: 'list',
+  reporter: JUNIT ? [['list'], ['junit', { outputFile: JUNIT }]] : 'list',
   use: { baseURL: `http://${HOST}:${port}` },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },

@@ -77,6 +77,20 @@ jobs:
         env:
           CHECK_LOG_DIR: ${{ runner.temp }}/check-logs
         run: bash scripts/check.sh fmt clippy test doctest audit-rust
+      - name: move nextest's JUnit results out of target/, which a cache may carry to another run
+        if: ${{ always() }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/junit"
+          if [ -f target/nextest/default/junit.xml ]; then
+            mv target/nextest/default/junit.xml "$RUNNER_TEMP/junit/"
+          fi
+      - name: upload the JUnit results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: junit-rust
+          path: ${{ runner.temp }}/junit/
+          if-no-files-found: warn
       - name: keep only the dependencies' artifacts in the cache
         if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main') && steps.rust-cache.outputs.cache-hit != 'true' }}
         run: cargo clean --workspace
@@ -146,6 +160,20 @@ jobs:
           CHECK_LOG_DIR: ${{ runner.temp }}/check-logs
           ENGINE_SLICE: ${{ matrix.slice }}/${{ strategy.job-total }}
         run: bash scripts/check.sh test-engine
+      - name: move nextest's JUnit results out of target/, which a cache may carry to another run
+        if: ${{ always() }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/junit"
+          if [ -f target/nextest/default/junit.xml ]; then
+            mv target/nextest/default/junit.xml "$RUNNER_TEMP/junit/"
+          fi
+      - name: upload the JUnit results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: junit-engine-${{ matrix.slice }}
+          path: ${{ runner.temp }}/junit/
+          if-no-files-found: warn
       - name: upload stage logs
         if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -203,6 +231,20 @@ jobs:
         env:
           CHECK_LOG_DIR: ${{ runner.temp }}/check-logs
         run: bash scripts/check.sh test-release
+      - name: move nextest's JUnit results out of target/, which a cache may carry to another run
+        if: ${{ always() }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/junit"
+          if [ -f target/nextest/default/junit.xml ]; then
+            mv target/nextest/default/junit.xml "$RUNNER_TEMP/junit/"
+          fi
+      - name: upload the JUnit results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: junit-release
+          path: ${{ runner.temp }}/junit/
+          if-no-files-found: warn
       - name: free space after the stage
         run: df -h /
       - name: keep only the dependencies' release artifacts in the cache
@@ -278,7 +320,16 @@ jobs:
       - name: web (pnpm check with svelte-check --fail-on-warnings, vitest, vite build, playwright) and audit-web (pnpm audit)
         env:
           CHECK_LOG_DIR: ${{ runner.temp }}/check-logs
+          VITEST_JUNIT_FILE: ${{ runner.temp }}/junit/vitest.xml
+          PLAYWRIGHT_JUNIT_OUTPUT_FILE: ${{ runner.temp }}/junit/playwright-e2e.xml
         run: bash scripts/check.sh web audit-web
+      - name: upload the JUnit results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: junit-web
+          path: ${{ runner.temp }}/junit/
+          if-no-files-found: warn
       - name: save the pnpm store
         if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main') && steps.pnpm-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -315,6 +366,8 @@ jobs:
       - name: Chromium's headless shell and WebKit, with their system libraries
         run: pnpm --dir web/app exec playwright install --with-deps --only-shell chromium webkit
       - name: the planted cards, in Chromium, WebKit and Firefox
+        env:
+          PLAYWRIGHT_JUNIT_OUTPUT_FILE: ${{ runner.temp }}/junit/playwright-card.xml
         run: pnpm --dir web/app test:card
       - name: upload the planted suite's results
         if: ${{ always() }}
@@ -322,6 +375,13 @@ jobs:
         with:
           name: card-sandbox-results
           path: web/app/test-results/
+          if-no-files-found: warn
+      - name: upload the JUnit results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: junit-card-sandbox
+          path: ${{ runner.temp }}/junit/
           if-no-files-found: warn
   hygiene:
     runs-on: ubuntu-24.04
@@ -376,7 +436,15 @@ jobs:
         env:
           CHECK_LOG_DIR: ${{ runner.temp }}/check-logs
           CHECK_HISTORY: "1"
+          PYTHON_STAGE_JUNIT_FILE: ${{ runner.temp }}/junit/python.xml
         run: bash scripts/check.sh python scrub secrets
+      - name: upload the JUnit results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: junit-hygiene
+          path: ${{ runner.temp }}/junit/
+          if-no-files-found: warn
       - name: upload stage logs
         if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -1140,6 +1208,8 @@ jobs:
       - name: Chromium's headless shell and WebKit, with their system libraries
         run: pnpm --dir web/app exec playwright install --with-deps --only-shell chromium webkit
       - name: the browser tests over the module (Chromium and WebKit, persistent profiles)
+        env:
+          PLAYWRIGHT_JUNIT_OUTPUT_FILE: ${{ runner.temp }}/junit/playwright-engine.xml
         run: pnpm --dir web/app test:engine
       - name: the Mini App's build, which the study suite serves
         run: pnpm --dir web/app build
@@ -1150,7 +1220,16 @@ jobs:
       - name: the census of the staged build (no companion file in the public site)
         run: python3 scripts/companion-site-census.py --root web/app/build
       - name: the study suite over the staged build (Chromium and WebKit, persistent profiles)
+        env:
+          PLAYWRIGHT_JUNIT_OUTPUT_FILE: ${{ runner.temp }}/junit/playwright-study.xml
         run: pnpm --dir web/app test:study
+      - name: upload the JUnit results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: junit-web-engine
+          path: ${{ runner.temp }}/junit/
+          if-no-files-found: warn
 
   # The benches (SPEC-618): per lane a build job with a read-only token, which runs every build
   # and install script, and an upload job that alone holds CodSpeed's OIDC grant and installs and
