@@ -1,0 +1,11 @@
+import subprocess
+
+TABLE = {"test_tool": ("cargo", "nextest")}
+
+
+def build(package):
+    subprocess.run(["cargo", "build", "-p", package], check=True)
+    subprocess.run(("cargo", "test", "--locked"), check=True)
+    command = ["swift", "test", "--package-path", package]
+    subprocess.run(["xcodebuild", *arguments(package)], check=True)
+    return command

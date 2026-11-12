@@ -71,3 +71,19 @@ A6 to A9: green at d672785a
 A11: red at dfb89b3f: AssertionError: Lists differ: ['crates/companion/tests/formal_vectors_de[447 chars]res'] != [] First list contains 4 additional elements.
 A11: green at d672785a
 ```
+
+## The two owed vectors tests (#878)
+
+SPEC-431 section 11 was committed first. The two `owed` rows were then removed
+alone (84e28c0f), with row S43115 re-anchored and no test added: A4 read red at that commit by its first
+assertion over the real tree, which named both entries as implemented entries with no vectors
+test and no owed row. The two vectors tests and rows S43137 to S43141 were committed next (9c5ea821): A4
+read green there, and A12 and A13 passed over the code as it is.
+
+A4: red at 84e28c0f
+A4: green at 9c5ea821
+
+```red-first
+A12: not red: the kept-away rule already answers every vector the port wrote, so the test reads green over the code as it is; its reds are hand rows S43137, S43138 and S43139, killed by A12
+A13: not red: the shared reader already refuses none of the port's trees and refuses each control, so the test reads green over the code as it is; its reds are hand rows S43140 and S43141, killed by A13
+```

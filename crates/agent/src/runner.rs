@@ -88,7 +88,7 @@ impl Runner for ProcessRunner {
             ));
             write_private(&file, prompt).map_err(|_| Cause::RunFailed)?;
             let outcome = self.launch(&file, caps).await;
-            let _ = std::fs::remove_file(&file);
+            let _ = tokio::fs::remove_file(&file).await;
             outcome
         })
     }

@@ -1,0 +1,20 @@
+# Planted for test_lock_duplicates.py, read as text and never run: gamma at two versions, listed.
+version = 4
+
+[[package]]
+name = "gamma"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "gamma"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "planted-root"
+version = "0.1.0"
+dependencies = [
+ "gamma 0.1.0",
+ "gamma 0.2.0",
+]
