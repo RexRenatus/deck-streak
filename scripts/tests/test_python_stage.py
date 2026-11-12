@@ -27,11 +27,11 @@ TOLD = (
     "    def test_told(self):\n"
     "        print('told', os.environ.get('PYTHON_STAGE_JUNIT_FILE'))\n"
 )
-# A red module whose output holds a character XML 1.0 cannot hold.
+# A red module whose output holds a character XML 1.0 cannot hold and a letter past ASCII.
 LOUD = (
     "import unittest\n\n\nclass Loud(unittest.TestCase):\n"
     "    def test_red(self):\n"
-    "        print('loud \\x1b[31m')\n"
+    "        print('loud \\x1b[31m \\u00e9')\n"
     "        self.assertEqual(1, 2)\n"
 )
 
@@ -310,6 +310,7 @@ class TheStageWritesItsJUnitResults(unittest.TestCase):
                 done = run_stage(Path(scratch) / attempt, tree, ["one", "two"], **named)
                 self.assertTrue(junit.is_file(), "the stage wrote no JUnit file")
                 root = ElementTree.fromstring(junit.read_bytes())
+                self.assertIn("\u00e9".encode(), junit.read_bytes())
                 junit.unlink()
                 lines = done.stdout.splitlines()
                 self.assertEqual(lines[-1], verdict)
