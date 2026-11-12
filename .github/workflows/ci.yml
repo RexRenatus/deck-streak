@@ -120,6 +120,7 @@ jobs:
         run: rustup show
       - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
+          # Row S42802 reads this line and the next; an action update rewrites neither (SPEC-678).
           tool: cargo-nextest@0.9.149
       - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
         env:
@@ -174,6 +175,7 @@ jobs:
         run: rustup show
       - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
+          # Row S42803 reads this line and the next; an action update rewrites neither (SPEC-678).
           tool: cargo-nextest@0.9.149
       - name: protoc 31.1, checksum verified (Anki's engine compiles its protobuf definitions, ADR-022)
         env:
