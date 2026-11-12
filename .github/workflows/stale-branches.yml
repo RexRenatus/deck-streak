@@ -56,4 +56,5 @@ jobs:
       - name: the census over the lists
         env:
           STALE_BRANCHES_LISTS: ${{ runner.temp }}/stale-branches.lists
-        run: python3 -m unittest discover -s scripts/tests -p test_stale_branches.py -v
+        working-directory: scripts/tests
+        run: python3 -m unittest -v test_stale_branches
