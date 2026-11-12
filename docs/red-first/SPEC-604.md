@@ -61,3 +61,17 @@ checks one batch at a time`; A3: the merge conditions differ from the queue cond
 `examined 0 merge queue settings`), and against the tuned file all eleven read green. The tuned file
 read 0 errors against the same schema, and a planted copy whose parallel check count is a string
 read 1 error.
+
+The revision named in the specification's header changed two tests together with the queue file:
+the entry test, `test_a_pull_request_enters_the_queue_only_into_dev_labelled_ready_resolved_and_green`,
+and the batch test, `test_a_batch_merges_only_after_ci_fragment_and_dependency_review_pass_on_it`.
+The revised tests were committed alone first and run by their acceptance commands against the queue
+file as it stood before the revision, and each read red by assertion. The entry test read
+`AssertionError: False is not true : a ready, green pull request with the READY status enters`
+and the batch test read
+`AssertionError: False is not true : a batch whose members entered by the READY status merges on the batch's checks alone`.
+Against the revised queue file all eleven read green.
+The revised queue file read 0 errors against Mergify's published configuration schema, fetched
+once more and never vendored (its sha256 is now
+f6f924c812112063e81b42f087200935e317e66f64942e001545fea2effba1cb), and a planted copy whose
+batch size is a string read 1 error.

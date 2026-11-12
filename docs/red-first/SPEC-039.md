@@ -648,3 +648,26 @@ A79: green at d5420d4b
 A80: red at 146eb84c: AssertionError: [] == [] : import subprocess
 A80: green at d5420d4b
 ```
+
+## Addendum: an unpathed `[[bin]]` is read by cargo's older rule, or refused (section 43, issue #527)
+
+The tests of A81 to A85 were committed first, alone, at 0ce1ee94, against the reader as it stood on
+`dev`. They fail by assertion, not by error: the unpathed family agreed with the oracle on 24 of
+its 128 members, and each planted test failed for its own reason. The reader's fix went green at
+e9dc246e.
+
+```red-first
+A81: red at 0ce1ee94: agreed with the oracle 1547, refused by name 87
+A81: green at e9dc246e
+A82: red at 0ce1ee94: AssertionError: Tuples differ: ('tool', 'crates/fix/src/main.rs') != ('tool', 'crates/fix/src/tool.rs')
+A82: green at e9dc246e
+A83: red at 0ce1ee94: AssertionError: 'crates/fix declares the binary tool at src/main.rs, which does not exist' != ('tool', 'crates/fix/src/bin/main.rs')
+A83: green at e9dc246e
+A84: red at 0ce1ee94: AssertionError: ('tool', 'crates/fix/src/main.rs') != 'crates/fix declares the binary tool with[36 chars]r it'
+A84: green at e9dc246e
+A85: red at 0ce1ee94: AssertionError: 'crat[14 chars]s the binary tool at src/main.rs, which does not exist' != 'crat[14 chars]s the binary tool with no path, and cargo finds no file for it'
+A85: green at e9dc246e
+```
+
+The examined lines at e9dc246e read `examined 1738 generated crate layouts`, `agreed with the oracle
+1575, refused by name 163` and `unpathed [[bin]] layouts by outcome: [('refused', 76), ('src/bin/main.rs', 12), ('src/main.rs', 24), ('src/tool.rs', 16)]`.

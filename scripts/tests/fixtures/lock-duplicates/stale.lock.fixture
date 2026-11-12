@@ -1,0 +1,15 @@
+# Planted for test_lock_duplicates.py, read as text and never run: alpha at one version, which a
+# listing entry still names, so the entry is stale.
+version = 4
+
+[[package]]
+name = "alpha"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "planted-root"
+version = "0.1.0"
+dependencies = [
+ "alpha",
+]

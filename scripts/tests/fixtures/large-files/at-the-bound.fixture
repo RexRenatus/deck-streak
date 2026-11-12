@@ -1,0 +1,5 @@
+# A file at the bound, an empty file and an executable file are not sites, and a path with spaces
+# is read whole after its tab (SPEC-673 R4, R5).
+100644 blob 1048576	assets/at the bound.bin
+100644 blob 0	docs/empty.md
+100755 blob 2048	scripts/run.sh

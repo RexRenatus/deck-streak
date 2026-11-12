@@ -1,0 +1,9 @@
+name: waits
+on: push
+jobs:
+  wait:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: a waiter whose pattern is in the command line of its own shell
+        run: |
+          timeout 30 bash -c 'until pgrep -f deck-api; do sleep 1; done'

@@ -100,3 +100,25 @@ SPEC-615's acceptance criteria A1 to A4, its red-first record and its row S61500
 
 Built by SPEC-615; drawn in `docs/schematics/review-fixture-day.md`. SPEC-348 R8 (the review
 fixture), its A1 (the four intervals) and its A15, A17 and A19 (the app's tests that read them).
+
+## Amendment: the fixture's second reader, the issue's job and an earlier run's directory (SPEC-615)
+
+- **The second reader.** The `release-and-app` job reads the pinned fixture twice: its review
+  screen's step runs `ReviewModelTests`, `ReviewSessionTests` and `ReviewFlowTests` over one copy,
+  and its bury and flag step copies the same `review-fixture/` again and runs
+  `ReviewActionsFlowTests` over that copy, in `.github/workflows/xcframework.yml`, the step
+  `the bury and flag tests, Debug, on the iPhone and then the iPad`. The context above named the
+  first reader only. The pin holds for both: each copy carries the same rollover hour, and both
+  steps run in the one job, well inside the lead of half a day. The consequence of a lone re-run
+  binds both: the job re-run alone, about twelve hours after the writing job, meets the cutoff in
+  either step.
+- **The issue's job.** #779 observed its reds in the `apple / harness` job. The change ADR-610
+  decides has since moved the review, bury and flag tests into `release-and-app`, the sibling job
+  that repeats the harness's prefix and boot, and the job the context above names is that one.
+- **An earlier run's directory.** SPEC-615's A1 and A2 name their scratch directories by the test
+  and the process under the target's temporary folder, which persists between runs. Chosen: the
+  helper removes a directory that an earlier run left under the same process id before its
+  absent-first check (SPEC-615 R7, A5). Rejected: a stamp from the wall clock in the name,
+  because no added line reads the wall clock and the engine's own instant is the only one these
+  tests use; a temporary-directory crate, because it adds a dependency and a lockfile change for
+  a test's sake.

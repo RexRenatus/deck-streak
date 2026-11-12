@@ -839,6 +839,15 @@
         "notifications",
         "router::the_same_event_from_both_surfaces_is_delivered_once",
         "the delivery's scoped key is a unique index, so the router's claim writes nothing on a conflict and one key is delivered at most once across the bot and the Mini App (SPEC-041 R4 rule 2, R5); a key held in SQL is proved by a script mutation"
+      ],
+      [
+        "S04195-THE-EXPORT-CARRIES-A-KEPT-CLAIM",
+        "crates/notifications/src/data_rights.rs",
+        "\"claim\": row.claim,",
+        "\"claim\": row.claim.filter(|_| false),",
+        "coordination",
+        "data_rights_symmetry::the_export_carries_the_claim_an_abandoned_queue_row_kept",
+        "the export carries each queue row's claim by its value, a kept claim included (SPEC-041 R18, A30, #538); the mutant reads the claim and yields none, so every exported claim is null, as the plant #538 names does; the killer lives in the coordination crate"
       ]
     ]
   }
