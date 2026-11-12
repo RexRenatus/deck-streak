@@ -59,6 +59,14 @@ A24: red at 83b2734a: AssertionError: False is not true : the script wrote no ic
 A24: green at edf2fa57
 A25: red at 7124d3ce: AssertionError: Lists differ: ["crates/engine-core/**: the XCFramework l[157 chars] it"] != []
 A25: green at 85c644d7
+A26: red at 6cd59182: AssertionError: 1 != 2 : the certificate was read 1 time(s), not twice
+A26: green at 5071e917
+A27: red at 6cd59182: AssertionError: Lists differ: [] != ['pkcs12 read failed: class wrong-password; reading once more with -legacy']
+A27: green at 5071e917
+A28: red at 6cd59182: AssertionError: 'openssl pkcs12 read failed: first class wrong-password, -legacy class option-refused' not found in ['openssl pkcs12 failed with exit 1']
+A28: green at 5071e917
+A29: red at 3adb425: AssertionError: Lists differ: [] != ['fixture openssl version line']
+A29: green at 409e44c
 ```
 
 - Three red lines are shortened where the failure printed more than a criterion needs: A8's set
@@ -93,3 +101,37 @@ A25: green at 85c644d7
   amended block, and green at 85c644d7. A25's planted control, the live workflow with
   `crates/engine-core/**` dropped, was red by name: `crates/engine-core/**: the XCFramework links
   it, and the internal lane's push filter does not watch it`.
+- The first certificate read's amendment (SPEC-352 section 8, R9 and R13 as amended). Its three
+  criteria, A26 to A28, are new, so each takes one red and one green line in the fence above. Their
+  tests and the shim's refused-read setting were committed alone, before the lane script changed;
+  each red and green is read locally by running `test_ios_lane.py` at the named commit, where the
+  module's other tests pass. A26 is red when no second read is recorded, A27 when a failed read
+  prints no class line, and A28 when the refusal names no class.
+- A27's control is an exact mutation of the fixed script: only the class line's print changed, to
+  print openssl's standard error after the class. A27 run alone failed by name in each of its four
+  cases (`FAILED (failures=4)`), the shim's planted marker text appearing in the step's output;
+  the script was then restored by copy, its sha256 equal before and after.
+- The certificate read's killers. d246c585 adds the four survivors' killers, two tests after
+  A28's, committed after the greens at 5071e917 and changing no test before them.
+  `test_the_re_wrap_is_given_exactly_what_the_certificate_read_wrote` kills the two mutants that
+  make the read hand nothing to the re-wrap, on the first read's path and on the `-legacy` path;
+  `test_each_certificate_read_line_is_written_out_before_the_next_tool_runs` kills the two that
+  leave the class line or the `-legacy` ok line unflushed when the next tool runs. Each kill was
+  proved by an exact mutation of the script, its killer run alone failing by name and the script
+  restored by copy, its sha256 equal before and after. The script was unchanged from the green to bc368d99:
+  `git -C <wt> diff --quiet 5071e917 bc368d99 -- scripts/ios_lane.py` reads rc 0.
+- The openssl version line's amendment (SPEC-352 section 8, R9 and R13 as amended). Its one
+  criterion, A29, is new, so it takes one red and one green line in the fence above. Its test was
+  committed alone at 3adb425, before the lane script changed, with one test edit of that red
+  commit disclosed here: the shims gain an answer to `openssl version`, kept apart from the reads
+  (a record of its own, the planted version line or nothing, and a planted decoy made executable),
+  so no existing assertion sees the call. A29 is red at 3adb425 when the step prints no version
+  line (`AssertionError: Lists differ: [] != ['fixture openssl version line']`), and green at
+  409e44c, where the module's other tests pass. Each kill was proved by an exact mutation of the
+  fixed script, A29 run alone failing by name and the script restored by copy, its sha256 equal
+  before and after: the version line's print removed, its flush made false or its end changed;
+  the read, its call site or the re-wrap naming the bare `openssl`; the version call given the
+  step's whole environment or another argument; `tool()` naming the path in its refusal; and the
+  missing-openssl check negated, its refusal text changed, its raise removed or its search given
+  another name. No mutation coverage commit follows the green.
+  The green commit `409e44c` carries the cure, and `git diff --quiet 409e44c HEAD` over scripts/ios_lane.py and scripts/tests/test_ios_lane.py reads rc 0.

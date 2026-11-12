@@ -112,6 +112,118 @@
         "        if event not in (\"workflow_dispatch\",):\n",
         "the internal plan admits a push on dev, so a push run reaches the build (SPEC-352 R3 as R22 amends it, A1)",
         "test_ios_lane.LanePlan.test_the_internal_plan_refuses_any_event_or_ref_but_a_dispatch_on_dev"
+      ],
+      [
+        "S35214-INVALID-PASSWORD-IS-WRONG-PASSWORD",
+        "scripts/ios_lane.py",
+        "(\"invalid password\", \"mac verify\")",
+        "(\"mac verify\",)",
+        "a failed read whose standard error says invalid password is named wrong-password (SPEC-352 R13 as amended, A28)",
+        "test_ios_lane.LaneCredential.test_a_failed_legacy_read_refuses_naming_both_classes_and_runs_no_further_tool"
+      ],
+      [
+        "S35215-MAC-VERIFY-IS-WRONG-PASSWORD",
+        "scripts/ios_lane.py",
+        "(\"invalid password\", \"mac verify\")",
+        "(\"invalid password\",)",
+        "a failed read whose standard error says mac verify is named wrong-password (SPEC-352 R13 as amended, A27)",
+        "test_ios_lane.LaneCredential.test_each_failed_certificate_read_prints_one_class_and_nothing_of_openssl"
+      ],
+      [
+        "S35216-UNSUPPORTED-IS-LEGACY-ALGORITHM",
+        "scripts/ios_lane.py",
+        "(\"legacy-algorithm\", (\"unsupported\",))",
+        "(\"legacy-algorithm\", ())",
+        "a failed read whose standard error says unsupported is named legacy-algorithm (SPEC-352 R13 as amended, A27)",
+        "test_ios_lane.LaneCredential.test_each_failed_certificate_read_prints_one_class_and_nothing_of_openssl"
+      ],
+      [
+        "S35217-UNKNOWN-OPTION-IS-OPTION-REFUSED",
+        "scripts/ios_lane.py",
+        "(\"unknown option\", \"unrecognized flag\", \"bad option\")",
+        "(\"unrecognized flag\", \"bad option\")",
+        "a failed read whose standard error says unknown option is named option-refused (SPEC-352 R13 as amended, A28)",
+        "test_ios_lane.LaneCredential.test_a_failed_legacy_read_refuses_naming_both_classes_and_runs_no_further_tool"
+      ],
+      [
+        "S35218-UNRECOGNIZED-FLAG-IS-OPTION-REFUSED",
+        "scripts/ios_lane.py",
+        "(\"unknown option\", \"unrecognized flag\", \"bad option\")",
+        "(\"unknown option\", \"bad option\")",
+        "a failed read whose standard error says unrecognized flag is named option-refused (SPEC-352 R13 as amended, A27)",
+        "test_ios_lane.LaneCredential.test_each_failed_certificate_read_prints_one_class_and_nothing_of_openssl"
+      ],
+      [
+        "S35219-ANY-OTHER-ERROR-IS-UNRECOGNISED",
+        "scripts/ios_lane.py",
+        "    return \"unrecognised\"",
+        "    return \"option-refused\"",
+        "a failed read whose standard error holds no class's words is named unrecognised, never another class (SPEC-352 R13 as amended, A27)",
+        "test_ios_lane.LaneCredential.test_each_failed_certificate_read_prints_one_class_and_nothing_of_openssl"
+      ],
+      [
+        "S35220-WRONG-PASSWORD-IS-TESTED-FIRST",
+        "scripts/ios_lane.py",
+        "    (\"wrong-password\", (\"invalid password\", \"mac verify\")),\n    (\"legacy-algorithm\", (\"unsupported\",)),",
+        "    (\"legacy-algorithm\", (\"unsupported\",)),\n    (\"wrong-password\", (\"invalid password\", \"mac verify\")),",
+        "wrong-password is tested before legacy-algorithm, so a text holding both is named wrong-password (SPEC-352 R13 as amended, A27)",
+        "test_ios_lane.LaneCredential.test_each_failed_certificate_read_prints_one_class_and_nothing_of_openssl"
+      ],
+      [
+        "S35221-LEGACY-ALGORITHM-BEFORE-OPTION-REFUSED",
+        "scripts/ios_lane.py",
+        "    (\"legacy-algorithm\", (\"unsupported\",)),\n    (\"option-refused\", (\"unknown option\", \"unrecognized flag\", \"bad option\")),",
+        "    (\"option-refused\", (\"unknown option\", \"unrecognized flag\", \"bad option\")),\n    (\"legacy-algorithm\", (\"unsupported\",)),",
+        "legacy-algorithm is tested before option-refused, so a text holding both is named legacy-algorithm (SPEC-352 R13 as amended, A27)",
+        "test_ios_lane.LaneCredential.test_each_failed_certificate_read_prints_one_class_and_nothing_of_openssl"
+      ],
+      [
+        "S35222-THE-CLASS-IS-CHOSEN-CASE-BLIND",
+        "scripts/ios_lane.py",
+        "    text = errors.lower()",
+        "    text = errors",
+        "a failed read's class is chosen case-blind (SPEC-352 R13 as amended, A27)",
+        "test_ios_lane.LaneCredential.test_each_failed_certificate_read_prints_one_class_and_nothing_of_openssl"
+      ],
+      [
+        "S35223-THE-SECOND-READ-TAKES-LEGACY",
+        "scripts/ios_lane.py",
+        "    legacy = read(\"-legacy\")",
+        "    legacy = read()",
+        "the read after a failed first read takes -legacy right after pkcs12 (SPEC-352 R9 as amended, A26)",
+        "test_ios_lane.LaneCredential.test_a_failed_certificate_read_is_read_once_more_under_legacy"
+      ],
+      [
+        "S35224-NO-THIRD-CERTIFICATE-READ",
+        "scripts/ios_lane.py",
+        "    if legacy.returncode != 0:",
+        "    if legacy.returncode != 0:\n        legacy = read(\"-legacy\")\n    if legacy.returncode != 0:",
+        "a failed -legacy read is refused, and the certificate is never read a third time (SPEC-352 R9 as amended, A28)",
+        "test_ios_lane.LaneCredential.test_a_failed_legacy_read_refuses_naming_both_classes_and_runs_no_further_tool"
+      ],
+      [
+        "S35225-THE-LEGACY-CLASS-IS-ITS-OWN-READS",
+        "scripts/ios_lane.py",
+        "        second = read_failure(legacy.stderr)",
+        "        second = failed",
+        "the refusal's second class is chosen from the -legacy read's own standard error (SPEC-352 R9 as amended, A28)",
+        "test_ios_lane.LaneCredential.test_a_failed_legacy_read_refuses_naming_both_classes_and_runs_no_further_tool"
+      ],
+      [
+        "S35226-A-GOOD-FIRST-READ-IS-NOT-RETRIED",
+        "scripts/ios_lane.py",
+        "    if first.returncode == 0:",
+        "    if first.returncode != 0:",
+        "a first certificate read that succeeds is never read again (SPEC-352 R9 as amended, A9)",
+        "test_ios_lane.LaneCredential.test_signing_imports_the_certificate_non_extractable_into_a_job_keychain"
+      ],
+      [
+        "S35227-A-GOOD-LEGACY-READ-SAYS-SO",
+        "scripts/ios_lane.py",
+        "    print(\"pkcs12 read under -legacy: ok\", flush=True)",
+        "    pass",
+        "a -legacy read that succeeds says so in one line before the signing goes on (SPEC-352 R13 as amended, A26)",
+        "test_ios_lane.LaneCredential.test_a_failed_certificate_read_is_read_once_more_under_legacy"
       ]
     ]
   }
