@@ -7,9 +7,22 @@
 // reveal and no rating, only a flag and a bury (SPEC-380 A14).
 import AVFoundation
 import Foundation
+import UIKit
 import XCTest
 
 @testable import DeckStreak
+
+/// A poster that records each announcement the review makes, in order, in place of the system's.
+@MainActor
+private final class RecordingPoster {
+    private(set) var notifications: [UIAccessibility.Notification] = []
+    private(set) var said: [String] = []
+
+    func post(_ notification: UIAccessibility.Notification, _ argument: Any?) {
+        notifications.append(notification)
+        said.append((argument as? String) ?? "")
+    }
+}
 
 /// A voice the tests install: it is never on a simulator, so its choice is the test's alone.
 private let testVoice = InstalledVoice(
@@ -214,6 +227,32 @@ final class ReviewModelTests: XCTestCase {
         await open.perform(.showAnswer)
         await open.perform(.rate(.good))
         XCTAssertEqual(open.answered, 1, "with no settle interval the grade is sent")
+    }
+
+    /// SPEC-680 R6: the review announces the card shown, the answer when it shows, the grade sent
+    /// and the next card after it, through to the finish in its words, each once and each as an
+    /// announcement, through the poster a test hands in.
+    @MainActor
+    func test_the_review_announces_each_answer_grade_card_and_finish() async throws {
+        let (engine, review) = try await openedFixture(freshFixture())
+        let poster = RecordingPoster()
+        let model = ReviewModel(
+            deck: review, session: ReviewSession(engine: engine),
+            post: { notification, argument in poster.post(notification, argument) },
+            voiceOverRunning: { true }, installed: { [] })
+        await model.start()
+        XCTAssertEqual(poster.said.count, 1, "the first card is announced: \(poster.said)")
+        await model.perform(.showAnswer)
+        XCTAssertEqual(poster.said.count, 2, "the answer is announced: \(poster.said)")
+        await model.perform(.rate(.good))
+        XCTAssertEqual(poster.said.count, 4, "the grade and the next card: \(poster.said)")
+        await answeredGood(model, cards: 7)
+        XCTAssertEqual(model.phase, .finished, "eight grades finish the deck")
+        XCTAssertEqual(poster.said.count, 25, "each answer, grade and card or finish once")
+        XCTAssertEqual(poster.said.last, FinishWords.text(answered: 8), "the finish's words")
+        XCTAssertEqual(
+            poster.notifications,
+            Array(repeating: UIAccessibility.Notification.announcement, count: 25))
     }
 
     // MARK: - Steps

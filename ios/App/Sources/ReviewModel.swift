@@ -48,6 +48,10 @@ final class ReviewModel {
 
     init(
         deck: Deck, session: ReviewSession, settle: Duration = .zero,
+        post: @escaping @MainActor (UIAccessibility.Notification, Any?) -> Void = {
+            notification, argument in
+            UIAccessibility.post(notification: notification, argument: argument)
+        },
         voiceOverRunning: @escaping @MainActor () -> Bool = { UIAccessibility.isVoiceOverRunning },
         installed: @escaping @MainActor () -> [InstalledVoice] = InstalledVoices.all
     ) {
