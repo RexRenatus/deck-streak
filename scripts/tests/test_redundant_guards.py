@@ -128,7 +128,7 @@ ABSENT_CHECK = re.compile(
 PRESENT_CHECK = re.compile(
     r"^(?:(?P<b>.+) \. is_(?:some|ok) \( \)|(?P<c>.+) (?:!==|!=) (?:undefined|null|nil)|(?P<f>.+) is not None)$"
 )
-SCRIPT = re.compile(r"<script[^>]*>(.*?)</script>", re.S)
+SCRIPT = re.compile(r"<script\b[^>]*>(.*?)</script\b[^>]*>", re.S | re.I)
 SVELTE_BLOCK = re.compile(r"\{(#if|:else if|:else|/if|#each|/each)\s*([^}]*)\}")
 SHELL_IF = re.compile(r"^(if|elif)\s+(.*?);?\s*then\s*$|^(if|elif)\s+(.*?)\s*;\s*then")
 SHELL_TEST = re.compile(r"^!?\s*(?:\[\[?\s|test\s)")
