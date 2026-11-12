@@ -36,3 +36,7 @@ path is no bench file. It removes no assertion, keeps the check that no bench fi
 `web/app/src` and the coverage exclusions, and changes no line of A1 or A2. A local run of
 `test_perf_benches.py` read that test red at 10e6d727 and every test OK over the tree of the
 commit after it.
+
+```red-first
+A3: not red: tests only; each new test passes at the base, and the ranged StrykerJS run before and after is the proof
+```

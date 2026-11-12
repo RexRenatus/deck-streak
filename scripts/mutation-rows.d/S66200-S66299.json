@@ -1,0 +1,230 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S66200-THE-EXCLUDE-LIST-IS-READ",
+        "scripts/tests/test_ci_job_budget.py",
+        "for entry in matrix.get(\"exclude\", []):",
+        "for entry in matrix.get(\"exclude\", [])[:0]:",
+        "an exclude entry drops nothing, so an excluded combination is counted (SPEC-662 R2)",
+        "test_ci_job_budget.TheRunsAreCountedByOneRule.test_a_static_matrix_counts_its_combinations_after_exclude_then_include"
+      ],
+      [
+        "S66201-AN-EXCLUDE-ENTRY-MATCHES-ON-EVERY-KEY",
+        "scripts/tests/test_ci_job_budget.py",
+        "if not all(c.get(k) == v",
+        "if not any(c.get(k) == v",
+        "an exclude entry drops each combination that shares any one of its values (SPEC-662 R2)",
+        "test_ci_job_budget.TheRunsAreCountedByOneRule.test_a_static_matrix_counts_its_combinations_after_exclude_then_include"
+      ],
+      [
+        "S66202-AN-INCLUDE-THAT-EXTENDS-ADDS-NONE",
+        "scripts/tests/test_ci_job_budget.py",
+        "if not any(all(c[k] == v",
+        "if any(all(c[k] == v",
+        "an include entry that extends a combination is counted as a new one, and one that adds is not (SPEC-662 R2)",
+        "test_ci_job_budget.TheRunsAreCountedByOneRule.test_a_static_matrix_counts_its_combinations_after_exclude_then_include"
+      ],
+      [
+        "S66203-AN-INCLUDE-THAT-ADDS-COUNTS-ONE",
+        "scripts/tests/test_ci_job_budget.py",
+        "            added += 1",
+        "            added += 2",
+        "an include entry that extends no combination adds two jobs, not one (SPEC-662 R2)",
+        "test_ci_job_budget.TheRunsAreCountedByOneRule.test_a_static_matrix_counts_its_combinations_after_exclude_then_include"
+      ],
+      [
+        "S66204-EACH-AXIS-VALUE-IS-A-COMBINATION",
+        "scripts/tests/test_ci_job_budget.py",
+        "for combo in combos for value in values]",
+        "for combo in combos for value in values[:1]]",
+        "an axis counts its first value alone, so a static matrix is undercounted (SPEC-662 R2)",
+        "test_ci_job_budget.TheRunsAreCountedByOneRule.test_a_static_matrix_counts_its_combinations_after_exclude_then_include"
+      ],
+      [
+        "S66205-A-COMPUTED-AXIS-IS-NOT-COUNTED",
+        "scripts/tests/test_ci_job_budget.py",
+        "        if not isinstance(value, list):",
+        "        if False:",
+        "an axis computed at run time is read as a static list of its characters (SPEC-662 R2)",
+        "test_ci_job_budget.TheRunsAreCountedByOneRule.test_a_computed_matrix_or_a_foreign_call_is_counted_once_and_undecided"
+      ],
+      [
+        "S66206-A-COMPUTED-MATRIX-NAMES-ITS-SOURCE",
+        "scripts/tests/test_ci_job_budget.py",
+        "undecided.append((name, job_id, source))",
+        "undecided.append((name, job_id, str(count)))",
+        "an undecided matrix is named by its count, not by the expression it reads (SPEC-662 R2)",
+        "test_ci_job_budget.TheRunsAreCountedByOneRule.test_a_computed_matrix_or_a_foreign_call_is_counted_once_and_undecided"
+      ],
+      [
+        "S66207-A-LOCAL-CALL-COUNTS-THE-CALLED-JOBS",
+        "scripts/tests/test_ci_job_budget.py",
+        "each, inner = run_count(call.group(1), workflows)",
+        "inner = run_count(call.group(1), workflows)[1]",
+        "a job-level call counts as one job, not as the called workflow's jobs (SPEC-662 R2)",
+        "test_ci_job_budget.TheRunsAreCountedByOneRule.test_a_job_level_call_counts_the_called_jobs_per_combination"
+      ],
+      [
+        "S66208-A-CALL-RUNS-ONCE-PER-COMBINATION",
+        "scripts/tests/test_ci_job_budget.py",
+        "jobs += count * each",
+        "jobs += max(count, each)",
+        "a call from a matrix job counts the called jobs once, not once per combination (SPEC-662 R2)",
+        "test_ci_job_budget.TheRunsAreCountedByOneRule.test_a_job_level_call_counts_the_called_jobs_per_combination"
+      ],
+      [
+        "S66209-A-FOREIGN-CALL-IS-UNDECIDED",
+        "scripts/tests/test_ci_job_budget.py",
+        "undecided.append((name, job_id, f\"uses: {job['uses']}\"))",
+        "undecided.extend([])",
+        "a call the census cannot read is counted once and never named as undecided (SPEC-662 R2)",
+        "test_ci_job_budget.TheRunsAreCountedByOneRule.test_a_computed_matrix_or_a_foreign_call_is_counted_once_and_undecided"
+      ],
+      [
+        "S66210-A-JOB-ITS-CONDITION-CAN-SKIP-IS-COUNTED",
+        "scripts/tests/test_ci_job_budget.py",
+        "for job_id, job in (workflows[name].get(\"jobs\") or {}).items():",
+        "for job_id, job in ((i, j) for i, j in (workflows[name].get(\"jobs\") or {}).items() if \"if\" not in j):",
+        "a job with a condition is left out of its run's count (SPEC-662 R2)",
+        "test_ci_job_budget.TheRunsAreCountedByOneRule.test_a_job_its_condition_can_skip_is_still_counted"
+      ],
+      [
+        "S66211-A-PUSH-FILTERED-BY-TAGS-ALONE-STARTS-NONE",
+        "scripts/tests/test_ci_job_budget.py",
+        "return \"tags\" not in filters and \"tags-ignore\" not in filters",
+        "return True",
+        "a push filtered by tags alone is counted as a run of a push to dev (SPEC-662 R1)",
+        "test_ci_job_budget.TheRunsAreCountedByOneRule.test_only_a_push_to_dev_and_a_pull_request_into_dev_start_a_run"
+      ],
+      [
+        "S66212-A-BRANCH-LIST-STARTS-ON-DEV",
+        "scripts/tests/test_ci_job_budget.py",
+        "entry == BRANCH or PATTERN.search(entry)",
+        "entry != BRANCH or PATTERN.search(entry)",
+        "a branch list starts a run when it lists a branch other than dev (SPEC-662 R1)",
+        "test_ci_job_budget.TheRunsAreCountedByOneRule.test_only_a_push_to_dev_and_a_pull_request_into_dev_start_a_run"
+      ],
+      [
+        "S66213-A-BRANCH-PATTERN-IS-COUNTED",
+        "scripts/tests/test_ci_job_budget.py",
+        "entry == BRANCH or PATTERN.search(entry)",
+        "entry == BRANCH",
+        "a branch pattern is read as a branch name, so a run it may start is not counted (SPEC-662 R1)",
+        "test_ci_job_budget.TheRunsAreCountedByOneRule.test_only_a_push_to_dev_and_a_pull_request_into_dev_start_a_run"
+      ],
+      [
+        "S66214-A-BRANCHES-IGNORE-LISTING-DEV-STARTS-NONE",
+        "scripts/tests/test_ci_job_budget.py",
+        "return BRANCH not in as_list(ignored)",
+        "return True",
+        "a branches-ignore filter that lists dev still starts a run (SPEC-662 R1)",
+        "test_ci_job_budget.TheRunsAreCountedByOneRule.test_only_a_push_to_dev_and_a_pull_request_into_dev_start_a_run"
+      ],
+      [
+        "S66215-THE-PULL-REQUEST-TARGET-EVENT-IS-COUNTED",
+        "scripts/tests/test_ci_job_budget.py",
+        "EVENTS = (\"push\", \"pull_request\", \"pull_request_target\")",
+        "EVENTS = (\"push\", \"pull_request\")",
+        "a pull_request_target run into dev is not counted (SPEC-662 R1)",
+        "test_ci_job_budget.TheRunsAreCountedByOneRule.test_only_a_push_to_dev_and_a_pull_request_into_dev_start_a_run"
+      ],
+      [
+        "S66216-THE-BRANCH-IS-DEV",
+        "scripts/tests/test_ci_job_budget.py",
+        "BRANCH = \"dev\"",
+        "BRANCH = \"main\"",
+        "the runs are read against main, not dev (SPEC-662 R1)",
+        "test_ci_job_budget.TheRunsAreCountedByOneRule.test_only_a_push_to_dev_and_a_pull_request_into_dev_start_a_run"
+      ],
+      [
+        "S66217-A-RUN-AT-ITS-BUDGET-PASSES",
+        "scripts/tests/test_ci_job_budget.py",
+        "elif jobs > held[0]:",
+        "elif jobs >= held[0]:",
+        "a run whose count equals its budget is reported past it (SPEC-662 R8)",
+        "test_ci_job_budget.TheVerdictHoldsEachRunToItsBudget.test_a_run_past_its_budget_warns_and_a_run_at_or_under_it_does_not"
+      ],
+      [
+        "S66218-A-RUN-WITH-NO-BUDGET-SAYS-SO",
+        "scripts/tests/test_ci_job_budget.py",
+        "f\"WARN job-budget {name} {event}: {jobs} job(s), no budget\"",
+        "f\"WARN job-budget {name} {event}: {jobs} job(s)\"",
+        "a run with no budget is printed without saying it has none (SPEC-662 R8)",
+        "test_ci_job_budget.TheVerdictHoldsEachRunToItsBudget.test_each_unlisted_run_or_job_stale_entry_and_missing_reason_is_named"
+      ],
+      [
+        "S66219-A-LISTED-UNDECIDED-JOB-IS-QUIET",
+        "scripts/tests/test_ci_job_budget.py",
+        "if (file, job) not in undecided and (file, job) not in seen:",
+        "if (file, job) not in seen:",
+        "an undecided job the listing names is still reported (SPEC-662 R8)",
+        "test_ci_job_budget.TheVerdictHoldsEachRunToItsBudget.test_each_unlisted_run_or_job_stale_entry_and_missing_reason_is_named"
+      ],
+      [
+        "S66220-AN-ENTRY-WITH-NO-REASON-IS-NAMED",
+        "scripts/tests/test_ci_job_budget.py",
+        "        if not why.strip():",
+        "        if False:",
+        "a budget entry with no reason passes unnamed (SPEC-662 R6, R8)",
+        "test_ci_job_budget.TheVerdictHoldsEachRunToItsBudget.test_each_unlisted_run_or_job_stale_entry_and_missing_reason_is_named"
+      ],
+      [
+        "S66221-A-STALE-BUDGET-ENTRY-IS-NAMED",
+        "scripts/tests/test_ci_job_budget.py",
+        "        if key not in found:",
+        "        if False:",
+        "a budget entry no run matches passes unnamed (SPEC-662 R8)",
+        "test_ci_job_budget.TheVerdictHoldsEachRunToItsBudget.test_each_unlisted_run_or_job_stale_entry_and_missing_reason_is_named"
+      ],
+      [
+        "S66222-A-STALE-UNDECIDED-ENTRY-IS-NAMED",
+        "scripts/tests/test_ci_job_budget.py",
+        "for key in sorted(set(undecided) - seen):",
+        "for key in sorted(set(undecided) - seen - set(undecided)):",
+        "an undecided entry no job matches passes unnamed (SPEC-662 R8)",
+        "test_ci_job_budget.TheVerdictHoldsEachRunToItsBudget.test_each_unlisted_run_or_job_stale_entry_and_missing_reason_is_named"
+      ],
+      [
+        "S66223-FAIL-FAILS-EACH-LINE",
+        "scripts/tests/test_ci_job_budget.py",
+        "return lines + problems, problems",
+        "return lines + problems, [line for line in problems if line.startswith(\"STALE \")]",
+        "at fail a run past its budget passes (SPEC-662 R9)",
+        "test_ci_job_budget.TheVerdictHoldsEachRunToItsBudget.test_each_unlisted_run_or_job_stale_entry_and_missing_reason_is_named"
+      ],
+      [
+        "S66224-WARN-FAILS-NO-WARN-LINE",
+        "scripts/tests/test_ci_job_budget.py",
+        "[line for line in problems if line.startswith(\"STALE \")]",
+        "problems",
+        "at warn a run past its budget fails (SPEC-662 R9)",
+        "test_ci_job_budget.TheVerdictHoldsEachRunToItsBudget.test_a_run_past_its_budget_warns_and_a_run_at_or_under_it_does_not"
+      ],
+      [
+        "S66225-THE-LEVEL-IS-WARN",
+        "scripts/tests/test_ci_job_budget.py",
+        "LEVEL = Level.WARN",
+        "LEVEL = Level.FAIL",
+        "the census starts at fail, not at warn (SPEC-662 R9)",
+        "test_ci_job_budget.TheRepositoryRunsHoldTheirBudget.test_every_run_is_counted_and_held_to_its_budget_at_warn"
+      ],
+      [
+        "S66226-AN-EMPTY-POPULATION-IS-VOID",
+        "scripts/tests/test_ci_job_budget.py",
+        "    files = workflow_files(directory)",
+        "    files = sorted(directory.glob(\"*.yml\"))",
+        "a directory with no workflow file is read as no run, not refused (SPEC-662 R3)",
+        "test_ci_job_budget.TheVerdictHoldsEachRunToItsBudget.test_an_empty_population_is_void"
+      ],
+      [
+        "S66227-WARN-FAILS-EACH-STALE-LINE",
+        "scripts/tests/test_ci_job_budget.py",
+        "line.startswith(\"STALE \")",
+        "line.startswith(\"STALE \") and False",
+        "at warn an entry nothing matches passes (SPEC-662 R9)",
+        "test_ci_job_budget.TheVerdictHoldsEachRunToItsBudget.test_each_unlisted_run_or_job_stale_entry_and_missing_reason_is_named"
+      ]
+    ]
+  }
+}

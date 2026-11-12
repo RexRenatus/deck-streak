@@ -1,0 +1,14 @@
+name: caller
+on:
+  push:
+    branches: [dev]
+jobs:
+  call:
+    strategy:
+      matrix:
+        target: [one, two]
+    uses: $/.github/workflows/called.yml
+  after:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo after

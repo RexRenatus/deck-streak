@@ -1,0 +1,23 @@
+# Planted for test_lock_duplicates.py, read as text and never run: every name at one version.
+version = 4
+
+[[package]]
+name = "alpha"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "beta"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "alpha",
+]
+
+[[package]]
+name = "planted-root"
+version = "0.1.0"
+dependencies = [
+ "alpha",
+ "beta",
+]

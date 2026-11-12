@@ -156,6 +156,12 @@ nothing at the red commit, so each is recorded `not red` and is held by the rows
 | `docs/schematics/domain-integrity-checks.md` | the schematic | added |
 | `docs/red-first/SPEC-432.md` | the record | added |
 | `changelog.d/domain-integrity-432.md` | the fragment | added |
+| `crates/daemon/tests/append_only_tables.rs` | `deck-streak-daemon`, test code | amended by #895: four register rows, five sanctioned writes, the moved-sanction tree's five kept sanctions and A14 (R11 to R14) |
+| `scripts/mutation-rows.d/S43200-S43299.json` | the rows | amended by #895: S43237 to S43245 (section 15) |
+| `docs/decisions/ADR-446-the-domain-checks-are-rust-tests-in-economy-the-composition-root-and-ingest-each-listing-todays-sites-at-fail.md` | the decision | amended by #895: D10 |
+| `docs/schematics/domain-integrity-checks.md` | the schematic | amended by #895 |
+| `docs/red-first/SPEC-432.md` | the record | amended by #895 |
+| `changelog.d/append-only-tables-895.md` | the fragment | added by #895 |
 
 `tools/table-census/table_census.rs` is included by path and unchanged.
 
@@ -245,3 +251,118 @@ S43236, one per matcher rule, guard and judge arm, each killed by the test named
 | S43234 | `tests/sync_write_idempotency.rs` | the unreadable arm disabled | A11 |
 | S43235 | `tests/sync_write_idempotency.rs` | `state.rs` dropped from the sync modules | A10 |
 | S43236 | `tests/sync_write_idempotency.rs` | the PLAIN judge's gone arm disabled | A13 |
+
+## 10. Amendment for #895: the problem, measured
+
+Sections 10 to 15 amend this SPEC for #895 (ADR-446 D10). Each figure was read at `b9a08e60` with
+the command or the file beside it.
+
+- **Schema.** Each of the four tables is created by one migration whose header says the table is
+  exported and erased: `freeze_events` by `migrations/007601_streaks_state_and_governor.sql`,
+  `sync_runs` by `migrations/002201_ingest_sync_runs.sql`, `notification_decisions` by
+  `migrations/004101_notifications_router.sql` and `agent_runs` by
+  `migrations/004301_agent_runs.sql`, whose header adds that the table is retained for the period
+  `privacy.json` gives its `agent-runs` record; `migrations/004302_agent_runs_created_at_index.sql`
+  adds an index on `agent_runs`, and its header names the retention prune's statement.
+  `privacy.json` keeps the other three tables until the account is deleted.
+- **Writes.** `git grep -n -i -E '(insert|update|delete|replace).{0,40}(freeze_events|sync_runs|notification_decisions|agent_runs)' b9a08e60 -- crates/agent/src crates/ingest/src crates/notifications/src crates/streaks/src`
+  lists ten statements, each read whole. Five are inserts: `streaks/src/store.rs:42`
+  (`insert_events`, `INSERT OR IGNORE`), `ingest/src/sync_runs.rs:368` and `:432`
+  (`record_skipped`, `record`), `notifications/src/ledger.rs:154` (`record`) and
+  `agent/src/runs.rs:71` (`record`). Five are deletes: the owner's erase of each table, a
+  `DELETE FROM` the whole table in `streaks/src/data_rights.rs:174`,
+  `ingest/src/data_rights.rs:275`, `notifications/src/data_rights.rs:71` and
+  `agent/src/data_rights.rs:70` (each `erase`), and the retention prune `agent/src/runs.rs:103`
+  (`prune_before`, `DELETE FROM agent_runs WHERE created_at < ?1`). No statement the command lists
+  updates a row, and none is an upsert or a replace.
+- **The composition root's plants.** The test module of `crates/daemon/src/wiring.rs` renames
+  `sync_runs`, puts a view and an `INSTEAD OF` trigger in its place and writes `sync_runs_base`
+  (`UNREAD_RUNS`, `REFUSED_RUN`, `UNREADABLE_DAY`). None of them updates or deletes a row of
+  `sync_runs`, and the whole-word bound reads `sync_runs_base` as another table.
+- **The register.** Section 5 left these four tables undeclared (#895), and ADR-446 D2 and D7 said
+  so. That held for SPEC-432's first delivery; this amendment declares them.
+
+## 11. Requirements of the amendment
+
+R11. The register (R3) carries four more rows, each with the context that owns its table and the
+migration that creates it: `freeze_events` (streaks,
+`migrations/007601_streaks_state_and_governor.sql`), `sync_runs` (ingest,
+`migrations/002201_ingest_sync_runs.sql`), `notification_decisions` (notifications,
+`migrations/004101_notifications_router.sql`) and `agent_runs` (agent,
+`migrations/004301_agent_runs.sql`). This amendment is the declaration ADR-446 D2 names for a table
+whose migration's header does not declare it; no migration is edited.
+
+R12. The sanctioned list (R6) carries five more writes, each the sanction its table's migration
+names: the owner's erases, `streaks/src/data_rights.rs` `erase` DELETE `freeze_events`,
+`ingest/src/data_rights.rs` `erase` DELETE `sync_runs`, `notifications/src/data_rights.rs` `erase`
+DELETE `notification_decisions` and `agent/src/data_rights.rs` `erase` DELETE `agent_runs`; and the
+retention prune, `agent/src/runs.rs` `prune_before` DELETE `agent_runs`. The found list at the head
+EQUALS these twelve, counts included, so an update of a row of any of the four tables, and a delete
+of one outside these five, is refused by name.
+
+R13. An `UPDATE` and a `DELETE FROM` of each of the four tables, planted in a crate's `src` and in a
+migration under items no sanction names, are refused by file, item, kind and table: sixteen planted
+rewrites, each reaching its check, spelt from the four names #895 gives and never read from the
+register.
+
+R14. The moved-sanction tree of A9 carries the five new sanctions at their sanctioned items, each
+kept, and its three refusals are unchanged. No test, assertion, planted case, register row,
+sanctioned write, mutation row or refusal of sections 2 to 9 is removed or relaxed, and no
+production source, migration or query cache changes.
+
+## 12. Acceptance criteria of the amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A14 | an `UPDATE` and a `DELETE FROM` of each table this amendment declares, planted in a crate and a migration outside every sanction, are refused by file, item, kind and table, sixteen of sixteen | `an_update_or_delete_of_each_newly_declared_table_is_refused` |
+
+```acceptance
+A14: cargo test -p deck-streak-daemon --test append_only_tables -- --exact an_update_or_delete_of_each_newly_declared_table_is_refused
+```
+
+A5 and A9 keep their tests and read the amended lists: A5's found list is R12's twelve sanctioned
+writes over the eight registered tables, and A9 keeps ten sanctions where it kept five. A14's plants
+are written to a temporary directory the test makes, and no test asserts a wall-clock time.
+
+## 13. What the amendment does NOT cover
+
+- A schema change to a registered table (a column added, a rename, a view or a trigger in its
+  place), which the matcher does not read; the rule that a destructive migration change needs a
+  ruling holds it (#892).
+- Rust outside `src`, and a statement assembled by `concat!` or from constants, which no literal
+  shows (#585).
+- A key for the `sync_runs` record: it is an insert's key and rewrites no row, so the declaration
+  holds with it and without it (#891).
+
+## 14. Risks of the amendment
+
+- **A later writer of the four tables:** a correction, or a retention prune of another of them, reds
+  A5 until its sanction joins the list with its owning decision; the refusal names its file, item,
+  kind and table.
+- **A rewrite of one of the four tables in a source or migration section 10 does not list:** A5
+  reads every crate's `src` and every migration at the head and names it; it is listed with its
+  owning decision, or reworded.
+- **A plant in a `src` test module that rewrites one of the four tables:** it is counted, ADR-446
+  D2's known false positive, and is reworded or listed. The composition root's `UNREADABLE_DAY`
+  writes `sync_runs_base`, another table to the whole-word bound.
+- **Five sanctions joining the list at once:** ADR-446 D10 counts them as the declaration's own,
+  apart from D6's allow-list entries, so one declaration reads as no fall in the check's precision.
+
+## 15. Formal model and mutation rows of the amendment
+
+Not applicable by surface, as section 8 says: the amendment edits test code and documents only, so
+no covered span is edited, and it adds no actor and no shared state.
+
+Band `S43200-S43299`, table `MUTATIONS`: S43237 to S43245, each killed by the test named.
+
+| row | file | the mutant | killer |
+|---|---|---|---|
+| S43237 | `tests/append_only_tables.rs` | the register's `freeze_events` respelled | A14 |
+| S43238 | `tests/append_only_tables.rs` | the register's `sync_runs` respelled | A14 |
+| S43239 | `tests/append_only_tables.rs` | the register's `notification_decisions` respelled | A14 |
+| S43240 | `tests/append_only_tables.rs` | the register's `agent_runs` respelled | A14 |
+| S43241 | `tests/append_only_tables.rs` | the `freeze_events` erase's sanction names another file | A5 |
+| S43242 | `tests/append_only_tables.rs` | the `sync_runs` erase's sanction names another file | A5 |
+| S43243 | `tests/append_only_tables.rs` | the `notification_decisions` erase's sanction names another file | A5 |
+| S43244 | `tests/append_only_tables.rs` | the `agent_runs` erase's sanction names another file | A5 |
+| S43245 | `tests/append_only_tables.rs` | the retention prune's sanction names another item | A5 |

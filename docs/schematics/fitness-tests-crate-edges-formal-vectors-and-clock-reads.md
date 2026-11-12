@@ -52,10 +52,10 @@ flowchart LR
 
 | what | at `dev` | printed as |
 |---|---|---|
-| entries | 40: 13 Lean (each with covers and one vectors line), 27 TLA+ (each with covers, no vectors) | `examined 40 formal entry(ies)` with the Lean and TLA+ counts |
-| vectors tests | 11, each naming its path once in a string literal | `examined 11 vectors test(s)` |
-| vectors files | 13, each declared by one Lean entry | `examined 13 vectors file(s)` |
-| rows | `owed`: `lean/SensitiveDeck`, `lean/TableCensusReach`; `unimplemented`: none | `listed 2 parity row(s)` |
+| entries | 68: 36 Lean (each with covers and one vectors line), 32 TLA+ (each with covers, no vectors) | `examined 68 formal entry(ies)` with the Lean and TLA+ counts |
+| vectors tests | 25, each naming its path once in a string literal | `examined 25 vectors test(s)` |
+| vectors files | 36, each declared by one Lean entry | `examined 36 vectors file(s)` |
+| rows | `owed`: `lean/AgentPinGroups`, `lean/DeployEntryRefusal`, `lean/PathGate`, `lean/RecordClassBinding`, `lean/ReleaseCarry`, `lean/ReleaseGates`, `lean/RetiredListShape`, `lean/SearchHolds`, `lean/TokenProgress`; `unimplemented`: `lean/DocsMermaidRead`, `lean/PushJudge` | `listed 11 parity row(s)` |
 | matcher | the token is `formal/vectors/<slug>.jsonl` inside a string literal, never in a comment | the planted controls of A4 and A5 |
 
 The list's third key, `as_found`, joins the same verdict: each row `{"path", "adr"}` names a

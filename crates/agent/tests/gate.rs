@@ -144,6 +144,57 @@ async fn a_template_flag_adds_the_template_as_a_second_subject() {
     assert!(argv.ends_with("check persona"));
 }
 
+#[tokio::test]
+async fn every_file_the_gate_stages_is_removed_when_its_check_ends() {
+    let dir = tempfile::tempdir().expect("a directory");
+    let work = dir.path().join("work");
+    std::fs::create_dir(&work).expect("a work directory");
+    let recorder = dir.path().join("subjects.py");
+    let probe_text = [
+        "import os, sys",
+        "args = sys.argv[1:]",
+        "with open(sys.argv[0] + '.seen', 'a') as seen:",
+        "    for at, arg in enumerate(args):",
+        "        if arg == '--subject':",
+        "            state = 'present' if os.path.isfile(args[at + 1]) else 'absent'",
+        "            seen.write(args[at + 1] + ' ' + state + '\\n')",
+        "print('examined 1')",
+        "",
+    ]
+    .join("\n");
+    std::fs::write(&recorder, probe_text).expect("a probe");
+    let class = |name: &str| GateClassSpec {
+        probe: recorder.clone(),
+        class: name.to_owned(),
+        with_template: true,
+    };
+    let g = ProbeGate::new(
+        dir.path().to_path_buf(),
+        work.clone(),
+        vec![class("persona")],
+        Some(class("output-invisible")),
+        true,
+    )
+    .expect("a gate whose probe records its subjects");
+    assert_eq!(g.check("out", "tpl").await, GateOutcome::Passed);
+    assert_eq!(g.check_input("in").await, GateOutcome::Passed);
+    // The probe was handed four staged subjects, two per check, each present while it ran.
+    let record = dir.path().join("subjects.py.seen");
+    let seen = std::fs::read_to_string(&record).expect("a record");
+    let staged = format!("{}/", work.display());
+    let present = |line: &&str| line.starts_with(&staged) && line.ends_with(" present");
+    let lines: Vec<&str> = seen.lines().collect();
+    assert_eq!(lines.len(), 4, "{seen}");
+    assert!(lines.iter().all(present), "{seen}");
+    // Nothing the gate staged is left in its work directory once each check has ended.
+    let left: Vec<_> = std::fs::read_dir(&work)
+        .expect("the work directory")
+        .filter_map(Result::ok)
+        .map(|entry| entry.file_name())
+        .collect();
+    assert_eq!(left, Vec::<std::ffi::OsString>::new());
+}
+
 #[test]
 fn an_empty_class_list_is_refused_at_construction() {
     let dir = tempfile::tempdir().expect("a directory");

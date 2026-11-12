@@ -1,0 +1,23 @@
+name: matrix
+on:
+  pull_request:
+    branches: [dev]
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        os: [a, b]
+        version: [1, 2, 3]
+        exclude:
+          - os: b
+            version: 3
+        include:
+          - os: a
+            version: 1
+            extra: x
+          - os: c
+            version: 9
+          - color: green
+    steps:
+      - run: echo build
