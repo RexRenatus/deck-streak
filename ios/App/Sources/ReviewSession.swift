@@ -52,7 +52,9 @@ actor ReviewSession {
 
     /// The queue's head card's question, its counts, its four intervals and what the review's undo
     /// offers now, or the designed end, which offers none.
-    func next(autoplay: Bool, installed: [InstalledVoice]) async throws -> ReviewStep {
+    func next(
+        autoplay: Bool, installed: [InstalledVoice], night: Bool = false
+    ) async throws -> ReviewStep {
         let queue = try await engine.queue()
         let counts = ReviewCounts(
             new: queue.newCount, learning: queue.learningCount, review: queue.reviewCount)
@@ -75,7 +77,9 @@ actor ReviewSession {
     }
 
     /// The shown card's answer face, or the empty face when no card is shown.
-    func reveal(autoplay: Bool, installed: [InstalledVoice]) async throws -> ReviewFace {
+    func reveal(
+        autoplay: Bool, installed: [InstalledVoice], night: Bool = false
+    ) async throws -> ReviewFace {
         try await shown(ReviewFace.empty) { card in
             try await engine.face(
                 card.cardID, answer: true, autoplay: autoplay, installed: installed)

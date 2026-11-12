@@ -76,6 +76,27 @@ let withheldLine =
     + "You can still bury or flag it."
 
 final class ReviewSessionTests: XCTestCase {
+    /// SPEC-680 R1: a face asked in dark mode is the engine's night face, whose body carries the
+    /// night classes, for the question and the answer; a face asked in light mode carries none.
+    func test_a_dark_card_face_reads_its_night_classes() async throws {
+        let (engine, review) = try await openedFixture(freshFixture())
+        let session = ReviewSession(engine: engine)
+        try await session.choose(review)
+        let dark = try await session.next(autoplay: false, installed: [], night: true)
+        XCTAssertTrue(
+            dark.face.document.contains("nightMode night_mode"),
+            "a question asked in dark mode carries the night classes")
+        let answer = try await session.reveal(autoplay: false, installed: [], night: true)
+        XCTAssertTrue(
+            answer.document.contains("nightMode night_mode"),
+            "an answer asked in dark mode carries the night classes")
+        let day = try await session.next(autoplay: false, installed: [], night: false)
+        XCTAssertFalse(day.face.document.isEmpty, "a question asked in light mode has its page")
+        XCTAssertFalse(
+            day.face.document.contains("nightMode"),
+            "a question asked in light mode carries no night class")
+    }
+
     func test_a16_a_double_tap_answers_once() async throws {
         let (engine, review) = try await openedFixture(freshFixture())
         let session = ReviewSession(engine: engine)
