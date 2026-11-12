@@ -1,0 +1,102 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S65400-THE-ROUTE-FORM-IS-READ",
+        "scripts/tests/test_client_types_census.py",
+        "for rm in re.finditer(r\"\\.route\\(",
+        "for rm in re.finditer(r\"\\.routes\\(",
+        "the route form stops matching, so no route is examined (SPEC-654 R2, A1)",
+        "test_client_types_census.PlantedTrees.test_an_equal_pair_reads_no_finding"
+      ],
+      [
+        "S65401-ANSWER-KEYS-ARE-KEPT",
+        "scripts/tests/test_client_types_census.py",
+        "        keys |= found\n",
+        "        keys |= set()\n",
+        "a json! object's keys leave the answer, so the pair reads unmeasured (SPEC-654 R2, A1)",
+        "test_client_types_census.PlantedTrees.test_an_equal_pair_reads_no_finding"
+      ],
+      [
+        "S65402-A-REFUSAL-IS-NO-ANSWER",
+        "scripts/tests/test_client_types_census.py",
+        "if found == {\"reason\"}:",
+        "if found == {\"refusal\"}:",
+        "a refusal's reason key joins the answer, so an equal pair reads drifted (SPEC-654 R2, A1)",
+        "test_client_types_census.PlantedTrees.test_an_equal_pair_reads_no_finding"
+      ],
+      [
+        "S65403-A-DESTRUCTURED-READ-IS-KEPT",
+        "scripts/tests/test_client_types_census.py",
+        "if \"Record<string\" in source or source in records:",
+        "if False:",
+        "a key destructured from the cast value leaves the client's keys (SPEC-654 R3, A1)",
+        "test_client_types_census.PlantedTrees.test_an_equal_pair_reads_no_finding"
+      ],
+      [
+        "S65404-ONE-API-PATH-MAKES-A-MIRROR",
+        "scripts/tests/test_client_types_census.py",
+        "if len(paths) != 1:",
+        "if len(paths) != 0:",
+        "a Swift file with one API path yields no mirror, so the Swift pair is lost (SPEC-654 R4, A1)",
+        "test_client_types_census.PlantedTrees.test_an_equal_pair_reads_no_finding"
+      ],
+      [
+        "S65405-UNREAD-KEYS-ARE-NAMED",
+        "scripts/tests/test_client_types_census.py",
+        "unread = sorted(theirs - ours)",
+        "unread = []",
+        "a key the client leaves unread is no longer a drift, so the pair reads equal (SPEC-654 R5, A2)",
+        "test_client_types_census.PlantedTrees.test_a_drifted_field_is_named_warns_at_warn_and_fails_at_fail"
+      ],
+      [
+        "S65406-A-CLIENT-TYPE-WITH-NO-ROUTE",
+        "scripts/tests/test_client_types_census.py",
+        "findings[key] = (\"unmatched\", client[\"where\"])",
+        "findings[key] = (\"equal\", client[\"where\"])",
+        "a client type with no route is classed equal (SPEC-654 R5, A3)",
+        "test_client_types_census.PlantedTrees.test_an_unmatched_client_type_and_its_route_are_found"
+      ],
+      [
+        "S65407-A-ROUTE-WITH-NO-CLIENT",
+        "scripts/tests/test_client_types_census.py",
+        "if (method, path) not in paired:",
+        "if False:",
+        "a route no client type mirrors is no longer a finding (SPEC-654 R5, A3)",
+        "test_client_types_census.PlantedTrees.test_an_unmatched_client_type_and_its_route_are_found"
+      ],
+      [
+        "S65408-THE-LEVEL-DECIDES",
+        "scripts/tests/test_client_types_census.py",
+        "elif level == WARN:",
+        "elif True:",
+        "an unlisted finding warns at fail too (SPEC-654 R7, A2)",
+        "test_client_types_census.PlantedTrees.test_a_drifted_field_is_named_warns_at_warn_and_fails_at_fail"
+      ],
+      [
+        "S65409-A-STALE-ENTRY-FAILS",
+        "scripts/tests/test_client_types_census.py",
+        "if findings.get(key, (None, None))[0] != listed[key][0]:",
+        "if False:",
+        "a listed entry no finding matches passes (SPEC-654 R7, A4)",
+        "test_client_types_census.PlantedTrees.test_a_listed_finding_reads_listed_and_a_stale_entry_fails_at_both_levels"
+      ],
+      [
+        "S65410-NO-HANDLER-FILE-IS-VOID",
+        "scripts/tests/test_client_types_census.py",
+        "examined(\"handler file(s)\", files)",
+        "list(files)",
+        "an empty tree is refused under another name, never as no handler file (SPEC-654 R6, A5)",
+        "test_client_types_census.PlantedTrees.test_an_empty_population_is_void"
+      ],
+      [
+        "S65411-THE-LEVEL-STARTS-AT-WARN",
+        "scripts/tests/test_client_types_census.py",
+        "LEVEL = WARN\n",
+        "LEVEL = FAIL\n",
+        "the census starts at fail, which is its own delivery (SPEC-654 R8, R9, A6)",
+        "test_client_types_census.TheTree.test_the_tree_holds_todays_listing_at_warn"
+      ]
+    ]
+  }
+}

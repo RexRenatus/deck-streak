@@ -16,12 +16,9 @@ const RULE: &str = "blocking-in-async";
 /// The census's level (R22). Moving it to `Fail` is its own delivery (R24).
 const LEVEL: Level = Level::Warn;
 
-/// Today's sites, SPEC-436 section 1, in its order (R22). Their cures are tracked apart.
+/// Today's sites, SPEC-436 section 1 less the agent's four that section 10 cures, in its order
+/// (R22, R27). The skip day's cure is tracked apart.
 const LISTED: &[&str] = &[
-    "crates/agent/src/gate.rs check std::fs::remove_file #1",
-    "crates/agent/src/gate.rs check std::fs::remove_file #2",
-    "crates/agent/src/gate.rs check_input std::fs::remove_file #1",
-    "crates/agent/src/runner.rs run std::fs::remove_file #1",
     "crates/ingest/src/skip_write.rs steps std::fs::copy #1",
     "crates/ingest/src/skip_write.rs backup std::fs::copy #1",
     "crates/ingest/src/skip_write.rs backup std::fs::set_permissions #1",
@@ -594,6 +591,27 @@ fn the_repository_lists_exactly_todays_blocking_sites() {
     assert_ne!(found.files, Vec::<String>::new());
     assert!(found.bodies > 0);
     assert_eq!(verdict(RULE, LEVEL, &found.keys, LISTED), Ok(Vec::new()));
+}
+
+#[test]
+fn the_agent_gate_and_runner_remove_their_staged_files_off_the_runtime_workers() {
+    let files = repository_sources().expect("the tree's sources read");
+    let found = find(&files).expect("the census reads the tree");
+    for examined in ["crates/agent/src/gate.rs", "crates/agent/src/runner.rs"] {
+        assert!(
+            found.files.iter().any(|file| file == examined),
+            "{examined} is examined"
+        );
+    }
+    let agent: Vec<String> = printed(&found)
+        .into_iter()
+        .filter(|key| key.starts_with("crates/agent/"))
+        .collect();
+    assert_eq!(
+        agent,
+        Vec::<String>::new(),
+        "the agent's sources hold no blocking site"
+    );
 }
 
 #[test]

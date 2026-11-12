@@ -73,6 +73,9 @@ R5. On the pinned fixture the text card (`1_000_007`) reads, through the adapter
     so these engine-computed words are pinned over a fixture whose seed inputs are fixed.
 R6. One mutation row, S61500, in `scripts/mutation-rows.d/S61500-S61599.json`: the pin's target of
     half a day replaced by a quarter of a day, killed by A1.
+R7. Each test's scratch directory, named by the test and its process under the target's temporary
+    folder, is absent before the test writes it: a directory that an earlier run left under the
+    same process id is removed first, and the absent-first check then holds the removal.
 
 ## 3. Acceptance criteria of SPEC-615
 
@@ -82,6 +85,7 @@ R6. One mutation row, S61500, in `scripts/mutation-rows.d/S61500-S61599.json`: t
 | A2 | the pinned fixture's text card reads, through the adapter, the four intervals A1 of SPEC-348 pins (R5) | `crates/ffi/tests/fixture_day_cutoff.rs` |
 | A3 | the writer calls the pin once, after the review collection's build and before the parity collection's, and includes it once (R3) | `crates/ffi/tests/fixture_day_cutoff.rs` |
 | A4 | the review screen's A15, A17 and A19 Swift tests pass on both destinations over the pinned fixture (R4) | the `apple / release-and-app` job's review tests |
+| A5 | a scratch directory that an earlier run left under this process id, with a file in it, is removed before a test writes, and the helper still names the directory by the test and the process (R7) | `crates/ffi/tests/fixture_day_cutoff.rs` |
 
 ```acceptance
 A1: cargo test -p deck-streak-ffi --test fixture_day_cutoff -- --exact the_review_fixture_day_ends_twelve_hours_after_its_writer
@@ -90,6 +94,7 @@ A3: cargo test -p deck-streak-ffi --test fixture_day_cutoff -- --exact the_fixtu
 A4: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:DeckStreakTests/ReviewModelTests/test_a15_the_loop_reaches_the_designed_end
 A4: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:DeckStreakTests/ReviewSessionTests/test_a17_each_rating_shows_its_interval
 A4: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -destination "platform=iOS Simulator,name=$IPAD_SIM,OS=$SIM_OS" -disable-concurrent-destination-testing -only-testing:DeckStreakUITests/ReviewFlowTests/test_a19_the_ratings_sit_at_the_bottom_named_by_their_titles
+A5: cargo test -p deck-streak-ffi --test fixture_day_cutoff -- --exact an_earlier_runs_scratch_directory_is_cleared_before_a_test_writes
 ```
 
 A1 asserts by its own literals, never the support module's constants, so the row S61500 is killed
@@ -131,3 +136,36 @@ iPad simulator.
   detected by the same A4 tests.
 - **An engine that stops honouring the hour.** A new engine rev whose timing ignores `rollover`
   reads red in A1, which measures the engine's own timing after the pin.
+
+## 7. Amendments: the fixture's second reader, the issue's job and an earlier run's directory
+
+Read on dev after this SPEC's delivery merged, by `git show <base>:<path>` and `grep -n`. The
+amendment adds R7, A5 and this section, and changes no other requirement or criterion.
+
+- **The second reader.** `release-and-app` reads the pinned fixture twice. Its review screen's
+  step copies `review-fixture/` and runs `ReviewModelTests`, `ReviewSessionTests` and
+  `ReviewFlowTests` over that copy; its bury and flag step copies the same `review-fixture/`
+  again and runs `ReviewActionsFlowTests` over the second copy, in
+  `.github/workflows/xcframework.yml`, the steps
+  `the review screen's tests, Debug, on the iPhone and then the iPad` and
+  `the bury and flag tests, Debug, on the iPhone and then the iPad`. Both copies carry the
+  pinned rollover hour, and ADR-637's amendment names this reader beside the first.
+- **The issue's job.** #779 observed its reds in the `apple / harness` job. The review, bury and
+  flag tests run in `release-and-app` since ADR-610's change, which made it the sibling job that
+  repeats the harness's prefix and boot, so `release-and-app` is the job that reads the fixture,
+  and A4 is read there.
+- **An earlier run's directory.** A1 and A2 name their scratch directories by the test and the
+  process under the target's temporary folder, which persists between runs, so a later run whose
+  process gets an earlier run's id meets that run's directory and fails the absent-first check
+  for a reason outside A1 and A2. R7 and A5 cure it: the helper removes such a directory first,
+  with no clock read and no new dependency.
+- **A4's reading.** The record's A4 line names the `release-and-app` job whose review screen's
+  step read A15, A17 and A19 green by name on both destinations over the pinned fixture, job
+  126669104649, at the last head of the pull request that delivered this SPEC. The job itself
+  failed in an earlier step, the app's other tests, which runs none of A15, A17 and A19.
+- **The files the amendment changes:** this file (R7, A5 and this section),
+  `docs/decisions/ADR-637-the-review-fixture-pins-its-rollover-hour-half-a-day-ahead-and-the-interval-label-stays-as-anki-gives-it.md`
+  (an appended amendment), `docs/red-first/SPEC-615.md` (A5's lines and A4's reading),
+  `crates/ffi/tests/fixture_day_cutoff.rs` (A5 and the helper's removal),
+  `crates/ffi/examples/review-fixture.rs` (two doc lines that name the builders without a count)
+  and `changelog.d/review-fixture-day-scratch-615.md` (added).

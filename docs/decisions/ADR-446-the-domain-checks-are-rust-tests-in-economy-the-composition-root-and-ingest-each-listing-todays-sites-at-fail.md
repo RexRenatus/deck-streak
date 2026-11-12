@@ -279,3 +279,39 @@ printing its examined counts; the rows of `S43200-S43299`, each proved killed.
 SPEC-432 holds the measurements, the requirements, the acceptance criteria and the file manifest.
 The shared lexer is SPEC-324's (ADR-325). The wallet's write rules are ADR-308's; the XP ledger's are
 ADR-040's and ADR-072's.
+
+## Amendment for #895: D10
+
+### D10. The four tables written only by inserts are declared append-only in the register
+
+`freeze_events`, `sync_runs`, `notification_decisions` and `agent_runs` are each written by inserts
+and, beside them, only by the deletes their migrations name: the owner's erase of each, and the
+retention prune of `agent_runs` (`agent/src/runs.rs` `prune_before`). SPEC-432's amendment for #895
+declares each of them append-only in D2's form: a register row citing the migration that creates the
+table, and the table's sanctioned deletes listed beside the seven. The register then names eight
+tables of seven contexts, which only the composition root may know, so D4's home holds, and the
+sanctioned list names twelve writes; the matcher, the fail-closed arms and the judge are unchanged. No migration is edited: the four are applied, and sqlx checks every applied migration
+against its source. The five sanctioned writes are the declaration's own, the writes D2 requires a
+declaring delivery to list with its rows, so D6 counts them as neither a fix nor an allow-list
+entry. D2's sentence that these four tables are not listed, and D7's tables append-only in practice
+but undeclared, held for SPEC-432's first delivery; this amendment declares them.
+
+### Confirmation of D10
+
+`cargo test -p deck-streak-daemon --test append_only_tables`; rows S43237 to S43245, each proved
+killed.
+
+## What D10 was chosen against
+
+- A `BEFORE UPDATE` and a `BEFORE DELETE` trigger on each table that calls `RAISE(ABORT, ...)`: lost because a delete trigger aborts the owner's erase and the retention prune as surely as any other delete, so only an update trigger could stand, and it would be a migration and a product change that refuses at run time, where D2 chose a census that names the writer on the pull request.
+- A header sentence added to each table's migration: lost because the four migrations are applied, and sqlx checks each applied migration against its source, so an edited file fails the next run on every database already migrated.
+- Leaving `agent_runs` undeclared because its retention prune deletes rows: lost because the prune deletes whole rows by age through one named statement, the shape of the erase D2 already sanctions, and the sanction refuses every other rewrite of the table.
+- Counting the five sanctions as D6 allow-list entries: lost because D2 requires them with the rows that declare their tables, so they record a declaration rather than a refusal the check answered by widening, and counting them would show a fall in precision the check never had.
+- Waiting for the key #891 gives the `sync_runs` record: lost because that key is an insert's, so the table is written only by inserts and its erase with the key and without it.
+
+## What would make D10 wrong
+
+- A product reason to rewrite a row of one of the four tables, such as a correction or a status
+  updated in place: its writer needs a sanction and an owning decision, or A5 refuses it.
+- A row rewritten outside `crates/*/src/` and `migrations/`, by hand or by a tool: the census reads
+  only the tree.

@@ -819,6 +819,42 @@
         "if census.files == usize::MAX {",
         "handler_panic_census::the_panic_census_refuses_an_empty_population",
         "an empty population is no longer refused by its own name (SPEC-436 R13, A14)"
+      ],
+      [
+        "S43691-THE-CHECK-REMOVES-ITS-STAGED-OUTPUT",
+        "agent",
+        "src/gate.rs",
+        "tokio::join!(tokio::fs::remove_file(&out),",
+        "tokio::join!(std::future::ready(Ok::<(), std::io::Error>(())),",
+        "gate::every_file_the_gate_stages_is_removed_when_its_check_ends",
+        "the check leaves its staged output in the gate's work directory (SPEC-436 R25, A16)"
+      ],
+      [
+        "S43692-THE-CHECK-REMOVES-ITS-STAGED-TEMPLATE",
+        "agent",
+        "src/gate.rs",
+        "tokio::fs::remove_file(&tpl));",
+        "std::future::ready(Ok::<(), std::io::Error>(())));",
+        "gate::every_file_the_gate_stages_is_removed_when_its_check_ends",
+        "the check leaves its staged template in the gate's work directory (SPEC-436 R25, A16)"
+      ],
+      [
+        "S43693-THE-INPUT-CHECK-REMOVES-ITS-STAGED-INPUT",
+        "agent",
+        "src/gate.rs",
+        "let _ = tokio::fs::remove_file(&path).await;",
+        "let _ = std::future::ready(Ok::<(), std::io::Error>(())).await;",
+        "gate::every_file_the_gate_stages_is_removed_when_its_check_ends",
+        "the input check leaves its staged input in the gate's work directory (SPEC-436 R25, A16)"
+      ],
+      [
+        "S43694-THE-RUN-REMOVES-ITS-PROMPT",
+        "agent",
+        "src/runner.rs",
+        "let _ = tokio::fs::remove_file(&file).await;",
+        "let _ = std::future::ready(Ok::<(), std::io::Error>(())).await;",
+        "runner::the_prompt_is_left_only_on_a_private_file_that_is_removed",
+        "the run leaves its prompt file in the runner's work directory (SPEC-436 R25)"
       ]
     ]
   }

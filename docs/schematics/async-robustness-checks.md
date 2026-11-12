@@ -144,10 +144,6 @@ count of 0.
 
 | file | function | call | ordinal | line at `b25ed04a` |
 |---|---|---|---|---|
-| `crates/agent/src/gate.rs` | `check` | `std::fs::remove_file` | 1 | 205 |
-| `crates/agent/src/gate.rs` | `check` | `std::fs::remove_file` | 2 | 206 |
-| `crates/agent/src/gate.rs` | `check_input` | `std::fs::remove_file` | 1 | 220 |
-| `crates/agent/src/runner.rs` | `run` | `std::fs::remove_file` | 1 | 91 |
 | `crates/ingest/src/skip_write.rs` | `steps` | `std::fs::copy` | 1 | 302 |
 | `crates/ingest/src/skip_write.rs` | `backup` | `std::fs::copy` | 1 | 511 |
 | `crates/ingest/src/skip_write.rs` | `backup` | `std::fs::set_permissions` | 1 | 512 |
@@ -159,3 +155,7 @@ count of 0.
 A key holds no line number, so an edit above a site keeps its entry; the line column is where each
 site was read at `b25ed04a`. A fix removes the site's entry from `LISTED`, which is how a fix is
 counted (ADR-450 D5, D6).
+
+SPEC-436 section 10 cures the agent's four staged-file removals in `crates/agent/src/gate.rs` and
+`crates/agent/src/runner.rs` with tokio's file removal (#908), so they left `LISTED` and this table;
+the seven skip-day sites above stay listed (#907).

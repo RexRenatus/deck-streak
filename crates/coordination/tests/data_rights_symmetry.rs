@@ -34,8 +34,10 @@ use tempfile::TempDir;
 
 /// Statements that leave every table of the schema holding rows no erase leaves: 101 rows in each
 /// table that takes rows, so an export that pages or limits its read comes up short (the
-/// predecessor's lesson), and every column a reset writes moved off its reset value.
-const SEEDS: [&str; 45] = [
+/// predecessor's lesson), and every column a reset writes moved off its reset value. The queue
+/// holds one row more, abandoned with its claim kept, so the export carries a claim that is not
+/// null and is measured by its value (SPEC-041 R18).
+const SEEDS: [&str; 46] = [
     "UPDATE settings_generation SET generation = 7, courses_digest = '0123456789abcdef' \
      WHERE id = 1",
     "UPDATE ingest_state SET anchor_newest_review_id = 1700000000123, anchor_card_count = 57, \
@@ -138,6 +140,10 @@ const SEEDS: [&str; 45] = [
      SELECT 'celebration', 'synthetic:' || i, 'bot', 'T4', 'T2', 'synthetic ' || i, \
      CASE i % 2 WHEN 0 THEN 'quiet' ELSE 'send' END, i % 3, \
      CASE i % 5 WHEN 0 THEN 'abandoned' ELSE 'held' END, 1000 * i, 20000 + i, 1000 * i FROM n",
+    "INSERT INTO notification_queue (kind, dedupe_key, surface, tier_requested, tier_pending, \
+     text, hold, tries, state, claim, deferred_at, study_day, created_at) \
+     VALUES ('celebration', 'synthetic:claimed', 'bot', 'T4', 'T2', 'synthetic claimed', 'send', \
+     1, 'abandoned', '1700000000500', 102000, 20102, 102000)",
     "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 101) \
      INSERT INTO in_app_feed (dedupe_key, kind, tier, text, seen_at, created_at) \
      SELECT 'synthetic:' || i, 'celebration', 'T2', 'synthetic ' || i, \
@@ -493,6 +499,39 @@ async fn the_exported_tables_equal_the_erased_tables_over_every_port() {
     assert_eq!(
         keys, exported,
         "a key of the export holds a table's rows short"
+    );
+    probe.db.close().await;
+}
+
+/// A queue row abandoned with its claim kept, as a flush whose push may have reached the owner
+/// leaves it, is exported with that claim by its value, never as null (SPEC-041 R18, A30).
+#[tokio::test]
+async fn the_export_carries_the_claim_an_abandoned_queue_row_kept() {
+    let probe = Probe::run().await;
+    let claims = |rows: &[Value]| -> Vec<Value> {
+        rows.iter()
+            .filter(|row| row["dedupe_key"] == "synthetic:claimed")
+            .map(|row| row["claim"].clone())
+            .collect()
+    };
+    let seeded = examined(
+        "seeded queue row(s) abandoned with a kept claim",
+        claims(&probe.before["notification_queue"]),
+    );
+    assert_eq!(
+        seeded,
+        [Value::from("1700000000500")],
+        "the seeded row read from the table carries the kept claim"
+    );
+    let exported = probe
+        .export
+        .get("notification_queue")
+        .and_then(Value::as_array)
+        .expect("the export carries the queue");
+    assert_eq!(
+        claims(exported),
+        [Value::from("1700000000500")],
+        "the export carries the claim an abandoned queue row kept, by its value"
     );
     probe.db.close().await;
 }
