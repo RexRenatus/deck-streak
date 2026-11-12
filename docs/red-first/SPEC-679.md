@@ -13,4 +13,6 @@ A6: not red: no SPEC number is held twice at the base too; it guards the new SPE
 A7: not red: no SPEC in the judged folder reads planned at the base too; it guards the new SPEC's Status line
 ```
 
-The green commit `63e8fce` carries the amendment, the SPEC and the fragment, and `git diff --quiet 63e8fce HEAD -- scripts/tests/test_macos_destination_record.py docs/decisions/ADR-342-one-universal-iphone-and-ipad-app-driven-by-touch-keys-or-an-8bitdo-remote.md docs/specs/SPEC-679-a-native-macos-destination-for-the-one-app-target.md changelog.d/macos-destination-679.md` reads rc 0.
+The green commit `63e8fce` carries the amendment, the SPEC and the fragment, and `git diff --quiet 63e8fce HEAD -- docs/decisions/ADR-342-one-universal-iphone-and-ipad-app-driven-by-touch-keys-or-an-8bitdo-remote.md docs/specs/SPEC-679-a-native-macos-destination-for-the-one-app-target.md changelog.d/macos-destination-679.md` reads rc 0.
+
+The first push also read one red that is no criterion's: `test_the_finder_is_defined_once_and_a_planted_copy_is_caught` in `scripts/tests/test_mutation_workflows.py` found the test module's `indent` helper equal in body to the mutants finder's `indent_of`. It was cured in `7b9e3a6`, which counts the same leading spaces by a regular expression match and changes no assertion, and never by a change to that census; the four tests read green at `7b9e3a6`, and `git diff --quiet 7b9e3a6 HEAD -- scripts/tests/test_macos_destination_record.py` reads rc 0.
