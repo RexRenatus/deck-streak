@@ -193,7 +193,7 @@ def tool(*args, stdin=None):
         args, input=stdin, env=without_credential(), capture_output=True, text=True
     )
     if done.returncode != 0:
-        raise Refused(f"{args[0]} {args[1]} failed with exit {done.returncode}")
+        raise Refused(f"{Path(args[0]).name} {args[1]} failed with exit {done.returncode}")
     return done.stdout
 
 
@@ -243,7 +243,7 @@ def read_failure(errors):
     return "unrecognised"
 
 
-def read_certificate(original, passphrase):
+def read_certificate(openssl, original, passphrase):
     """Read the placed certificate out under the run-time passphrase, its password on standard
     input and no credential part in the environment, and return what openssl wrote. After a failed
     read, print its class and read once more with `-legacy`, never a third time, and refuse naming
@@ -252,7 +252,7 @@ def read_certificate(original, passphrase):
     def read(*legacy):
         return subprocess.run(
             [
-                "openssl",
+                openssl,
                 "pkcs12",
                 *legacy,
                 "-in",
@@ -284,6 +284,7 @@ def read_certificate(original, passphrase):
 def sign():
     """Check the profile, import the certificate into a job keychain, install the profile, write
     the include file and archive the harness (SPEC-352 R8, R9, R13)."""
+    openssl = shutil.which("openssl")
     blob = base64.b64decode(os.environ["PROFILE"])
     profile = plistlib.loads(re.search(rb"<\?xml.*</plist>", blob, re.DOTALL).group())
     entitlements = profile["Entitlements"]
@@ -299,14 +300,17 @@ def sign():
         raise Refused("the profile has expired")
     if app.split(".")[0] == "invalid":
         raise Refused("the profile's app id is the placeholder, whose first label is invalid")
+    if openssl is None:
+        raise Refused("no openssl is on the PATH")
+    print(tool(openssl, "version"), end="", flush=True)
     lane = make_lane()
     original = lane / "original.p12"
     write_private(original, base64.b64decode(os.environ["CERTIFICATE"]))
-    pem = read_certificate(original, passphrase)
+    pem = read_certificate(openssl, original, passphrase)
     original.unlink()
     bundle = lane / "certificate.p12"
     tool(
-        "openssl",
+        openssl,
         "pkcs12",
         "-export",
         "-out",
