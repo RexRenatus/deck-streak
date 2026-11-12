@@ -29,7 +29,7 @@ CHECK = REPO / "scripts" / "web-route-size.py"
 # The ratchet's margin in bytes gzip -9, written here apart from the check.
 MARGIN = 1024
 # Where the client build leaves its generated nodes and its output, under the app.
-NODES = ".svelte-kit/generated/client-optimized/nodes"
+NODES = ".svelte-kit/generated/build/client-optimized/nodes"
 CLIENT = Path(".svelte-kit") / "output" / "client"
 MANIFEST = CLIENT / ".vite" / "manifest.json"
 FAR = "_app/immutable/chunks/far.js"
@@ -130,7 +130,7 @@ def plant(root, chunks, routes, files=None):
     for number, route_file in routes.items():
         named = "../../../kit/error.svelte"
         if route_file is not None:
-            named = f"../../../../src/routes/{route_file}"
+            named = f"../../../../../src/routes/{route_file}"
             page = app / "src" / "routes" / route_file
             page.parent.mkdir(parents=True, exist_ok=True)
             page.write_text("<p>planted</p>\n", encoding="utf-8")
