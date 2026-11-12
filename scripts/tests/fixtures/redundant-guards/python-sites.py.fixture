@@ -1,0 +1,66 @@
+"""Planted for the redundant-guard census (SPEC-665 R5 to R10); read as text, never imported."""
+
+
+def same_expression(ready, count):
+    if ready and count > 0:
+        if ready:  # planted: same-expression
+            return 1
+    return 0
+
+
+def chained(ready):
+    return ready and not ready  # planted: same-expression
+
+
+def range_check(count):
+    if count >= 10:
+        if count < 5:  # planted: range
+            return 2
+    return 0
+
+
+def presence(value):
+    if value is not None:
+        if value is None:  # planted: presence
+            return 3
+    return 0
+
+
+def early(limit):
+    if limit < 0:
+        return 0
+    if limit < 0:  # planted: same-expression
+        return -1
+    return limit
+
+
+def reassigned(count):
+    if count > 3:
+        count = 0
+        if count > 3:  # accepted: reassigned
+            return 1
+    return count
+
+
+def called(items):
+    if items.count(3):
+        if items.count(3):  # accepted: call
+            return True
+    return False
+
+
+def attribute(box):
+    if box.ready:
+        if box.ready:  # accepted: undecided
+            return 4
+    return 0
+
+
+def looped(count):
+    kept = 0
+    if count > 3:
+        while count > 0:  # accepted: loop
+            if count > 3:  # accepted: loop
+                kept += 1
+            count -= 1
+    return kept
