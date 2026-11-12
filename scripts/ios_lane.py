@@ -24,8 +24,8 @@ except the installed profile and the ignored include file, and `clean` removes a
   tool runs, refuses a development, expired or placeholder profile, reads the certificate (once
   more with `-legacy` after a failed read, never a third time), re-wraps it under a generated
   passphrase, imports it non-extractable into a job keychain, refuses a profile not issued for
-  that certificate, installs the profile, writes the include file and archives the harness (R8,
-  R9, R13).
+  that certificate, installs the profile, writes the include file and archives the app its project
+  spec names (R8, R9, R13; SPEC-566).
 - `upload-to-testflight` writes the key into a fresh private directory for the export alone and
   removes that directory on any exit (R10).
 - `clean` restores the keychain search list, deletes the job keychain, and removes the profile,
@@ -72,18 +72,12 @@ ROLES = (
     ("PASSWORD", "the certificate's password"),
     ("PROFILE", "the profile"),
 )
-# The harness's Release build for a generic device, which both builds take.
-HARNESS = (
-    "-project",
-    "ios/Harness.xcodeproj",
-    "-scheme",
-    "Harness",
-    "-configuration",
-    "Release",
-    "-destination",
-    "generic/platform=iOS",
-)
-# The ignored include file `ios/Config/Harness.xcconfig` names last.
+# The app's project spec (SPEC-566 R1): its top-level `name` names the project the generator writes
+# beside it and the scheme both builds take, so the lane, both lane files and the tests read it.
+SPEC = Path("ios/app.yml")
+# The spec's top-level `name:` line: the key at column 0, one space, and one word, alone.
+NAME = re.compile(r"(?m)^name: (\w+)$")
+# The ignored include file `ios/Config/App.xcconfig` names last (the harness's names it too).
 INCLUDE = "ios/Config/Signing.local.xcconfig"
 # Where Xcode reads installed provisioning profiles from, under `HOME`.
 PROFILES = "Library/Developer/Xcode/UserData/Provisioning Profiles"
@@ -228,6 +222,27 @@ def numbers():
     ]
 
 
+def app():
+    """The app's Release build for a generic device, which both builds take: the project and the
+    scheme that the top-level `name` of the app's project spec names (SPEC-566 R1). A spec that is
+    absent or names no project is refused before any tool runs (R2)."""
+    text = SPEC.read_text(encoding="utf-8") if SPEC.is_file() else ""
+    found = NAME.search(text)
+    if not found:
+        raise Refused(f"the app's project spec {SPEC} names no project")
+    name = found.group(1)
+    return (
+        "-project",
+        f"{SPEC.parent}/{name}.xcodeproj",
+        "-scheme",
+        name,
+        "-configuration",
+        "Release",
+        "-destination",
+        "generic/platform=iOS",
+    )
+
+
 def write_private(path, data):
     """Write `data` to a new file only its owner may read or write; never reuse a file."""
     descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
@@ -286,22 +301,23 @@ def read_certificate(openssl, original, passphrase):
 
 def sign():
     """Check the profile, import the certificate into a job keychain, install the profile, write
-    the include file and archive the harness (SPEC-352 R8, R9, R13)."""
+    the include file and archive the app (SPEC-352 R8, R9, R13)."""
+    build = app()
     openssl = shutil.which("openssl")
     blob = base64.b64decode(os.environ["PROFILE"])
     profile = plistlib.loads(re.search(rb"<\?xml.*</plist>", blob, re.DOTALL).group())
     entitlements = profile["Entitlements"]
     team = profile["TeamIdentifier"][0]
-    app = entitlements["application-identifier"].removeprefix(f"{team}.")
+    app_id = entitlements["application-identifier"].removeprefix(f"{team}.")
     keychain_password, passphrase = secrets.token_hex(16), secrets.token_hex(16)
-    private = (team, profile["TeamName"], app, profile["Name"], profile["UUID"])
+    private = (team, profile["TeamName"], app_id, profile["Name"], profile["UUID"])
     for value in (*private, keychain_password, passphrase):
         print(f"::add-mask::{value}", flush=True)
     if entitlements.get("get-task-allow") or "ProvisionedDevices" in profile:
         raise Refused("the profile is a development profile, not an App Store distribution profile")
     if profile["ExpirationDate"] <= datetime.datetime.now(datetime.UTC).replace(tzinfo=None):
         raise Refused("the profile has expired")
-    if app.split(".")[0] == "invalid":
+    if app_id.split(".")[0] == "invalid":
         raise Refused("the profile's app id is the placeholder, whose first label is invalid")
     if openssl is None:
         raise Refused("no openssl is on the PATH")
@@ -376,7 +392,7 @@ def sign():
         raise Refused("the profile was not issued for the imported certificate")
     signing = {
         "team": team,
-        "app id": app,
+        "app id": app_id,
         "uuid": profile["UUID"],
         "identity": matched[0],
         "private": private,
@@ -387,16 +403,14 @@ def sign():
     (profiles / f"{profile['UUID']}.mobileprovision").write_bytes(blob)
     Path(INCLUDE).write_text(
         "// The lane's signing, written by its sign step and removed by its clean step.\n"
-        f"DS_APP_ID = {app}\n"
+        f"DS_APP_ID = {app_id}\n"
         f"DEVELOPMENT_TEAM = {team}\n"
         "CODE_SIGN_STYLE = Manual\n"
         f"CODE_SIGN_IDENTITY = {matched[0]}\n"
         f"PROVISIONING_PROFILE_SPECIFIER = {profile['UUID']}\n",
         encoding="utf-8",
     )
-    xcodebuild(
-        private, "archive", *HARNESS, "-archivePath", str(lane / "app.xcarchive"), *numbers()
-    )
+    xcodebuild(private, "archive", *build, "-archivePath", str(lane / "app.xcarchive"), *numbers())
 
 
 def upload():
@@ -461,12 +475,13 @@ def clean():
 
 
 def build_unsigned():
-    """Build the harness for a generic device with signing off: the run with no credential."""
+    """Build the app for a generic device with signing off: the run with no credential."""
+    build = app()
     lane = make_lane()
     xcodebuild(
         (),
         "build",
-        *HARNESS,
+        *build,
         "-derivedDataPath",
         str(lane / "build"),
         "CODE_SIGNING_ALLOWED=NO",
