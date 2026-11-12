@@ -1,0 +1,326 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S66501-THE-SAME-EXPRESSION-ARM-DECIDES-A-REPEATED-CONDITION",
+        "scripts/tests/test_redundant_guards.py",
+        "        if text == ftext or negated(text) == ftext:",
+        "        if text == ftext and negated(text) == ftext:",
+        "the same-expression arm decides an inner condition equal to an enclosing one or to its negation; without it a planted repeated condition is not found (SPEC-665 R5)",
+        "test_redundant_guards.PlantedSitesAreFound.test_rust_planted_sites_are_found"
+      ],
+      [
+        "S66502-THE-RANGE-ARM-DECIDES-A-FIXED-COMPARISON",
+        "scripts/tests/test_redundant_guards.py",
+        "        if cmp and fcmp and range_decides(fcmp, cmp) is not None:",
+        "        if cmp and fcmp and range_decides(fcmp, cmp) is None:",
+        "the range arm decides a comparison of the same name whose result the enclosing range fixes; without it a planted fixed comparison is not found (SPEC-665 R6)",
+        "test_redundant_guards.PlantedSitesAreFound.test_rust_planted_sites_are_found"
+      ],
+      [
+        "S66503-THE-PRESENCE-ARM-DECIDES-A-PROVED-CHECK",
+        "scripts/tests/test_redundant_guards.py",
+        "if g) == present:",
+        "if g) != present:",
+        "the presence arm decides an absence or presence check the enclosing binding already proves; without it a planted proved check is not found (SPEC-665 R7)",
+        "test_redundant_guards.PlantedSitesAreFound.test_typescript_planted_sites_are_found"
+      ],
+      [
+        "S66504-A-NESTED-BODY-INHERITS-ITS-CONDITION",
+        "scripts/tests/test_redundant_guards.py",
+        "        block(bo + 1 if braced else bo, end, facts + new, function)",
+        "        block(bo + 1 if braced else bo, end, facts, function)",
+        "a nested body inherits the conditions of the construct that encloses it; without it a planted nested repeat is not found (SPEC-665 R8)",
+        "test_redundant_guards.PlantedSitesAreFound.test_swift_planted_sites_are_found"
+      ],
+      [
+        "S66505-A-LATER-CONJUNCT-SEES-THE-EARLIER-ONES",
+        "scripts/tests/test_redundant_guards.py",
+        "                        live + seen,",
+        "                        live,",
+        "a later conjunct of a chain is judged against the conjuncts before it; without it a planted chain that repeats its first conjunct is not found (SPEC-665 R8)",
+        "test_redundant_guards.PlantedSitesAreFound.test_rust_planted_sites_are_found"
+      ],
+      [
+        "S66506-AN-EARLY-EXIT-DECIDES-THE-REST-OF-THE-BLOCK",
+        "scripts/tests/test_redundant_guards.py",
+        "                early = s == \"if\" and inner and inner[0][1].rstrip(\"!\") in EXITS",
+        "                early = s == \"if\" and inner and inner[0][1].rstrip(\"!\") not in EXITS",
+        "an if whose body exits makes its negation a fact for the rest of the block; without it a planted check repeated after an early return is not found (SPEC-665 R8)",
+        "test_redundant_guards.PlantedSitesAreFound.test_typescript_planted_sites_are_found"
+      ],
+      [
+        "S66507-A-SWIFT-GUARD-HOLDS-FOR-THE-REST-OF-ITS-SCOPE",
+        "scripts/tests/test_redundant_guards.py",
+        "                    facts += new",
+        "                    facts += []",
+        "a Swift guard's conditions hold for the rest of its scope; without it a planted check after a guard is not found (SPEC-665 R8)",
+        "test_redundant_guards.PlantedSitesAreFound.test_swift_planted_sites_are_found"
+      ],
+      [
+        "S66508-A-PYTHON-EARLY-EXIT-DECIDES-THE-REST",
+        "scripts/tests/test_redundant_guards.py",
+        "and neg and not stmt.orelse:",
+        "and neg and stmt.orelse:",
+        "a Python if whose only statement exits makes its negation a fact for the statements after it; without it a planted check repeated after an early return is not found (SPEC-665 R8)",
+        "test_redundant_guards.PlantedSitesAreFound.test_python_planted_sites_are_found"
+      ],
+      [
+        "S66509-AN-ASSIGNMENT-BETWEEN-THE-CHECKS-STOPS-A-FACT",
+        "scripts/tests/test_redundant_guards.py",
+        "        if nxt in ASSIGN or prv in BINDERS:",
+        "        if nxt in ASSIGN and prv in BINDERS:",
+        "an assignment between the two checks stops the enclosing fact; without it a planted check after a reassignment is reported as a site (SPEC-665 R9)",
+        "test_redundant_guards.PlantedSitesAreFound.test_typescript_planted_sites_are_found"
+      ],
+      [
+        "S66510-A-PYTHON-STORE-BETWEEN-THE-CHECKS-STOPS-A-FACT",
+        "scripts/tests/test_redundant_guards.py",
+        "(ast.Store, ast.Del)",
+        "(ast.Del,)",
+        "a Python store in a fact's scope stops it; without it a planted check after a reassignment is reported as a site (SPEC-665 R9)",
+        "test_redundant_guards.PlantedSitesAreFound.test_python_planted_sites_are_found"
+      ],
+      [
+        "S66511-A-CONDITION-THAT-CALLS-IS-NEVER-DECIDED",
+        "scripts/tests/test_redundant_guards.py",
+        "        if toks[k][0] == \"id\" and toks[k + 1][1] == \"(\" and toks[k][1].rstrip(\"!\") not in PURE:",
+        "        if toks[k][0] == \"id\" and toks[k + 1][1] == \"(\" and False and toks[k][1].rstrip(\"!\") not in PURE:",
+        "a condition that calls anything outside the pure set is never a fact and never decided; without it a planted call checked twice is reported as a site (SPEC-665 R10)",
+        "test_redundant_guards.PlantedSitesAreFound.test_rust_planted_sites_are_found"
+      ],
+      [
+        "S66512-A-CLOSURE-BODY-DROPS-EVERY-FACT",
+        "scripts/tests/test_redundant_guards.py",
+        "                    facts if carry and k not in names else [],",
+        "                    facts,",
+        "a closure or function body that may run later drops every enclosing fact; without it a planted check inside a closure is reported as a site (SPEC-665 R9)",
+        "test_redundant_guards.PlantedSitesAreFound.test_svelte_planted_sites_are_found"
+      ],
+      [
+        "S66513-RUST-TEST-CODE-IS-NOT-READ",
+        "scripts/tests/test_redundant_guards.py",
+        "(\"cfg ( test )\", \"test\")",
+        "(\"cfg ( tests )\", \"test\")",
+        "an item under a test attribute is test code and is not read; without it a planted repeat inside a test module is reported as a site (SPEC-665 R3)",
+        "test_redundant_guards.PlantedSitesAreFound.test_rust_planted_sites_are_found"
+      ],
+      [
+        "S66514-A-SHELL-COMMAND-BETWEEN-THE-TESTS-CLEARS-EVERY-FACT",
+        "scripts/tests/test_redundant_guards.py",
+        "                    level.clear()",
+        "                    level.copy()",
+        "any shell command between two tests clears every fact, since a function may set any variable; without it a planted test after a reassignment is reported as a site (SPEC-665 R11)",
+        "test_redundant_guards.PlantedSitesAreFound.test_shell_planted_sites_are_found"
+      ],
+      [
+        "S66515-A-SHELL-TEST-WITH-A-COMMAND-SUBSTITUTION-IS-NEVER-DECIDED",
+        "scripts/tests/test_redundant_guards.py",
+        " and \"$(\" not in part and",
+        " and",
+        "a shell test that substitutes a command is never a fact; without it a planted command substitution tested twice is reported as a site (SPEC-665 R11)",
+        "test_redundant_guards.PlantedSitesAreFound.test_shell_planted_sites_are_found"
+      ],
+      [
+        "S66516-THE-POPULATION-READS-RUST",
+        "scripts/tests/test_redundant_guards.py",
+        "        return \"rust\" if shipped else None",
+        "        return None",
+        "the population reads each crate's shipped Rust sources; without it a shipped Rust path is not read (SPEC-665 R2)",
+        "test_redundant_guards.PlantedSitesAreFound.test_the_population_reads_each_language_and_no_test_code"
+      ],
+      [
+        "S66517-THE-POPULATION-READS-PYTHON",
+        "scripts/tests/test_redundant_guards.py",
+        "            return \"python\"",
+        "            return None",
+        "the population reads the shipped Python scripts and deploy code; without it a shipped Python path is not read (SPEC-665 R2)",
+        "test_redundant_guards.PlantedSitesAreFound.test_the_population_reads_each_language_and_no_test_code"
+      ],
+      [
+        "S66518-THE-POPULATION-READS-TYPESCRIPT",
+        "scripts/tests/test_redundant_guards.py",
+        "        return \"svelte\" if name.endswith(\".svelte\") else \"typescript\"",
+        "        return \"svelte\"",
+        "the population reads the web app's TypeScript and JavaScript apart from its Svelte; without it a TypeScript path is read as Svelte (SPEC-665 R2)",
+        "test_redundant_guards.PlantedSitesAreFound.test_the_population_reads_each_language_and_no_test_code"
+      ],
+      [
+        "S66519-THE-POPULATION-LEAVES-OUT-THE-SWIFT-TEST-TARGETS",
+        "scripts/tests/test_redundant_guards.py",
+        "\"ios/\") and not IOS_TEST.search(rel) else None",
+        "\"ios/\") else None",
+        "the population leaves out the Swift test targets; without it a Swift test file is read as shipped code (SPEC-665 R3)",
+        "test_redundant_guards.PlantedSitesAreFound.test_the_population_reads_each_language_and_no_test_code"
+      ],
+      [
+        "S66520-THE-POPULATION-READS-SHELL",
+        "scripts/tests/test_redundant_guards.py",
+        "    return \"shell\" if name.endswith(\".sh\") else None",
+        "    return None",
+        "the population reads every shell script; without it a shell script is not read (SPEC-665 R2)",
+        "test_redundant_guards.PlantedSitesAreFound.test_the_population_reads_each_language_and_no_test_code"
+      ],
+      [
+        "S66521-THE-POPULATION-LEAVES-OUT-WEB-TEST-FOLDERS",
+        "scripts/tests/test_redundant_guards.py",
+        "|^web/app/tests/|/__tests__/\")",
+        "|^web/app/tests/\")",
+        "the population leaves out the web test runner's test folders; without it a file under a tests folder is read as shipped code (SPEC-665 R3)",
+        "test_redundant_guards.PlantedSitesAreFound.test_the_population_reads_each_language_and_no_test_code"
+      ],
+      [
+        "S66522-AN-UNLISTED-SITE-WARNS-AT-WARN",
+        "scripts/tests/test_redundant_guards.py",
+        "            warned.append(f\"WARN {detail}\")",
+        "            failed.append(f\"WARN {detail}\")",
+        "at warn an unlisted site prints its WARN line and passes; without it an unlisted site fails at warn (SPEC-665 R14)",
+        "test_redundant_guards.PlantedSitesAreFound.test_the_level_decides_whether_an_unlisted_site_fails_and_a_stale_entry_always_does"
+      ],
+      [
+        "S66523-AN-UNLISTED-SITE-FAILS-AT-FAIL",
+        "scripts/tests/test_redundant_guards.py",
+        "            failed.append(f\"FAIL {detail}\")",
+        "            warned.append(f\"FAIL {detail}\")",
+        "at fail an unlisted site fails naming it; without it an unlisted site passes at fail (SPEC-665 R14)",
+        "test_redundant_guards.PlantedSitesAreFound.test_the_level_decides_whether_an_unlisted_site_fails_and_a_stale_entry_always_does"
+      ],
+      [
+        "S66524-A-STALE-ENTRY-FAILS-AT-BOTH-LEVELS",
+        "scripts/tests/test_redundant_guards.py",
+        "for key in listed if key not in found]",
+        "for key in listed if key in found]",
+        "a listed entry that no site matches fails with its STALE line at both levels; without it a stale entry passes (SPEC-665 R14)",
+        "test_redundant_guards.PlantedSitesAreFound.test_the_level_decides_whether_an_unlisted_site_fails_and_a_stale_entry_always_does"
+      ],
+      [
+        "S66525-A-KEY-COUNTS-ITS-ORDINAL",
+        "scripts/tests/test_redundant_guards.py",
+        "        counts[stem] = counts.get(stem, 0) + 1",
+        "        counts[stem] = counts.get(stem, 0)",
+        "each key carries its ordinal among the sites of one file, function and form, in line order; without it two sites share one key (SPEC-665 R12)",
+        "test_redundant_guards.PlantedSitesAreFound.test_the_level_decides_whether_an_unlisted_site_fails_and_a_stale_entry_always_does"
+      ],
+      [
+        "S66526-AN-EMPTY-POPULATION-IS-REFUSED",
+        "scripts/tests/test_redundant_guards.py",
+        "    for rel, language in examined(\"file(s)\", files):",
+        "    for rel, language in files:",
+        "the census prints its examined file count and refuses zero; without it an empty population passes (SPEC-665 R4)",
+        "test_redundant_guards.PlantedSitesAreFound.test_an_empty_population_is_refused"
+      ],
+      [
+        "S66527-NO-CONDITION-READ-IS-REFUSED",
+        "scripts/tests/test_redundant_guards.py",
+        "range(found.under))",
+        "range(found.under or 1))",
+        "the census prints its count of conditions under an enclosing condition and refuses zero; without it a reading that found none passes (SPEC-665 R4)",
+        "test_redundant_guards.PlantedSitesAreFound.test_an_empty_population_is_refused"
+      ],
+      [
+        "S66528-A-LOOP-BODY-AFTER-THE-FACT-CLEARS-IT",
+        "scripts/tests/test_redundant_guards.py",
+        "touched(toks, f[3], c0) | looped(f[3], c0)",
+        "touched(toks, f[3], c0) | set()",
+        "a name assigned anywhere in a loop body that encloses the inner check and begins after the enclosing condition clears that condition's fact; without the loop-body scan a planted loop that assigns the name later in its body is a false site (SPEC-665 R9)",
+        "test_redundant_guards.PlantedSitesAreFound.test_rust_planted_sites_are_found"
+      ],
+      [
+        "S66529-A-WHILE-CONDITION-HOLDS-IN-ITS-OWN-BODY",
+        "scripts/tests/test_redundant_guards.py",
+        "            if point < head and head < at <= hi:",
+        "            if head < at <= hi:",
+        "only a loop that begins after the fact is scanned, so a while condition still decides a repeat in its own body; without the boundary the planted repeat under its while is not found (SPEC-665 R9)",
+        "test_redundant_guards.PlantedSitesAreFound.test_swift_planted_sites_are_found"
+      ],
+      [
+        "S66530-A-WHILE-BODY-IS-A-LOOP-BODY",
+        "scripts/tests/test_redundant_guards.py",
+        "LOOP_HEADS = {\"while\", \"for\", \"loop\", \"do\", \"repeat\"}",
+        "LOOP_HEADS = {\"for\", \"loop\", \"do\", \"repeat\"}",
+        "a while body is a loop body; without the head a planted while that assigns the name later in its body is a false site (SPEC-665 R9)",
+        "test_redundant_guards.PlantedSitesAreFound.test_swift_planted_sites_are_found"
+      ],
+      [
+        "S66531-A-FOR-BODY-IS-A-LOOP-BODY",
+        "scripts/tests/test_redundant_guards.py",
+        "LOOP_HEADS = {\"while\", \"for\", \"loop\", \"do\", \"repeat\"}",
+        "LOOP_HEADS = {\"while\", \"loop\", \"do\", \"repeat\"}",
+        "a for body is a loop body; without the head a planted Rust for loop that assigns the name later in its body is a false site (SPEC-665 R9)",
+        "test_redundant_guards.PlantedSitesAreFound.test_rust_planted_sites_are_found"
+      ],
+      [
+        "S66532-A-RUST-LOOP-BODY-IS-A-LOOP-BODY",
+        "scripts/tests/test_redundant_guards.py",
+        "LOOP_HEADS = {\"while\", \"for\", \"loop\", \"do\", \"repeat\"}",
+        "LOOP_HEADS = {\"while\", \"for\", \"do\", \"repeat\"}",
+        "a Rust loop body is a loop body; without the head a planted loop that assigns the name later in its body is a false site (SPEC-665 R9)",
+        "test_redundant_guards.PlantedSitesAreFound.test_rust_planted_sites_are_found"
+      ],
+      [
+        "S66533-A-DO-BODY-IS-A-LOOP-BODY",
+        "scripts/tests/test_redundant_guards.py",
+        "LOOP_HEADS = {\"while\", \"for\", \"loop\", \"do\", \"repeat\"}",
+        "LOOP_HEADS = {\"while\", \"for\", \"loop\", \"repeat\"}",
+        "a do body is a loop body; without the head a planted do loop that assigns the name later in its body is a false site (SPEC-665 R9)",
+        "test_redundant_guards.PlantedSitesAreFound.test_typescript_planted_sites_are_found"
+      ],
+      [
+        "S66534-A-REPEAT-BODY-IS-A-LOOP-BODY",
+        "scripts/tests/test_redundant_guards.py",
+        "LOOP_HEADS = {\"while\", \"for\", \"loop\", \"do\", \"repeat\"}",
+        "LOOP_HEADS = {\"while\", \"for\", \"loop\", \"do\"}",
+        "a Swift repeat body is a loop body; without the head a planted repeat loop that assigns the name later in its body is a false site (SPEC-665 R9)",
+        "test_redundant_guards.PlantedSitesAreFound.test_swift_planted_sites_are_found"
+      ],
+      [
+        "S66535-A-WHILE-BODY-OPENS-AFTER-ITS-CONDITION",
+        "scripts/tests/test_redundant_guards.py",
+        "        if toks[k][1] in (\"while\", \"for\"):",
+        "        if toks[k][1] in (\"for\",):",
+        "a while body opens after its condition; without that opening no while body is scanned and a planted while that assigns the name later is a false site (SPEC-665 R9)",
+        "test_redundant_guards.PlantedSitesAreFound.test_swift_planted_sites_are_found"
+      ],
+      [
+        "S66536-A-FOR-BODY-OPENS-AFTER-ITS-CONDITION",
+        "scripts/tests/test_redundant_guards.py",
+        "        if toks[k][1] in (\"while\", \"for\"):",
+        "        if toks[k][1] in (\"while\",):",
+        "a for body opens after its pattern and iterator; without that opening no Rust for body is scanned and a planted for loop that assigns the name later is a false site (SPEC-665 R9)",
+        "test_redundant_guards.PlantedSitesAreFound.test_rust_planted_sites_are_found"
+      ],
+      [
+        "S66537-AN-EACH-BLOCK-BINDS-ITS-NAMES-AFRESH",
+        "scripts/tests/test_redundant_guards.py",
+        "            stack.append(each_bound(cond))",
+        "            stack.append(set())",
+        "an each block binds its item afresh on every pass and drops each enclosing fact on it; without the binding a planted each block that rebinds the name is a false site (SPEC-665 R9)",
+        "test_redundant_guards.PlantedSitesAreFound.test_svelte_planted_sites_are_found"
+      ],
+      [
+        "S66538-THE-PYTHON-STORE-SCAN-READS-NESTED-LOOPS",
+        "scripts/tests/test_redundant_guards.py",
+        "            for n in ast.walk(stmt):",
+        "            for n in ast.iter_child_nodes(stmt):",
+        "the Python store scan reads every statement of a fact's scope to its depth, so a store later in an enclosing loop body clears the fact; a shallow scan makes the planted loop a false site (SPEC-665 R9)",
+        "test_redundant_guards.PlantedSitesAreFound.test_python_planted_sites_are_found"
+      ],
+      [
+        "S66539-A-SHELL-LOOP-HEAD-CLEARS-EVERY-FACT",
+        "scripts/tests/test_redundant_guards.py",
+        "SHELL_KEEPS = re.compile(r\"^(?:then|do|done|fi|else|echo|printf)\\b|^$|^#|^[{}]$\")",
+        "SHELL_KEEPS = re.compile(r\"^(?:then|do|done|fi|else|echo|printf|for)\\b|^$|^#|^[{}]$\")",
+        "a shell loop head is a command that clears every fact, so no fact enters a loop body; keeping it makes the planted for loop that assigns the name later a false site (SPEC-665 R11)",
+        "test_redundant_guards.PlantedSitesAreFound.test_shell_planted_sites_are_found"
+      ],
+      [
+        "S66540-ONLY-A-LOOP-BEGUN-BEFORE-THE-INNER-CHECK-ENCLOSES-IT",
+        "scripts/tests/test_redundant_guards.py",
+        "            if point < head and head < at <= hi:",
+        "            if point < head and at <= hi:",
+        "only a loop whose head comes before the inner check can enclose it, so a loop later in the function leaves the fact alone; without the bound the planted site followed by a loop that assigns the name is not found (SPEC-665 R9)",
+        "test_redundant_guards.PlantedSitesAreFound.test_typescript_planted_sites_are_found"
+      ]
+    ]
+  }
+}
