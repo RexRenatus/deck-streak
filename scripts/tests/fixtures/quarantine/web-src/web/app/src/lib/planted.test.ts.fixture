@@ -1,0 +1,6 @@
+// Planted: a Vitest file under web/app/src, read as text, never run. Its skip is a site.
+import { expect, test } from 'vitest';
+
+test.skip('a planted test with no listed reason', () => {
+  expect(true).toBe(true);
+});
