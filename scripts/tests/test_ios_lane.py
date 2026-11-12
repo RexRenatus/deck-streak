@@ -30,6 +30,7 @@ of the secret that holds them. A test makes the next certificate reads fail thro
 re-wrap and every other tool behave as before.
 """
 
+import ast
 import datetime
 import hashlib
 import json
@@ -140,8 +141,17 @@ elif tool == "security" and args[0] == "import":
     entry["imported"] = Path(args[1]).is_file()
 elif tool == "security" and args[0] == "list-keychains" and "-s" not in args:
     out = f'    "{fixture["login"]}"\\n'
+elif tool == "security" and args[0] == "find-certificate":
+    out = "".join(
+        f'SHA-256 hash: {sha256}\\nSHA-1 hash: {sha1}\\nkeychain: "{args[-1]}"\\n'
+        for sha256, sha1 in fixture["certificates"]
+    )
 elif tool == "security" and args[0] == "find-identity":
-    out = f'  1) {fixture["identity"]} "{fixture["identity name"]}"\\n     1 valid identities found\\n'
+    listed = "".join(
+        f'  {number}) {sha1} "{name}"\\n'
+        for number, (sha1, name) in enumerate(fixture["identities"], 1)
+    )
+    out = f'{listed}     {len(fixture["identities"])} valid identities found\\n'
 elif tool == "xcodebuild":
     if "archive" in args:
         Path(value("-archivePath")).mkdir(parents=True)
@@ -493,6 +503,89 @@ def xcconfig(text):
     return dict(re.findall(r"(?m)^([A-Z_]+) = (.*)$", text))
 
 
+# The digests the weak-hashing query reads as strong, spelt as `hashlib` names its constructors,
+# lower-cased with `_` and `-` dropped. Any other `hashlib` call in the lane, its test or the fake
+# tools' program is refused, so a SHA-1 cannot come back under another spelling (SPEC-352 A31).
+STRONG_DIGESTS = {
+    "blake2b",
+    "blake2s",
+    "sha224",
+    "sha256",
+    "sha384",
+    "sha3224",
+    "sha3256",
+    "sha3384",
+    "sha3512",
+    "sha512",
+    "shake128",
+    "shake256",
+}
+
+
+def hashlib_calls(source):
+    """Every call `source` makes into `hashlib`, by the module's name, an alias of it or a name
+    imported from it, as (line, digest): the first argument of `new` or `pbkdf2_hmac` when it is a
+    literal, else the constructor's name, lower-cased with `_` and `-` dropped; '' for a name it cannot read."""
+    tree = ast.parse(source)
+    modules, members = set(), {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            names = [alias for alias in node.names if alias.name == "hashlib"]
+            modules |= {alias.asname or alias.name for alias in names}
+        elif isinstance(node, ast.ImportFrom) and node.module == "hashlib":
+            members |= {alias.asname or alias.name: alias.name for alias in node.names}
+    found = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name):
+            if node.func.value.id not in modules:
+                continue
+            name = node.func.attr
+        elif isinstance(node.func, ast.Name) and node.func.id in members:
+            name = members[node.func.id]
+        else:
+            continue
+        if name in ("new", "pbkdf2_hmac"):
+            first = node.args[0] if node.args else None
+            literal = isinstance(first, ast.Constant) and isinstance(first.value, str)
+            name = first.value if literal else ""
+        found.append((node.lineno, name.lower().replace("_", "").replace("-", "")))
+    return found
+
+
+class LaneDigests(unittest.TestCase):
+    def test_no_lane_file_hashes_with_a_digest_the_weak_hashing_query_reads_as_weak(self):
+        sources = {
+            "scripts/ios_lane.py": LANE.read_text(encoding="utf-8"),
+            "scripts/tests/test_ios_lane.py": Path(__file__).read_text(encoding="utf-8"),
+            "the fake tools' program": SHIM,
+        }
+        calls = [
+            (where, line, digest)
+            for where, source in sources.items()
+            for line, digest in hashlib_calls(source)
+        ]
+        weak = [call for call in examined("hashlib calls", calls) if call[2] not in STRONG_DIGESTS]
+        self.assertEqual(weak, [])
+
+    def test_the_digest_census_refuses_each_planted_spelling_of_a_weak_digest(self):
+        plants = (
+            "import hashlib\nhashlib.sha1(b'')\n",
+            "import hashlib as h\nh.md5(b'')\n",
+            "from hashlib import sha1 as s\ns(b'')\n",
+            "import hashlib\nhashlib.new('SHA-1', b'')\n",
+            "import hashlib\nhashlib.new(NAME, b'')\n",
+            "import hashlib\nhashlib.pbkdf2_hmac('sha1', b'', b'', 1)\n",
+        )
+        for plant in examined("planted weak digests", plants):
+            with self.subTest(plant=plant):
+                calls = hashlib_calls(plant)
+                self.assertEqual(len(calls), 1)
+                self.assertNotIn(calls[0][1], STRONG_DIGESTS)
+        self.assertEqual(hashlib_calls("import hashlib\nhashlib.sha3_256(b'')\n"), [(2, "sha3256")])
+
+
 class LaneCredential(unittest.TestCase):
     def setUp(self):
         scratch = tempfile.TemporaryDirectory()
@@ -520,7 +613,9 @@ class LaneCredential(unittest.TestCase):
         }
         self.certificate = os.urandom(512)
         self.developer_certificate = os.urandom(256)
-        self.identity = hashlib.sha1(self.developer_certificate).hexdigest().upper()
+        # The identity as the keychain names it: a SHA-1 only the fake `security` prints, paired
+        # with the SHA-256 of the profile's certificate, so the test computes no SHA-1 itself.
+        self.identity = (uuid.uuid4().hex + uuid.uuid4().hex[:8]).upper()
         self.values = {
             "KEY": "-----BEGIN " + f"PRIVATE KEY-----\n{token}\n-----END PRIVATE KEY-----\n",
             "KEYID": uuid.uuid4().hex[:10].upper(),
@@ -533,10 +628,14 @@ class LaneCredential(unittest.TestCase):
         sentinels = dict(self.values, KEY=token)
         sentinels.update(self.ids)
         (self.shims / "sentinels.json").write_text(json.dumps(sentinels), encoding="utf-8")
+        name = f"Apple Distribution: {self.ids['team name']} ({self.ids['team']})"
+        digest = hashlib.sha256(self.developer_certificate).hexdigest().upper()
         fixture = {
             "login": LOGIN_KEYCHAIN,
-            "identity": self.identity,
-            "identity name": f"Apple Distribution: {self.ids['team name']} ({self.ids['team']})",
+            # What `security find-identity` lists, and what `security find-certificate -Z`
+            # pairs: each certificate's SHA-256 with the SHA-1 its identity is named by.
+            "identities": [[self.identity, name]],
+            "certificates": [[digest, self.identity]],
             "printed": " ".join(self.ids.values()),
         }
         (self.shims / "fixture.json").write_text(json.dumps(fixture), encoding="utf-8")
@@ -790,6 +889,23 @@ class LaneCredential(unittest.TestCase):
         for setting in examined("signing settings", SIGNING_SETTINGS):
             self.assertEqual([a for a in archive["args"] if a.startswith(f"{setting}=")], [])
 
+    def test_the_identity_is_the_one_the_keychain_pairs_with_the_profiles_certificate(self):
+        # A second identity, listed first, whose certificate the profile does not hold.
+        other = (uuid.uuid4().hex + uuid.uuid4().hex[:8]).upper()
+        fixture = json.loads((self.shims / "fixture.json").read_text(encoding="utf-8"))
+        fixture["identities"].insert(0, [other, fixture["identities"][0][1]])
+        fixture["certificates"].insert(0, [(uuid.uuid4().hex * 2).upper(), other])
+        (self.shims / "fixture.json").write_text(json.dumps(fixture), encoding="utf-8")
+        code, _, errors, records, _ = self.step("sign", ("CERTIFICATE", "PASSWORD", "PROFILE"))
+        keychain = str(self.lane / "lane.keychain-db")
+        printed = self.one(records, "security", "find-certificate")
+        self.assertEqual(printed["args"], ["find-certificate", "-a", "-Z", keychain])
+        self.assertEqual(code, 0, errors)
+        include = xcconfig((self.checkout / INCLUDE).read_text(encoding="utf-8"))
+        self.assertEqual(include["CODE_SIGN_IDENTITY"], self.identity)
+        signing = json.loads((self.lane / "signing.json").read_text(encoding="utf-8"))
+        self.assertEqual(signing["identity"], self.identity)
+
     def test_the_upload_key_lives_in_one_private_file_for_the_upload_step_only(self):
         self.sign()
         self.assertEqual(list(self.lane.glob("key-*")), [])
@@ -1002,6 +1118,7 @@ class LaneCredential(unittest.TestCase):
             ],
             ["security", "list-keychains", "-d", "user"],
             ["security", "list-keychains", "-d", "user", "-s", keychain, LOGIN_KEYCHAIN],
+            ["security", "find-certificate", "-a", "-Z", keychain],
             ["security", "find-identity", "-v", "-p", "codesigning", keychain],
             ["xcodebuild", "archive"],
         ]

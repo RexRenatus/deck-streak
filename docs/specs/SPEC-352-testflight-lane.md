@@ -226,6 +226,8 @@ R22. Ruling 461: the internal lane also starts on a push to `dev`, filtered to t
 | A27 | each failed read prints exactly one line naming one class of the closed set, `wrong-password`, `legacy-algorithm`, `option-refused` or `unrecognised`, chosen in section 8's order (one case per class); a marker the shim plants in its standard error reaches neither the step's output nor its refusal | `test_ios_lane.py`, `test_each_failed_certificate_read_prints_one_class_and_nothing_of_openssl` |
 | A28 | when the `-legacy` read also fails, the step refuses naming both classes, and the shims record no third `pkcs12` read and no `security` call | `test_ios_lane.py`, `test_a_failed_legacy_read_refuses_naming_both_classes_and_runs_no_further_tool` |
 | A29 | with recording shims on `PATH`, the step prints the shim's version line exactly once, written out before the certificate read runs, with no credential part in the version call's arguments, standard input or environment; the read, the read under `-legacy` and the re-wrap run the binary the step found when it started, even when another `openssl` appears earlier on `PATH` after the version line; a failed version call refuses naming the tool and not its path; with no `openssl` on `PATH` the step refuses before any read with one fixed line | `test_ios_lane.py`, `test_the_openssl_version_is_printed_before_the_read_and_every_call_names_its_path` |
+| A30 | with a second identity listed first whose certificate the profile does not hold, signing reads `security find-certificate -a -Z` on the job keychain before `find-identity`, and the include file and the signing record carry the identity the keychain pairs with the profile's certificate | `test_ios_lane.py`, `test_the_identity_is_the_one_the_keychain_pairs_with_the_profiles_certificate` |
+| A31 | no `hashlib` call in the lane, its test or the fake tools' program names a digest outside the strong set the weak-hashing query reads, whether reached by the module, an alias or an imported name; each planted weak spelling is refused by name | `test_ios_lane.py`, `LaneDigests`, its census and its planted control |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_the_internal_plan_refuses_any_event_or_ref_but_a_dispatch_on_dev
@@ -257,6 +259,8 @@ A26: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_a
 A27: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_each_failed_certificate_read_prints_one_class_and_nothing_of_openssl
 A28: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_a_failed_legacy_read_refuses_naming_both_classes_and_runs_no_further_tool
 A29: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_the_openssl_version_is_printed_before_the_read_and_every_call_names_its_path
+A30: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_the_identity_is_the_one_the_keychain_pairs_with_the_profiles_certificate
+A31: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k LaneDigests
 ```
 
 Every criterion runs on Linux in the hygiene job's `python` stage, with no credential, no macOS
@@ -467,3 +471,24 @@ its path. When `PATH` gives no `openssl`, the step refuses before any read with
 | `docs/red-first/SPEC-352.md` | docs | changed: A29's red and green lines and one bullet appended, and the previous bullet's closing sentence re-worded |
 
 The amendment changes no workflow, no other tool call and no repository or environment setting.
+
+### The identity is matched by the SHA-256 the keychain prints
+
+Code scanning's weak-hashing query read the signing step's SHA-1 of each developer certificate in the profile, and the test's SHA-1 that mirrored it, as a weak hash of sensitive data. The lane now computes no SHA-1. Before it lists the identities, it reads `security find-certificate -a -Z` on the job keychain, which prints each certificate's SHA-256 beside the SHA-1 that `security find-identity` names its identity by, and it hands signing an identity only when the keychain's SHA-256 for that identity's certificate is the SHA-256 of one of the profile's developer certificates. The identity still reaches `CODE_SIGN_IDENTITY` and the export options as the SHA-1 Apple's tools print.
+
+R8's parenthetical now reads: (the SHA-256 that `security find-certificate -Z` prints for an identity's certificate equals the SHA-256 of one of its developer certificates; the lane computes no SHA-1 of its own).
+
+- A8: the refusal of another certificate's profile is unchanged and now reads the keychain's pairing; no assertion is removed.
+- The exact call list that holds every signing tool's arguments gains `security find-certificate -a -Z` on the job keychain, before `find-identity`.
+- A30: new, R8 as amended.
+- A31: new, R8 as amended.
+
+| file | context | change |
+|---|---|---|
+| `scripts/ios_lane.py` | scripts | changed: the identity matched by the SHA-256 the keychain prints (R8 as amended) |
+| `scripts/tests/test_ios_lane.py` | tests | changed: the fake `security` prints `find-certificate -Z`, the fixture's identity is the keychain's, the exact call list, and A30 and A31 added |
+| `scripts/mutation-rows.d/S35200-S35299.json` | mutation | changed: rows for the new match, appended |
+| `changelog.d/testflight-identity-digest-352.md` | docs | added |
+| `docs/specs/SPEC-352-testflight-lane.md`, `docs/decisions/ADR-363-testflight-lane.md`, `docs/red-first/SPEC-352.md` | docs | changed: insert-only amendments |
+
+The amendment changes no workflow, trigger, secret, environment or code-scanning setting.

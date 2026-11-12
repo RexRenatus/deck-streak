@@ -67,6 +67,10 @@ A28: red at 6cd59182: AssertionError: 'openssl pkcs12 read failed: first class w
 A28: green at 5071e917
 A29: red at 3adb425: AssertionError: Lists differ: [] != ['fixture openssl version line']
 A29: green at 409e44c
+A30: red at d2c61361: AssertionError: 0 != 1 : security find-certificate ran 0 times
+A30: green at 71427932
+A31: red at d2c61361: AssertionError: Lists differ: [('scripts/ios_lane.py', 312, 'sha1')] != []
+A31: green at 71427932
 ```
 
 - Three red lines are shortened where the failure printed more than a criterion needs: A8's set
@@ -135,3 +139,4 @@ A29: green at 409e44c
   missing-openssl check negated, its refusal text changed, its raise removed or its search given
   another name. No mutation coverage commit follows the green.
   The green commit `409e44c` carries the cure, and `git diff --quiet 409e44c HEAD` over scripts/ios_lane.py and scripts/tests/test_ios_lane.py reads rc 0.
+- The identity-match amendment (SPEC-352 R8 as amended). Its tests were committed alone at d2c61361, before the lane changed at 71427932, and each red and green was read by running `test_ios_lane.py` in a `git archive` of each commit. With the fixture's identity now the keychain's, every test that signs is red at d2c61361 on the refusal "the profile was not issued for the imported certificate", because the base computes a SHA-1 the fake tool no longer prints; A30 and A31 are new, and each red quoted above is its own assertion. The census's planted control, `test_the_digest_census_refuses_each_planted_spelling_of_a_weak_digest`, is green at both commits by design: it judges the census, not the lane.

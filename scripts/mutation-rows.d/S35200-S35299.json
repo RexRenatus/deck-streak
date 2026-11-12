@@ -224,6 +224,22 @@
         "    pass",
         "a -legacy read that succeeds says so in one line before the signing goes on (SPEC-352 R13 as amended, A26)",
         "test_ios_lane.LaneCredential.test_a_failed_certificate_read_is_read_once_more_under_legacy"
+      ],
+      [
+        "S35228-THE-MATCH-DIGEST-IS-SHA-256",
+        "scripts/ios_lane.py",
+        "    issued = {hashlib.sha256(der).hexdigest().upper() for der in profile[\"DeveloperCertificates\"]}\n",
+        "    issued = {hashlib.sha1(der).hexdigest().upper() for der in profile[\"DeveloperCertificates\"]}\n",
+        "the profile's certificates are matched by SHA-256, and the lane computes no SHA-1 of its own (SPEC-352 R8 as amended, A31)",
+        "test_ios_lane.LaneDigests.test_no_lane_file_hashes_with_a_digest_the_weak_hashing_query_reads_as_weak"
+      ],
+      [
+        "S35229-THE-IDENTITY-IS-THE-PAIRED-ONE",
+        "scripts/ios_lane.py",
+        "    matched = [identity for identity in listed if printed.get(identity) in issued]\n",
+        "    matched = [identity for identity in listed if issued & set(printed.values())]\n",
+        "signing is handed the identity the keychain pairs with the profile's certificate, never the first one listed (SPEC-352 R8 as amended, A30)",
+        "test_ios_lane.LaneCredential.test_the_identity_is_the_one_the_keychain_pairs_with_the_profiles_certificate"
       ]
     ]
   }

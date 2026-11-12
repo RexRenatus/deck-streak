@@ -87,6 +87,9 @@ HARNESS = (
 INCLUDE = "ios/Config/Signing.local.xcconfig"
 # Where Xcode reads installed provisioning profiles from, under `HOME`.
 PROFILES = "Library/Developer/Xcode/UserData/Provisioning Profiles"
+# What `security find-certificate -Z` prints first for each certificate in a keychain: its
+# SHA-256, then its SHA-1, the hash `find-identity` names an identity by (SPEC-352 R8).
+DIGESTS = re.compile(r"SHA-256 hash: ([0-9A-F]{64})\s+SHA-1 hash: ([0-9A-F]{40})", re.IGNORECASE)
 # What `security find-identity` lists for each identity: its index, SHA-1 and quoted name.
 IDENTITY = re.compile(r"\) ([0-9A-F]{40}) \"")
 # The closed set a failed certificate read is named by: each class with the words of openssl's
@@ -359,11 +362,16 @@ def sign():
     saved = re.findall(r'"([^"]*)"', tool("security", "list-keychains", "-d", "user"))
     (lane / "search-list").write_text(json.dumps(saved), encoding="utf-8")
     tool("security", "list-keychains", "-d", "user", "-s", keychain, *saved)
+    # The keychain's own pairing of each certificate's SHA-256 with the SHA-1 its identity is
+    # named by, read before the identities: the profile's certificates are matched by SHA-256,
+    # and signing is handed the SHA-1 Apple's tools print, never one the lane computes.
+    digests = DIGESTS.findall(tool("security", "find-certificate", "-a", "-Z", keychain))
+    printed = {sha1.upper(): sha256.upper() for sha256, sha1 in digests}
     listed = IDENTITY.findall(
         tool("security", "find-identity", "-v", "-p", "codesigning", keychain)
     )
-    issued = {hashlib.sha1(der).hexdigest().upper() for der in profile["DeveloperCertificates"]}
-    matched = [identity for identity in listed if identity in issued]
+    issued = {hashlib.sha256(der).hexdigest().upper() for der in profile["DeveloperCertificates"]}
+    matched = [identity for identity in listed if printed.get(identity) in issued]
     if not matched:
         raise Refused("the profile was not issued for the imported certificate")
     signing = {
