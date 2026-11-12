@@ -1,0 +1,105 @@
+// Planted for the redundant-guard census (SPEC-665 R5 to R10); read as text, never compiled.
+
+fn same_expression(ready: bool, count: u32) -> u32 {
+    if ready && count > 0 {
+        if ready { // planted: same-expression
+            return 1;
+        }
+    }
+    0
+}
+
+fn chained(ready: bool) -> bool {
+    if ready && !ready { // planted: same-expression
+        return true;
+    }
+    false
+}
+
+fn range(count: u32) -> u32 {
+    if count > 10 {
+        if count > 5 { // planted: range
+            return 2;
+        }
+    }
+    0
+}
+
+fn presence(value: Option<u32>) -> u32 {
+    if let Some(inner) = value {
+        if value.is_some() { // planted: presence
+            return inner;
+        }
+    }
+    0
+}
+
+fn early(limit: i64) -> i64 {
+    if limit < 0 {
+        return 0;
+    }
+    if limit < 0 { // planted: same-expression
+        return -1;
+    }
+    limit
+}
+
+fn reassigned(mut count: u32) -> u32 {
+    if count > 3 {
+        count = 0;
+        if count > 3 { // accepted: reassigned
+            return 1;
+        }
+    }
+    count
+}
+
+fn called(items: &[u32]) -> bool {
+    if items.contains(&3) {
+        if items.contains(&3) { // accepted: call
+            return true;
+        }
+    }
+    false
+}
+
+#[cfg(test)]
+mod tests {
+    fn repeated(ready: bool) -> bool {
+        if ready {
+            if ready { // accepted: test-code
+                return true;
+            }
+        }
+        false
+    }
+}
+
+fn looped(mut count: i64, rounds: &[i64]) -> i64 {
+    let mut kept = 0;
+    if count > 3 {
+        for round in rounds {
+            if count > 3 { // accepted: loop
+                kept += 1;
+            }
+            count -= 1;
+        }
+    }
+    kept
+}
+
+fn spun(mut count: i64) -> i64 {
+    let mut kept = 0;
+    if count > 3 {
+        loop {
+            if count > 3 { // accepted: loop
+                kept += 1;
+            }
+            count -= 1;
+            if count < 0 {
+                break;
+            }
+        }
+    }
+    kept
+}
