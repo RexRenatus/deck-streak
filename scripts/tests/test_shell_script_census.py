@@ -37,7 +37,11 @@ SAVED = ("files.txt", "version.txt", "status.txt", "output.json")
 LEVEL = "warn"
 # R6: today's findings, keyed by path and check code, each with the count found and the reason it
 # stands. An unlisted finding prints at warn.
-LISTED = {}
+STANDS = "found at the first run; a fix is its own delivery (SPEC-655 section 5)"
+LISTED = {
+    ("deploy/scripts/sync-server.sh", "SC2016"): (1, STANDS),
+    ("scripts/github-setup.sh", "SC2329"): (3, STANDS),
+}
 
 
 def tracked(root=REPO):
