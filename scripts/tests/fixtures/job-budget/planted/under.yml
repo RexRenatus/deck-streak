@@ -1,0 +1,15 @@
+name: under
+on:
+  push:
+    branches: [dev]
+  pull_request:
+    branches: [dev, main]
+jobs:
+  first:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo first
+  second:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo second

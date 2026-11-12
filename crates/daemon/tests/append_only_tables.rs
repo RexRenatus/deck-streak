@@ -1,12 +1,13 @@
 //! The append-only tables take only their sanctioned writes (SPEC-432 R3 to R6; ADR-446 D2).
 //!
-//! The register names each table a migration's header declares written once. The census reads
-//! every string literal of every `.rs` file under `crates/*/src/`, decoded by the shared lexer,
-//! and every `migrations/*.sql` file, its SQL comments dropped, and finds each `UPDATE` (with or
-//! without `OR <action>`), `DELETE FROM`, `REPLACE INTO`, `INSERT OR REPLACE INTO` and upsert of
-//! a registered table, written bare, quoted, bracketed or `main.`-qualified, in any case and as a
-//! whole word. A write it cannot read fails closed. The found rewrites equal the sanctioned list,
-//! counts included. Every walk prints how many it examined and refuses zero (R9).
+//! The register names each table declared written once, by its migration's header or by
+//! SPEC-432's amendment for #895. The census reads every string literal of every `.rs` file under
+//! `crates/*/src/`, decoded by the shared lexer, and every `migrations/*.sql` file, its SQL
+//! comments dropped, and finds each `UPDATE` (with or without `OR <action>`), `DELETE FROM`,
+//! `REPLACE INTO`, `INSERT OR REPLACE INTO` and upsert of a registered table, written bare, quoted,
+//! bracketed or `main.`-qualified, in any case and as a whole word. A write it cannot read fails
+//! closed. The found rewrites equal the sanctioned list, counts included. Every walk prints how
+//! many it examined and refuses zero (R9).
 
 // An integration test is test code: its helpers panic on an unreadable tree, and it prints the
 // examined count on purpose.
@@ -24,8 +25,9 @@ mod table_census;
 use table_census::Token;
 
 /// The register (SPEC-432 R3): each append-only table, the context that owns it and the migration
-/// whose header declares it written once.
-const REGISTER: [(&str, &str, &str); 4] = [
+/// whose header declares it written once, or, for a table SPEC-432's amendment for #895 declares,
+/// the migration that creates it.
+const REGISTER: [(&str, &str, &str); 8] = [
     (
         "coin_ledger",
         "economy",
@@ -46,11 +48,27 @@ const REGISTER: [(&str, &str, &str); 4] = [
         "curriculum",
         "migrations/007701_curriculum_road_to_c2_and_law.sql",
     ),
+    (
+        "freeze_events",
+        "streaks",
+        "migrations/007601_streaks_state_and_governor.sql",
+    ),
+    (
+        "sync_runs",
+        "ingest",
+        "migrations/002201_ingest_sync_runs.sql",
+    ),
+    (
+        "notification_decisions",
+        "notifications",
+        "migrations/004101_notifications_router.sql",
+    ),
+    ("agent_runs", "agent", "migrations/004301_agent_runs.sql"),
 ];
 
 /// The sanctioned rewrites (SPEC-432 R6): the file under `crates/`, the item, the kind, the table
 /// and how many statements write it, each the sanction its migration names.
-const SANCTIONED: [(&str, &str, &str, &str, usize); 7] = [
+const SANCTIONED: [(&str, &str, &str, &str, usize); 12] = [
     (
         "economy/src/wallet.rs",
         "settle_mint_on",
@@ -100,6 +118,27 @@ const SANCTIONED: [(&str, &str, &str, &str, usize); 7] = [
         "band_milestones",
         1,
     ),
+    // The owner's erase of each table SPEC-432's amendment for #895 declares, which its migration's
+    // header names: the table is exported and erased.
+    (
+        "streaks/src/data_rights.rs",
+        "erase",
+        DELETE,
+        "freeze_events",
+        1,
+    ),
+    ("ingest/src/data_rights.rs", "erase", DELETE, "sync_runs", 1),
+    (
+        "notifications/src/data_rights.rs",
+        "erase",
+        DELETE,
+        "notification_decisions",
+        1,
+    ),
+    ("agent/src/data_rights.rs", "erase", DELETE, "agent_runs", 1),
+    // The agent's retention prune, whose statement the header of
+    // `migrations/004302_agent_runs_created_at_index.sql` names.
+    ("agent/src/runs.rs", "prune_before", DELETE, "agent_runs", 1),
 ];
 
 /// A rewrite by `UPDATE`.
@@ -743,6 +782,100 @@ pub async fn from_file(db: &sqlx::SqlitePool) {
 /// A planted migration that reads only.
 const PLANTED_READ_SQL: &str = "SELECT 1;\n";
 
+/// A planted tree, each file with its text: the kept sanctions at their files and items, one
+/// sanctioned update written twice, the badges erase gone, an update no sanction names, and a
+/// migration that reads only.
+const PLANTED_SANCTION_TREE: [(&str, &str); 13] = [
+    (
+        "crates/economy/src/wallet.rs",
+        r#"pub fn settle_mint_on() -> [&'static str; 2] {
+    [
+        "UPDATE coin_ledger SET delta = ?1 WHERE id = ?2",
+        "UPDATE coin_ledger SET delta = ?1 WHERE id = ?3",
+    ]
+}
+"#,
+    ),
+    (
+        "crates/economy/src/data_rights.rs",
+        r#"fn erase() -> &'static str {
+    "DELETE FROM coin_ledger"
+}
+"#,
+    ),
+    (
+        "crates/economy/src/rogue.rs",
+        r#"pub fn rewrite_a_grant() -> &'static str {
+    "UPDATE xp_ledger SET amount = 0 WHERE id = ?1"
+}
+"#,
+    ),
+    (
+        "crates/progression/src/data_rights.rs",
+        r#"fn erase() -> &'static str {
+    "DELETE FROM xp_ledger"
+}
+"#,
+    ),
+    (
+        "crates/curriculum/src/data_rights.rs",
+        r#"fn erase() -> &'static str {
+    "DELETE FROM band_milestones"
+}
+"#,
+    ),
+    (
+        "crates/curriculum/src/store.rs",
+        r#"pub fn mark_band_up() -> &'static str {
+    "UPDATE band_milestones SET celebrated_at = ?3 WHERE course = ?1 AND band = ?2"
+}
+"#,
+    ),
+    (
+        "crates/coordination/src/recompute/badges.rs",
+        r#"pub fn offer_badges() -> &'static str {
+    "UPDATE badges_earned SET celebrated_at = ?1 WHERE badge = ?2"
+}
+"#,
+    ),
+    (
+        "crates/streaks/src/data_rights.rs",
+        r#"fn erase() -> &'static str {
+    "DELETE FROM freeze_events"
+}
+"#,
+    ),
+    (
+        "crates/ingest/src/data_rights.rs",
+        r#"fn erase() -> &'static str {
+    "DELETE FROM sync_runs"
+}
+"#,
+    ),
+    (
+        "crates/notifications/src/data_rights.rs",
+        r#"fn erase() -> &'static str {
+    "DELETE FROM notification_decisions"
+}
+"#,
+    ),
+    (
+        "crates/agent/src/data_rights.rs",
+        r#"fn erase() -> &'static str {
+    "DELETE FROM agent_runs"
+}
+"#,
+    ),
+    (
+        "crates/agent/src/runs.rs",
+        r#"pub fn prune_before() -> &'static str {
+    "DELETE FROM agent_runs WHERE created_at < ?1"
+}
+"#,
+    ),
+    (PLANTED_MIGRATION, PLANTED_READ_SQL),
+];
+
 #[test]
 fn the_append_only_tables_take_only_their_sanctioned_writes() {
     let root = root();
@@ -961,62 +1094,7 @@ fn a_write_the_check_cannot_read_fails_closed() {
 #[test]
 fn a_sanctioned_write_gone_or_doubled_is_refused() {
     let planted = tempfile::tempdir().expect("a temporary directory");
-    let tree = [
-        (
-            "crates/economy/src/wallet.rs",
-            r#"pub fn settle_mint_on() -> [&'static str; 2] {
-    [
-        "UPDATE coin_ledger SET delta = ?1 WHERE id = ?2",
-        "UPDATE coin_ledger SET delta = ?1 WHERE id = ?3",
-    ]
-}
-"#,
-        ),
-        (
-            "crates/economy/src/data_rights.rs",
-            r#"fn erase() -> &'static str {
-    "DELETE FROM coin_ledger"
-}
-"#,
-        ),
-        (
-            "crates/economy/src/rogue.rs",
-            r#"pub fn rewrite_a_grant() -> &'static str {
-    "UPDATE xp_ledger SET amount = 0 WHERE id = ?1"
-}
-"#,
-        ),
-        (
-            "crates/progression/src/data_rights.rs",
-            r#"fn erase() -> &'static str {
-    "DELETE FROM xp_ledger"
-}
-"#,
-        ),
-        (
-            "crates/curriculum/src/data_rights.rs",
-            r#"fn erase() -> &'static str {
-    "DELETE FROM band_milestones"
-}
-"#,
-        ),
-        (
-            "crates/curriculum/src/store.rs",
-            r#"pub fn mark_band_up() -> &'static str {
-    "UPDATE band_milestones SET celebrated_at = ?3 WHERE course = ?1 AND band = ?2"
-}
-"#,
-        ),
-        (
-            "crates/coordination/src/recompute/badges.rs",
-            r#"pub fn offer_badges() -> &'static str {
-    "UPDATE badges_earned SET celebrated_at = ?1 WHERE badge = ?2"
-}
-"#,
-        ),
-        (PLANTED_MIGRATION, PLANTED_READ_SQL),
-    ];
-    for (path, text) in tree {
+    for (path, text) in PLANTED_SANCTION_TREE {
         plant(planted.path(), path, text);
     }
     let census = census(planted.path(), &tables());
@@ -1053,6 +1131,77 @@ fn a_sanctioned_write_gone_or_doubled_is_refused() {
     assert_eq!(
         refused, expected,
         "the unsanctioned rewrite, the doubled sanction and the sanction gone are refused, and \
-         the five kept sanctions are not"
+         the ten kept sanctions are not"
     );
+}
+
+/// The tables SPEC-432's amendment for #895 declares append-only, spelt as the issue names them
+/// and never read from the register.
+const NEWLY_DECLARED: [&str; 4] = [
+    "freeze_events",
+    "sync_runs",
+    "notification_decisions",
+    "agent_runs",
+];
+
+/// The rewrites of a row that a newly declared table refuses, `{}` standing for the table.
+const ROW_REWRITES: [(&str, &str); 2] = [
+    (UPDATE, "UPDATE {} SET created_at = 0 WHERE id = ?1"),
+    (DELETE, "DELETE FROM {} WHERE id = ?1"),
+];
+
+#[test]
+fn an_update_or_delete_of_each_newly_declared_table_is_refused() {
+    let planted = tempfile::tempdir().expect("a temporary directory");
+    let mut source = String::new();
+    let mut migration = String::new();
+    let mut expected = BTreeSet::new();
+    let mut statement_number = 0;
+    for table in NEWLY_DECLARED {
+        for (kind, statement) in ROW_REWRITES {
+            let text = statement.replace("{}", table);
+            let item = format!("{}_{table}", kind.to_lowercase());
+            writeln!(
+                source,
+                "pub fn {item}() -> &'static str {{\n    {}\n}}\n",
+                rust_literal(&text)
+            )
+            .expect("a String takes any text");
+            expected.insert(format!(
+                "planted/src/lib.rs {item} {kind} {table}: 1 rewrite(s) of an append-only table, \
+                 and none is sanctioned"
+            ));
+            migration.push_str(&text);
+            migration.push_str(";\n");
+            statement_number += 1;
+            expected.insert(format!(
+                "{PLANTED_MIGRATION} statement {statement_number} {kind} {table}: 1 rewrite(s) of \
+                 an append-only table, and none is sanctioned"
+            ));
+        }
+    }
+    plant(planted.path(), "crates/planted/src/lib.rs", &source);
+    plant(planted.path(), PLANTED_MIGRATION, &migration);
+    let census = census(planted.path(), &tables());
+    examined_all(&census);
+    let refused: BTreeSet<String> = judge(&census, &[]).into_iter().collect();
+    let mut reached = 0;
+    let mut missing = Vec::new();
+    for want in &expected {
+        reached += 1;
+        if !refused.contains(want) {
+            missing.push(want.as_str());
+        }
+    }
+    println!(
+        "examined {reached} of {} planted rewrite(s) of a newly declared table",
+        expected.len()
+    );
+    assert_eq!(reached, 16, "every planted rewrite reached its check");
+    assert!(
+        missing.is_empty(),
+        "an update or delete of a newly declared table is not refused by file, item, kind and \
+         table: {missing:#?}"
+    );
+    assert_eq!(refused, expected, "only the planted rewrites are refused");
 }

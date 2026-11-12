@@ -1,0 +1,6 @@
+# A planted listing, one entry per row as the census's format prints it: mode, type, blob size,
+# a tab, then the path. A file one byte past the bound with no entry is a site; one at the bound
+# and one far under it are not (SPEC-673 R2, R4).
+100644 blob 1048577	assets/past.bin
+100644 blob 1048576	assets/at.bin
+100644 blob 10	docs/small.md

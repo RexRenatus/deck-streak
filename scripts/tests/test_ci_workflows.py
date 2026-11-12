@@ -10884,6 +10884,10 @@ DYNAMIC_IMPORTS = {
         ("test_public_scrub", "chunk", "zlib.crc32(kind + body)", 1),
         ("test_public_scrub", "png", "zlib.compress(bytes(2))", 1),
     ),
+    **allowed(
+        "declares the job budget census's two levels, warn and fail, as an enumeration of two constant values (SPEC-662 R9); it imports, runs and reads nothing",
+        ("test_ci_job_budget", "<module>", "enum.Enum", 1),
+    ),
 }
 
 

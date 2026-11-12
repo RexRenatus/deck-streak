@@ -1,0 +1,15 @@
+name: called
+on:
+  workflow_call:
+jobs:
+  first:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo first
+  pair:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        n: [1, 2]
+    steps:
+      - run: echo pair

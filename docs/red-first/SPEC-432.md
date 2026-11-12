@@ -77,3 +77,27 @@ five listed items. A5 read `examined 410 source file(s)`, `examined 6609 literal
 1, UPSERT 4, SET 4, DELETE 0, PLAIN 3 and INCREMENT 0. No list of this SPEC changed. 1e29f006 makes
 one cure, in the escape-hatch census of SPEC-435: it re-pins that census's examined count to its
 population at current dev, and it edits no file of this SPEC.
+
+## Amendment for #895
+
+A14 and the five kept sanctions of the moved-sanction tree were committed at eaf8aa94 with the
+register and the sanctioned list as they stood, four tables and seven writes. A14, run alone by
+name, read `running 1 test` and failed on its refusal assertion: no planted update or delete of the
+four tables was refused, because the register did not name them. A5 and A9 passed there. The daemon
+package's suite at eaf8aa94 failed only on A14. The next commit, 896e32ba, holds the moved-sanction
+tree's planted files in a const that A9 plants from, within the workspace's function-length lint,
+and changes no test name, assertion, planted case or refusal. The green commit, a2aa1fd7, adds the
+four register rows and the five sanctioned writes, and changes no test function, assertion or
+planted case. A14 then passed, reading `examined 16 of 16 planted rewrite(s) of a newly declared
+table`, and A5 read `examined 420 source file(s)`, `examined 6729 literal(s)`, `examined 33
+migration(s)` and `examined 6649 statement(s)` and found the twelve sanctioned writes. The daemon
+package's suite at a2aa1fd7 failed on nothing.
+
+```red-first
+A14: red at eaf8aa94: an update or delete of a newly declared table is not refused by file, item, kind and table: [
+A14: green at a2aa1fd7
+```
+
+Across `git diff b9a08e60...HEAD`, no test is deleted, renamed or skipped, no planted case, register
+row or sanctioned write is removed, and no filter, exclusion, skip list, sample or bound is added on
+the test side. The weakening table is empty.
