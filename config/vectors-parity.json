@@ -8,8 +8,6 @@
     {"entry": "lean/ReleaseGates", "adr": "ADR-445"},
     {"entry": "lean/RetiredListShape", "adr": "ADR-445"},
     {"entry": "lean/SearchHolds", "adr": "ADR-445"},
-    {"entry": "lean/SensitiveDeck", "adr": "ADR-445"},
-    {"entry": "lean/TableCensusReach", "adr": "ADR-445"},
     {"entry": "lean/TokenProgress", "adr": "ADR-445"}
   ],
   "unimplemented": [

@@ -1,0 +1,6 @@
+<!-- A planted component for scripts/tests/test_web_strict_equality.py (SPEC-656). -->
+<script lang="ts">
+  let { size = 1 }: { size?: number } = $props(); // accepted: no API value in its props
+</script>
+
+<span>{size}</span>

@@ -1,0 +1,11 @@
+// Planted: read as text, never run. A platform condition is admitted; a project condition is a site.
+import { test } from '@playwright/test';
+
+test('platform', async ({ browserName }) => {
+  test.skip(browserName !== 'webkit', 'only WebKit serves this');
+});
+
+test('project', async ({}, testInfo) => {
+  test.skip(testInfo.project.name !== 'phone', 'rendered in one project');
+});
+test.runIf(browserName === 'webkit')('runs on one platform', () => {});

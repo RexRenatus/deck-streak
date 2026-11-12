@@ -1,0 +1,11 @@
+name: ignored
+on:
+  push:
+    branches-ignore: [dev]
+  pull_request:
+    branches-ignore: [main]
+jobs:
+  only:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo only

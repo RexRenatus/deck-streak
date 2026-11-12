@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# A planted script with no extension, counted by the shell its first line names through env.
+printf '%s\n' "$@"

@@ -1,0 +1,28 @@
+{
+  "_": "SPEC-677: each quarantined test names the runs on one head that disagreed; each site is a marker no entry binds, listed with its reason. A quarantined test keeps running.",
+  "level": "warn",
+  "quarantined": [],
+  "sites": [
+    {
+      "file": "crates/api/tests/trace.rs",
+      "stack": "rust",
+      "form": "ignore",
+      "count": 1,
+      "reason": "a child run whose reason does not name its parent test; reported by the hygiene job 130729148768"
+    },
+    {
+      "file": "crates/progression/tests/xp_census.rs",
+      "stack": "rust",
+      "form": "ignore",
+      "count": 1,
+      "reason": "an ignore whose reason names no test that runs it; reported by the hygiene job 130729148768"
+    },
+    {
+      "file": "web/app/tests/verify/planted.spec.ts",
+      "stack": "web",
+      "form": "skip",
+      "count": 1,
+      "reason": "skips outside one Playwright project; reported by the hygiene job 130729148768"
+    }
+  ]
+}

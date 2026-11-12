@@ -202,8 +202,7 @@ impl OutputGate for ProbeGate {
                     break;
                 }
             }
-            let _ = std::fs::remove_file(&out);
-            let _ = std::fs::remove_file(&tpl);
+            let _ = tokio::join!(tokio::fs::remove_file(&out), tokio::fs::remove_file(&tpl));
             outcome
         })
     }
@@ -217,7 +216,7 @@ impl OutputGate for ProbeGate {
                 return failed(CLASS_VOID, Vec::new());
             };
             let outcome = self.run_class(spec, &path, &path).await;
-            let _ = std::fs::remove_file(&path);
+            let _ = tokio::fs::remove_file(&path).await;
             outcome
         })
     }

@@ -15,6 +15,8 @@ every vector of its Lean proof (A14).
 SPEC-645's tests follow them: a `--rows-from` plan of the wrong shape refused by name by `prove`,
 `legs` and `merge` as processes and by its reader as a function (A1 to A5), and a well-formed
 plan read as before (A6).
+SPEC-678's two tests sit beside the census: no committed row's find holds an action pin or its
+version comment, and the check names each planted form and no clean find.
 """
 
 import argparse
@@ -348,6 +350,62 @@ class EveryRowIsCensused(unittest.TestCase):
         self.assertIn("occurs 2 times", planted.stdout)
         self.assertIn("S00021-NAMELESS", planted.stdout)
         self.assertIn("names no test", planted.stdout)
+
+
+# --------------------------------------------------------------------------- SPEC-678
+
+#: An action pinned by its commit, `@` and forty lowercase hex digits, and the version comment
+#: beside a pin, `# v<n>.<n>`: an update of the action rewrites both on every `uses:` line that
+#: names it, so a find holding either occurs 0 times once the update lands (SPEC-678 R1).
+ACTION_PIN = re.compile(r"@[0-9a-f]{40}")
+VERSION_COMMENT = re.compile(r"# v\d+\.\d+")
+
+
+def pinned_finds(rows):
+    """The ids of `rows`, in their order, whose find holds an action pin or a version comment."""
+    pinned = []
+    for row in rows:
+        if ACTION_PIN.search(row.find) or VERSION_COMMENT.search(row.find):
+            pinned.append(row.id)
+    return pinned
+
+
+def planted_row(runner, identifier, find):
+    """A row in the runner's shape whose find is `find`, for the pin check's controls."""
+    return runner.Row(
+        id=identifier,
+        table="SCRIPT_MUTATIONS",
+        target=TARGET,
+        find=find,
+        replace=find + " ",
+        killer="test_fixmod.Double.test_two_doubles_to_four",
+        crate=None,
+        description=DESCRIPTION,
+    )
+
+
+class NoRowAnchorsOnAnActionPin(unittest.TestCase):
+    """SPEC-678: no committed row's find holds an action pin or its version comment, read through
+    the runner's one reader, and the check names each planted form and no clean find."""
+
+    def test_no_committed_find_holds_an_action_pin_or_its_version_comment(self):
+        runner = load_runner()
+        rows = examined("committed rows", runner.rows_of(runner.load_tree(REPO)))
+        self.assertEqual(pinned_finds(rows), [])
+
+    def test_the_pin_check_names_each_planted_form_and_no_clean_find(self):
+        runner = load_runner()
+        pin = "@" + "1234567890" * 4
+        planted = [
+            planted_row(runner, "S00090-PIN", "      - uses: example/action" + pin + "\n"),
+            planted_row(runner, "S00091-COMMENT", "# v1.2\n        if: ${{ true }}"),
+            planted_row(runner, "S00092-BOTH", "uses: example/action" + pin + " # v3.4.5"),
+            planted_row(runner, "S00093-TOOL", "          tool: cargo-nextest@0.9.149"),
+            planted_row(runner, "S00094-NOTE", "          # a row anchors here\n          tool: x"),
+            planted_row(runner, "S00095-SHORT", "uses: example/action@1234567"),
+        ]
+        examined("planted rows", planted)
+        self.assertEqual(pinned_finds(planted), ["S00090-PIN", "S00091-COMMENT", "S00092-BOTH"])
 
 
 class NoRowLeavesWhileItsTargetStays(unittest.TestCase):

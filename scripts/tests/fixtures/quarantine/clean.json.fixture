@@ -1,0 +1,35 @@
+{
+  "level": "warn",
+  "quarantined": [
+    {
+      "test": "flaky.py.fixture::test_sometimes",
+      "record": [
+        {
+          "run": 11,
+          "attempt": 1,
+          "job": "web",
+          "job_id": 21,
+          "head": "b9a08e602fc10c9f3ecd88a1544f3f595d55cbda",
+          "conclusion": "failure"
+        },
+        {
+          "run": 11,
+          "attempt": 2,
+          "job": "web",
+          "job_id": 22,
+          "head": "b9a08e602fc10c9f3ecd88a1544f3f595d55cbda",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ],
+  "sites": [
+    {
+      "file": "markers.ts.fixture",
+      "stack": "web",
+      "form": "skip",
+      "count": 1,
+      "reason": "planted: the condition names a project, which the census does not admit"
+    }
+  ]
+}

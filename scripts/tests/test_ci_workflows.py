@@ -5457,6 +5457,33 @@ class TheEngineBuildsInEveryRustJob(unittest.TestCase):
             self.assertEqual(digest, PROTOC_SHA256, name)
 
 
+class TheHygieneJobSavesThePinnedShellCheckOutput(unittest.TestCase):
+    """SPEC-655 A6: one step of the hygiene job downloads the pinned ShellCheck against the full
+    digest of its archive and saves the json1 output where the python stage's census reads it,
+    before that stage runs."""
+
+    def test_hygiene_runs_the_pinned_shellcheck_once_before_its_stages(self):
+        archive = (
+            "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/"
+            "shellcheck-v0.11.0.linux.x86_64.tar.xz"
+        )
+        steps = load("ci.yml")["jobs"]["hygiene"]["steps"]
+        gate = next(n for n, s in enumerate(steps) if GATE_CALL.search(str(s.get("run", ""))))
+        runs = [(n, s) for n, s in enumerate(steps) if "shellcheck" in str(s.get("run", ""))]
+        self.assertEqual(len(runs), 1, "hygiene runs ShellCheck in no single step")
+        at, step = runs[0]
+        self.assertLess(at, gate, "ShellCheck saves its output after the stage that reads it")
+        self.assertTrue(
+            sha256_checked(step, "SHELLCHECK_SHA256"), "the archive's digest is unchecked"
+        )
+        self.assertIn(archive, step["run"])
+        self.assertIn("--norc --format=json1 --severity=style --", step["run"])
+        self.assertEqual(
+            (step.get("env") or {}).get("SHELLCHECK_DIR"),
+            "${{ runner.temp }}/check-logs/shellcheck",
+        )
+
+
 def concurrency_problems(block):
     """What a workflow-level concurrency block gets wrong, judged in scenarios: two runs of one pull
     request, two of another, pushes to dev and main, and a pull request beside a push."""
@@ -10856,6 +10883,10 @@ DYNAMIC_IMPORTS = {
         ),
         ("test_public_scrub", "chunk", "zlib.crc32(kind + body)", 1),
         ("test_public_scrub", "png", "zlib.compress(bytes(2))", 1),
+    ),
+    **allowed(
+        "declares the job budget census's two levels, warn and fail, as an enumeration of two constant values (SPEC-662 R9); it imports, runs and reads nothing",
+        ("test_ci_job_budget", "<module>", "enum.Enum", 1),
     ),
 }
 

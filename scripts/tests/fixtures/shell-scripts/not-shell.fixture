@@ -1,0 +1,2 @@
+#!/usr/bin/env python3
+"""A planted file with no extension whose first line names no shell: not counted."""

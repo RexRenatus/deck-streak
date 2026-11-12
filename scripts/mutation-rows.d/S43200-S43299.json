@@ -333,6 +333,87 @@
         "if gone && false {",
         "sync_write_idempotency::a_write_module_is_classified_and_a_listed_one_holds_a_write",
         "the judge refuses a listed PLAIN site that is gone; disabled, the planted skip module without record_prior passes"
+      ],
+      [
+        "S43237-THE-REGISTER-NAMES-FREEZE-EVENTS",
+        "daemon",
+        "tests/append_only_tables.rs",
+        "        \"freeze_events\",\n        \"streaks\",\n        \"migrations/007601_streaks_state_and_governor.sql\",",
+        "        \"freeze_event\",\n        \"streaks\",\n        \"migrations/007601_streaks_state_and_governor.sql\",",
+        "append_only_tables::an_update_or_delete_of_each_newly_declared_table_is_refused",
+        "the register names freeze_events with its migration; respelled, the planted update and delete of freeze_events are no longer refused"
+      ],
+      [
+        "S43238-THE-REGISTER-NAMES-SYNC-RUNS",
+        "daemon",
+        "tests/append_only_tables.rs",
+        "        \"sync_runs\",\n        \"ingest\",\n        \"migrations/002201_ingest_sync_runs.sql\",",
+        "        \"sync_run\",\n        \"ingest\",\n        \"migrations/002201_ingest_sync_runs.sql\",",
+        "append_only_tables::an_update_or_delete_of_each_newly_declared_table_is_refused",
+        "the register names sync_runs with its migration; respelled, the planted update and delete of sync_runs are no longer refused"
+      ],
+      [
+        "S43239-THE-REGISTER-NAMES-NOTIFICATION-DECISIONS",
+        "daemon",
+        "tests/append_only_tables.rs",
+        "        \"notification_decisions\",\n        \"notifications\",\n        \"migrations/004101_notifications_router.sql\",",
+        "        \"notification_decision\",\n        \"notifications\",\n        \"migrations/004101_notifications_router.sql\",",
+        "append_only_tables::an_update_or_delete_of_each_newly_declared_table_is_refused",
+        "the register names notification_decisions with its migration; respelled, the planted update and delete of notification_decisions are no longer refused"
+      ],
+      [
+        "S43240-THE-REGISTER-NAMES-AGENT-RUNS",
+        "daemon",
+        "tests/append_only_tables.rs",
+        "    (\"agent_runs\", \"agent\", \"migrations/004301_agent_runs.sql\"),",
+        "    (\"agent_run\", \"agent\", \"migrations/004301_agent_runs.sql\"),",
+        "append_only_tables::an_update_or_delete_of_each_newly_declared_table_is_refused",
+        "the register names agent_runs with its migration; respelled, the planted update and delete of agent_runs are no longer refused"
+      ],
+      [
+        "S43241-THE-FREEZE-EVENTS-ERASE-IS-SANCTIONED",
+        "daemon",
+        "tests/append_only_tables.rs",
+        "\"streaks/src/data_rights.rs\",",
+        "\"streaks/src/data_right.rs\",",
+        "append_only_tables::the_append_only_tables_take_only_their_sanctioned_writes",
+        "the sanctioned list holds the freeze_events erase at its file; moved to another file, the head's erase is unsanctioned and the listed one is gone"
+      ],
+      [
+        "S43242-THE-SYNC-RUNS-ERASE-IS-SANCTIONED",
+        "daemon",
+        "tests/append_only_tables.rs",
+        "\"ingest/src/data_rights.rs\",",
+        "\"ingest/src/data_right.rs\",",
+        "append_only_tables::the_append_only_tables_take_only_their_sanctioned_writes",
+        "the sanctioned list holds the sync_runs erase at its file; moved to another file, the head's erase is unsanctioned and the listed one is gone"
+      ],
+      [
+        "S43243-THE-NOTIFICATION-DECISIONS-ERASE-IS-SANCTIONED",
+        "daemon",
+        "tests/append_only_tables.rs",
+        "\"notifications/src/data_rights.rs\",",
+        "\"notifications/src/data_right.rs\",",
+        "append_only_tables::the_append_only_tables_take_only_their_sanctioned_writes",
+        "the sanctioned list holds the notification_decisions erase at its file; moved to another file, the head's erase is unsanctioned and the listed one is gone"
+      ],
+      [
+        "S43244-THE-AGENT-RUNS-ERASE-IS-SANCTIONED",
+        "daemon",
+        "tests/append_only_tables.rs",
+        "\"agent/src/data_rights.rs\",",
+        "\"agent/src/data_right.rs\",",
+        "append_only_tables::the_append_only_tables_take_only_their_sanctioned_writes",
+        "the sanctioned list holds the agent_runs erase at its file; moved to another file, the head's erase is unsanctioned and the listed one is gone"
+      ],
+      [
+        "S43245-THE-AGENT-RUNS-PRUNE-IS-SANCTIONED",
+        "daemon",
+        "tests/append_only_tables.rs",
+        "\"prune_before\",",
+        "\"prune\",",
+        "append_only_tables::the_append_only_tables_take_only_their_sanctioned_writes",
+        "the sanctioned list holds the agent_runs retention prune by its item; renamed, the head's prune_before delete is unsanctioned and the listed one is gone"
       ]
     ]
   }

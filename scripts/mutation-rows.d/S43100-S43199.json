@@ -1,5 +1,54 @@
 {
   "tables": {
+    "MUTATIONS": [
+      [
+        "S43137-A-NAME-PREFIX-IS-NO-ANCESTOR",
+        "ingest",
+        "src/sensitive.rs",
+        "        .is_some_and(|rest| rest.is_empty() || rest.starts_with(DECK_SEPARATOR))",
+        "        .is_some_and(|rest| rest.is_empty() || !rest.starts_with(DECK_SEPARATOR))",
+        "formal_vectors_sensitive_deck::the_kept_away_rule_answers_every_lean_vector",
+        "a deck sits under a marked deck only when its name is that name or continues it past the separator, as every vector the port wrote answers (SPEC-431 R20, A12)"
+      ],
+      [
+        "S43138-THE-SEPARATOR-IS-THE-PORTS",
+        "ingest",
+        "src/settings.rs",
+        "pub const DECK_SEPARATOR: char = '\\x1f';",
+        "pub const DECK_SEPARATOR: char = '\\x1e';",
+        "formal_vectors_sensitive_deck::the_kept_away_rule_answers_every_lean_vector",
+        "the separator between a deck name's parts is the port's, so a child deck sits under its marked parent (SPEC-431 R20, A12)"
+      ],
+      [
+        "S43139-AN-UNREADABLE-SET-IS-UNREADABLE",
+        "ingest",
+        "src/sensitive.rs",
+        "        return Admission::Unreadable;",
+        "        return Admission::Unresolved;",
+        "formal_vectors_sensitive_deck::the_kept_away_rule_answers_every_lean_vector",
+        "a marked set that could not be read refuses every card as unreadable, as the port answers (SPEC-431 R20, A12)"
+      ]
+    ],
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S43140-A-LONE-CHARACTER-STAYS-OUT-OF-THE-POOL",
+        "tools/table-census/table_census.rs",
+        "part.chars().count() < 2",
+        "part.chars().count() < 1",
+        "economy",
+        "formal_vectors_table_census_reach::the_table_census_reach_answers_every_lean_vector",
+        "a piece of one character stays out of the workspace-wide pool, so the reader refuses no tree of the port's vectors (SPEC-431 R21, A13)"
+      ],
+      [
+        "S43141-EACH-REACH-COVERS-THE-NAME",
+        "tools/table-census/table_census.rs",
+        "covered.extend(covering(table, &reader.reach(file)));",
+        "covered.extend(covering(table, &reader.reach(file)).into_iter().filter(|_| false));",
+        "economy",
+        "formal_vectors_table_census_reach::the_table_census_reach_answers_every_lean_vector",
+        "a file whose own reach covers the name is refused, so the control that joins a name's pieces in one file is refused by that file (SPEC-431 R21, A13)"
+      ]
+    ],
     "SCRIPT_MUTATIONS": [
       [
         "S43100-EDGE-ROW-DROPPED",
@@ -124,7 +173,7 @@
       [
         "S43115-OWED-ROW-DROPPED",
         "config/vectors-parity.json",
-        ",\n    {\"entry\": \"lean/TableCensusReach\", \"adr\": \"ADR-445\"}",
+        ",\n    {\"entry\": \"lean/RetiredListShape\", \"adr\": \"ADR-445\"}",
         "",
         "an implemented entry with no vectors test and no owed row is refused (SPEC-431 R7, A4)",
         "test_formal_parity.EachFormalEntryMeetsItsVectorsTest.test_every_implemented_lean_entry_has_its_vectors_test_or_a_row"

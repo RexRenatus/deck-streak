@@ -1771,7 +1771,12 @@ mod tests {
         let absent = super::seal_secret(&loader());
         assert!(
             matches!(absent, Ok(None)),
-            "no seal secret turns the release off: {absent:?}"
+            "no seal secret turns the release off: {}",
+            match &absent {
+                Ok(None) => "Ok(None)".to_owned(),
+                Ok(Some(_)) => "Ok(Some)".to_owned(),
+                Err(error) => format!("Err({error})"),
+            }
         );
 
         let path = directory.path().join(super::SEAL_SECRET_ROLE);
@@ -1808,7 +1813,12 @@ mod tests {
             let read = super::seal_secret(&loader());
             assert!(
                 matches!(read, Ok(Some(_))),
-                "{what} turns the release on: {read:?}"
+                "{what} turns the release on: {}",
+                match &read {
+                    Ok(None) => "Ok(None)".to_owned(),
+                    Ok(Some(_)) => "Ok(Some)".to_owned(),
+                    Err(error) => format!("Err({error})"),
+                }
             );
         }
     }

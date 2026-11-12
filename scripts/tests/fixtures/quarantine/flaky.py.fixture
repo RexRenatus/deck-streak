@@ -1,0 +1,8 @@
+"""Planted: a test the listing quarantines; read as text, never run."""
+
+import unittest
+
+
+class Planted(unittest.TestCase):
+    def test_sometimes(self):
+        self.assertTrue(True)

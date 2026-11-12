@@ -83,3 +83,51 @@ A3: green at 40da018d39e81e847353b13df2fd7842fecc3bcf
 A4: red at c5d08c0f7e7c2f73aafbf86433e73f7733b095ee: AssertionError: examined 0 Tide roles: the population is empty, so nothing was judged
 A4: green at 40da018d39e81e847353b13df2fd7842fecc3bcf
 ```
+
+## The identity of the greens
+
+CI runs the tip of each push, and none of the commits the red and green lines above name was a tip it ran:
+each has 0 check-runs. Each line below compares two commits over the paths the criteria read, with the exit
+status of `git diff --quiet` (0: those paths are byte-identical in the two commits).
+
+The Ember round was read green by name in the pull request's `ci` run at `f5b349a` (run 41182293472), whose
+web job failed only on its dependency audit:
+
+- `git diff --quiet 699d8db 032f480 -- web/app/src/lib/design/tokens.test.ts scripts/tests/test_ember_tokens.py`
+  exits 0, and from `699d8db` to `93dc1ec` over the same two paths it exits 0: no test changed between the
+  red and either green.
+- `git diff --quiet 032f480 f5b349a -- web/app/scripts/build-tokens.ts web/app/src/lib/design/tokens.json`
+  exits 0, and `git diff --quiet 93dc1ec f5b349a -- web/app/src/lib/design/tokens.json ios/App/Assets.xcassets`
+  exits 0: the code each green measured is the code that run read.
+- The same two test paths from `032f480` to `f5b349a` exit 1, and from `93dc1ec` to `f5b349a` exit 1:
+  `tokens.test.ts` gains one test after its line 252, which reads the compile's exact refusal messages, and
+  removes or changes no line; `test_ember_tokens.py` changes one line of its fixture builder, whose old and
+  new forms give equal values for each of the 256 channel values.
+
+The Tide round was read green in the `ci` run at the delivery's last head, `ad70eed` (run 41626040649):
+
+- `git diff --quiet c5d08c0 40da018 -- web/app/src/lib/design/tokens.test.ts scripts/tests/test_tide_tokens.py`
+  exits 0: no test changed between the red and the green.
+- `git diff --quiet 40da018 ad70eed -- web/app/scripts/build-tokens.ts web/app/src/lib/design scripts/tests/test_tide_tokens.py ios/App/Assets.xcassets`
+  exits 0: the tests and the code at the green are the ones that run read.
+
+## Plants added after the delivery
+
+Commit `ed9b1d4` adds plants for the census reasons the tests above did not reach, and loosens no assertion
+they hold. The colour-set test now also plants a colour set that is not there, as a missing file and as a
+file that is not JSON, and an entry that is not whole sRGB with alpha 1.000, as another colour space, an
+alpha below 1 and a component outside the 8-bit hex form; each plant must produce its one exact finding. The
+raw-colour test now reads each of its four compile plants by its exact finding, the file, the line and the
+literal, where it counted one finding before. Like the planted refusals above, these are `not red`: each is
+a planted fixture, refused on every run.
+
+Four plants were each shown able to fail by a mutant of the census made by hand in that commit's tree, its test run
+by name, and the module then restored from its saved bytes with its sha256 equal:
+
+- the `set-missing` line replaced by `pass`: `AssertionError: Lists differ: [] != ['set-missing: ios/App/Assets.xcassets/Tid[65 chars]ere']`
+- the colour-space check removed: `AssertionError: Lists differ: [] != ['value-differs: ios/App/Assets.xcassets/T[88 chars]000']`
+- the alpha check read as `is None`: `AssertionError: Lists differ: [] != ['value-differs: ios/App/Assets.xcassets/T[95 chars]000']`
+- the raw-colour finding holding the whole line in place of the literal: `AssertionError: Lists differ: ["raw-colour: web/app/scripts/build-tokens[40 chars])';"] != ['raw-col`
+
+Each of the four mutants passes the same test as it stood before that commit, run the same way, so no
+test caught any of them before. At `ed9b1d4` the module runs 5 tests, OK, with each mutant undone.
