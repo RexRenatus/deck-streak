@@ -1,0 +1,29 @@
+// A planted API module for scripts/tests/test_web_strict_equality.py (SPEC-656). The `.fixture`
+// suffix keeps it out of Vitest, svelte-check and every probe glob; the census reads it by the
+// name before that suffix. A line the census must report ends with a `planted` comment naming its
+// rule; a form it must pass ends with an `accepted` comment.
+import { readView, type View } from './views';
+import { VIEW_PATH } from './paths';
+
+export type Answer<T> = { readonly kind: 'ok'; readonly value: T } | { readonly kind: 'none' };
+
+export interface Options {
+  readonly retries: number | null; // accepted: null spells an absent value
+  readonly signal?: AbortSignal; // planted: absent-spelling
+  readonly reload: (page?: number) => void; // planted: absent-spelling
+}
+
+export function same(a: number, b: number): boolean {
+  return a === b; // accepted: strict equality
+}
+
+export function differs(a: number, b: number): boolean {
+  return a != b; // planted: loose-equality
+}
+
+// a != b in a line comment is prose
+export const text = 'a == b'; // accepted: inside a string
+
+export function load(body: unknown): View | null {
+  return VIEW_PATH.length > 0 ? readView(body) : null;
+}

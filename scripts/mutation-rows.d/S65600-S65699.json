@@ -1,0 +1,214 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S65601-LOOSE-NOT-EQUAL",
+        "scripts/tests/test_web_strict_equality.py",
+        "LOOSE = re.compile(r\"(?<![=!<>])(==|!=)(?!=)\")",
+        "LOOSE = re.compile(r\"(?<![=!<>])(==)(?!=)\")",
+        "the loose pattern holds `!=`; without it a planted `!=` is not found (SPEC-656 R3, A2)",
+        "test_web_strict_equality.TheWebClientHoldsStrictEqualityAndOneAbsentSpelling.test_a_planted_loose_comparison_is_found_and_its_lookalikes_are_not"
+      ],
+      [
+        "S65602-LOOSE-NOT-STRICT",
+        "scripts/tests/test_web_strict_equality.py",
+        "LOOSE = re.compile(r\"(?<![=!<>])(==|!=)(?!=)\")",
+        "LOOSE = re.compile(r\"(?<![=!<>])(==|!=)\")",
+        "the loose pattern refuses a third `=`; without it a planted `===` is found (SPEC-656 R3, A2)",
+        "test_web_strict_equality.TheWebClientHoldsStrictEqualityAndOneAbsentSpelling.test_a_planted_loose_comparison_is_found_and_its_lookalikes_are_not"
+      ],
+      [
+        "S65603-LINE-COMMENT",
+        "scripts/tests/test_web_strict_equality.py",
+        "        if pair == \"//\":",
+        "        if pair == \"//\" and False:",
+        "a line comment is text; without it a planted `!=` in a comment is found (SPEC-656 R2, A2)",
+        "test_web_strict_equality.TheWebClientHoldsStrictEqualityAndOneAbsentSpelling.test_a_planted_loose_comparison_is_found_and_its_lookalikes_are_not"
+      ],
+      [
+        "S65604-BLOCK-COMMENT",
+        "scripts/tests/test_web_strict_equality.py",
+        "        if pair == \"/*\":",
+        "        if pair == \"/*\" and False:",
+        "a block comment is text; without it a planted `!=` in one is found (SPEC-656 R2, A2)",
+        "test_web_strict_equality.TheWebClientHoldsStrictEqualityAndOneAbsentSpelling.test_a_planted_loose_comparison_is_found_and_its_lookalikes_are_not"
+      ],
+      [
+        "S65605-STRING",
+        "scripts/tests/test_web_strict_equality.py",
+        "        if char in \"'\\\"\":",
+        "        if char in \"\":",
+        "a string is text; without it a planted `==` in a string is found (SPEC-656 R2, A2)",
+        "test_web_strict_equality.TheWebClientHoldsStrictEqualityAndOneAbsentSpelling.test_a_planted_loose_comparison_is_found_and_its_lookalikes_are_not"
+      ],
+      [
+        "S65606-REGEX-LITERAL",
+        "scripts/tests/test_web_strict_equality.py",
+        "        if char == \"/\" and (last in REGEX_AFTER or last == \"\" or word in REGEX_KEYWORDS):",
+        "        if char == \"/\" and False:",
+        "a regular expression is text; without it a planted `==` in one is found (SPEC-656 R2, A2)",
+        "test_web_strict_equality.TheWebClientHoldsStrictEqualityAndOneAbsentSpelling.test_a_planted_loose_comparison_is_found_and_its_lookalikes_are_not"
+      ],
+      [
+        "S65607-TEMPLATE-TEXT",
+        "scripts/tests/test_web_strict_equality.py",
+        "        if char == \"`\":",
+        "        if char == \"`\" and False:",
+        "template text is text; without it a planted `==` in template text is found (SPEC-656 R2, A2)",
+        "test_web_strict_equality.TheWebClientHoldsStrictEqualityAndOneAbsentSpelling.test_a_planted_loose_comparison_is_found_and_its_lookalikes_are_not"
+      ],
+      [
+        "S65608-TEMPLATE-EXPRESSION",
+        "scripts/tests/test_web_strict_equality.py",
+        "            elif pair == \"${\":",
+        "            elif pair == \"${\" and False:",
+        "a template's `${ }` is code; without it a planted comparison in one is missed (SPEC-656 R2, A2)",
+        "test_web_strict_equality.TheWebClientHoldsStrictEqualityAndOneAbsentSpelling.test_a_planted_loose_comparison_is_found_and_its_lookalikes_are_not"
+      ],
+      [
+        "S65609-MARKUP-EXPRESSION",
+        "scripts/tests/test_web_strict_equality.py",
+        "        out[index + 1 : end] = mask(markup[index + 1 : end])",
+        "        out[index + 1 : end] = blanked(markup[index + 1 : end])",
+        "a markup expression is code; without it a planted `{#if a == b}` is missed (SPEC-656 R2, A2)",
+        "test_web_strict_equality.TheWebClientHoldsStrictEqualityAndOneAbsentSpelling.test_a_planted_loose_comparison_is_found_and_its_lookalikes_are_not"
+      ],
+      [
+        "S65610-HTML-COMMENT",
+        "scripts/tests/test_web_strict_equality.py",
+        "HIDDEN = (SCRIPT, STYLE, HTML_COMMENT)",
+        "HIDDEN = (SCRIPT, STYLE)",
+        "an HTML comment is text; without it a planted `{a == b}` in one is found (SPEC-656 R2, A2)",
+        "test_web_strict_equality.TheWebClientHoldsStrictEqualityAndOneAbsentSpelling.test_a_planted_loose_comparison_is_found_and_its_lookalikes_are_not"
+      ],
+      [
+        "S65611-SCRIPT-BLOCK",
+        "scripts/tests/test_web_strict_equality.py",
+        "        out[match.start(1) : match.end(1)] = mask(match.group(1))",
+        "        out[match.start(1) : match.end(1)] = blanked(match.group(1))",
+        "a component's script is code; without it a planted `!=` in one is missed (SPEC-656 R2, A2)",
+        "test_web_strict_equality.TheWebClientHoldsStrictEqualityAndOneAbsentSpelling.test_a_planted_loose_comparison_is_found_and_its_lookalikes_are_not"
+      ],
+      [
+        "S65612-OPTIONAL-MEMBER",
+        "scripts/tests/test_web_strict_equality.py",
+        "OPTIONAL = re.compile(r\"(?<=[\\w$\\]])\\?:\")",
+        "OPTIONAL = re.compile(r\"(?<=[\\w$\\]])\\?:(?!)\")",
+        "an optional member is a site; without it a planted `name?:` is missed (SPEC-656 R5, A3)",
+        "test_web_strict_equality.TheWebClientHoldsStrictEqualityAndOneAbsentSpelling.test_a_planted_boundary_with_the_other_spelling_is_found"
+      ],
+      [
+        "S65613-UNDEFINED-UNION",
+        "scripts/tests/test_web_strict_equality.py",
+        "UNDEFINED_UNION = re.compile(r\"(?<!\\|)\\|\\s*undefined\\b|\\bundefined\\s*\\|(?!\\|)\")",
+        "UNDEFINED_UNION = re.compile(r\"(?!)\")",
+        "a `| undefined` is a site; without it a planted one is missed (SPEC-656 R5, A3)",
+        "test_web_strict_equality.TheWebClientHoldsStrictEqualityAndOneAbsentSpelling.test_a_planted_boundary_with_the_other_spelling_is_found"
+      ],
+      [
+        "S65614-TYPE-IMPORT",
+        "scripts/tests/test_web_strict_equality.py",
+        "        if code[match.start()] != \"i\" or not typed:",
+        "        if code[match.start()] != \"i\":",
+        "only a module the API imports a type from is a boundary; without it a value-only module's `?:` is found (SPEC-656 R4, A3)",
+        "test_web_strict_equality.TheWebClientHoldsStrictEqualityAndOneAbsentSpelling.test_a_planted_boundary_with_the_other_spelling_is_found"
+      ],
+      [
+        "S65615-EXPORTED-ONLY",
+        "scripts/tests/test_web_strict_equality.py",
+        "DECLARATION = re.compile(r\"\\bexport\\s+(interface|type)\\s+([A-Za-z_$][\\w$]*)\")",
+        "DECLARATION = re.compile(r\"\\b(interface|type)\\s+([A-Za-z_$][\\w$]*)\")",
+        "only an exported declaration is read; without it a planted unexported `?:` is found (SPEC-656 R5, A3)",
+        "test_web_strict_equality.TheWebClientHoldsStrictEqualityAndOneAbsentSpelling.test_a_planted_boundary_with_the_other_spelling_is_found"
+      ],
+      [
+        "S65616-STATE-NO-VALUE",
+        "scripts/tests/test_web_strict_equality.py",
+        "        empty = start.startswith(\")\") or re.match(r\"undefined\\b\", start)",
+        "        empty = re.match(r\"undefined\\b\", start)",
+        "a state that starts with no value is a site; without it a planted `$state<Answer<T>>()` is missed (SPEC-656 R5, A3)",
+        "test_web_strict_equality.TheWebClientHoldsStrictEqualityAndOneAbsentSpelling.test_a_planted_boundary_with_the_other_spelling_is_found"
+      ],
+      [
+        "S65617-STATE-ANSWER",
+        "scripts/tests/test_web_strict_equality.py",
+        "        if \"Answer<\" not in argument or not rest.startswith(\"(\"):",
+        "        if not rest.startswith(\"(\"):",
+        "only a state holding an Answer is read; without it a planted element state is found (SPEC-656 R5, A3)",
+        "test_web_strict_equality.TheWebClientHoldsStrictEqualityAndOneAbsentSpelling.test_a_planted_boundary_with_the_other_spelling_is_found"
+      ],
+      [
+        "S65618-PROPS-ANSWER",
+        "scripts/tests/test_web_strict_equality.py",
+        "        if \"Answer<\" not in declaration:",
+        "        if False:",
+        "only props that name an Answer are read; without it a planted plain `size?:` is found (SPEC-656 R5, A3)",
+        "test_web_strict_equality.TheWebClientHoldsStrictEqualityAndOneAbsentSpelling.test_a_planted_boundary_with_the_other_spelling_is_found"
+      ],
+      [
+        "S65619-PROPS-READ",
+        "scripts/tests/test_web_strict_equality.py",
+        "            found += props_sites(path, code)",
+        "            found += []",
+        "a component's props are read; without it planted props sites are missed (SPEC-656 R5, A3)",
+        "test_web_strict_equality.TheWebClientHoldsStrictEqualityAndOneAbsentSpelling.test_a_planted_boundary_with_the_other_spelling_is_found"
+      ],
+      [
+        "S65620-OPTIONAL-PARAMETER",
+        "scripts/tests/test_web_strict_equality.py",
+        "            if form == \"optional\" and opened > 0:",
+        "            if form == \"optional\" and opened > 1:",
+        "a `?:` inside parentheses is an optional parameter; without it a planted one is keyed as a member (SPEC-656 R5, A3)",
+        "test_web_strict_equality.TheWebClientHoldsStrictEqualityAndOneAbsentSpelling.test_a_planted_boundary_with_the_other_spelling_is_found"
+      ],
+      [
+        "S65621-VERDICT-WARN",
+        "scripts/tests/test_web_strict_equality.py",
+        "            if level == \"fail\":",
+        "            if level in (\"fail\", \"warn\"):",
+        "at warn an unlisted site passes; without it the planted unlisted site fails at warn (SPEC-656 R6, A4)",
+        "test_web_strict_equality.TheWebClientHoldsStrictEqualityAndOneAbsentSpelling.test_the_level_decides_an_unlisted_site_and_a_stale_entry_always_fails"
+      ],
+      [
+        "S65622-VERDICT-STALE",
+        "scripts/tests/test_web_strict_equality.py",
+        "                failures.append(f\"STALE {rule} {key}\")",
+        "                pass",
+        "a stale listed entry fails; without it the planted stale entry passes (SPEC-656 R6, A4)",
+        "test_web_strict_equality.TheWebClientHoldsStrictEqualityAndOneAbsentSpelling.test_the_level_decides_an_unlisted_site_and_a_stale_entry_always_fails"
+      ],
+      [
+        "S65623-LEVEL-WARN",
+        "scripts/tests/test_web_strict_equality.py",
+        "LEVEL = \"warn\"",
+        "LEVEL = \"fail\"",
+        "the census lands at warn; without it LEVEL reads fail (SPEC-656 R6, A1)",
+        "test_web_strict_equality.TheWebClientHoldsStrictEqualityAndOneAbsentSpelling.test_the_repository_holds_exactly_todays_listing"
+      ],
+      [
+        "S65624-EMPTY-VOID",
+        "scripts/tests/test_web_strict_equality.py",
+        "    files = examined(\"web source file(s)\", files)",
+        "    files = list(files)",
+        "an empty population is VOID; without it the planted empty tree passes (SPEC-656 R1, A5)",
+        "test_web_strict_equality.TheWebClientHoldsStrictEqualityAndOneAbsentSpelling.test_an_empty_population_is_void"
+      ],
+      [
+        "S65625-BOUNDARY-VOID",
+        "scripts/tests/test_web_strict_equality.py",
+        "    boundary = examined(\"boundary module(s)\", boundary_modules(files))",
+        "    boundary = boundary_modules(files)",
+        "a population with no API module is VOID; without it the planted tree with none passes (SPEC-656 R4, A5)",
+        "test_web_strict_equality.TheWebClientHoldsStrictEqualityAndOneAbsentSpelling.test_an_empty_population_is_void"
+      ],
+      [
+        "S65626-LOOSE-ORDINAL",
+        "scripts/tests/test_web_strict_equality.py",
+        "            found.append((f\"{path} #{number}\", line_of(code, match.start())))",
+        "            found.append((f\"{path} #1\", line_of(code, match.start())))",
+        "a loose site's key holds its ordinal; without it two planted sites in one file share a key (SPEC-656 R3, A2)",
+        "test_web_strict_equality.TheWebClientHoldsStrictEqualityAndOneAbsentSpelling.test_a_planted_loose_comparison_is_found_and_its_lookalikes_are_not"
+      ]
+    ]
+  }
+}

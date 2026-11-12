@@ -1,0 +1,6 @@
+// A planted module the API imports only a value from: no boundary (SPEC-656). See api.ts.fixture.
+export const VIEW_PATH = '/api/view';
+
+export interface PathOptions {
+  readonly page?: number; // accepted: the API imports no type from this module
+}
