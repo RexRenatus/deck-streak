@@ -85,7 +85,7 @@ def minimums(text):
 
 def indent(line):
     """How many spaces open a line."""
-    return len(line) - len(line.lstrip(" "))
+    return re.match(r" *", line).end()
 
 
 def entries(lines):
