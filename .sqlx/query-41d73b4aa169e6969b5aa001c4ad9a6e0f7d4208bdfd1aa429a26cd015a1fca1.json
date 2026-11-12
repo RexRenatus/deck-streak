@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO ingest_state (id, rescore_pending, window_floor, window_count, created_at) VALUES (1, 0, ?1, ?2, ?3) ON CONFLICT (id) DO UPDATE SET window_floor = excluded.window_floor, window_count = excluded.window_count",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "41d73b4aa169e6969b5aa001c4ad9a6e0f7d4208bdfd1aa429a26cd015a1fca1"
+}

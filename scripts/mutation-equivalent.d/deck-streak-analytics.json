@@ -1,0 +1,13 @@
+{
+  "records": [
+    {
+      "file": "crates/analytics/src/snapshot.rs",
+      "mutant": "replace < with <= in card_snapshot",
+      "anchor": "&& card.interval < MATURE_IVL_DAYS",
+      "reason": "Only a card younger than MATURE_IVL_DAYS reaches this test, so <= admits no other card.",
+      "evidence": "The branch is the else of card.interval >= MATURE_IVL_DAYS, so every card that reaches it has card.interval < MATURE_IVL_DAYS, and card.interval <= MATURE_IVL_DAYS is true for each of them exactly when the original is.",
+      "reached_by": "rollup_metrics::the_card_snapshot_matches_the_predecessors_golden",
+      "issue": "#295"
+    }
+  ]
+}

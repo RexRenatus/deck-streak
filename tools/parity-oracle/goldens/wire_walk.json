@@ -1,0 +1,527 @@
+{
+  "adapter": "walk_hex",
+  "cases": [
+    {
+      "class": "empty",
+      "input": {
+        "hex": ""
+      },
+      "output": {
+        "fields": []
+      }
+    },
+    {
+      "class": "varint",
+      "input": {
+        "hex": "089601"
+      },
+      "output": {
+        "fields": [
+          [
+            1,
+            0,
+            150
+          ]
+        ]
+      }
+    },
+    {
+      "class": "varint",
+      "input": {
+        "hex": "1800"
+      },
+      "output": {
+        "fields": [
+          [
+            3,
+            0,
+            0
+          ]
+        ]
+      }
+    },
+    {
+      "class": "varint",
+      "input": {
+        "hex": "1080808080808080808001"
+      },
+      "output": {
+        "fields": [
+          [
+            2,
+            0,
+            9223372036854775808
+          ]
+        ]
+      }
+    },
+    {
+      "class": "fixed64",
+      "input": {
+        "hex": "210001020304050607"
+      },
+      "output": {
+        "fields": [
+          [
+            4,
+            1,
+            "0001020304050607"
+          ]
+        ]
+      }
+    },
+    {
+      "class": "fixed32",
+      "input": {
+        "hex": "2d00010203"
+      },
+      "output": {
+        "fields": [
+          [
+            5,
+            5,
+            "00010203"
+          ]
+        ]
+      }
+    },
+    {
+      "class": "length",
+      "input": {
+        "hex": "0a0568656c6c6f"
+      },
+      "output": {
+        "fields": [
+          [
+            1,
+            2,
+            "68656c6c6f"
+          ]
+        ]
+      }
+    },
+    {
+      "class": "length",
+      "input": {
+        "hex": "1200"
+      },
+      "output": {
+        "fields": [
+          [
+            2,
+            2,
+            ""
+          ]
+        ]
+      }
+    },
+    {
+      "class": "length",
+      "input": {
+        "hex": "0a01611201620807"
+      },
+      "output": {
+        "fields": [
+          [
+            1,
+            2,
+            "61"
+          ],
+          [
+            2,
+            2,
+            "62"
+          ],
+          [
+            1,
+            0,
+            7
+          ]
+        ]
+      }
+    },
+    {
+      "class": "big_field_number",
+      "input": {
+        "hex": "8080800401"
+      },
+      "output": {
+        "fields": [
+          [
+            1048576,
+            0,
+            1
+          ]
+        ]
+      }
+    },
+    {
+      "class": "truncated_varint",
+      "input": {
+        "hex": "0880"
+      },
+      "output": {
+        "error": "truncated varint"
+      }
+    },
+    {
+      "class": "truncated_key",
+      "input": {
+        "hex": "80"
+      },
+      "output": {
+        "error": "truncated varint"
+      }
+    },
+    {
+      "class": "varint_too_long",
+      "input": {
+        "hex": "08ffffffffffffffffffff01"
+      },
+      "output": {
+        "error": "varint too long"
+      }
+    },
+    {
+      "class": "truncated_fixed64",
+      "input": {
+        "hex": "2101020304050607"
+      },
+      "output": {
+        "error": "truncated 64-bit field"
+      }
+    },
+    {
+      "class": "truncated_fixed32",
+      "input": {
+        "hex": "2d010203"
+      },
+      "output": {
+        "error": "truncated 32-bit field"
+      }
+    },
+    {
+      "class": "truncated_length",
+      "input": {
+        "hex": "0a05616263"
+      },
+      "output": {
+        "error": "truncated length-delimited field"
+      }
+    },
+    {
+      "class": "group_start",
+      "input": {
+        "hex": "0b"
+      },
+      "output": {
+        "error": "unsupported wire type 3"
+      }
+    },
+    {
+      "class": "group_end",
+      "input": {
+        "hex": "0c"
+      },
+      "output": {
+        "error": "unsupported wire type 4"
+      }
+    },
+    {
+      "class": "wire_type_six",
+      "input": {
+        "hex": "0e"
+      },
+      "output": {
+        "error": "unsupported wire type 6"
+      }
+    },
+    {
+      "class": "wire_type_seven",
+      "input": {
+        "hex": "0f"
+      },
+      "output": {
+        "error": "unsupported wire type 7"
+      }
+    },
+    {
+      "class": "trailing_after_field",
+      "input": {
+        "hex": "080180"
+      },
+      "output": {
+        "error": "truncated varint"
+      }
+    },
+    {
+      "input": {
+        "hex": "8801b2df8ffafd14a9020dd2d0263440a3f2"
+      },
+      "output": {
+        "fields": [
+          [
+            17,
+            0,
+            721005309874
+          ],
+          [
+            37,
+            1,
+            "0dd2d0263440a3f2"
+          ]
+        ]
+      }
+    },
+    {
+      "input": {
+        "hex": "d90166a2aba8da2ffbcf317c1167302a618191a201293c0b887770791c06998f46abe54e8cdd5054cf3d40dbb0723b1a63df5858293a9601a1cdea1b543ce9a2020325372f"
+      },
+      "output": {
+        "fields": [
+          [
+            27,
+            1,
+            "66a2aba8da2ffbcf"
+          ],
+          [
+            6,
+            1,
+            "7c1167302a618191"
+          ],
+          [
+            20,
+            2,
+            "3c0b887770791c06998f46abe54e8cdd5054cf3d40dbb0723b1a63df5858293a9601a1cdea1b543ce9"
+          ],
+          [
+            36,
+            2,
+            "25372f"
+          ]
+        ]
+      }
+    },
+    {
+      "input": {
+        "hex": "880187ade6bfac1318c0f6908e830e8802ed80d2c0c201"
+      },
+      "output": {
+        "fields": [
+          [
+            17,
+            0,
+            664779986567
+          ],
+          [
+            3,
+            0,
+            481871280960
+          ],
+          [
+            33,
+            0,
+            52212039789
+          ]
+        ]
+      }
+    },
+    {
+      "input": {
+        "hex": "a101d68c37c6326f7a6578ed88a7e98408"
+      },
+      "output": {
+        "fields": [
+          [
+            20,
+            1,
+            "d68c37c6326f7a65"
+          ],
+          [
+            15,
+            0,
+            276172489837
+          ]
+        ]
+      }
+    },
+    {
+      "input": {
+        "hex": "488bbec896971f09609fcf309769ba9850c4bff889d01125bf90caec"
+      },
+      "output": {
+        "fields": [
+          [
+            9,
+            0,
+            1071373229835
+          ],
+          [
+            1,
+            1,
+            "609fcf309769ba98"
+          ],
+          [
+            10,
+            0,
+            605611237316
+          ],
+          [
+            4,
+            5,
+            "bf90caec"
+          ]
+        ]
+      }
+    },
+    {
+      "input": {
+        "hex": "2d6c0523ae"
+      },
+      "output": {
+        "fields": [
+          [
+            5,
+            5,
+            "6c0523ae"
+          ]
+        ]
+      }
+    },
+    {
+      "input": {
+        "hex": "624b3301156c69cf28b890e21946c0cbc98201ea2efba3756695e6acc2691ab2452ebc0a3cf47a48970347bab34b0975dde57ec8c694972afc89b440ee78f842b5a7483f891361bdc86d9df15b"
+      },
+      "output": {
+        "fields": [
+          [
+            12,
+            2,
+            "3301156c69cf28b890e21946c0cbc98201ea2efba3756695e6acc2691ab2452ebc0a3cf47a48970347bab34b0975dde57ec8c694972afc89b440ee78f842b5a7483f891361bdc86d9df15b"
+          ]
+        ]
+      }
+    },
+    {
+      "input": {
+        "hex": "4a062757ad8c7da231878431439b26fd14"
+      },
+      "output": {
+        "fields": [
+          [
+            9,
+            2,
+            "2757ad8c7da2"
+          ],
+          [
+            6,
+            1,
+            "878431439b26fd14"
+          ]
+        ]
+      }
+    },
+    {
+      "input": {
+        "hex": "fd01c830449f"
+      },
+      "output": {
+        "fields": [
+          [
+            31,
+            5,
+            "c830449f"
+          ]
+        ]
+      }
+    },
+    {
+      "input": {
+        "hex": "5de2f74e5b69943c61e4cdef229c9802a7cc95e3fc0d723593dff230ba7d5ebe954d05abc14b9141215b123b8fd52d62e2e3d016595830fe98517c8c773c30e4ddab79551ce72d0c920f82b786"
+      },
+      "output": {
+        "fields": [
+          [
+            11,
+            5,
+            "e2f74e5b"
+          ],
+          [
+            13,
+            1,
+            "943c61e4cdef229c"
+          ],
+          [
+            35,
+            0,
+            480170567207
+          ],
+          [
+            14,
+            2,
+            "93dff230ba7d5ebe954d05abc14b9141215b123b8fd52d62e2e3d016595830fe98517c8c773c30e4ddab79551ce72d0c920f82b786"
+          ]
+        ]
+      }
+    },
+    {
+      "input": {
+        "hex": "9d0220ba071fa902507524e1d715006fcd012f92ed97"
+      },
+      "output": {
+        "fields": [
+          [
+            35,
+            5,
+            "20ba071f"
+          ],
+          [
+            37,
+            1,
+            "507524e1d715006f"
+          ],
+          [
+            25,
+            5,
+            "2f92ed97"
+          ]
+        ]
+      }
+    },
+    {
+      "input": {
+        "hex": "3d604c3c11b901675c7395003f1a72e5018dae43a3"
+      },
+      "output": {
+        "fields": [
+          [
+            7,
+            5,
+            "604c3c11"
+          ],
+          [
+            23,
+            1,
+            "675c7395003f1a72"
+          ],
+          [
+            28,
+            5,
+            "8dae43a3"
+          ]
+        ]
+      }
+    }
+  ],
+  "function": "darkfields._iter_fields",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Walks the bytes the case's hex names and writes each byte value back as hex; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_094.py",
+  "registry_sha256": "65b653c5282152fc891e68568d1df2e994b7beb4822b1cd96a6bbac9b2bae5e6",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

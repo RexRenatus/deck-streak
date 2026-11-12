@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT drill_id AS \"drill_id!\", study_day, surface, created_at\n                   FROM drill_answers ORDER BY drill_id",
+  "describe": {
+    "columns": [
+      {
+        "name": "drill_id!",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "drill_answers",
+            "name": "drill_id"
+          }
+        }
+      },
+      {
+        "name": "study_day",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "drill_answers",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "surface",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "drill_answers",
+            "name": "surface"
+          }
+        }
+      },
+      {
+        "name": "created_at",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "drill_answers",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "faa70d4bd826c4bc266ee86a9b7f5e1318cd0d380debe3ab5252fe6b3005aa7e"
+}

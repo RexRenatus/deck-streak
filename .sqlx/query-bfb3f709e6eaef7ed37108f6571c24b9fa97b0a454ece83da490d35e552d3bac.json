@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE pity SET since_epic = 0, since_legendary = 0 WHERE id = 1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "bfb3f709e6eaef7ed37108f6571c24b9fa97b0a454ece83da490d35e552d3bac"
+}

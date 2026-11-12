@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO habit_strength (study_day, strength, created_at) VALUES (?1, ?2, ?3)\n         ON CONFLICT (study_day) DO UPDATE SET strength = excluded.strength",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "63120f1930427a362cce57a80f714b1a15277925e6f187e422d815f1e80f2cef"
+}

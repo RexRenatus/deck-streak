@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO cron_fires (job_id, fire_date, first_seen_at, updated_at, last_fire_at, ok_count, error_count, catchup_count, missed_count, last_outcome, created_at) VALUES (?1, ?2, ?3, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?3) ON CONFLICT (job_id, fire_date) DO UPDATE SET ok_count = cron_fires.ok_count + excluded.ok_count, error_count = cron_fires.error_count + excluded.error_count, catchup_count = cron_fires.catchup_count + excluded.catchup_count, missed_count = cron_fires.missed_count + excluded.missed_count, updated_at = excluded.updated_at, last_outcome = excluded.last_outcome, last_fire_at = coalesce(excluded.last_fire_at, cron_fires.last_fire_at)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 9
+    },
+    "nullable": []
+  },
+  "hash": "00f4ae07a33ffaf6df9fe21e7fffa2f0f1d98774329a9ce7b952c9d08a7395c4"
+}

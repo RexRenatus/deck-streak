@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COALESCE(attachment, stem || '.md') AS \"name!: String\"\n               FROM inbox_captures WHERE capture_key = ?1 AND source = 'miniapp'",
+  "describe": {
+    "columns": [
+      {
+        "name": "name!: String",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "3e2b9f198aeba35ab14803e0855f989162ac6334c4cd017ff728bf0c9430a7ef"
+}

@@ -1,0 +1,13 @@
+{
+  "records": [
+    {
+      "file": "crates/ffi/src/engine.rs",
+      "mutant": "replace red_flag -> u32 with 1",
+      "anchor": "review::RED",
+      "reason": "red_flag answers the core's review::RED, which is the literal 1, so replacing its body with 1 returns the same value.",
+      "evidence": "review::RED is the const 1 in crates/engine-core/src/review.rs, the engine's number for the red flag, and red_flag has no other input or effect. The two bodies return equal values on every call, so no test can tell them apart; the sibling mutant that returns 0 is caught by the pin, and S35011 pins the const's value in the core.",
+      "reached_by": "review_actions::the_red_flag_is_the_engines_flag_one",
+      "issue": "#633"
+    }
+  ]
+}

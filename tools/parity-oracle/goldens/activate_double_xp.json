@@ -1,0 +1,909 @@
+{
+  "adapter": "with_a_stub_wallet_of_tokens",
+  "cases": [
+    {
+      "class": "none",
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": []
+      },
+      "output": {
+        "activated": [],
+        "error": "no token held",
+        "ok": false,
+        "until_ms": null
+      }
+    },
+    {
+      "class": "none",
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 0,
+            "consumed": 1,
+            "granted_at_ms": 1699996400123,
+            "window_ends_at_ms": 0
+          }
+        ]
+      },
+      "output": {
+        "activated": [],
+        "error": "no token held",
+        "ok": false,
+        "until_ms": null
+      }
+    },
+    {
+      "class": "none",
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 1699989200123,
+            "consumed": 0,
+            "granted_at_ms": 1699985600123,
+            "window_ends_at_ms": 1699996400123
+          }
+        ]
+      },
+      "output": {
+        "activated": [],
+        "error": "no token held",
+        "ok": false,
+        "until_ms": null
+      }
+    },
+    {
+      "class": "none",
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 1699989200123,
+            "consumed": 1,
+            "granted_at_ms": 1699985600123,
+            "window_ends_at_ms": 1699996400123
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 1,
+            "granted_at_ms": 1,
+            "window_ends_at_ms": 0
+          }
+        ]
+      },
+      "output": {
+        "activated": [],
+        "error": "no token held",
+        "ok": false,
+        "until_ms": null
+      }
+    },
+    {
+      "class": "active",
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 1699992800123,
+            "consumed": 0,
+            "granted_at_ms": 1699992800123,
+            "window_ends_at_ms": 1699996400123
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1699996400123,
+            "window_ends_at_ms": 0
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1700000000123,
+            "window_ends_at_ms": 0
+          }
+        ]
+      },
+      "output": {
+        "activated": [
+          {
+            "activated_at_ms": 1700000000123,
+            "id": 2,
+            "window_ends_at_ms": 1700007200123
+          }
+        ],
+        "error": null,
+        "ok": true,
+        "until_ms": 1700007200123
+      }
+    },
+    {
+      "class": "active",
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 1699992800123,
+            "consumed": 1,
+            "granted_at_ms": 1699992800123,
+            "window_ends_at_ms": 1699996400123
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1699996400123,
+            "window_ends_at_ms": 0
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1700000000123,
+            "window_ends_at_ms": 0
+          }
+        ]
+      },
+      "output": {
+        "activated": [
+          {
+            "activated_at_ms": 1700000000123,
+            "id": 2,
+            "window_ends_at_ms": 1700007200123
+          }
+        ],
+        "error": null,
+        "ok": true,
+        "until_ms": 1700007200123
+      }
+    },
+    {
+      "class": "active",
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 1699992800123,
+            "consumed": 0,
+            "granted_at_ms": 1699992800123,
+            "window_ends_at_ms": 1700000000122
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1699996400123,
+            "window_ends_at_ms": 0
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1700000000123,
+            "window_ends_at_ms": 0
+          }
+        ]
+      },
+      "output": {
+        "activated": [
+          {
+            "activated_at_ms": 1700000000123,
+            "id": 2,
+            "window_ends_at_ms": 1700007200123
+          }
+        ],
+        "error": null,
+        "ok": true,
+        "until_ms": 1700007200123
+      }
+    },
+    {
+      "class": "active",
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 1699992800123,
+            "consumed": 1,
+            "granted_at_ms": 1699992800123,
+            "window_ends_at_ms": 1700000000122
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1699996400123,
+            "window_ends_at_ms": 0
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1700000000123,
+            "window_ends_at_ms": 0
+          }
+        ]
+      },
+      "output": {
+        "activated": [
+          {
+            "activated_at_ms": 1700000000123,
+            "id": 2,
+            "window_ends_at_ms": 1700007200123
+          }
+        ],
+        "error": null,
+        "ok": true,
+        "until_ms": 1700007200123
+      }
+    },
+    {
+      "class": "active",
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 1699992800123,
+            "consumed": 0,
+            "granted_at_ms": 1699992800123,
+            "window_ends_at_ms": 1700000000123
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1699996400123,
+            "window_ends_at_ms": 0
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1700000000123,
+            "window_ends_at_ms": 0
+          }
+        ]
+      },
+      "output": {
+        "activated": [
+          {
+            "activated_at_ms": 1700000000123,
+            "id": 2,
+            "window_ends_at_ms": 1700007200123
+          }
+        ],
+        "error": null,
+        "ok": true,
+        "until_ms": 1700007200123
+      }
+    },
+    {
+      "class": "active",
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 1699992800123,
+            "consumed": 1,
+            "granted_at_ms": 1699992800123,
+            "window_ends_at_ms": 1700000000123
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1699996400123,
+            "window_ends_at_ms": 0
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1700000000123,
+            "window_ends_at_ms": 0
+          }
+        ]
+      },
+      "output": {
+        "activated": [
+          {
+            "activated_at_ms": 1700000000123,
+            "id": 2,
+            "window_ends_at_ms": 1700007200123
+          }
+        ],
+        "error": null,
+        "ok": true,
+        "until_ms": 1700007200123
+      }
+    },
+    {
+      "class": "active",
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 1699992800123,
+            "consumed": 0,
+            "granted_at_ms": 1699992800123,
+            "window_ends_at_ms": 1700000000124
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1699996400123,
+            "window_ends_at_ms": 0
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1700000000123,
+            "window_ends_at_ms": 0
+          }
+        ]
+      },
+      "output": {
+        "activated": [],
+        "error": "a token is already active",
+        "ok": false,
+        "until_ms": null
+      }
+    },
+    {
+      "class": "active",
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 1699992800123,
+            "consumed": 1,
+            "granted_at_ms": 1699992800123,
+            "window_ends_at_ms": 1700000000124
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1699996400123,
+            "window_ends_at_ms": 0
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1700000000123,
+            "window_ends_at_ms": 0
+          }
+        ]
+      },
+      "output": {
+        "activated": [
+          {
+            "activated_at_ms": 1700000000123,
+            "id": 2,
+            "window_ends_at_ms": 1700007200123
+          }
+        ],
+        "error": null,
+        "ok": true,
+        "until_ms": 1700007200123
+      }
+    },
+    {
+      "class": "active",
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 1699992800123,
+            "consumed": 0,
+            "granted_at_ms": 1699992800123,
+            "window_ends_at_ms": 1700003600123
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1699996400123,
+            "window_ends_at_ms": 0
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1700000000123,
+            "window_ends_at_ms": 0
+          }
+        ]
+      },
+      "output": {
+        "activated": [],
+        "error": "a token is already active",
+        "ok": false,
+        "until_ms": null
+      }
+    },
+    {
+      "class": "active",
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 1699992800123,
+            "consumed": 1,
+            "granted_at_ms": 1699992800123,
+            "window_ends_at_ms": 1700003600123
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1699996400123,
+            "window_ends_at_ms": 0
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1700000000123,
+            "window_ends_at_ms": 0
+          }
+        ]
+      },
+      "output": {
+        "activated": [
+          {
+            "activated_at_ms": 1700000000123,
+            "id": 2,
+            "window_ends_at_ms": 1700007200123
+          }
+        ],
+        "error": null,
+        "ok": true,
+        "until_ms": 1700007200123
+      }
+    },
+    {
+      "class": "active",
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 1699992800123,
+            "consumed": 0,
+            "granted_at_ms": 1699992800123,
+            "window_ends_at_ms": 1700007200122
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1699996400123,
+            "window_ends_at_ms": 0
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1700000000123,
+            "window_ends_at_ms": 0
+          }
+        ]
+      },
+      "output": {
+        "activated": [],
+        "error": "a token is already active",
+        "ok": false,
+        "until_ms": null
+      }
+    },
+    {
+      "class": "active",
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 1699992800123,
+            "consumed": 1,
+            "granted_at_ms": 1699992800123,
+            "window_ends_at_ms": 1700007200122
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1699996400123,
+            "window_ends_at_ms": 0
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1700000000123,
+            "window_ends_at_ms": 0
+          }
+        ]
+      },
+      "output": {
+        "activated": [
+          {
+            "activated_at_ms": 1700000000123,
+            "id": 2,
+            "window_ends_at_ms": 1700007200123
+          }
+        ],
+        "error": null,
+        "ok": true,
+        "until_ms": 1700007200123
+      }
+    },
+    {
+      "class": "active",
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1699913600123,
+            "window_ends_at_ms": 0
+          },
+          {
+            "activated_at_ms": 1699996400123,
+            "consumed": 0,
+            "granted_at_ms": 1699992800123,
+            "window_ends_at_ms": 1700003600123
+          }
+        ]
+      },
+      "output": {
+        "activated": [],
+        "error": "a token is already active",
+        "ok": false,
+        "until_ms": null
+      }
+    },
+    {
+      "class": "oldest",
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1699996400123,
+            "window_ends_at_ms": 0
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1699913600123,
+            "window_ends_at_ms": 0
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1699999940123,
+            "window_ends_at_ms": 0
+          }
+        ]
+      },
+      "output": {
+        "activated": [
+          {
+            "activated_at_ms": 1700000000123,
+            "id": 1,
+            "window_ends_at_ms": 1700007200123
+          }
+        ],
+        "error": null,
+        "ok": true,
+        "until_ms": 1700007200123
+      }
+    },
+    {
+      "class": "oldest",
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 0,
+            "consumed": 1,
+            "granted_at_ms": 1699913600123,
+            "window_ends_at_ms": 0
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1699996400123,
+            "window_ends_at_ms": 0
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1700000000123,
+            "window_ends_at_ms": 0
+          }
+        ]
+      },
+      "output": {
+        "activated": [
+          {
+            "activated_at_ms": 1700000000123,
+            "id": 2,
+            "window_ends_at_ms": 1700007200123
+          }
+        ],
+        "error": null,
+        "ok": true,
+        "until_ms": 1700007200123
+      }
+    },
+    {
+      "class": "oldest",
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 1699982000123,
+            "consumed": 0,
+            "granted_at_ms": 1699978400123,
+            "window_ends_at_ms": 1699989200123
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1699827200123,
+            "window_ends_at_ms": 0
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1700000000123,
+            "window_ends_at_ms": 0
+          }
+        ]
+      },
+      "output": {
+        "activated": [
+          {
+            "activated_at_ms": 1700000000123,
+            "id": 2,
+            "window_ends_at_ms": 1700007200123
+          }
+        ],
+        "error": null,
+        "ok": true,
+        "until_ms": 1700007200123
+      }
+    },
+    {
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 1699985750561,
+            "consumed": 0,
+            "granted_at_ms": 1699982150561,
+            "window_ends_at_ms": 1699992950561
+          }
+        ]
+      },
+      "output": {
+        "activated": [],
+        "error": "no token held",
+        "ok": false,
+        "until_ms": null
+      }
+    },
+    {
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 1699999547473,
+            "consumed": 0,
+            "granted_at_ms": 1699995947473,
+            "window_ends_at_ms": 1700006747473
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1699979865274,
+            "window_ends_at_ms": 0
+          }
+        ]
+      },
+      "output": {
+        "activated": [],
+        "error": "a token is already active",
+        "ok": false,
+        "until_ms": null
+      }
+    },
+    {
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 0,
+            "consumed": 1,
+            "granted_at_ms": 1699879365026,
+            "window_ends_at_ms": 0
+          },
+          {
+            "activated_at_ms": 1699994370213,
+            "consumed": 0,
+            "granted_at_ms": 1699990770213,
+            "window_ends_at_ms": 1700001570213
+          },
+          {
+            "activated_at_ms": 1699986484649,
+            "consumed": 0,
+            "granted_at_ms": 1699982884649,
+            "window_ends_at_ms": 1699993684649
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1699891301750,
+            "window_ends_at_ms": 0
+          }
+        ]
+      },
+      "output": {
+        "activated": [],
+        "error": "a token is already active",
+        "ok": false,
+        "until_ms": null
+      }
+    },
+    {
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": []
+      },
+      "output": {
+        "activated": [],
+        "error": "no token held",
+        "ok": false,
+        "until_ms": null
+      }
+    },
+    {
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1699974626269,
+            "window_ends_at_ms": 0
+          }
+        ]
+      },
+      "output": {
+        "activated": [
+          {
+            "activated_at_ms": 1700000000123,
+            "id": 1,
+            "window_ends_at_ms": 1700007200123
+          }
+        ],
+        "error": null,
+        "ok": true,
+        "until_ms": 1700007200123
+      }
+    },
+    {
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 1699997259575,
+            "consumed": 0,
+            "granted_at_ms": 1699993659575,
+            "window_ends_at_ms": 1700004459575
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1699756881419,
+            "window_ends_at_ms": 0
+          }
+        ]
+      },
+      "output": {
+        "activated": [],
+        "error": "a token is already active",
+        "ok": false,
+        "until_ms": null
+      }
+    },
+    {
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 0,
+            "consumed": 1,
+            "granted_at_ms": 1699845936667,
+            "window_ends_at_ms": 0
+          }
+        ]
+      },
+      "output": {
+        "activated": [],
+        "error": "no token held",
+        "ok": false,
+        "until_ms": null
+      }
+    },
+    {
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1699919269213,
+            "window_ends_at_ms": 0
+          },
+          {
+            "activated_at_ms": 1699992494189,
+            "consumed": 0,
+            "granted_at_ms": 1699988894189,
+            "window_ends_at_ms": 1699999694189
+          },
+          {
+            "activated_at_ms": 1699990677204,
+            "consumed": 0,
+            "granted_at_ms": 1699987077204,
+            "window_ends_at_ms": 1699997877204
+          },
+          {
+            "activated_at_ms": 0,
+            "consumed": 0,
+            "granted_at_ms": 1699957928201,
+            "window_ends_at_ms": 0
+          }
+        ]
+      },
+      "output": {
+        "activated": [
+          {
+            "activated_at_ms": 1700000000123,
+            "id": 1,
+            "window_ends_at_ms": 1700007200123
+          }
+        ],
+        "error": null,
+        "ok": true,
+        "until_ms": 1700007200123
+      }
+    },
+    {
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": []
+      },
+      "output": {
+        "activated": [],
+        "error": "no token held",
+        "ok": false,
+        "until_ms": null
+      }
+    },
+    {
+      "input": {
+        "now_ms": 1700000000123,
+        "tokens": [
+          {
+            "activated_at_ms": 1699994215718,
+            "consumed": 1,
+            "granted_at_ms": 1699990615718,
+            "window_ends_at_ms": 1700001415718
+          }
+        ]
+      },
+      "output": {
+        "activated": [],
+        "error": "no token held",
+        "ok": false,
+        "until_ms": null
+      }
+    }
+  ],
+  "function": "pipeline_layers.loot.LootLayer.activate_double_xp",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Activates once on a stand-in layer over a stub store holding the case's tokens, each with its id in the case's order, with the clock patched to the case's instant; returns the answer, the window's end and the activations written, in epoch milliseconds; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_081.py",
+  "registry_sha256": "67257e9dfbf5070946f9cabbe897df72d7f71fa60cd8414cf384b5c83d530274",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

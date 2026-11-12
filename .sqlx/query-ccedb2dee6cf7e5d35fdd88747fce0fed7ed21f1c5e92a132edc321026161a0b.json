@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id AS \"id!: i64\", code, study_day, minutes\n           FROM minutes_log ORDER BY id DESC LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: i64",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "minutes_log",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "code",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "minutes_log",
+            "name": "code"
+          }
+        }
+      },
+      {
+        "name": "study_day",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "minutes_log",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "minutes",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "minutes_log",
+            "name": "minutes"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "ccedb2dee6cf7e5d35fdd88747fce0fed7ed21f1c5e92a132edc321026161a0b"
+}

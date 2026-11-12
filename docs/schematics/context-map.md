@@ -1,20 +1,36 @@
 # Schematic: the context map as components
 
-Kind: component. Read at DeckStreak `main` 769ee62 (`docs/CONTEXT-MAP.md`, `crates/*/Cargo.toml`).
-The binding record is the fence in docs/CONTEXT-MAP.md; this diagram draws it by layer. An arrow
-is a Cargo dependency, and it points down only.
+Kind: component. Read at DeckStreak `dev` 74ad834dd5cc8f3e971878758daa709e1902f801.
+Its sources are the fence in `docs/CONTEXT-MAP.md` and every `crates/*/Cargo.toml`.
+
+The binding record is the fence in `docs/CONTEXT-MAP.md`; this diagram draws it by layer. Every
+directory under `crates/` is one node, named by its directory: a node id spells a hyphen as an
+underscore, and its label keeps the directory's name. A crate's role is its line in the fence.
+
+An arrow is one dependency its crate's manifest names under `[dependencies]` or
+`[build-dependencies]`, or under a target's table of either name, and the fence names the same
+edge. A `[dev-dependencies]` entry is not an edge. Each arrow is its own line, from one crate to
+one crate.
+
+The layers are declared top to bottom, and every arrow leaves its layer for a later one, so every
+arrow points down. `scripts/tests/test_context_map_schematic.py` holds the drawing to the
+manifests and the fence (SPEC-394, ADR-408).
 
 ```mermaid
 flowchart TB
   subgraph root[composition root]
-    daemon[daemon: deckstreakd]
+    daemon
   end
   subgraph adapters[adapters]
-    api[api: axum HTTPS]
-    bot[bot: Telegram Bot API]
+    api
+    bot
+    mcp
+    push
+    ffi
+    web_engine["web-engine"]
   end
   subgraph app[application]
-    coordination[coordination: use cases and jobs]
+    coordination
   end
   subgraph domain[domain contexts]
     analytics
@@ -34,25 +50,183 @@ flowchart TB
     privacy
   end
   subgraph acl[anti-corruption layers]
-    ingest[ingest: Anki]
-    vault[vault: second brain]
-    identity[identity: Telegram initData]
-    agent[agent: Claude Code runner]
+    ingest
+    vault
+    identity
+    agent
   end
-  kernel[kernel: shared kernel]
+  subgraph engine[the engine over the replay maths]
+    engine_core["engine-core"]
+  end
+  subgraph shared[the shared kernel]
+    kernel
+  end
+  subgraph slot[the scheduling companion's substitutable body]
+    companion_slot["companion-slot"]
+  end
+  subgraph reading[the search, over the study day]
+    search
+  end
+  subgraph store[the collection store, over the media core]
+    collection
+  end
+  subgraph foundations[no workspace dependency]
+    study_day["study-day"]
+    xp
+    fsrs7
+    companion
+    anki_format["anki-format"]
+    media
+    render
+    sync
+  end
 
-  daemon --> api & bot & coordination
-  api --> coordination
-  bot --> coordination
-  api --> notifications
-  bot --> notifications
+  daemon --> kernel
+  daemon --> ingest
+  daemon --> identity
+  daemon --> analytics
+  daemon --> progression
+  daemon --> streaks
+  daemon --> curriculum
+  daemon --> economy
+  daemon --> quests
+  daemon --> habits
+  daemon --> focus
+  daemon --> discipline
+  daemon --> markets
+  daemon --> notifications
+  daemon --> readings
+  daemon --> vault
+  daemon --> agent
+  daemon --> insights
+  daemon --> publishing
+  daemon --> privacy
+  daemon --> coordination
+  daemon --> api
+  daemon --> bot
+  daemon --> mcp
+
+  api --> kernel
   api --> identity
+  api --> notifications
+  api --> coordination
+
+  bot --> kernel
   bot --> identity
-  coordination --> domain
-  coordination --> ingest & vault & identity & agent
-  analytics & progression & curriculum & quests & discipline & readings & insights --> ingest
-  domain --> kernel
-  acl --> kernel
+  bot --> notifications
+  bot --> coordination
+
+  mcp --> kernel
+  mcp --> coordination
+
+  push --> kernel
+
+  ffi --> engine_core
+  ffi --> collection
+  ffi --> media
+
+  web_engine --> engine_core
+  web_engine --> companion
+  web_engine --> media
+
+  engine_core --> fsrs7
+  engine_core --> media
+
+  coordination --> kernel
+  coordination --> ingest
+  coordination --> identity
+  coordination --> analytics
+  coordination --> progression
+  coordination --> streaks
+  coordination --> curriculum
+  coordination --> economy
+  coordination --> quests
+  coordination --> habits
+  coordination --> focus
+  coordination --> discipline
+  coordination --> markets
+  coordination --> notifications
+  coordination --> readings
+  coordination --> vault
+  coordination --> agent
+  coordination --> insights
+  coordination --> publishing
+  coordination --> privacy
+
+  analytics --> kernel
+  analytics --> ingest
+  progression --> kernel
+  progression --> ingest
+  progression --> xp
+  streaks --> kernel
+  curriculum --> kernel
+  curriculum --> ingest
+  economy --> kernel
+  quests --> kernel
+  quests --> ingest
+  habits --> kernel
+  focus --> kernel
+  discipline --> kernel
+  discipline --> ingest
+  markets --> kernel
+  notifications --> kernel
+  readings --> kernel
+  readings --> ingest
+  insights --> kernel
+  insights --> ingest
+  publishing --> kernel
+  privacy --> kernel
+
+  ingest --> kernel
+  ingest --> collection
+  ingest --> search
+  ingest --> anki_format
+  vault --> kernel
+  identity --> kernel
+  agent --> kernel
+
+  kernel --> study_day
+  search --> study_day
+
+  collection --> media
+
+  companion_slot --> companion
 ```
 
-The Mini App (`web/app`) is outside the crate graph: it reaches `api` over HTTPS only.
+The daemon composes none of `ffi`, `web-engine` and `push`. A native client links `ffi` into its
+own binary and the web client runs `web-engine`, each over `engine-core`; `push` joins the daemon
+when native push carries the one router (#640). The clients' edges to `xp` are #639's.
+
+`fsrs7` depends on no workspace crate, and `engine-core` alone depends on it.
+
+`study-day` depends on no workspace crate, and `kernel` alone depends on it: it holds the study day
+the kernel re-exports, so the kernel sits in a layer of its own above it (SPEC-497, ADR-515).
+
+`search` depends on `study-day` alone and `ingest` alone depends on it: it reads a search into a
+typed query and evaluates it over rows, with no edge to the kernel, so it sits in a layer of its
+own between the anti-corruption layer that uses it and the foundations (SPEC-514, ADR-532).
+
+`companion` depends on no workspace crate, and `companion-slot` and `web-engine` depend on it: the
+slot is the one body a build substitutes behind the scheduling companion's interface, so it sits in
+a layer of its own above the interface (SPEC-501, ADR-519), and the web engine decides over the
+owner's companion frames in the Worker with the interface's own decision (SPEC-511, ADR-529 D4).
+No other crate reaches either yet.
+
+`collection` depends on `media` alone, for the media store's hashes and names, so it sits in a layer
+of its own above the foundations (SPEC-601, ADR-621 D6). `ingest` depends on it, for its schema-18
+adapter implements the collection's read port, and `ffi` depends on it for the face reader over the
+media store it holds switched off; the store stays dormant until the cut-over (SPEC-512, ADR-530;
+SPEC-601, ADR-621 D7).
+
+`media` depends on no workspace crate (its one dependency is `sha2`) (SPEC-513, ADR-531). The
+collection depends on it for the media store's index, the engine core for the face rewrite over its
+one grammar, and `ffi` and `web-engine` for the readers they hold switched off (SPEC-601, ADR-621
+D6 to D8).
+
+`render` depends on no workspace crate, and no crate depends on it yet (SPEC-603, ADR-624).
+
+`deck-streak-migration` is planned in the fence and has no directory under `crates/`, so it is not
+drawn until the delivery that builds it.
+
+The web client's code under `web/app` and the native harness under `ios/` are outside the crate
+graph: the fence lists each as depending on nothing internal.

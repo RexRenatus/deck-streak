@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT study_day AS \"study_day!\", graduations FROM daily_rollup\n           WHERE study_day BETWEEN ?1 AND ?2",
+  "describe": {
+    "columns": [
+      {
+        "name": "study_day!",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "graduations",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "graduations"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "757f456852827e99ebc5bcda70ef2efaf07deb0b861f01f6d040fb31e7135935"
+}

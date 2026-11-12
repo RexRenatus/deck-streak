@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT max(study_day) AS \"cursor: i64\" FROM daily_rollup WHERE settled_at IS NOT NULL",
+  "describe": {
+    "columns": [
+      {
+        "name": "cursor: i64",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "68fe5ff166f4a43a4e3ed2f246264462af2eea3c1cf14c246fd6405de3c9468b"
+}

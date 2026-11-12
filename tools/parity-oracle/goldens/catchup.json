@@ -1,0 +1,950 @@
+{
+  "adapter": "with_stub_scheduler",
+  "cases": [
+    {
+      "class": "on_time",
+      "input": {
+        "attempts": 0,
+        "claim": true,
+        "delivered": true,
+        "deliveries": 0,
+        "hour": 4,
+        "job_id": "last_chance",
+        "minute": 7,
+        "now_ms": 1471234020000,
+        "raises": false
+      },
+      "output": {
+        "events": [
+          [
+            "claim",
+            "last_chance",
+            17028
+          ],
+          [
+            "invoke",
+            "last_chance"
+          ],
+          [
+            "record",
+            "last_chance",
+            17028,
+            "ok"
+          ]
+        ],
+        "ran": [
+          "last_chance"
+        ]
+      }
+    },
+    {
+      "class": "on_time",
+      "input": {
+        "attempts": 0,
+        "claim": true,
+        "delivered": true,
+        "deliveries": 0,
+        "hour": 9,
+        "job_id": "daily_digest",
+        "minute": 5,
+        "now_ms": 1854003930000,
+        "raises": false
+      },
+      "output": {
+        "events": [
+          [
+            "claim",
+            "daily_digest",
+            21458
+          ],
+          [
+            "invoke",
+            "daily_digest"
+          ],
+          [
+            "record",
+            "daily_digest",
+            21458,
+            "ok"
+          ]
+        ],
+        "ran": [
+          "daily_digest"
+        ]
+      }
+    },
+    {
+      "class": "five_hours",
+      "input": {
+        "attempts": 0,
+        "claim": true,
+        "delivered": true,
+        "deliveries": 0,
+        "hour": 4,
+        "job_id": "last_chance",
+        "minute": 7,
+        "now_ms": 152788020000,
+        "raises": false
+      },
+      "output": {
+        "events": [
+          [
+            "claim",
+            "last_chance",
+            1768
+          ],
+          [
+            "invoke",
+            "last_chance"
+          ],
+          [
+            "record",
+            "last_chance",
+            1768,
+            "ok"
+          ]
+        ],
+        "ran": [
+          "last_chance"
+        ]
+      }
+    },
+    {
+      "class": "seven_hours",
+      "input": {
+        "attempts": 0,
+        "claim": true,
+        "delivered": true,
+        "deliveries": 0,
+        "hour": 4,
+        "job_id": "streak_risk",
+        "minute": 7,
+        "now_ms": 2303118420000,
+        "raises": false
+      },
+      "output": {
+        "events": [
+          [
+            "record",
+            "streak_risk",
+            26656,
+            "missed"
+          ]
+        ],
+        "ran": []
+      }
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "attempts": 0,
+        "claim": true,
+        "delivered": true,
+        "deliveries": 0,
+        "hour": 9,
+        "job_id": "daily_digest",
+        "minute": 5,
+        "now_ms": 584636700000,
+        "raises": false
+      },
+      "output": {
+        "events": [
+          [
+            "claim",
+            "daily_digest",
+            6766
+          ],
+          [
+            "invoke",
+            "daily_digest"
+          ],
+          [
+            "record",
+            "daily_digest",
+            6766,
+            "ok"
+          ]
+        ],
+        "ran": [
+          "daily_digest"
+        ]
+      }
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "attempts": 0,
+        "claim": true,
+        "delivered": true,
+        "deliveries": 0,
+        "hour": 9,
+        "job_id": "last_chance",
+        "minute": 5,
+        "now_ms": 1807110300001,
+        "raises": false
+      },
+      "output": {
+        "events": [
+          [
+            "record",
+            "last_chance",
+            20915,
+            "missed"
+          ]
+        ],
+        "ran": []
+      }
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "attempts": 0,
+        "claim": true,
+        "delivered": true,
+        "deliveries": 0,
+        "hour": 9,
+        "job_id": "streak_risk",
+        "minute": 5,
+        "now_ms": 3287919899999,
+        "raises": false
+      },
+      "output": {
+        "events": [
+          [
+            "claim",
+            "streak_risk",
+            38054
+          ],
+          [
+            "invoke",
+            "streak_risk"
+          ],
+          [
+            "record",
+            "streak_risk",
+            38054,
+            "ok"
+          ]
+        ],
+        "ran": [
+          "streak_risk"
+        ]
+      }
+    },
+    {
+      "class": "before_fire",
+      "input": {
+        "attempts": 0,
+        "claim": true,
+        "delivered": true,
+        "deliveries": 0,
+        "hour": 9,
+        "job_id": "streak_risk",
+        "minute": 5,
+        "now_ms": 2332746240000,
+        "raises": false
+      },
+      "output": {
+        "events": [],
+        "ran": []
+      }
+    },
+    {
+      "class": "before_fire",
+      "input": {
+        "attempts": 0,
+        "claim": true,
+        "delivered": true,
+        "deliveries": 0,
+        "hour": 23,
+        "job_id": "last_chance",
+        "minute": 59,
+        "now_ms": 1131490740000,
+        "raises": false
+      },
+      "output": {
+        "events": [],
+        "ran": []
+      }
+    },
+    {
+      "class": "after_midnight",
+      "input": {
+        "attempts": 0,
+        "claim": true,
+        "delivered": true,
+        "deliveries": 0,
+        "hour": 22,
+        "job_id": "morning_brief",
+        "minute": 0,
+        "now_ms": 1900112400000,
+        "raises": false
+      },
+      "output": {
+        "events": [],
+        "ran": []
+      }
+    },
+    {
+      "class": "after_midnight",
+      "input": {
+        "attempts": 0,
+        "claim": true,
+        "delivered": true,
+        "deliveries": 0,
+        "hour": 23,
+        "job_id": "morning_brief",
+        "minute": 30,
+        "now_ms": 2419979400000,
+        "raises": false
+      },
+      "output": {
+        "events": [],
+        "ran": []
+      }
+    },
+    {
+      "class": "midnight",
+      "input": {
+        "attempts": 0,
+        "claim": true,
+        "delivered": true,
+        "deliveries": 0,
+        "hour": 0,
+        "job_id": "daily_digest",
+        "minute": 0,
+        "now_ms": 2932156800000,
+        "raises": false
+      },
+      "output": {
+        "events": [
+          [
+            "claim",
+            "daily_digest",
+            33937
+          ],
+          [
+            "invoke",
+            "daily_digest"
+          ],
+          [
+            "record",
+            "daily_digest",
+            33937,
+            "ok"
+          ]
+        ],
+        "ran": [
+          "daily_digest"
+        ]
+      }
+    },
+    {
+      "class": "midnight",
+      "input": {
+        "attempts": 0,
+        "claim": true,
+        "delivered": true,
+        "deliveries": 0,
+        "hour": 0,
+        "job_id": "streak_risk",
+        "minute": 0,
+        "now_ms": 2292818340000,
+        "raises": false
+      },
+      "output": {
+        "events": [
+          [
+            "claim",
+            "streak_risk",
+            26537
+          ],
+          [
+            "invoke",
+            "streak_risk"
+          ],
+          [
+            "record",
+            "streak_risk",
+            26537,
+            "ok"
+          ]
+        ],
+        "ran": [
+          "streak_risk"
+        ]
+      }
+    },
+    {
+      "class": "claim_refused",
+      "input": {
+        "attempts": 0,
+        "claim": false,
+        "delivered": true,
+        "deliveries": 0,
+        "hour": 8,
+        "job_id": "daily_digest",
+        "minute": 0,
+        "now_ms": 1168333200000,
+        "raises": false
+      },
+      "output": {
+        "events": [
+          [
+            "claim",
+            "daily_digest",
+            13522
+          ]
+        ],
+        "ran": []
+      }
+    },
+    {
+      "class": "claim_refused",
+      "input": {
+        "attempts": 0,
+        "claim": false,
+        "delivered": true,
+        "deliveries": 0,
+        "hour": 4,
+        "job_id": "last_chance",
+        "minute": 7,
+        "now_ms": 198763620000,
+        "raises": false
+      },
+      "output": {
+        "events": [
+          [
+            "record",
+            "last_chance",
+            2300,
+            "missed"
+          ]
+        ],
+        "ran": []
+      }
+    },
+    {
+      "class": "delivered",
+      "input": {
+        "attempts": 1,
+        "claim": true,
+        "delivered": true,
+        "deliveries": 1,
+        "hour": 20,
+        "job_id": "last_chance",
+        "minute": 0,
+        "now_ms": 535240800000,
+        "raises": false
+      },
+      "output": {
+        "events": [
+          [
+            "claim",
+            "last_chance",
+            6194
+          ],
+          [
+            "invoke",
+            "last_chance"
+          ],
+          [
+            "record",
+            "last_chance",
+            6194,
+            "ok"
+          ]
+        ],
+        "ran": [
+          "last_chance"
+        ]
+      }
+    },
+    {
+      "class": "released",
+      "input": {
+        "attempts": 1,
+        "claim": true,
+        "delivered": false,
+        "deliveries": 0,
+        "hour": 20,
+        "job_id": "daily_digest",
+        "minute": 0,
+        "now_ms": 1077742800000,
+        "raises": false
+      },
+      "output": {
+        "events": [
+          [
+            "claim",
+            "daily_digest",
+            12473
+          ],
+          [
+            "invoke",
+            "daily_digest"
+          ],
+          [
+            "record",
+            "daily_digest",
+            12473,
+            "ok"
+          ],
+          [
+            "release",
+            "daily_digest",
+            12473
+          ]
+        ],
+        "ran": [
+          "daily_digest"
+        ]
+      }
+    },
+    {
+      "class": "released",
+      "input": {
+        "attempts": 3,
+        "claim": true,
+        "delivered": false,
+        "deliveries": 0,
+        "hour": 9,
+        "job_id": "morning_brief",
+        "minute": 5,
+        "now_ms": 1605085500000,
+        "raises": false
+      },
+      "output": {
+        "events": [
+          [
+            "claim",
+            "morning_brief",
+            18577
+          ],
+          [
+            "invoke",
+            "morning_brief"
+          ],
+          [
+            "record",
+            "morning_brief",
+            18577,
+            "ok"
+          ],
+          [
+            "release",
+            "morning_brief",
+            18577
+          ]
+        ],
+        "ran": [
+          "morning_brief"
+        ]
+      }
+    },
+    {
+      "class": "latched",
+      "input": {
+        "attempts": 0,
+        "claim": true,
+        "delivered": false,
+        "deliveries": 0,
+        "hour": 22,
+        "job_id": "morning_brief",
+        "minute": 0,
+        "now_ms": 1454020200000,
+        "raises": false
+      },
+      "output": {
+        "events": [
+          [
+            "claim",
+            "morning_brief",
+            16828
+          ],
+          [
+            "invoke",
+            "morning_brief"
+          ],
+          [
+            "record",
+            "morning_brief",
+            16828,
+            "ok"
+          ]
+        ],
+        "ran": [
+          "morning_brief"
+        ]
+      }
+    },
+    {
+      "class": "latched",
+      "input": {
+        "attempts": 1,
+        "claim": true,
+        "delivered": false,
+        "deliveries": 1,
+        "hour": 8,
+        "job_id": "last_chance",
+        "minute": 0,
+        "now_ms": 666432060000,
+        "raises": false
+      },
+      "output": {
+        "events": [
+          [
+            "claim",
+            "last_chance",
+            7713
+          ],
+          [
+            "invoke",
+            "last_chance"
+          ],
+          [
+            "record",
+            "last_chance",
+            7713,
+            "ok"
+          ]
+        ],
+        "ran": [
+          "last_chance"
+        ]
+      }
+    },
+    {
+      "class": "raised",
+      "input": {
+        "attempts": 0,
+        "claim": true,
+        "delivered": true,
+        "deliveries": 0,
+        "hour": 9,
+        "job_id": "daily_digest",
+        "minute": 5,
+        "now_ms": 1514973900000,
+        "raises": true
+      },
+      "output": {
+        "events": [
+          [
+            "claim",
+            "daily_digest",
+            17534
+          ],
+          [
+            "invoke",
+            "daily_digest"
+          ],
+          [
+            "record",
+            "daily_digest",
+            17534,
+            "error"
+          ],
+          [
+            "alert"
+          ]
+        ],
+        "ran": []
+      }
+    },
+    {
+      "class": "raised",
+      "input": {
+        "attempts": 1,
+        "claim": true,
+        "delivered": true,
+        "deliveries": 0,
+        "hour": 8,
+        "job_id": "last_chance",
+        "minute": 0,
+        "now_ms": 1243843200000,
+        "raises": true
+      },
+      "output": {
+        "events": [
+          [
+            "claim",
+            "last_chance",
+            14396
+          ],
+          [
+            "invoke",
+            "last_chance"
+          ],
+          [
+            "record",
+            "last_chance",
+            14396,
+            "error"
+          ],
+          [
+            "alert"
+          ]
+        ],
+        "ran": []
+      }
+    },
+    {
+      "input": {
+        "attempts": 0,
+        "claim": true,
+        "delivered": false,
+        "deliveries": 0,
+        "hour": 18,
+        "job_id": "streak_risk",
+        "minute": 15,
+        "now_ms": 866392171078,
+        "raises": false
+      },
+      "output": {
+        "events": [],
+        "ran": []
+      }
+    },
+    {
+      "input": {
+        "attempts": 2,
+        "claim": true,
+        "delivered": true,
+        "deliveries": 0,
+        "hour": 20,
+        "job_id": "last_chance",
+        "minute": 17,
+        "now_ms": 3286232471495,
+        "raises": false
+      },
+      "output": {
+        "events": [],
+        "ran": []
+      }
+    },
+    {
+      "input": {
+        "attempts": 0,
+        "claim": false,
+        "delivered": true,
+        "deliveries": 0,
+        "hour": 13,
+        "job_id": "last_chance",
+        "minute": 22,
+        "now_ms": 458659928013,
+        "raises": false
+      },
+      "output": {
+        "events": [
+          [
+            "claim",
+            "last_chance",
+            5308
+          ]
+        ],
+        "ran": []
+      }
+    },
+    {
+      "input": {
+        "attempts": 1,
+        "claim": false,
+        "delivered": false,
+        "deliveries": 1,
+        "hour": 3,
+        "job_id": "streak_risk",
+        "minute": 50,
+        "now_ms": 3002925134204,
+        "raises": false
+      },
+      "output": {
+        "events": [],
+        "ran": []
+      }
+    },
+    {
+      "input": {
+        "attempts": 2,
+        "claim": true,
+        "delivered": true,
+        "deliveries": 0,
+        "hour": 23,
+        "job_id": "daily_digest",
+        "minute": 3,
+        "now_ms": 528163592255,
+        "raises": false
+      },
+      "output": {
+        "events": [],
+        "ran": []
+      }
+    },
+    {
+      "input": {
+        "attempts": 2,
+        "claim": false,
+        "delivered": false,
+        "deliveries": 0,
+        "hour": 10,
+        "job_id": "last_chance",
+        "minute": 16,
+        "now_ms": 1243677125871,
+        "raises": false
+      },
+      "output": {
+        "events": [],
+        "ran": []
+      }
+    },
+    {
+      "input": {
+        "attempts": 2,
+        "claim": true,
+        "delivered": false,
+        "deliveries": 0,
+        "hour": 16,
+        "job_id": "morning_brief",
+        "minute": 32,
+        "now_ms": 713630735600,
+        "raises": false
+      },
+      "output": {
+        "events": [],
+        "ran": []
+      }
+    },
+    {
+      "input": {
+        "attempts": 0,
+        "claim": true,
+        "delivered": true,
+        "deliveries": 0,
+        "hour": 13,
+        "job_id": "morning_brief",
+        "minute": 17,
+        "now_ms": 709929060883,
+        "raises": false
+      },
+      "output": {
+        "events": [
+          [
+            "claim",
+            "morning_brief",
+            8216
+          ],
+          [
+            "invoke",
+            "morning_brief"
+          ],
+          [
+            "record",
+            "morning_brief",
+            8216,
+            "ok"
+          ]
+        ],
+        "ran": [
+          "morning_brief"
+        ]
+      }
+    },
+    {
+      "input": {
+        "attempts": 0,
+        "claim": true,
+        "delivered": true,
+        "deliveries": 0,
+        "hour": 17,
+        "job_id": "streak_risk",
+        "minute": 24,
+        "now_ms": 537900992762,
+        "raises": false
+      },
+      "output": {
+        "events": [],
+        "ran": []
+      }
+    },
+    {
+      "input": {
+        "attempts": 1,
+        "claim": true,
+        "delivered": false,
+        "deliveries": 0,
+        "hour": 9,
+        "job_id": "streak_risk",
+        "minute": 13,
+        "now_ms": 2113389993258,
+        "raises": true
+      },
+      "output": {
+        "events": [
+          [
+            "claim",
+            "streak_risk",
+            24460
+          ],
+          [
+            "invoke",
+            "streak_risk"
+          ],
+          [
+            "record",
+            "streak_risk",
+            24460,
+            "error"
+          ],
+          [
+            "alert"
+          ]
+        ],
+        "ran": []
+      }
+    },
+    {
+      "input": {
+        "attempts": 1,
+        "claim": false,
+        "delivered": true,
+        "deliveries": 0,
+        "hour": 23,
+        "job_id": "daily_digest",
+        "minute": 18,
+        "now_ms": 3097720519161,
+        "raises": false
+      },
+      "output": {
+        "events": [],
+        "ran": []
+      }
+    },
+    {
+      "input": {
+        "attempts": 2,
+        "claim": true,
+        "delivered": true,
+        "deliveries": 0,
+        "hour": 19,
+        "job_id": "daily_digest",
+        "minute": 21,
+        "now_ms": 233516301473,
+        "raises": false
+      },
+      "output": {
+        "events": [],
+        "ran": []
+      }
+    }
+  ],
+  "function": "scheduler.run_startup_catchup",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Runs the catch-up once over the predecessor's scheduler, built and never started, holding one allowlisted cron job at the case's hour and minute whose function is the stamping wrapper around a stub body, and a stub pipeline that answers the claim with the case's value and records every claim, record, release and alert; the body records its invocation, moves the notifier's marker by the case's counts and returns the case's delivery or raises; the process's zone is UTC for the call; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_027.py",
+  "registry_sha256": "ac5bdf68d64e1d17d9f6b93a5f237600e878d693b9d4c61f9655dbd37d8d6540",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

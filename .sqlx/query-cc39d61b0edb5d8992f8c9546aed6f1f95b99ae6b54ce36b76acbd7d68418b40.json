@@ -1,0 +1,86 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT trigger, study_day, started_at, finished_at, attempts, full_download FROM sync_runs WHERE status = 'ok' ORDER BY finished_at DESC, id DESC LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "trigger",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "sync_runs",
+            "name": "trigger"
+          }
+        }
+      },
+      {
+        "name": "study_day",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "sync_runs",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "started_at",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "sync_runs",
+            "name": "started_at"
+          }
+        }
+      },
+      {
+        "name": "finished_at",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "sync_runs",
+            "name": "finished_at"
+          }
+        }
+      },
+      {
+        "name": "attempts",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "sync_runs",
+            "name": "attempts"
+          }
+        }
+      },
+      {
+        "name": "full_download",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "sync_runs",
+            "name": "full_download"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "cc39d61b0edb5d8992f8c9546aed6f1f95b99ae6b54ce36b76acbd7d68418b40"
+}

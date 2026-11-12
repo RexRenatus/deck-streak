@@ -1,0 +1,2204 @@
+"""The hand-proved mutation rows: the runner, the census, the retirement check and the pack's reader
+interface (SPEC-039 A1 to A11).
+
+A1 to A8 and A10 run the runner against a fixture repository built at run time in a temporary
+directory: a git repository with one committed target, one unittest module and, for A8, one crate
+with no dependency and its own lockfile, built into the fixture's own `target/`. The fixture's
+killers append what they observed to an untracked `observed.log`, so a test can see whether a
+killer ran, and against which bytes. A9 reads the committed rows, and A11 plants rows the census
+must refuse.
+
+SPEC-465's tests close the module: a retired list of the wrong shape refused by name (A1 to A5),
+a runner process signalled at each edge of a killer's run (A6 to A9), `main()` run in this
+process and leaving its handlers as it found them (A10 to A12), and the reader driven through
+every vector of its Lean proof (A14).
+SPEC-645's tests follow them: a `--rows-from` plan of the wrong shape refused by name by `prove`,
+`legs` and `merge` as processes and by its reader as a function (A1 to A5), and a well-formed
+plan read as before (A6).
+"""
+
+import argparse
+import contextlib
+import hashlib
+import importlib.util
+import io
+import json
+import os
+import re
+import shutil
+import signal
+import subprocess
+import sys
+import tempfile
+import textwrap
+import time
+import unittest
+from pathlib import Path
+from unittest import mock
+
+from _support import REPO, examined
+
+RUNNER = REPO / "scripts" / "mutation_rows.py"
+EXAMINED = re.compile(r"^examined (\d+)", re.MULTILINE)
+#: The header every fixture carries: the pack's three tables and their declared spellings.
+HEADER = {
+    "_": [
+        "A fixture's rows (SPEC-039).",
+        "target spelling: MUTATIONS is crate-relative, crates/{cell 1}/{cell 2}",
+        "target spelling: SCRIPT_MUTATIONS is repo-rooted, {cell 1}",
+        "target spelling: CARGO_KILLED_SCRIPT_MUTATIONS is repo-rooted, {cell 1}",
+    ],
+    "arities": {"MUTATIONS": [7], "CARGO_KILLED_SCRIPT_MUTATIONS": [7], "SCRIPT_MUTATIONS": [6]},
+    "tables": {"MUTATIONS": [], "CARGO_KILLED_SCRIPT_MUTATIONS": [], "SCRIPT_MUTATIONS": []},
+}
+TARGET = "scripts/fixmod.py"
+TARGET_TEXT = "def double(x):\n    return x * 2\n"
+KILLERS = '''"""A fixture's killers; each appends what it observed to observed.log."""
+
+import importlib.util
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+spec = importlib.util.spec_from_file_location("fixmod", ROOT / "scripts" / "fixmod.py")
+fixmod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(fixmod)
+
+
+def observe(value):
+    with (ROOT / "observed.log").open("a", encoding="utf-8") as log:
+        log.write(f"{value}\\n")
+
+
+class Double(unittest.TestCase):
+    def test_two_doubles_to_four(self):
+        value = fixmod.double(2)
+        observe(value)
+        self.assertEqual(value, 4)
+
+    def test_the_result_is_a_whole_number(self):
+        value = fixmod.double(3)
+        observe(value)
+        self.assertIsInstance(value, int)
+
+    def test_red_whatever_the_code(self):
+        observe(fixmod.double(2))
+        self.assertEqual(fixmod.double(2), 5)
+'''
+DESCRIPTION = "doubling doubles, not triples"
+
+
+def script_row(identifier, find, replace, killer, target=TARGET):
+    return [identifier, target, find, replace, DESCRIPTION, killer]
+
+
+def git(root, *args):
+    return subprocess.run(
+        ["git", "-C", str(root), *args], capture_output=True, text=True, check=True
+    ).stdout
+
+
+def sha256(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+class Fixture:
+    """A git repository in a temporary directory, removed when the test ends."""
+
+    def __init__(self, test, rows=(), cargo=False, files=None):
+        scratch = tempfile.TemporaryDirectory()
+        test.addCleanup(scratch.cleanup)
+        self.root = Path(scratch.name)
+        self.write("scripts/mutation-rows.json", json.dumps(HEADER, indent=2) + "\n")
+        self.write(TARGET, TARGET_TEXT)
+        self.write("scripts/tests/test_fixmod.py", KILLERS)
+        self.write("README.txt", "a fixture\n")
+        self.write(".gitignore", "observed.log\ntarget/\n")
+        if cargo:
+            self.crate()
+        for relative, text in (files or {}).items():
+            self.write(relative, text)
+        self.rows(rows)
+        git(self.root, "init", "-q", "-b", "dev")
+        git(self.root, "config", "user.email", "fixture@example.invalid")
+        git(self.root, "config", "user.name", "fixture")
+        self.commit("the fixture")
+
+    def write(self, relative, text):
+        path = self.root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+        return path
+
+    def rows(self, rows, band="S00000-S00099"):
+        tables = {"MUTATIONS": [], "CARGO_KILLED_SCRIPT_MUTATIONS": [], "SCRIPT_MUTATIONS": []}
+        for table, row in rows:
+            tables[table].append(row)
+        self.write(f"scripts/mutation-rows.d/{band}.json", json.dumps({"tables": tables}) + "\n")
+
+    def crate(self):
+        shutil.copy(REPO / "rust-toolchain.toml", self.root / "rust-toolchain.toml")
+        self.write("Cargo.toml", '[workspace]\nmembers = ["crates/fix"]\nresolver = "2"\n')
+        self.write(
+            "Cargo.lock",
+            "# This file is automatically @generated by Cargo.\n"
+            "# It is not intended for manual editing.\n"
+            'version = 4\n\n[[package]]\nname = "fix"\nversion = "0.1.0"\n',
+        )
+        self.write(
+            "crates/fix/Cargo.toml",
+            '[package]\nname = "fix"\nversion = "0.1.0"\nedition = "2021"\n',
+        )
+        self.write("crates/fix/src/lib.rs", "pub fn double(x: i64) -> i64 {\n    x * 2\n}\n")
+        self.write(
+            "crates/fix/tests/double.rs",
+            "#[test]\nfn two_doubles_to_four() {\n    assert_eq!(fix::double(2), 4);\n}\n\n"
+            "#[test]\nfn three_doubles_to_six() {\n    assert_eq!(fix::double(3), 6);\n}\n",
+        )
+
+    def commit(self, message):
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "-m", message)
+        return git(self.root, "rev-parse", "HEAD").strip()
+
+    def run(self, *args, path=None, output=None):
+        # A job's own `GITHUB_OUTPUT` never reaches the runner: a test that reads the step's
+        # outputs names the file they go to (SPEC-417 A3).
+        env = {
+            k: v for k, v in os.environ.items() if k not in ("CARGO_TARGET_DIR", "GITHUB_OUTPUT")
+        }
+        env["PYTHONDONTWRITEBYTECODE"] = "1"
+        if path is not None:
+            env["PATH"] = path
+        if output is not None:
+            env["GITHUB_OUTPUT"] = str(output)
+        return subprocess.run(
+            [sys.executable, str(RUNNER), *args, "--root", str(self.root)],
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=3600,
+            check=False,
+        )
+
+    def observed(self):
+        log = self.root / "observed.log"
+        return log.read_text(encoding="utf-8").split() if log.is_file() else []
+
+    def report(self):
+        """The runner's `--report` file, or no entry when it wrote none."""
+        path = self.root / "report.json"
+        return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else []
+
+
+def verdicts(done):
+    """{row id: verdict} from the runner's one line per row."""
+    found = {}
+    for line in done.stdout.splitlines():
+        match = re.match(r"^(S\d+-[A-Z0-9-]+): (KILLED|SURVIVED|VOID)\b", line)
+        if match:
+            found[match.group(1)] = match.group(2)
+    return found
+
+
+class TheRunnerProvesARowTheWayThePackDoes(unittest.TestCase):
+    def test_a_tracked_change_is_refused_before_any_mutant_is_installed(self):
+        row = script_row(
+            "S00001-DOUBLE", "x * 2", "x * 3", "test_fixmod.Double.test_two_doubles_to_four"
+        )
+        fixture = Fixture(self, [("SCRIPT_MUTATIONS", row)])
+        fixture.write("README.txt", "an uncommitted change\n")
+        before = sha256(fixture.root / TARGET)
+        done = fixture.run("prove", "--all")
+        self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+        self.assertIn("README.txt", done.stdout + done.stderr)
+        self.assertEqual(sha256(fixture.root / TARGET), before)
+        self.assertEqual(fixture.observed(), [], "a killer ran on a dirty tree")
+
+    def test_an_anchor_that_does_not_occur_exactly_once_is_void(self):
+        row = script_row(
+            "S00002-AMBIGUOUS", "x", "y", "test_fixmod.Double.test_two_doubles_to_four"
+        )
+        fixture = Fixture(self, [("SCRIPT_MUTATIONS", row)])
+        done = fixture.run("prove", "--all")
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00002-AMBIGUOUS": "VOID"})
+        self.assertIn("occurs 2 times", done.stdout)
+        self.assertEqual(fixture.observed(), [], "a killer ran for an ambiguous anchor")
+
+    def test_a_killer_that_selects_other_than_one_test_is_void(self):
+        row = script_row("S00003-TWO-TESTS", "x * 2", "x * 3", "test_fixmod.Double")
+        fixture = Fixture(self, [("SCRIPT_MUTATIONS", row)])
+        done = fixture.run("prove", "--all")
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00003-TWO-TESTS": "VOID"})
+        self.assertIn("selected 3 tests", done.stdout)
+
+    def test_a_killed_mutant_is_restored_byte_for_byte(self):
+        row = script_row(
+            "S00004-DOUBLE", "x * 2", "x * 3", "test_fixmod.Double.test_two_doubles_to_four"
+        )
+        fixture = Fixture(self, [("SCRIPT_MUTATIONS", row)])
+        before = (fixture.root / TARGET).read_bytes()
+        done = fixture.run("prove", "--all")
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00004-DOUBLE": "KILLED"})
+        # The control saw the real code double 2, and the mutant made it triple.
+        self.assertEqual(fixture.observed(), ["4", "6"])
+        self.assertEqual((fixture.root / TARGET).read_bytes(), before)
+        self.assertEqual(git(fixture.root, "status", "--porcelain", "--untracked-files=no"), "")
+        self.assertRegex(done.stdout, r"(?m)^examined 1\b")
+
+    def test_a_surviving_mutant_fails_the_run(self):
+        row = script_row(
+            "S00005-WEAK", "x * 2", "x * 3", "test_fixmod.Double.test_the_result_is_a_whole_number"
+        )
+        fixture = Fixture(self, [("SCRIPT_MUTATIONS", row)])
+        before = (fixture.root / TARGET).read_bytes()
+        done = fixture.run("prove", "--all")
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00005-WEAK": "SURVIVED"})
+        self.assertEqual(fixture.observed(), ["6", "9"])
+        self.assertEqual((fixture.root / TARGET).read_bytes(), before)
+
+    def test_a_mutant_that_does_not_parse_is_void_not_a_kill(self):
+        row = script_row(
+            "S00006-UNPARSED", "x * 2", "x *", "test_fixmod.Double.test_two_doubles_to_four"
+        )
+        fixture = Fixture(self, [("SCRIPT_MUTATIONS", row)])
+        before = (fixture.root / TARGET).read_bytes()
+        done = fixture.run("prove", "--all")
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00006-UNPARSED": "VOID"})
+        self.assertIn("does not parse", done.stdout)
+        # Only the control ran: the mutant never reached a killer.
+        self.assertEqual(fixture.observed(), ["4"])
+        self.assertEqual((fixture.root / TARGET).read_bytes(), before)
+
+    def test_a_killer_red_without_its_mutant_is_void(self):
+        row = script_row(
+            "S00007-BASE-RED", "x * 2", "x * 3", "test_fixmod.Double.test_red_whatever_the_code"
+        )
+        fixture = Fixture(self, [("SCRIPT_MUTATIONS", row)])
+        done = fixture.run("prove", "--all")
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00007-BASE-RED": "VOID"})
+        self.assertIn("fails without its mutant", done.stdout)
+        self.assertEqual(fixture.observed(), ["4"], "the killer ran again after its control")
+
+    def test_a_cargo_killer_is_built_first_and_selected_once(self):
+        killed = [
+            "S00010-CARGO-DOUBLE",
+            "fix",
+            "src/lib.rs",
+            "x * 2",
+            "x * 3",
+            "double::two_doubles_to_four",
+            DESCRIPTION,
+        ]
+        unbuilt = [
+            "S00011-CARGO-UNBUILT",
+            "fix",
+            "src/lib.rs",
+            "x * 2",
+            'x * "2"',
+            "double::two_doubles_to_four",
+            DESCRIPTION,
+        ]
+        fixture = Fixture(self, [("MUTATIONS", killed), ("MUTATIONS", unbuilt)], cargo=True)
+        before = (fixture.root / "crates/fix/src/lib.rs").read_bytes()
+        done = fixture.run("prove", "--all", "--report", str(fixture.root / "report.json"))
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(
+            verdicts(done), {"S00010-CARGO-DOUBLE": "KILLED", "S00011-CARGO-UNBUILT": "VOID"}
+        )
+        self.assertIn("does not build", done.stdout)
+        report = {entry["id"]: entry for entry in fixture.report()}
+        self.assertEqual(report["S00010-CARGO-DOUBLE"]["control"], {"selected": 1, "passed": True})
+        self.assertEqual(report["S00010-CARGO-DOUBLE"]["mutant"], {"selected": 1, "passed": False})
+        self.assertEqual(report["S00011-CARGO-UNBUILT"]["mutant"], None)
+        self.assertEqual((fixture.root / "crates/fix/src/lib.rs").read_bytes(), before)
+        self.assertEqual(git(fixture.root, "status", "--porcelain", "--untracked-files=no"), "")
+
+
+class EveryRowIsCensused(unittest.TestCase):
+    def census(self, root):
+        return subprocess.run(
+            [sys.executable, str(RUNNER), "census", "--root", str(root)],
+            capture_output=True,
+            text=True,
+            timeout=300,
+            check=False,
+        )
+
+    def test_every_committed_row_is_anchored_once_and_names_one_test(self):
+        done = self.census(REPO)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        counts = examined("census reports", EXAMINED.findall(done.stdout))
+        self.assertGreater(int(counts[-1]), 0, done.stdout)
+        # The census is not blind: a planted ambiguous anchor and a killer naming no test.
+        ambiguous = script_row(
+            "S00020-AMBIGUOUS", "x", "y", "test_fixmod.Double.test_two_doubles_to_four"
+        )
+        nameless = script_row("S00021-NAMELESS", "x * 2", "x * 3", "test_fixmod.Double.test_absent")
+        fixture = Fixture(self, [("SCRIPT_MUTATIONS", ambiguous), ("SCRIPT_MUTATIONS", nameless)])
+        planted = self.census(fixture.root)
+        self.assertEqual(planted.returncode, 1, planted.stdout + planted.stderr)
+        self.assertIn("S00020-AMBIGUOUS", planted.stdout)
+        self.assertIn("occurs 2 times", planted.stdout)
+        self.assertIn("S00021-NAMELESS", planted.stdout)
+        self.assertIn("names no test", planted.stdout)
+
+
+class NoRowLeavesWhileItsTargetStays(unittest.TestCase):
+    def test_a_row_that_leaves_while_its_target_stays_is_refused(self):
+        row = script_row(
+            "S00030-DOUBLE", "x * 2", "x * 3", "test_fixmod.Double.test_two_doubles_to_four"
+        )
+        fixture = Fixture(self, [("SCRIPT_MUTATIONS", row)])
+        base = git(fixture.root, "rev-parse", "HEAD").strip()
+        fixture.rows([])
+        fixture.commit("the row leaves, its target stays")
+        refused = fixture.run("retired", "--base", base)
+        self.assertEqual(refused.returncode, 1, refused.stdout + refused.stderr)
+        self.assertIn("S00030-DOUBLE", refused.stdout)
+        self.assertRegex(refused.stdout, r"(?m)^examined 1\b")
+        # A retirement record naming the maintainer's approval admits it.
+        record = {
+            "retired": [
+                {
+                    "id": "S00030-DOUBLE",
+                    "reason": "the fixture's doubling moved into a table-driven test",
+                    "approval": "the maintainer, relayed in #1",
+                }
+            ]
+        }
+        fixture.write("scripts/mutation-rows.retired.json", json.dumps(record) + "\n")
+        fixture.commit("the maintainer approved the retirement")
+        admitted = fixture.run("retired", "--base", base)
+        self.assertEqual(admitted.returncode, 0, admitted.stdout + admitted.stderr)
+        self.assertIn("S00030-DOUBLE", admitted.stdout)
+        # A row whose target leaves with it retires on its own.
+        gone = Fixture(self, [("SCRIPT_MUTATIONS", row)])
+        base = git(gone.root, "rev-parse", "HEAD").strip()
+        gone.rows([])
+        (gone.root / TARGET).unlink()
+        gone.commit("the target and its row leave together")
+        alone = gone.run("retired", "--base", base)
+        self.assertEqual(alone.returncode, 0, alone.stdout + alone.stderr)
+        self.assertIn("S00030-DOUBLE", alone.stdout)
+
+
+def census(root):
+    return subprocess.run(
+        [sys.executable, str(RUNNER), "census", "--root", str(root)],
+        capture_output=True,
+        text=True,
+        timeout=300,
+        check=False,
+    )
+
+
+class TheCensusRefusesARowThatCanProveNothing(unittest.TestCase):
+    def test_the_census_refuses_a_row_that_can_prove_nothing(self):
+        killer = "test_fixmod.Double.test_two_doubles_to_four"
+        # A find equal to its replacement installs the unchanged file, and a second row that
+        # installs the first row's mutant for the first row's killer adds no evidence.
+        same = script_row("S00040-SAME", "x * 2", "x * 2", killer)
+        first = script_row("S00041-FIRST", "x * 2", "x * 3", killer)
+        again = script_row("S00042-AGAIN", "x * 2", "x * 3", killer)
+        rows = [("SCRIPT_MUTATIONS", row) for row in (same, first, again)]
+        fixture = Fixture(self, rows)
+        refused = census(fixture.root)
+        self.assertEqual(refused.returncode, 1, refused.stdout + refused.stderr)
+        self.assertIn(
+            "census: S00040-SAME: its find is empty or equals its replacement", refused.stdout
+        )
+        self.assertIn(
+            "census: S00042-AGAIN: installs the mutant S00041-FIRST installs, for the same killer",
+            refused.stdout,
+        )
+        self.assertNotIn("S00041-FIRST:", refused.stdout)
+        self.assertRegex(refused.stdout, r"(?m)^examined 3 row")
+        # A row outside its fragment's band, and an id two fragments hold, stop the census by name.
+        outside = Fixture(
+            self, [("SCRIPT_MUTATIONS", script_row("S00150-OUT", "x * 2", "x * 3", killer))]
+        )
+        void = census(outside.root)
+        self.assertEqual(void.returncode, 1, void.stdout + void.stderr)
+        self.assertIn("S00150-OUT lies outside S0-S99", void.stdout)
+        reused = script_row("S00041-FIRST", "x * 2", "x * 5", killer)
+        twice = Fixture(self, [("SCRIPT_MUTATIONS", first), ("SCRIPT_MUTATIONS", reused)])
+        held = census(twice.root)
+        self.assertEqual(held.returncode, 1, held.stdout + held.stderr)
+        self.assertIn("the row id S00041-FIRST is held twice", held.stdout)
+
+
+# --------------------------------------------------------------------------- SPEC-646
+
+POPULATION_HEADER = "scripts/mutation-rows.json"
+POPULATION_BAND = "scripts/mutation-rows.d/S00000-S00099.json"
+#: A well-formed row set before each wrong one, so that every refusal names the wrong row's place.
+WELL_SHAPED = script_row(
+    "S00080-SHAPED", "x * 2", "x * 3", "test_fixmod.Double.test_two_doubles_to_four"
+)
+#: Where a row is planted: the header's table, or the band file's.
+PLACES = {"header": POPULATION_HEADER, "band": POPULATION_BAND}
+
+
+class ThePopulationReaderRefusesAMisshapenTableOrRow(unittest.TestCase):
+    """SPEC-646 A1 to A4 (R1 to R4): a header table that is not an array, a row that is not an
+    array and a row holding a cell that is not a string are each refused by the sentence naming
+    the file, the place and the shape it needed, exit 2, with no traceback, by `count` as a
+    process and by the reader in this process. A well-formed population reads as it did, and the
+    refusals the reader made before of a band file's table and of a row with no id stand."""
+
+    def planted(self, place, rows):
+        """A fixture whose `SCRIPT_MUTATIONS` table in the header or in the band file holds
+        `rows`, written over the committed fixture."""
+        fixture = Fixture(self)
+        if place == "header":
+            header = json.loads(json.dumps(HEADER))
+            header["tables"]["SCRIPT_MUTATIONS"] = rows
+            fixture.write(POPULATION_HEADER, json.dumps(header, indent=2) + "\n")
+        else:
+            tables = {"MUTATIONS": [], "CARGO_KILLED_SCRIPT_MUTATIONS": []}
+            tables["SCRIPT_MUTATIONS"] = rows
+            fixture.write(POPULATION_BAND, json.dumps({"tables": tables}) + "\n")
+        return fixture
+
+    def assert_refused(self, fixture, sentence):
+        done = fixture.run("count")
+        self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+        self.assertIn(f"mutation_rows: REFUSED: {sentence}", done.stderr.splitlines())
+        self.assertNotIn("Traceback", done.stderr)
+        runner = load_runner()
+        with self.assertRaises(runner.PopulationRefused) as refused:
+            runner.rows_of(runner.load_tree(fixture.root))
+        self.assertEqual(str(refused.exception), sentence)
+
+    def test_a_header_table_that_is_not_an_array_is_refused_naming_it(self):
+        sentence = f"{POPULATION_HEADER}: SCRIPT_MUTATIONS is not an array of rows"
+        for value in examined("planted header tables", [1, {}, "rows", None]):
+            with self.subTest(value=value):
+                self.assert_refused(self.planted("header", value), sentence)
+
+    def test_a_row_that_is_not_an_array_is_refused_naming_its_place(self):
+        planted = [(place, value) for place in PLACES for value in (1, "S00081-ROW", {})]
+        for place, value in examined("planted rows", planted):
+            with self.subTest(place=place, value=value):
+                sentence = f"{PLACES[place]}: SCRIPT_MUTATIONS[1] is not an array of cells"
+                self.assert_refused(self.planted(place, [WELL_SHAPED, value]), sentence)
+
+    def test_a_row_holding_a_cell_that_is_not_a_string_is_refused_naming_its_place(self):
+        wrong = {0: 7, 1: None, 2: 5}
+        planted = [(place, cell) for place in PLACES for cell in sorted(wrong)]
+        for place, cell in examined("planted cells", planted):
+            with self.subTest(place=place, cell=cell):
+                row = ["S00082-CELL", *WELL_SHAPED[1:]]
+                row[cell] = wrong[cell]
+                sentence = f"{PLACES[place]}: SCRIPT_MUTATIONS[1] holds a cell that is not a string"
+                self.assert_refused(self.planted(place, [WELL_SHAPED, row]), sentence)
+
+    def test_a_well_formed_population_reads_as_before_beside_the_refusals_it_kept(self):
+        fixture = Fixture(self, [("SCRIPT_MUTATIONS", WELL_SHAPED)])
+        done = fixture.run("count")
+        self.assertEqual((done.returncode, done.stdout), (0, "1\n"), done.stderr)
+        runner = load_runner()
+        rows = runner.rows_of(runner.load_tree(fixture.root))
+        self.assertEqual([row.id for row in rows], ["S00080-SHAPED"])
+        kept = [
+            ({}, f"{POPULATION_BAND}: SCRIPT_MUTATIONS is not an array of rows"),
+            ([WELL_SHAPED, []], f"{POPULATION_BAND}: a SCRIPT_MUTATIONS row has no id"),
+        ]
+        for planted_rows, sentence in examined("kept refusals", kept):
+            with self.subTest(sentence=sentence):
+                self.assert_refused(self.planted("band", planted_rows), sentence)
+
+
+class TheRunnerProvesEverySelectedRow(unittest.TestCase):
+    def test_every_row_its_selectors_name_is_proved_once(self):
+        killer = "test_fixmod.Double.test_two_doubles_to_four"
+        first = script_row("S00010-DOUBLE", "x * 2", "x * 3", killer)
+        fixture = Fixture(self, [("SCRIPT_MUTATIONS", first)])
+        second = script_row("S00110-RETURN", "return x * 2", "return x - 2", killer)
+        fixture.rows([("SCRIPT_MUTATIONS", second)], band="S00100-S00199")
+        fixture.commit("a second band")
+        plan = fixture.write("plan.json", json.dumps({"rows": ["S00110-RETURN", "S00010-DOUBLE"]}))
+        both = {"S00010-DOUBLE": "KILLED", "S00110-RETURN": "KILLED"}
+        for selectors in examined(
+            "selector sets",
+            [
+                ["--band", "S00000-S00099", "--row", "S00110-RETURN"],
+                ["--band", "S00100-S00199", "--rows-from", str(plan)],
+                ["--row", "S00010-DOUBLE", "--row", "S00110-RETURN", "--row", "S00010-DOUBLE"],
+            ],
+        ):
+            done = fixture.run("prove", *selectors)
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+            self.assertEqual(verdicts(done), both, " ".join(selectors))
+            self.assertRegex(done.stdout, r"(?m)^examined 2\b", " ".join(selectors))
+
+
+#: A bash script that uses an array, which `sh -n` refuses and `bash -n` accepts, and prints 3.
+BASH_TARGET = "scripts/fixtool.sh"
+BASH_TEXT = "#!/usr/bin/env bash\na=(1 2)\necho $(( ${a[0]} + ${a[1]} ))\n"
+#: The same, kept by its shebang alone: no `.sh` or `.bash` extension.
+BASH_SHEBANG_TARGET = "scripts/fixtool"
+#: A POSIX script that prints 3.
+SH_TARGET = "scripts/fixposix.sh"
+SH_TEXT = "#!/bin/sh\necho $((1 + 2))\n"
+#: Opens an `if` no `fi` closes, so neither shell reads the file.
+UNPARSED = ("echo $((", "if echo $((")
+TOOL_KILLERS = '''"""A fixture's shell killers; each appends what it observed to observed.log."""
+
+import subprocess
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def observe(value):
+    with (ROOT / "observed.log").open("a", encoding="utf-8") as log:
+        log.write(f"{value}\\n")
+
+
+def printed(shell, script):
+    done = subprocess.run(
+        [shell, str(ROOT / script)], capture_output=True, text=True, check=False
+    )
+    value = done.stdout.strip() or "nothing"
+    observe(value)
+    return value
+
+
+class Tool(unittest.TestCase):
+    def test_bash_sums_to_three(self):
+        self.assertEqual(printed("bash", "scripts/fixtool.sh"), "3")
+
+    def test_bash_shebang_sums_to_three(self):
+        self.assertEqual(printed("bash", "scripts/fixtool"), "3")
+
+    def test_sh_sums_to_three(self):
+        self.assertEqual(printed("sh", "scripts/fixposix.sh"), "3")
+
+    def test_bash_by_path_sums_to_three(self):
+        self.assertEqual(printed("/bin/bash", "scripts/fixtool.sh"), "3")
+
+    def test_marker_sums_to_three(self):
+        self.assertEqual(printed("sh", "scripts/fixmark.sh"), "3")
+
+    def test_extension_bash_sums_to_three(self):
+        self.assertEqual(printed("bash", "scripts/fixext.bash"), "3")
+
+    def test_extension_sh_sums_to_three(self):
+        self.assertEqual(printed("sh", "scripts/fixext.sh"), "3")
+
+    def test_dash_sums_to_three(self):
+        self.assertEqual(printed("sh", "scripts/fixdash"), "3")
+'''
+#: Targets with no shebang: only the extension says which shell reads them.
+EXT_BASH_TARGET = "scripts/fixext.bash"
+EXT_BASH_TEXT = "a=(1 2)\necho $(( ${a[0]} + ${a[1]} ))\n"
+EXT_SH_TARGET = "scripts/fixext.sh"
+EXT_SH_TEXT = "echo $((1 + 2))\n"
+#: A target whose shebang names dash and which has no extension.
+DASH_TARGET = "scripts/fixdash"
+DASH_TEXT = "#!/bin/dash\necho $((1 + 2))\n"
+#: A construct `bash -n` reads and `sh -n` does not, in place of a sum.
+ARRAY_MUTANT = ("echo $((1 + 2))", "a=(1 2); echo 3")
+MARK_TARGET = "scripts/fixmark.sh"
+TOOL_FILES = {
+    EXT_BASH_TARGET: EXT_BASH_TEXT,
+    EXT_SH_TARGET: EXT_SH_TEXT,
+    DASH_TARGET: DASH_TEXT,
+    BASH_TARGET: BASH_TEXT,
+    BASH_SHEBANG_TARGET: BASH_TEXT,
+    SH_TARGET: SH_TEXT,
+    "scripts/tests/test_fixtool.py": TOOL_KILLERS,
+}
+
+
+def runner_module():
+    """The runner imported as a module, for the tests that call `parses` and `builds` directly."""
+    scripts = str(REPO / "scripts")
+    if scripts not in sys.path:
+        sys.path.insert(0, scripts)
+    import mutation_rows
+
+    return mutation_rows
+
+
+class TheRunnerParseChecksAShellMutant(unittest.TestCase):
+    """SPEC-039 A41: a shell target's mutant is parse-checked, `bash -n` for a bash script and
+    `sh -n` otherwise; one that fails is VOID, never a kill."""
+
+    def prove(self, row):
+        fixture = Fixture(self, [("SCRIPT_MUTATIONS", row)], files=TOOL_FILES)
+        target = fixture.root / row[1]
+        before = target.read_bytes()
+        done = fixture.run("prove", "--all")
+        self.assertEqual(target.read_bytes(), before, "the target was not restored")
+        return fixture, done
+
+    def test_the_fixture_construct_parses_under_bash_and_not_under_sh(self):
+        script = Path(tempfile.mkdtemp()) / "array.sh"
+        self.addCleanup(shutil.rmtree, script.parent)
+        script.write_text(BASH_TEXT, encoding="utf-8")
+        bash = subprocess.run(["bash", "-n", str(script)], capture_output=True, text=True)
+        posix = subprocess.run(["sh", "-n", str(script)], capture_output=True, text=True)
+        self.assertEqual(bash.returncode, 0, bash.stderr)
+        self.assertNotEqual(
+            posix.returncode, 0, "sh reads the array, so the fixture proves nothing"
+        )
+        self.assertRegex(posix.stderr, r"(?i)syntax error")
+
+    def test_a_bash_mutant_that_does_not_parse_is_void_not_a_kill(self):
+        row = script_row(
+            "S00020-BASH-UNPARSED",
+            *UNPARSED,
+            "test_fixtool.Tool.test_bash_sums_to_three",
+            target=BASH_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00020-BASH-UNPARSED": "VOID"})
+        self.assertIn("does not parse", done.stdout)
+        self.assertIn("bash", done.stdout)
+        # Only the control ran: the mutant never reached its killer.
+        self.assertEqual(fixture.observed(), ["3"])
+
+    def test_a_bash_mutant_refused_with_exit_one_is_void(self):
+        # `bash -n` exits 1, not 2, on an array assignment left open at the end of its input.
+        row = script_row(
+            "S00034-BASH-OPEN-ARRAY",
+            "a=(1 2)",
+            "a=(1 2",
+            "test_fixtool.Tool.test_bash_sums_to_three",
+            target=BASH_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00034-BASH-OPEN-ARRAY": "VOID"})
+        self.assertIn("unexpected EOF while looking for matching", done.stdout)
+        self.assertEqual(fixture.observed(), ["3"])
+
+    def test_a_bash_mutant_that_parses_and_is_caught_is_killed(self):
+        row = script_row(
+            "S00021-BASH-CAUGHT",
+            "+ ${a[1]}",
+            "* ${a[1]}",
+            "test_fixtool.Tool.test_bash_sums_to_three",
+            target=BASH_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00021-BASH-CAUGHT": "KILLED"})
+        # The control read 1 + 2, and the mutant read 1 * 2: both ran.
+        self.assertEqual(fixture.observed(), ["3", "2"])
+
+    def test_a_shebang_alone_makes_a_target_a_shell_script(self):
+        row = script_row(
+            "S00022-SHEBANG-UNPARSED",
+            *UNPARSED,
+            "test_fixtool.Tool.test_bash_shebang_sums_to_three",
+            target=BASH_SHEBANG_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00022-SHEBANG-UNPARSED": "VOID"})
+        self.assertIn("does not parse", done.stdout)
+        self.assertEqual(fixture.observed(), ["3"])
+
+    def test_a_posix_sh_mutant_that_does_not_parse_is_void_not_a_kill(self):
+        row = script_row(
+            "S00023-SH-UNPARSED",
+            *UNPARSED,
+            "test_fixtool.Tool.test_sh_sums_to_three",
+            target=SH_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00023-SH-UNPARSED": "VOID"})
+        self.assertIn("does not parse", done.stdout)
+        self.assertEqual(fixture.observed(), ["3"])
+
+    def test_a_posix_sh_mutant_that_parses_and_is_caught_is_killed(self):
+        row = script_row(
+            "S00024-SH-CAUGHT",
+            "1 + 2",
+            "1 * 2",
+            "test_fixtool.Tool.test_sh_sums_to_three",
+            target=SH_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00024-SH-CAUGHT": "KILLED"})
+        self.assertEqual(fixture.observed(), ["3", "2"])
+
+    def test_a_bash_only_mutant_of_an_sh_shebang_script_is_void(self):
+        row = script_row(
+            "S00025-SH-SHEBANG-BASHISM",
+            *ARRAY_MUTANT,
+            "test_fixtool.Tool.test_sh_sums_to_three",
+            target=SH_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00025-SH-SHEBANG-BASHISM": "VOID"})
+        self.assertIn("sh: ", done.stdout)
+        self.assertEqual(fixture.observed(), ["3"])
+
+    def test_a_bash_extension_with_no_shebang_is_read_by_bash(self):
+        caught = script_row(
+            "S00026-BASH-EXT-CAUGHT",
+            "+ ${a[1]}",
+            "* ${a[1]}",
+            "test_fixtool.Tool.test_extension_bash_sums_to_three",
+            target=EXT_BASH_TARGET,
+        )
+        fixture, done = self.prove(caught)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00026-BASH-EXT-CAUGHT": "KILLED"})
+        self.assertEqual(fixture.observed(), ["3", "2"])
+
+    def test_a_bash_extension_mutant_that_does_not_parse_is_void(self):
+        row = script_row(
+            "S00027-BASH-EXT-UNPARSED",
+            *UNPARSED,
+            "test_fixtool.Tool.test_extension_bash_sums_to_three",
+            target=EXT_BASH_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00027-BASH-EXT-UNPARSED": "VOID"})
+        self.assertIn("does not parse", done.stdout)
+        self.assertEqual(fixture.observed(), ["3"])
+
+    def test_an_sh_extension_with_no_shebang_is_read_by_sh(self):
+        row = script_row(
+            "S00028-SH-EXT-BASHISM",
+            *ARRAY_MUTANT,
+            "test_fixtool.Tool.test_extension_sh_sums_to_three",
+            target=EXT_SH_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00028-SH-EXT-BASHISM": "VOID"})
+        self.assertIn("sh: ", done.stdout)
+        self.assertEqual(fixture.observed(), ["3"])
+
+    def test_an_sh_extension_mutant_that_does_not_parse_is_void(self):
+        row = script_row(
+            "S00029-SH-EXT-UNPARSED",
+            *UNPARSED,
+            "test_fixtool.Tool.test_extension_sh_sums_to_three",
+            target=EXT_SH_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00029-SH-EXT-UNPARSED": "VOID"})
+        self.assertIn("does not parse", done.stdout)
+        self.assertEqual(fixture.observed(), ["3"])
+
+    def test_a_dash_shebang_makes_a_target_a_shell_script(self):
+        row = script_row(
+            "S00030-DASH-UNPARSED",
+            *UNPARSED,
+            "test_fixtool.Tool.test_dash_sums_to_three",
+            target=DASH_TARGET,
+        )
+        fixture, done = self.prove(row)
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00030-DASH-UNPARSED": "VOID"})
+        self.assertIn("does not parse", done.stdout)
+        self.assertEqual(fixture.observed(), ["3"])
+
+    def test_the_parse_check_reads_the_mutant_and_never_runs_it(self):
+        marker = "echo MARK >> {}/observed.log\n"
+        row = script_row(
+            "S00031-MARKED",
+            "1 + 2",
+            "1 * 2",
+            "test_fixtool.Tool.test_marker_sums_to_three",
+            target=MARK_TARGET,
+        )
+        fixture = Fixture(self, [("SCRIPT_MUTATIONS", row)], files=TOOL_FILES)
+        fixture.write(
+            MARK_TARGET, "#!/bin/sh\n" + marker.format(fixture.root) + "echo $((1 + 2))\n"
+        )
+        fixture.commit("a target that marks each execution")
+        done = fixture.run("prove", "--all")
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {"S00031-MARKED": "KILLED"})
+        # The control run and the killer run each executed the target once; the parse check
+        # executed nothing, so no third mark exists.
+        self.assertEqual(fixture.observed(), ["MARK", "3", "MARK", "2"])
+
+    def test_a_missing_parser_is_a_refusal_naming_it(self):
+        row = script_row(
+            "S00032-NO-PARSER",
+            "+ ${a[1]}",
+            "* ${a[1]}",
+            "test_fixtool.Tool.test_bash_by_path_sums_to_three",
+            target=BASH_TARGET,
+        )
+        fixture = Fixture(self, [("SCRIPT_MUTATIONS", row)], files=TOOL_FILES)
+        bare = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, bare)
+        (bare / "git").symlink_to(shutil.which("git"))
+        # The killer runs /bin/bash by path, so only the runner's own lookup meets the bare PATH.
+        control = fixture.run("prove", "--all")
+        self.assertEqual(verdicts(control), {"S00032-NO-PARSER": "KILLED"}, control.stdout)
+        done = fixture.run("prove", "--all", path=str(bare))
+        self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+        self.assertEqual(verdicts(done), {})
+        self.assertIn("REFUSED: missing tool: bash", done.stdout)
+
+    def test_a_parser_that_hangs_leaves_the_mutant_unchecked_and_void(self):
+        runner = runner_module()
+        stubs = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, stubs)
+        stub = stubs / "bash"
+        stub.write_text("#!/bin/sh\nexec sleep 30\n", encoding="utf-8")
+        stub.chmod(0o755)
+        with (
+            mock.patch.dict(os.environ, {"PATH": f"{stubs}:/usr/bin:/bin"}),
+            mock.patch.object(runner, "PARSE_SECONDS", 1),
+        ):
+            why = runner.parses("bash", b"echo 1\n")
+        self.assertEqual(why, "the mutant is unchecked: bash -n timed out")
+        with mock.patch.dict(os.environ, {"PATH": str(stubs / "none")}):
+            with self.assertRaises(runner.ToolMissing) as refusal:
+                runner.parses("bash", b"echo 1\n")
+        self.assertEqual(refusal.exception.tool, "bash")
+
+    def test_the_reason_is_the_first_line_of_a_two_line_refusal(self):
+        runner = runner_module()
+        why = runner.parses("bash", b"if then\n")
+        self.assertEqual(
+            why,
+            "the mutant does not parse: bash: bash: line 1: syntax error near unexpected token"
+            " `then'",
+        )
+
+    def test_a_shell_target_with_a_cargo_killer_is_parsed_first_and_built_second(self):
+        runner = runner_module()
+        row = runner.Row("S00033-CARGO-SHELL", "SCRIPT", "scripts/x.sh", "a", "b", "k", None, "d")
+        killer = runner.Killer("cargo", "t", "crates/f/tests/t.rs", "fix", "t")
+        text = b"#!/usr/bin/env bash\necho 1\n"
+        calls = []
+
+        def record(command, **_):
+            calls.append(command)
+            return subprocess.CompletedProcess(command, 0, b"", b"")
+
+        with (
+            mock.patch.object(runner.subprocess, "run", side_effect=record),
+            mock.patch.object(runner, "resolve_tool"),
+        ):
+            self.assertIsNone(runner.builds(Path("."), row, killer, text))
+        self.assertEqual([call[0] for call in calls], ["bash", "cargo"])
+        self.assertEqual(calls[0], ["bash", "-n"])
+        self.assertEqual(calls[1][1:3], ["test", "--locked"])
+        self.assertIn("--no-run", calls[1])
+
+        calls.clear()
+
+        def refuse(command, **_):
+            calls.append(command)
+            return subprocess.CompletedProcess(command, 2, b"", b"bash: line 1: bad\n")
+
+        with mock.patch.object(runner.subprocess, "run", side_effect=refuse):
+            why = runner.builds(Path("."), row, killer, text)
+        self.assertEqual(why, "the mutant does not parse: bash: bash: line 1: bad")
+        self.assertEqual(calls, [["bash", "-n"]], "an unparsed mutant must never reach cargo")
+
+    def test_a_target_that_is_not_a_shell_script_is_given_no_parser(self):
+        runner = runner_module()
+        self.assertIsNone(runner.shell_parser("crates/f/src/lib.rs", b"fn main() {}\n"))
+        self.assertIsNone(runner.shell_parser("db/001.sql", b"select 1;\n"))
+        # The control: the same call names a parser once the target is a shell script.
+        self.assertEqual(runner.shell_parser("scripts/x.sh", b"select 1;\n"), "sh")
+
+
+BIN_MANIFEST = (
+    '[package]\nname = "fix"\nversion = "0.1.0"\nedition = "2021"\n\n'
+    '[[bin]]\nname = "fixbin"\npath = "src/main.rs"\n'
+)
+#: A crate with a library and one binary, the binary named other than the package, with a unit test
+#: in its root file and one in a module it declares; the library holds a test the binary does not.
+BIN_FILES = {
+    "crates/fix/Cargo.toml": BIN_MANIFEST,
+    "crates/fix/src/lib.rs": (
+        "pub fn double(x: i64) -> i64 {\n    x * 2\n}\n\n"
+        "#[cfg(test)]\nmod tests {\n    #[test]\n    fn only_in_the_lib() {\n"
+        "        assert_eq!(super::double(2), 4);\n    }\n}\n"
+    ),
+    "crates/fix/src/main.rs": (
+        "mod helper;\n\nfn triple(x: i64) -> i64 {\n    x * 3\n}\n\n"
+        'fn main() {\n    println!("{}", triple(2) + helper::halve(4));\n}\n\n'
+        "#[cfg(test)]\nmod tests {\n    #[test]\n    fn three_triples_to_nine() {\n"
+        "        assert_eq!(super::triple(3), 9);\n    }\n}\n"
+    ),
+    "crates/fix/src/helper.rs": (
+        "pub fn halve(x: i64) -> i64 {\n    x / 2\n}\n\n"
+        "#[cfg(test)]\nmod tests {\n    #[test]\n    fn four_halves_to_two() {\n"
+        "        assert_eq!(super::halve(4), 2);\n    }\n}\n"
+    ),
+}
+BIN_KILLER = "bin::tests::three_triples_to_nine"
+
+
+def bin_row(identifier, killer, find="x * 3", replace="x * 4", path="src/main.rs"):
+    return (
+        "MUTATIONS",
+        [identifier, "fix", path, find, replace, killer, DESCRIPTION],
+    )
+
+
+class TheBinKillerRunsTheBinarysOwnUnitTests(unittest.TestCase):
+    """SPEC-039 A42 to A44 (issue #352): a killer `bin::<test path>` names one unit test of the
+    crate's binary, resolved against the binary's own sources and run with `--bin`."""
+
+    def located(self, fixture, index=0):
+        runner = runner_module()
+        rows = runner.rows_of(runner.load_tree(fixture.root))
+        try:
+            return runner, rows[index], runner.locate_killer(fixture.root, rows[index])
+        except runner.KillerUnresolved as refusal:
+            self.fail(f"a bin killer is refused: {refusal}")
+
+    def test_a_bin_killer_runs_cargo_test_on_the_binary_by_its_exact_path(self):
+        fixture = Fixture(self, [bin_row("S00050-BIN", BIN_KILLER)], cargo=True, files=BIN_FILES)
+        runner, row, killer = self.located(fixture)
+        self.assertEqual((killer.package, killer.binary), ("fix", "fixbin"))
+        calls = []
+
+        def record(command, **kwargs):
+            calls.append((command, kwargs["cwd"]))
+            return subprocess.CompletedProcess(command, 0, "running 1 test\n", "")
+
+        # The killer runs in its own process group (#366) and the build through `subprocess.run`;
+        # both are recorded, so no real cargo runs and the order is the runner's own.
+        with (
+            mock.patch.object(runner.subprocess, "run", side_effect=record),
+            mock.patch.object(runner, "run_in_own_group", side_effect=record),
+            mock.patch.object(runner, "resolve_tool"),
+        ):
+            run = runner.run_killer(fixture.root, killer, Path("."))
+            self.assertIsNone(runner.builds(fixture.root, row, killer, b"x"))
+        self.assertEqual((run.selected, run.passed), (1, True))
+        self.assertEqual(
+            calls[0][0],
+            ["cargo", "test", "--locked", "-p", "fix", "--bin", "fixbin"]
+            + ["--", "--exact", "tests::three_triples_to_nine"],
+        )
+        self.assertEqual(
+            calls[1][0],
+            ["cargo", "test", "--locked", "-p", "fix", "--bin", "fixbin", "--no-run"],
+        )
+        self.assertEqual(calls[0][1], fixture.root)
+
+    def test_a_bin_killers_binary_is_read_from_its_manifest_and_never_guessed(self):
+        fixture = Fixture(self, [bin_row("S00051-BIN", BIN_KILLER)], cargo=True, files=BIN_FILES)
+        self.assertEqual(self.located(fixture)[2].binary, "fixbin")
+        # No [[bin]] table: the binary is the package's own, named by the package.
+        plain = Fixture(
+            self,
+            [bin_row("S00052-BIN", BIN_KILLER)],
+            cargo=True,
+            files=dict(BIN_FILES, **{"crates/fix/Cargo.toml": BIN_MANIFEST.split("\n[[bin]]")[0]}),
+        )
+        self.assertEqual(self.located(plain)[2].binary, "fix")
+        # Two binaries: the killer names none of them, so it is refused, not guessed.
+        two = Fixture(
+            self,
+            [bin_row("S00053-BIN", BIN_KILLER)],
+            cargo=True,
+            files=dict(
+                BIN_FILES,
+                **{
+                    "crates/fix/Cargo.toml": BIN_MANIFEST
+                    + '\n[[bin]]\nname = "other"\npath = "src/other.rs"\n'
+                },
+            ),
+        )
+        runner = runner_module()
+        with self.assertRaisesRegex(runner.KillerUnresolved, "2 binaries"):
+            runner.locate_killer(two.root, runner.rows_of(runner.load_tree(two.root))[0])
+
+    def test_a_bin_killer_that_selects_no_test_is_void_and_never_killed(self):
+        rows = [
+            bin_row("S00054-BIN-KILLED", BIN_KILLER),
+            bin_row("S00055-BIN-NO-TEST", "bin::tests::no_such_test", replace="x * 5"),
+        ]
+        fixture = Fixture(self, rows, cargo=True, files=BIN_FILES)
+        before = (fixture.root / "crates/fix/src/main.rs").read_bytes()
+        done = fixture.run("prove", "--all", "--report", str(fixture.root / "report.json"))
+        self.assertEqual(done.returncode, 3, done.stdout + done.stderr)
+        self.assertEqual(
+            verdicts(done), {"S00054-BIN-KILLED": "KILLED", "S00055-BIN-NO-TEST": "VOID"}
+        )
+        self.assertIn("selected 0 tests, not one", done.stdout)
+        report = {entry["id"]: entry for entry in fixture.report()}
+        self.assertEqual(report["S00054-BIN-KILLED"]["mutant"], {"selected": 1, "passed": False})
+        # The plant that selects nothing never reached its mutant: only the control ran.
+        self.assertIsNone(report["S00055-BIN-NO-TEST"]["mutant"])
+        self.assertEqual((fixture.root / "crates/fix/src/main.rs").read_bytes(), before)
+
+    def test_a_bin_killer_outside_the_binarys_sources_is_refused_by_the_census(self):
+        rows = [
+            bin_row("S00056-BIN-ROOT", BIN_KILLER),
+            bin_row(
+                "S00057-BIN-MODULE",
+                "bin::helper::tests::four_halves_to_two",
+                find="x / 2",
+                replace="x / 3",
+                path="src/helper.rs",
+            ),
+            bin_row(
+                "S00058-BIN-LIB-TEST",
+                "bin::tests::only_in_the_lib",
+                find="x * 2",
+                replace="x * 5",
+                path="src/lib.rs",
+            ),
+        ]
+        fixture = Fixture(self, rows, cargo=True, files=BIN_FILES)
+        done = census(fixture.root)
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertIn(
+            "census: S00058-BIN-LIB-TEST: its killer bin::tests::only_in_the_lib names no test: "
+            "crates/fix/src/main.rs declares only_in_the_lib 0 times",
+            done.stdout,
+        )
+        # The two killers the binary holds, one in its root file and one in a module it declares,
+        # resolve: they are not named.
+        self.assertNotIn("S00056", done.stdout)
+        self.assertNotIn("S00057", done.stdout)
+        self.assertRegex(done.stdout, r"(?m)^examined 3 row")
+
+
+class TheBinKillerFollowsRustcAndRefusesAShadow(unittest.TestCase):
+    """The verifier's plants (v) and (vi) for SPEC-039 section 15: a binary's root named other than
+    `main.rs` declares its modules beside itself, as rustc reads a crate root; and a crate whose
+    `tests/bin.rs` the `bin` kind shadows is refused, never rerouted to the binary's own test."""
+
+    def test_a_module_beside_a_root_not_named_main_resolves(self):
+        manifest = BIN_MANIFEST.replace('path = "src/main.rs"', 'path = "src/other.rs"')
+        files = {
+            "crates/fix/Cargo.toml": manifest,
+            "crates/fix/src/other.rs": "mod helper;\n\nfn main() {}\n",
+            "crates/fix/src/helper.rs": BIN_FILES["crates/fix/src/helper.rs"],
+        }
+        rows = [
+            bin_row(
+                "S00059-BIN-OTHER-ROOT-MODULE",
+                "bin::helper::tests::four_halves_to_two",
+                find="x / 2",
+                replace="x / 3",
+                path="src/helper.rs",
+            )
+        ]
+        fixture = Fixture(self, rows, cargo=True, files=files)
+        done = census(fixture.root)
+        self.assertNotIn("S00059", done.stdout)
+        self.assertRegex(done.stdout, r"(?m)^examined 1 row")
+
+    def test_a_bin_killer_beside_a_tests_bin_rs_is_refused(self):
+        files = dict(
+            BIN_FILES,
+            **{
+                "crates/fix/tests/bin.rs": (
+                    "#[cfg(test)]\nmod tests {\n    #[test]\n    fn three_triples_to_nine() {\n"
+                    "        assert_eq!(9, 9);\n    }\n}\n"
+                )
+            },
+        )
+        fixture = Fixture(self, [bin_row("S00060-BIN-SHADOW", BIN_KILLER)], cargo=True, files=files)
+        done = census(fixture.root)
+        self.assertIn(
+            "census: S00060-BIN-SHADOW: its killer bin::tests::three_triples_to_nine crates/fix "
+            "has a test target bin, which the bin kind shadows",
+            done.stdout,
+        )
+        self.assertRegex(done.stdout, r"(?m)^examined 1 row")
+
+
+#: The rows legs' population: one row past the 2844 that 18 legs of 158 rows hold (SPEC-417 R1,
+#: R2, R4). Every row's find is absent from the target, so no row of these tests runs a killer.
+LEG_ROWS = 2845
+LEG_KILLER = "test_fixmod.Double.test_two_doubles_to_four"
+LEGS_LINE = re.compile(r"(?m)^legs: (\d+) leg\(s\) for (\d+) row\(s\)")
+
+
+def unproved_row(identifier):
+    """A row whose find the target lacks: its proof is VOID and its killer never runs."""
+    return ("SCRIPT_MUTATIONS", script_row(identifier, "x * 9", "x * 8", LEG_KILLER))
+
+
+def outputs(path):
+    """The step outputs a run appended to `path`, as {name: value}; none when it wrote none."""
+    if not path.is_file():
+        return {}
+    lines = path.read_text(encoding="utf-8").splitlines()
+    return dict(line.split("=", 1) for line in lines if line)
+
+
+class TheRowsLegsFitTheirBound(unittest.TestCase):
+    """SPEC-417 A1 to A3 (R1 to R4): `legs` deals the plan's rows into the fewest legs whose
+    largest is projected within half of the rows job's bound, and refuses a count past the most
+    legs by name, never capping it."""
+
+    def setUp(self):
+        self.ids = [f"S00000-L{n}" for n in range(LEG_ROWS)]
+        self.fixture = Fixture(self, [unproved_row(identifier) for identifier in self.ids])
+
+    def legs(self, count, output=None):
+        plan = self.fixture.write("plan.json", json.dumps({"rows": self.ids[:count]}))
+        return self.fixture.run("legs", "--rows-from", str(plan), output=output)
+
+    def test_the_fewest_legs_whose_largest_leg_fits_the_bound(self):
+        cases = [
+            (0, 1),
+            (1, 1),
+            (158, 1),
+            (159, 2),
+            (317, 3),
+            (2512, 16),
+            (2528, 16),
+            (2529, 17),
+            (2686, 17),
+        ]
+        for count, want in examined("row counts", cases):
+            done = self.legs(count)
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+            line = LEGS_LINE.search(done.stdout)
+            self.assertIsNotNone(line, done.stdout + done.stderr)
+            self.assertEqual(int(line.group(2)), count, done.stdout)
+            found = int(line.group(1))
+            self.assertEqual(found, want, f"{count} rows read {found}, want {want}")
+
+    def test_a_population_past_the_most_legs_is_refused_by_name(self):
+        sink = self.fixture.write("refused-output", "")
+        done = self.legs(LEG_ROWS, output=sink)
+        self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+        self.assertRegex(done.stdout, r"(?m)^legs: REFUSED: 2845 row\(s\) need more than 18 legs\b")
+        self.assertIsNone(LEGS_LINE.search(done.stdout), done.stdout)
+        self.assertEqual(outputs(sink), {}, "a refused count wrote outputs")
+
+    def test_the_legs_reach_the_workflow_as_a_count_and_a_matrix(self):
+        sink = self.fixture.write("output", "")
+        done = self.legs(2512, output=sink)
+        written = outputs(sink)
+        self.assertEqual(written.get("rows_legs"), "16", done.stdout + done.stderr)
+        self.assertEqual(json.loads(written.get("rows_matrix", "null")), list(range(16)))
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertIn(
+            "legs: 16 leg(s) for 2512 row(s), the largest 157 row(s), projected at 2669 s",
+            done.stdout,
+        )
+
+    def test_the_release_runs_2688_rows_are_dealt_into_18_legs(self):
+        """SPEC-417 A13 (R1, R3, R4 as section 11 amends it): the release pull request's 2688
+        selected rows, two past the 2686 that 17 legs hold, are dealt into 18 legs within the
+        bound, never refused."""
+        sink = self.fixture.write("release-output", "")
+        done = self.legs(2688, output=sink)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        written = outputs(sink)
+        self.assertEqual(written.get("rows_legs"), "18", done.stdout)
+        self.assertEqual(json.loads(written.get("rows_matrix", "null")), list(range(18)))
+        self.assertIn(
+            "legs: 18 leg(s) for 2688 row(s), the largest 150 row(s), projected at 2550 s",
+            done.stdout,
+        )
+
+
+class TheRunnerProvesOnlyItsLegsRows(unittest.TestCase):
+    """SPEC-417 A4 and A5 (R5, R6): `prove --leg k/n` proves the chosen rows `[k::n]` in the plan's
+    order, and a leg that is not `k/n` with `0 <= k < n` is refused before any row runs."""
+
+    IDS = ("S00001-FIRST", "S00002-SECOND", "S00003-THIRD")
+
+    def fixture(self):
+        fixture = Fixture(self, [unproved_row(identifier) for identifier in self.IDS])
+        plan = fixture.write("plan.json", json.dumps({"rows": list(self.IDS)}))
+        return fixture, plan
+
+    def test_each_leg_proves_its_dealt_rows_and_the_legs_cover_the_plan_once(self):
+        fixture, plan = self.fixture()
+        first, second, third = self.IDS
+        proved = []
+        for leg, want in examined("legs", [("0/2", [first, third]), ("1/2", [second])]):
+            done = fixture.run("prove", "--rows-from", str(plan), f"--leg={leg}")
+            found = list(verdicts(done))
+            self.assertEqual(found, want, f"leg {leg}: {done.stdout}{done.stderr}")
+            self.assertRegex(done.stdout, rf"(?m)^examined {len(want)}$", leg)
+            proved += found
+        self.assertEqual(sorted(proved), sorted(self.IDS), "the legs do not cover the plan once")
+        self.assertEqual(fixture.observed(), [], "a killer ran for a row whose find is absent")
+
+    def test_a_malformed_leg_is_refused_before_any_row_runs(self):
+        fixture, plan = self.fixture()
+        for spelling in examined("malformed legs", ["2/2", "0/0", "-1/2", "1"]):
+            # The `=` form, so the option parser never reads `-1/2` as an option of its own.
+            done = fixture.run("prove", "--rows-from", str(plan), f"--leg={spelling}")
+            out = done.stdout + done.stderr
+            self.assertEqual(done.returncode, 2, f"--leg {spelling}: {out}")
+            self.assertEqual(verdicts(done), {}, f"--leg {spelling} proved a row: {out}")
+            self.assertIn(f"--leg {spelling} ", out)
+
+
+class TheMergeKeepsEveryLeg(unittest.TestCase):
+    """SPEC-417 A6 and A7 (R7, R8): `merge` writes every present leg's rows in leg order and names
+    each absent leg, and refuses, writing nothing, a row in two legs or in a leg its deal did not
+    give it."""
+
+    IDS = tuple(f"S0000{n}-ROW{n}" for n in range(6))
+
+    def setUp(self):
+        self.fixture = Fixture(self, [unproved_row(identifier) for identifier in self.IDS])
+        self.plan = self.fixture.write("plan.json", json.dumps({"rows": list(self.IDS)}))
+
+    def plant(self, name, legs):
+        """Each leg's report as the leg writes it, under `name/`: {leg: [its entries]}."""
+        planted = {}
+        for k, ids in legs.items():
+            planted[k] = [
+                {"id": identifier, "verdict": "KILLED", "reason": f"planted in leg {k}"}
+                for identifier in ids
+            ]
+            self.fixture.write(f"{name}/rows-leg-{k}.json", json.dumps(planted[k]))
+        return planted
+
+    def merge(self, name):
+        report = self.fixture.root / f"merged-{name}.json"
+        done = self.fixture.run(
+            "merge",
+            "--rows-from",
+            str(self.plan),
+            "--legs",
+            "3",
+            "--from",
+            str(self.fixture.root / name),
+            "--report",
+            str(report),
+        )
+        merged = json.loads(report.read_text(encoding="utf-8")) if report.is_file() else None
+        return done, merged
+
+    def test_the_merge_writes_every_legs_rows_and_names_a_missing_leg(self):
+        r = self.IDS
+        deal = {0: [r[0], r[3]], 1: [r[1], r[4]], 2: [r[2], r[5]]}
+        every = self.plant("every", deal)
+        done, merged = self.merge("every")
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(merged, every[0] + every[1] + every[2], done.stdout)
+        gap = self.plant("gap", {0: deal[0], 2: deal[2]})
+        done, merged = self.merge("gap")
+        out = done.stdout + done.stderr
+        self.assertEqual(done.returncode, 0, out)
+        self.assertEqual(merged, gap[0] + gap[2], out)
+        lines = done.stdout.splitlines()
+        absent = [n for n, line in enumerate(lines) if "leg 1 " in line and "absent" in line]
+        self.assertEqual(len(absent), 1, f"one line names leg 1 absent: {out}")
+        counted = [n for n, line in enumerate(lines) if EXAMINED.match(line)]
+        self.assertEqual(len(counted), 1, out)
+        self.assertLess(absent[0], counted[0], out)
+        self.assertEqual(lines[counted[0]], "examined 4", out)
+
+    def test_the_merge_refuses_a_row_the_deal_did_not_give_its_leg(self):
+        r = self.IDS
+        cases = [
+            (
+                "twice",
+                {0: [r[0], r[3]], 1: [r[1], r[4], r[0]], 2: [r[2], r[5]]},
+                f"{r[0]} is held by two legs",
+            ),
+            (
+                "misdealt",
+                {0: [r[0], r[1]], 1: [r[3], r[4]], 2: [r[2], r[5]]},
+                f"leg 0 holds {r[1]}, which its deal did not give it",
+            ),
+        ]
+        for name, legs, refusal in examined("planted deals", cases):
+            self.plant(name, legs)
+            done, merged = self.merge(name)
+            out = done.stdout + done.stderr
+            self.assertEqual(done.returncode, 2, f"{name}: {out}")
+            self.assertIn(refusal, out, name)
+            self.assertIsNone(merged, f"{name}: a refused merge wrote a report")
+
+
+def load_runner():
+    """The runner as a module in this process, read from its file as it stands, so a test can
+    observe the exit code `legs`, `merge` and `main` return: through a subprocess a returned None
+    and a returned 0 both end the process with status 0."""
+    spec = importlib.util.spec_from_file_location("mutation_rows_inprocess", RUNNER)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+class TheLegsAndMergeAnswerWithTheirOwnExitCodes(unittest.TestCase):
+    """SPEC-417 A1 to A3, A6 and A7 (R1 to R3, R7, R8): `legs`, `merge` and `main` called as
+    functions return the exit code they print and write, and shape the merged report's bytes."""
+
+    IDS = tuple(f"S0000{n}-ROW{n}" for n in range(6))
+
+    def setUp(self):
+        patcher = mock.patch.dict(os.environ)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        os.environ.pop("GITHUB_OUTPUT", None)
+        previous = signal.getsignal(signal.SIGTERM)
+        self.addCleanup(signal.signal, signal.SIGTERM, previous)
+        self.runner = load_runner()
+        self.fixture = Fixture(self, [unproved_row(identifier) for identifier in self.IDS])
+        self.plan = self.fixture.write("plan.json", json.dumps({"rows": list(self.IDS)}))
+
+    def args(self, **given):
+        wanted = dict(
+            all=False,
+            row=[],
+            band=None,
+            rows_from=str(self.plan),
+            report=None,
+            base=None,
+            leg=None,
+            legs=None,
+            source=None,
+        )
+        wanted.update(given)
+        return argparse.Namespace(**wanted)
+
+    def call(self, function, args):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = function(self.fixture.root, args)
+        return code, out.getvalue()
+
+    def plant(self, name, legs, count):
+        """Each leg's report under `name/`, holding the rows its deal of `count` legs gives it."""
+        for k in range(legs):
+            entries = [
+                {"id": i, "verdict": "KILLED", "reason": "planted"} for i in self.IDS[k::count]
+            ]
+            self.fixture.write(f"{name}/rows-leg-{k}.json", json.dumps(entries))
+        return self.fixture.root / name
+
+    def merge(self, source, legs, report=None):
+        report = report or self.fixture.root / "merged.json"
+        args = self.args(legs=legs, source=str(source), report=str(report))
+        code, out = self.call(self.runner.merge, args)
+        return code, out, report
+
+    def main(self, *argv):
+        """`main(argv)` as a function: (exit code, stdout, stderr); an argparse exit is its code."""
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            try:
+                code = self.runner.main(list(argv))
+            except SystemExit as stop:
+                code = stop.code
+        return code, out.getvalue(), err.getvalue()
+
+    def test_legs_returns_ok_after_it_prints_its_deal(self):
+        code, out = self.call(self.runner.legs, self.args())
+        self.assertEqual(code, 0, out)
+        self.assertIn("legs: 1 leg(s) for 6 row(s), the largest 6 row(s)", out)
+
+    def test_legs_returns_refused_for_a_plan_naming_no_row(self):
+        plan = self.fixture.write("ghost.json", json.dumps({"rows": ["S99999-GHOST"]}))
+        code, out = self.call(self.runner.legs, self.args(rows_from=str(plan)))
+        self.assertEqual(code, 2, out)
+        self.assertIn("legs: REFUSED: no row holds the id(s) S99999-GHOST", out)
+
+    def test_merge_returns_ok_and_writes_the_report_bytes_under_new_directories(self):
+        source = self.plant("every", 3, 3)
+        report = self.fixture.root / "out" / "deep" / "merged.json"
+        code, out, _ = self.merge(source, 3, report)
+        self.assertEqual(code, 0, out)
+        want = [
+            {"id": i, "verdict": "KILLED", "reason": "planted"}
+            for k in range(3)
+            for i in self.IDS[k::3]
+        ]
+        text = report.read_text(encoding="utf-8")
+        self.assertEqual(text, json.dumps(want, indent=2) + "\n")
+        self.assertTrue(text.endswith("]\n"), repr(text[-4:]))
+        self.assertIn("merge: 3 of 3 leg(s) reported, 6 row(s) merged", out)
+        self.assertIn("examined 6", out.splitlines())
+
+    def test_merge_takes_a_single_leg_and_refuses_a_count_below_one(self):
+        source = self.plant("single", 1, 1)
+        code, out, _ = self.merge(source, 1)
+        self.assertEqual(code, 0, out)
+        self.assertIn("merge: 1 of 1 leg(s) reported, 6 row(s) merged", out)
+        for count in examined("leg counts", [0, -1]):
+            code, out, report = self.merge(source, count, self.fixture.root / f"none{count}.json")
+            self.assertEqual(code, 2, out)
+            self.assertIn(f"merge: REFUSED: --legs {count} is not a count of legs", out)
+            self.assertFalse(report.exists(), "a refused count wrote a report")
+
+    def test_merge_returns_refused_for_a_plan_naming_no_row(self):
+        source = self.plant("ghost-src", 3, 3)
+        plan = self.fixture.write("ghost.json", json.dumps({"rows": ["S99999-GHOST"]}))
+        args = self.args(rows_from=str(plan), legs=3, source=str(source), report="unused.json")
+        code, out = self.call(self.runner.merge, args)
+        self.assertEqual(code, 2, out)
+        self.assertIn("merge: REFUSED: no row holds the id(s) S99999-GHOST", out)
+
+    def test_merge_returns_refused_for_an_unreadable_leg_report(self):
+        source = self.plant("broken", 3, 3)
+        self.fixture.write("broken/rows-leg-1.json", "{not json")
+        code, out, report = self.merge(source, 3)
+        self.assertEqual(code, 2, out)
+        self.assertIn("merge: REFUSED: leg 1's report is unreadable", out)
+        self.assertFalse(report.exists(), "a refused merge wrote a report")
+
+    def test_merge_returns_refused_for_a_report_that_is_not_a_list_of_proved_rows(self):
+        shapes = [
+            ("no id", [{"verdict": "KILLED"}]),
+            ("not a row", ["id"]),
+            ("an empty object", {}),
+            ("a row among strings", [{"id": self.IDS[0]}, "id"]),
+        ]
+        for name, shape in examined("report shapes", shapes):
+            source = self.plant(f"shape-{name.replace(' ', '-')}", 3, 3)
+            self.fixture.write(f"shape-{name.replace(' ', '-')}/rows-leg-0.json", json.dumps(shape))
+            code, out, report = self.merge(source, 3)
+            self.assertEqual(code, 2, f"{name}: {out}")
+            self.assertIn("merge: REFUSED: leg 0's report is not a list of proved rows", out, name)
+            self.assertFalse(report.exists(), f"{name}: a refused merge wrote a report")
+
+    def test_main_counts_and_lists_the_rows(self):
+        root = str(self.fixture.root)
+        code, out, err = self.main("count", "--root", root)
+        self.assertEqual((code, out.strip()), (0, "6"), err)
+        code, out, err = self.main("ids", "--root", root)
+        self.assertEqual(code, 0, err)
+        self.assertEqual(sorted(out.split()), sorted(self.IDS))
+
+    def test_main_names_a_missing_legs_plan(self):
+        code, _, err = self.main("legs", "--root", str(self.fixture.root))
+        self.assertEqual(code, 2)
+        self.assertIn("error: legs needs --rows-from", err)
+
+    def test_main_names_a_merge_missing_any_one_of_its_four_options(self):
+        root = str(self.fixture.root)
+        source = self.plant("main-src", 3, 3)
+        options = {
+            "--rows-from": str(self.plan),
+            "--legs": "3",
+            "--from": str(source),
+            "--report": str(self.fixture.root / "main-merged.json"),
+        }
+
+        def argv(leave):
+            return ["merge", "--root", root] + [
+                part for name, value in options.items() if name != leave for part in (name, value)
+            ]
+
+        code, out, err = self.main(*argv(None))
+        self.assertEqual(code, 0, out + err)
+        self.assertIn("merge: 3 of 3 leg(s) reported, 6 row(s) merged", out)
+        for leave in examined("left-out options", options):
+            code, out, err = self.main(*argv(leave))
+            self.assertEqual(code, 2, f"without {leave}: {out}{err}")
+            self.assertIn("error: merge needs --rows-from, --legs, --from and --report", err, leave)
+            self.assertEqual(out, "", f"without {leave}: {out}")
+        code, out, err = self.main(*argv("--legs"), "--legs", "0")
+        self.assertEqual(code, 2, out + err)
+        self.assertIn("merge: REFUSED: --legs 0 is not a count of legs", out)
+
+    def test_main_describes_the_options_of_prove_and_merge(self):
+        code, out, err = self.main("--help")
+        self.assertEqual(code, 0, err)
+        flat = " ".join(out.split())
+        for text in examined(
+            "help texts",
+            [
+                "prove: only the rows leg k of n deals, as k/n",
+                "merge: how many legs the plan dealt",
+                "merge: the directory of the legs' reports",
+            ],
+        ):
+            self.assertIn(text, flat)
+
+
+# --------------------------------------------------------------------------- SPEC-465
+
+RETIRED_LIST = "scripts/mutation-rows.retired.json"
+#: The sentences SPEC-465 R1 to R4 refuse a wrongly shaped list with, each spelt whole.
+NOT_AN_OBJECT = "scripts/mutation-rows.retired.json must hold a top-level object"
+NOT_AN_ARRAY = "scripts/mutation-rows.retired.json: `retired` is not an array of records"
+SECOND_IS_NOT_AN_OBJECT = "scripts/mutation-rows.retired.json: retired[1] is not an object"
+SECOND_HAS_NO_STRING_ID = "scripts/mutation-rows.retired.json: retired[1] has no string id"
+#: The row that leaves while its target stays, and its approved entry.
+LEAVING = "S00030-DOUBLE"
+APPROVED = {"id": LEAVING, "reason": "moved", "approval": "the maintainer, in #1"}
+#: A well-formed entry for a row the fixture never held, placed before a wrong one.
+OTHER = {"id": "S00031-OTHER", "reason": "moved", "approval": "the maintainer, in #1"}
+#: The fixture's passing killer, as the runner reads a script killer.
+PASSING = ("script", "test_fixmod.Double.test_two_doubles_to_four", "scripts/tests/test_fixmod.py")
+
+
+def leaving_row(test):
+    """A fixture whose one row leaves while its target stays, and the base it leaves from."""
+    row = script_row(LEAVING, "x * 2", "x * 3", "test_fixmod.Double.test_two_doubles_to_four")
+    fixture = Fixture(test, [("SCRIPT_MUTATIONS", row)])
+    base = git(fixture.root, "rev-parse", "HEAD").strip()
+    fixture.rows([])
+    fixture.commit("the row leaves, its target stays")
+    return fixture, base
+
+
+class TheRetiredListRefusesAWrongShape(unittest.TestCase):
+    """SPEC-465 A1 to A5 (R1 to R5): a retired list of the wrong shape is refused by the sentence
+    naming its shape, exit 2, with no traceback and nothing retired, by `retired` as a process and
+    as a function; a well-formed list admits its row as it did."""
+
+    def retired_over(self, document):
+        """`retired --base` over the leaving row's fixture, `document` committed as its list."""
+        fixture, base = leaving_row(self)
+        fixture.write(RETIRED_LIST, json.dumps(document) + "\n")
+        fixture.commit("a retired list")
+        return fixture, base, fixture.run("retired", "--base", base)
+
+    def assert_refused(self, document, sentence):
+        fixture, base, done = self.retired_over(document)
+        self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+        self.assertIn(f"mutation_rows: REFUSED: {sentence}", done.stderr.splitlines())
+        self.assertNotIn("Traceback", done.stderr)
+        self.assertNotIn(LEAVING, done.stdout, "a refused list retires nothing")
+        runner = load_runner()
+        with contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(runner.PopulationRefused) as refused:
+                runner.retired(fixture.root, base)
+        self.assertEqual(str(refused.exception), sentence)
+
+    def test_a_top_level_list_is_refused_naming_the_shape(self):
+        self.assert_refused([APPROVED], NOT_AN_OBJECT)
+
+    def test_a_retired_value_that_is_not_an_array_is_refused_naming_the_shape(self):
+        for value in examined("planted retired values", [1, {}]):
+            with self.subTest(value=value):
+                self.assert_refused({"retired": value}, NOT_AN_ARRAY)
+
+    def test_an_entry_that_is_not_an_object_is_refused_naming_its_place(self):
+        self.assert_refused({"retired": [OTHER, 1]}, SECOND_IS_NOT_AN_OBJECT)
+
+    def test_an_entry_without_a_string_id_is_refused_naming_its_place(self):
+        idless = {"reason": "moved", "approval": "the maintainer, in #1"}
+        self.assert_refused({"retired": [OTHER, idless]}, SECOND_HAS_NO_STRING_ID)
+
+    def test_a_well_formed_list_still_admits_its_row_beside_an_unapproved_entry(self):
+        unapproved = {"id": "S00031-OTHER", "reason": "moved", "approval": ""}
+        _, _, done = self.retired_over({"_": ["a note"], "retired": [unapproved, APPROVED]})
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        lines = done.stdout.splitlines()
+        self.assertIn(
+            f"retired: {LEAVING}: its target stays; retired with approval: the maintainer, in #1",
+            lines,
+        )
+        self.assertIn("examined 1", lines)
+
+
+class TheRetiredListReaderAgreesWithItsProof(unittest.TestCase):
+    """SPEC-465 A14 (R11): `retired` answers every vector `lean/RetiredListShape`'s writer derived
+    as the proof's port answers it, the refusal's sentence or whether the leaving row is
+    approved."""
+
+    VECTORS = REPO / "formal" / "vectors" / "retired-list-shape.jsonl"
+
+    def test_the_reader_agrees_with_every_vector_of_its_proof(self):
+        header, *lines = self.VECTORS.read_text(encoding="utf-8").splitlines()
+        vectors = [json.loads(line) for line in lines]
+        self.assertEqual(json.loads(header)["vectors"], len(vectors), "the header's count")
+        runner = load_runner()
+        fixture, base = leaving_row(self)
+        for vector in examined("vectors of the proof", vectors):
+            fixture.write(RETIRED_LIST, json.dumps(vector["document"]) + "\n")
+            try:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    outcome = ("read", runner.retired(fixture.root, base))
+            except runner.PopulationRefused as refused:
+                outcome = ("refused", str(refused))
+            except Exception as error:
+                outcome = ("crashed", type(error).__name__)
+            if "refused" in vector:
+                expected = ("refused", vector["refused"])
+            else:
+                expected = ("read", 0 if vector["approves"] else 1)
+            self.assertEqual(outcome, expected, json.dumps(vector["document"]))
+
+
+#: How long a signal test waits for a marker, a pid file, a process's end or the runner's exit.
+SIGNAL_BOUND = 20.0
+#: The killer the signal tests run: its test starts a grandchild, writes its own pid and the
+#: grandchild's to the files two environment variables name, then hangs past any bound.
+SIGNALLED_KILLER = textwrap.dedent(
+    """\
+    import os
+    import subprocess
+    import time
+    import unittest
+    from pathlib import Path
+
+
+    class Killer(unittest.TestCase):
+        def test_hangs_with_a_grandchild(self):
+            grandchild = subprocess.Popen(["sleep", "300"])
+            Path(os.environ["LEADER_PID_FILE"]).write_text(str(os.getpid()))
+            Path(os.environ["GRANDCHILD_PID_FILE"]).write_text(str(grandchild.pid))
+            time.sleep(300)
+    """
+)
+#: The runner as a process of its own, run as `driver.py <scripts> <directory> <edge>`: `main()`
+#: and the real `run_killer` on the killer above, with the row proof replaced by that one run.
+#: The edge selects one patch, by the runner's base names: `starting` holds the killer's start
+#: (after its fork, before its output is collected) until the test's `sent` marker, `cleaning`
+#: holds the first group kill until the test's `sent-again` marker, and `ignored` starts the
+#: runner with SIGHUP ignored; `interrupt-ignored` starts it with SIGINT ignored, and every other
+#: edge starts it with the interpreter's own SIGINT handler, whatever the test process inherited.
+#: Each held step ends in 20 short sleeps, whose backward jumps run a pending handler.
+SIGNALLED_DRIVER = textwrap.dedent(
+    """\
+    import os
+    import signal
+    import sys
+    import time
+    from pathlib import Path
+
+    sys.path.insert(0, sys.argv[1])
+    import mutation_rows as runner
+
+    DIRECTORY = Path(sys.argv[2])
+    EDGE = sys.argv[3]
+
+
+    def wait_for(path):
+        deadline = time.monotonic() + 20
+        while not path.exists():
+            if time.monotonic() > deadline:
+                raise SystemExit(f"the driver waited 20 s for {path.name}")
+            time.sleep(0.01)
+
+
+    def settle():
+        for _ in range(20):
+            time.sleep(0.01)
+
+
+    def prove(root, args, leg=None):
+        killer = runner.Killer(
+            "script", "signalled_killer.Killer.test_hangs_with_a_grandchild", "signalled_killer.py", cwd="."
+        )
+        return 0 if runner.run_killer(root, killer, root).passed else 1
+
+
+    class Starting(runner.subprocess.Popen):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            wait_for(Path(os.environ["GRANDCHILD_PID_FILE"]))
+            (DIRECTORY / "starting").write_text("")
+            wait_for(DIRECTORY / "sent")
+            settle()
+
+
+    group_kill = runner.kill_group
+
+
+    def cleaning(process):
+        if not (DIRECTORY / "cleaning").exists():
+            (DIRECTORY / "cleaning").write_text("")
+            wait_for(DIRECTORY / "sent-again")
+            settle()
+        group_kill(process)
+
+
+    runner.BUILD_SECONDS = 0
+    runner.TEST_SECONDS = 30
+    runner.prove = prove
+    if EDGE == "starting":
+        runner.subprocess.Popen = Starting
+    if EDGE == "cleaning":
+        runner.kill_group = cleaning
+    signal.signal(signal.SIGHUP, signal.SIG_IGN if EDGE == "ignored" else signal.SIG_DFL)
+    interrupt = signal.SIG_IGN if EDGE == "interrupt-ignored" else signal.default_int_handler
+    signal.signal(signal.SIGINT, interrupt)
+    sys.exit(runner.main(["prove", "--all", "--root", str(DIRECTORY)]))
+    """
+)
+
+
+def running(pid):
+    """Whether process `pid` runs, read from `/proc/<pid>/stat`: a zombie awaiting its parent does
+    not."""
+    try:
+        stat = Path(f"/proc/{pid}/stat").read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return stat.rsplit(")", 1)[1].split()[0] != "Z"
+
+
+def stop_by_number(pid):
+    """SIGKILL to the one pid this test started, if it still runs; never a pattern."""
+    if running(pid):
+        with contextlib.suppress(ProcessLookupError):
+            os.kill(pid, signal.SIGKILL)
+
+
+class TheRunnerEndsTheKillersGroupOnEverySignal(unittest.TestCase):
+    """SPEC-465 A6 to A9 (R6 to R8): a runner process, signalled from outside at each edge of its
+    killer's run, leaves neither the killer nor its grandchild running and exits 128 plus the
+    first signal's number. The test and the runner each wait, within a bound, for the marker the
+    other writes; neither waits on a bare sleep."""
+
+    def start(self, edge):
+        """The runner in a group of its own, driven at `edge`, once its killer and the killer's
+        grandchild run: (the killer's pid, the grandchild's)."""
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        self.directory = Path(scratch.name)
+        (self.directory / "signalled_killer.py").write_text(SIGNALLED_KILLER, encoding="utf-8")
+        (self.directory / "driver.py").write_text(SIGNALLED_DRIVER, encoding="utf-8")
+        env = dict(
+            os.environ,
+            LEADER_PID_FILE=str(self.directory / "leader.pid"),
+            GRANDCHILD_PID_FILE=str(self.directory / "grandchild.pid"),
+            PYTHONDONTWRITEBYTECODE="1",
+        )
+        self.runner = subprocess.Popen(
+            [
+                sys.executable,
+                str(self.directory / "driver.py"),
+                str(REPO / "scripts"),
+                str(self.directory),
+                edge,
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env=env,
+            process_group=0,
+        )
+        self.addCleanup(self.runner.wait)
+        self.addCleanup(stop_by_number, self.runner.pid)
+        grandchild = self.pid_in("grandchild.pid")
+        self.addCleanup(stop_by_number, grandchild)
+        leader = self.pid_in("leader.pid")
+        self.addCleanup(stop_by_number, leader)
+        self.assertTrue(running(leader), "the killer runs before the signal")
+        self.assertTrue(running(grandchild), "the grandchild runs before the signal")
+        return leader, grandchild
+
+    def pid_in(self, name):
+        """The pid the killer wrote to `name`, once it reads whole, within the bound."""
+        deadline = time.monotonic() + SIGNAL_BOUND
+        while time.monotonic() < deadline:
+            with contextlib.suppress(OSError, ValueError):
+                return int((self.directory / name).read_text(encoding="utf-8"))
+            time.sleep(0.05)
+        self.fail(f"the killer never wrote {name}")
+
+    def wait_for(self, name):
+        """Until the runner writes the marker `name`, within the bound."""
+        deadline = time.monotonic() + SIGNAL_BOUND
+        while not (self.directory / name).exists():
+            if time.monotonic() > deadline:
+                self.fail(f"the runner never wrote {name}")
+            time.sleep(0.01)
+
+    def mark(self, name):
+        (self.directory / name).write_text("", encoding="utf-8")
+
+    def assert_ended(self, pids, how, status):
+        """The killer and its grandchild gone within the bound, then the runner's exit status."""
+        leader, grandchild = pids
+        deadline = time.monotonic() + SIGNAL_BOUND
+        while (running(leader) or running(grandchild)) and time.monotonic() < deadline:
+            time.sleep(0.05)
+        self.assertFalse(running(leader), f"the killer {leader} still runs after {how}")
+        self.assertFalse(running(grandchild), f"the grandchild {grandchild} still runs after {how}")
+        try:
+            code = self.runner.wait(SIGNAL_BOUND)
+        except subprocess.TimeoutExpired:
+            self.fail(f"the runner still runs {SIGNAL_BOUND:.0f} s after {how}")
+        self.assertEqual(code, status, f"the runner's exit status after {how}")
+
+    def test_a_sighup_of_the_runner_ends_the_killers_group(self):
+        pids = self.start("hangup")
+        os.kill(self.runner.pid, signal.SIGHUP)
+        self.assert_ended(pids, "a SIGHUP of the runner", 129)
+
+    def test_a_sigterm_while_the_killer_starts_is_held_until_its_group_can_end(self):
+        pids = self.start("starting")
+        self.wait_for("starting")
+        os.kill(self.runner.pid, signal.SIGTERM)
+        self.mark("sent")
+        self.assert_ended(pids, "a SIGTERM while the killer starts", 143)
+
+    def test_a_second_sigterm_during_the_cleanup_is_ignored_and_the_group_ends(self):
+        pids = self.start("cleaning")
+        os.kill(self.runner.pid, signal.SIGTERM)
+        self.wait_for("cleaning")
+        os.kill(self.runner.pid, signal.SIGTERM)
+        self.mark("sent-again")
+        self.assert_ended(pids, "a second SIGTERM during the cleanup", 143)
+
+    def test_a_runner_started_with_sighup_ignored_keeps_it_ignored(self):
+        pids = self.start("ignored")
+        os.kill(self.runner.pid, signal.SIGHUP)
+        os.kill(self.runner.pid, signal.SIGTERM)
+        self.assert_ended(pids, "a SIGHUP, then a SIGTERM, of a runner that ignores SIGHUP", 143)
+
+    def test_a_sigint_while_the_killer_starts_is_held_until_its_group_can_end(self):
+        """SPEC-647 A1 (R1, R2): an interrupt during the killer's start waits for the group kill,
+        and the runner still ends by SIGINT."""
+        pids = self.start("starting")
+        self.wait_for("starting")
+        os.kill(self.runner.pid, signal.SIGINT)
+        self.mark("sent")
+        self.assert_ended(pids, "a SIGINT while the killer starts", -signal.SIGINT)
+
+    def test_a_second_signal_during_the_cleanup_is_ignored_whichever_came_first(self):
+        """SPEC-647 A2 (R3): once a cleanup has begun, a later signal is ignored whichever signal
+        began it, so the group ends and the runner ends as its first signal says."""
+        orders = [
+            (signal.SIGINT, signal.SIGINT),
+            (signal.SIGINT, signal.SIGTERM),
+            (signal.SIGTERM, signal.SIGINT),
+        ]
+        for first, second in examined("signal orders", orders):
+            with self.subTest(first=first.name, second=second.name):
+                pids = self.start("cleaning")
+                os.kill(self.runner.pid, first)
+                self.wait_for("cleaning")
+                os.kill(self.runner.pid, second)
+                self.mark("sent-again")
+                self.assert_ended(
+                    pids,
+                    f"a {second.name} during the cleanup a {first.name} began",
+                    -signal.SIGINT if first == signal.SIGINT else 128 + signal.SIGTERM,
+                )
+
+    def test_a_runner_started_with_sigint_ignored_keeps_it_ignored(self):
+        """SPEC-647 A3 (R1): a runner started with SIGINT ignored is not ended by one."""
+        pids = self.start("interrupt-ignored")
+        os.kill(self.runner.pid, signal.SIGINT)
+        os.kill(self.runner.pid, signal.SIGTERM)
+        self.assert_ended(pids, "a SIGINT, then a SIGTERM, of a runner that ignores SIGINT", 143)
+
+    def test_a_sigint_of_the_runner_still_ends_it_by_sigint_through_its_cleanup(self):
+        """SPEC-647 A6 (R2, R4, R5): a single interrupt still ends the group and the run by
+        SIGINT."""
+        pids = self.start("interrupt")
+        os.kill(self.runner.pid, signal.SIGINT)
+        self.assert_ended(pids, "a SIGINT of the runner", -signal.SIGINT)
+
+
+class TheRunEndsOnASigintAsOnItsOtherSignals(unittest.TestCase):
+    """SPEC-647 A4 and A5 (R1, R2, R4): `main()` run in this process takes SIGINT through its own
+    handler, ends an interrupted run as `KeyboardInterrupt`, keeps an ignored SIGINT ignored, and
+    reinstalls the SIGINT handler it found on every way out."""
+
+    def setUp(self):
+        for signum in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT):
+            found = signal.getsignal(signum)
+            self.addCleanup(signal.signal, signum, signal.SIG_DFL if found is None else found)
+        self.heard = []
+
+        def on_signal(signum, _frame):
+            self.heard.append(signum)
+
+        self.on_signal = on_signal
+        for signum in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT):
+            signal.signal(signum, on_signal)
+        self.runner = load_runner()
+        self.fixture, _ = leaving_row(self)
+        self.root = str(self.fixture.root)
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        self.scratch = Path(scratch.name)
+        self.killer = self.runner.Killer(*PASSING, cwd="scripts/tests")
+
+    def main(self, *argv):
+        """`main(argv)`'s way out, its output kept from the test's own: ("returned", code),
+        ("exited", code), ("interrupted", "KeyboardInterrupt") or ("raised", the class)."""
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            try:
+                return ("returned", self.runner.main(list(argv)))
+            except SystemExit as stop:
+                return ("exited", stop.code)
+            except KeyboardInterrupt:
+                return ("interrupted", "KeyboardInterrupt")
+            except Exception as error:
+                return ("raised", type(error).__name__)
+
+    def raise_sigint(self, *_args):
+        signal.raise_signal(signal.SIGINT)
+
+    def test_main_takes_sigint_and_restores_its_handler_on_every_way_out(self):
+        ways = [
+            ("a return", "count", contextlib.nullcontext, ("returned", 0)),
+            ("an argument error", "retired", contextlib.nullcontext, ("exited", 2)),
+            (
+                "an exception",
+                "census",
+                lambda: mock.patch.object(
+                    self.runner, "census", side_effect=RuntimeError("planted")
+                ),
+                ("raised", "RuntimeError"),
+            ),
+            (
+                "a SIGINT",
+                "count",
+                lambda: mock.patch.object(self.runner, "rows_of", side_effect=self.raise_sigint),
+                ("interrupted", "KeyboardInterrupt"),
+            ),
+        ]
+        for way, verb, patched, outcome in examined("ways out of main", ways):
+            signal.signal(signal.SIGINT, self.on_signal)
+            with patched():
+                self.assertEqual(self.main(verb, "--root", self.root), outcome, way)
+            self.assertIs(signal.getsignal(signal.SIGINT), self.on_signal, way)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        during = []
+
+        def read_sigint(*_args):
+            during.append(signal.getsignal(signal.SIGINT))
+            raise RuntimeError("planted")
+
+        with mock.patch.object(self.runner, "rows_of", side_effect=read_sigint):
+            self.assertEqual(
+                self.main("count", "--root", self.root), ("raised", "RuntimeError"), "ignored"
+            )
+        self.assertEqual(during, [signal.SIG_IGN], "an ignored SIGINT was taken during the run")
+        self.assertIs(signal.getsignal(signal.SIGINT), signal.SIG_IGN, "an ignored SIGINT")
+        signal.signal(signal.SIGINT, self.on_signal)
+        with mock.patch.object(signal, "getsignal", return_value=None):
+            self.assertEqual(self.main("count", "--root", self.root), ("returned", 0))
+        self.assertIs(signal.getsignal(signal.SIGINT), signal.SIG_DFL)
+        self.assertEqual(self.heard, [], "a signal main() handled reached the handler it found")
+
+    def test_a_sigint_held_while_a_killer_fails_to_start_still_ends_the_run(self):
+        def prove(root, _args, _leg=None):
+            return 0 if self.runner.run_killer(root, self.killer, self.scratch).passed else 1
+
+        def resolve_tool(command, _env, _cwd=None):
+            signal.raise_signal(signal.SIGINT)
+            raise self.runner.ToolMissing(command[0], "a planted refusal")
+
+        with (
+            mock.patch.object(self.runner, "prove", prove),
+            mock.patch.object(self.runner, "resolve_tool", resolve_tool),
+        ):
+            outcome = self.main("prove", "--all", "--root", self.root)
+        self.assertEqual(outcome, ("interrupted", "KeyboardInterrupt"))
+        self.assertEqual(self.heard, [], "a SIGINT main() held reached the handler it found")
+
+
+class MainLeavesTheProcessAsItFoundIt(unittest.TestCase):
+    """SPEC-465 A10 to A12 (R7, R9): `main()` run in this process reinstalls the SIGTERM and
+    SIGHUP handlers it found on every way out, leaves no signal state behind it, and ends with
+    the exit of a signal it held while a killer failed to start."""
+
+    def setUp(self):
+        for signum in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT):
+            found = signal.getsignal(signum)
+            self.addCleanup(signal.signal, signum, signal.SIG_DFL if found is None else found)
+        self.heard = []
+
+        def on_term(signum, _frame):
+            self.heard.append(signum)
+
+        def on_hup(signum, _frame):
+            self.heard.append(signum)
+
+        self.on_term, self.on_hup = on_term, on_hup
+        signal.signal(signal.SIGTERM, on_term)
+        signal.signal(signal.SIGHUP, on_hup)
+        self.runner = load_runner()
+        self.fixture, _ = leaving_row(self)
+        self.root = str(self.fixture.root)
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        self.scratch = Path(scratch.name)
+        self.killer = self.runner.Killer(*PASSING, cwd="scripts/tests")
+
+    def main(self, *argv):
+        """`main(argv)`'s way out, its output kept from the test's own: ("returned", code),
+        ("exited", code) or ("raised", the exception's class)."""
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            try:
+                return ("returned", self.runner.main(list(argv)))
+            except SystemExit as stop:
+                return ("exited", stop.code)
+            except Exception as error:
+                return ("raised", type(error).__name__)
+
+    def raise_sigterm(self, *_args):
+        signal.raise_signal(signal.SIGTERM)
+
+    def test_main_restores_the_handlers_it_found_on_every_way_out(self):
+        ways = [
+            ("a return", "count", contextlib.nullcontext, ("returned", 0)),
+            ("an argument error", "retired", contextlib.nullcontext, ("exited", 2)),
+            (
+                "an exception",
+                "census",
+                lambda: mock.patch.object(
+                    self.runner, "census", side_effect=RuntimeError("planted")
+                ),
+                ("raised", "RuntimeError"),
+            ),
+            (
+                "a signal",
+                "count",
+                lambda: mock.patch.object(self.runner, "rows_of", side_effect=self.raise_sigterm),
+                ("exited", 143),
+            ),
+        ]
+        for way, verb, patched, outcome in examined("ways out of main", ways):
+            with patched():
+                self.assertEqual(self.main(verb, "--root", self.root), outcome, way)
+            self.assertIs(signal.getsignal(signal.SIGTERM), self.on_term, way)
+            self.assertIs(signal.getsignal(signal.SIGHUP), self.on_hup, way)
+        with mock.patch.object(signal, "getsignal", return_value=None):
+            self.assertEqual(self.main("count", "--root", self.root), ("returned", 0))
+        self.assertIs(signal.getsignal(signal.SIGTERM), signal.SIG_DFL)
+        self.assertIs(signal.getsignal(signal.SIGHUP), signal.SIG_DFL)
+        self.assertEqual(self.heard, [], "a signal main() handled reached the handler it found")
+
+    def test_main_leaves_no_signal_state_behind(self):
+        for run in ("the first", "the second"):
+            with mock.patch.object(self.runner, "rows_of", side_effect=self.raise_sigterm):
+                self.assertEqual(self.main("count", "--root", self.root), ("exited", 143), run)
+        done = self.runner.run_killer(self.fixture.root, self.killer, self.scratch)
+        self.assertEqual(done, self.runner.Run(1, True))
+
+    def test_a_signal_held_while_a_killer_fails_to_start_still_ends_the_run(self):
+        def prove(root, _args, _leg=None):
+            return 0 if self.runner.run_killer(root, self.killer, self.scratch).passed else 1
+
+        def resolve_tool(command, _env, _cwd=None):
+            signal.raise_signal(signal.SIGTERM)
+            raise self.runner.ToolMissing(command[0], "a planted refusal")
+
+        with (
+            mock.patch.object(self.runner, "prove", prove),
+            mock.patch.object(self.runner, "resolve_tool", resolve_tool),
+        ):
+            outcome = self.main("prove", "--all", "--root", self.root)
+        self.assertEqual(outcome, ("exited", 143))
+
+
+PLAN_NOT_AN_OBJECT = "{plan} must hold a top-level object"
+PLAN_ROWS_NOT_AN_ARRAY = "{plan}: `rows` is not an array of row ids"
+PLAN_ENTRY_NOT_A_STRING = "{plan}: rows[{index}] is not a string"
+
+
+class TheRowsPlanRefusesAWrongShape(unittest.TestCase):
+    """SPEC-645 A1 to A6 (R1 to R5): a `--rows-from` plan of the wrong shape is refused by the
+    sentence naming the file and the shape it needed, as one `mutation_rows: REFUSED:` line on
+    stderr, exit 2, an empty stdout and nothing written, by `prove`, `legs` and `merge` as
+    processes and by the reader as a function; a well-formed plan reads as it did."""
+
+    IDS = ("S00001-FIRST", "S00002-SECOND", "S00003-THIRD")
+
+    def setUp(self):
+        self.fixture = Fixture(self, [unproved_row(identifier) for identifier in self.IDS])
+
+    def assert_refused(self, document, said_for):
+        """`document` as the plan of each verb that reads one, refused with the sentence
+        `said_for` spells from the plan's path, and by the reader in this process."""
+        plan = self.fixture.write("plan.json", json.dumps(document))
+        said = said_for(plan)
+        report = self.fixture.root / "merged.json"
+        sink = self.fixture.write("legs-output", "")
+        verbs = [
+            ("prove", lambda: self.fixture.run("prove", "--rows-from", str(plan))),
+            ("legs", lambda: self.fixture.run("legs", "--rows-from", str(plan), output=sink)),
+            (
+                "merge",
+                lambda: self.fixture.run(
+                    "merge",
+                    "--rows-from",
+                    str(plan),
+                    "--legs",
+                    "1",
+                    "--from",
+                    str(self.fixture.root / "legs"),
+                    "--report",
+                    str(report),
+                ),
+            ),
+        ]
+        for verb, run in examined("verbs that read a plan", verbs):
+            done = run()
+            first = (done.stderr.splitlines() or [""])[0]
+            self.assertEqual(done.returncode, 2, f"{verb} ended {done.returncode}: {first}")
+            self.assertEqual(done.stderr, f"mutation_rows: REFUSED: {said}\n", verb)
+            self.assertEqual(done.stdout, "", verb)
+        self.assertFalse(report.exists(), "a refused merge wrote a report")
+        self.assertEqual(outputs(sink), {}, "a refused plan wrote outputs")
+        runner = load_runner()
+        with self.assertRaises(runner.PlanRefused) as refused:
+            runner.plan_rows(str(plan), document)
+        self.assertEqual(str(refused.exception), said)
+
+    def test_a_plan_that_is_an_array_is_refused_naming_the_shape(self):
+        self.assert_refused(["S00001-FIRST"], lambda plan: PLAN_NOT_AN_OBJECT.format(plan=plan))
+
+    def test_a_plan_that_is_a_string_is_refused_naming_the_shape(self):
+        self.assert_refused("S00001-FIRST", lambda plan: PLAN_NOT_AN_OBJECT.format(plan=plan))
+
+    def test_a_plan_that_is_a_number_a_boolean_or_null_is_refused_naming_the_shape(self):
+        for value in examined("planted scalar plans", [7, 1.5, True, False, None]):
+            with self.subTest(value=value):
+                self.assert_refused(value, lambda plan: PLAN_NOT_AN_OBJECT.format(plan=plan))
+
+    def test_a_rows_value_that_is_not_an_array_is_refused_naming_the_shape(self):
+        planted = [7, "S00001-FIRST", None, {"S00001-FIRST": 1}]
+        for value in examined("planted rows values", planted):
+            with self.subTest(value=value):
+                self.assert_refused(
+                    {"rows": value}, lambda plan: PLAN_ROWS_NOT_AN_ARRAY.format(plan=plan)
+                )
+
+    def test_a_row_id_that_is_not_a_string_is_refused_naming_its_place(self):
+        planted = [(["S00001-FIRST", 1], 1), ([["S00001-FIRST"]], 0)]
+        for rows, index in examined("planted row ids", planted):
+            with self.subTest(rows=rows):
+                self.assert_refused(
+                    {"rows": rows},
+                    lambda plan, index=index: PLAN_ENTRY_NOT_A_STRING.format(
+                        plan=plan, index=index
+                    ),
+                )
+
+    def test_a_well_formed_plan_still_selects_its_rows(self):
+        plans = [
+            (
+                {"_": ["a note"], "rows": list(self.IDS), "scope": {"decision": "run"}},
+                0,
+                "legs: 1 leg(s) for 3 row(s), the largest 3 row(s)",
+            ),
+            ({"_": ["a note"]}, 0, "legs: 1 leg(s) for 0 row(s), the largest 0 row(s)"),
+            ({"rows": ["S99999-GHOST"]}, 2, "legs: REFUSED: no row holds the id(s) S99999-GHOST"),
+        ]
+        for document, code, line in examined("well-formed plans", plans):
+            plan = self.fixture.write("plan.json", json.dumps(document))
+            done = self.fixture.run("legs", "--rows-from", str(plan))
+            self.assertEqual(done.returncode, code, done.stdout + done.stderr)
+            self.assertIn(line, done.stdout)
+            self.assertEqual(done.stderr, "")
+
+
+if __name__ == "__main__":
+    unittest.main()

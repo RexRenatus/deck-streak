@@ -1,0 +1,86 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S12201-A-SEEN-KEY-IS-REFUSED",
+        "scripts/mutation_rows.py",
+        "        if key in seen:\n",
+        "        if False:\n",
+        "an object that holds a key twice is refused, so a merge git completes without a conflict cannot drop the rows under the first table (SPEC-122 R1)",
+        "test_band_repeated_key.TheReaderRefusesARepeatedKey.test_a_merge_git_completes_without_a_conflict_and_the_reader_refuses_the_result"
+      ],
+      [
+        "S12202-THE-REFUSAL-NAMES-ITS-CAUSE",
+        "scripts/mutation_rows.py",
+        "REPEATED_KEY = \"repeats the key\"\n",
+        "REPEATED_KEY = \"is repeated\"\n",
+        "the refusal says the file repeats the key, in the words the author reads (SPEC-122 R1)",
+        "test_band_repeated_key.TheReaderRefusesARepeatedKey.test_a_merge_git_completes_without_a_conflict_and_the_reader_refuses_the_result"
+      ],
+      [
+        "S12203-A-REVISIONS-HEADER-IS-READ-THROUGH-THE-REFUSAL",
+        "scripts/mutation_rows.py",
+        "    monolith = parse_document(MONOLITH, git(root, \"show\", f\"{revision}:{MONOLITH}\"))\n",
+        "    monolith = json.loads(git(root, \"show\", f\"{revision}:{MONOLITH}\"))\n",
+        "the header of a revision is read by the parser that refuses a repeated key, as the retirement check's base is (SPEC-122 R2)",
+        "test_band_repeated_key.TheReaderRefusesARepeatedKey.test_a_revision_whose_header_repeats_a_key_is_refused"
+      ],
+      [
+        "S12204-THE-TREES-HEADER-IS-READ-THROUGH-THE-REFUSAL",
+        "scripts/mutation_rows.py",
+        "    return assemble(parse_document(MONOLITH, text), tree_fragments(root))\n",
+        "    return assemble(json.loads(text), tree_fragments(root))\n",
+        "the header of the working tree is read by the parser that refuses a repeated key (SPEC-122 R2)",
+        "test_band_repeated_key.TheReaderRefusesARepeatedKey.test_a_header_that_repeats_a_key_is_refused_in_the_tree"
+      ],
+      [
+        "S12205-A-FRAGMENT-IS-READ-THROUGH-THE-REFUSAL",
+        "scripts/mutation_rows.py",
+        "    return name, parse_document(f\"{FRAGMENTS}/{name}\", text)\n",
+        "    return name, json.loads(text)\n",
+        "every band file, in the tree and in a revision, is read by the parser that refuses a repeated key (SPEC-122 R2)",
+        "test_band_repeated_key.TheReaderRefusesARepeatedKey.test_a_merge_git_completes_without_a_conflict_and_the_reader_refuses_the_result"
+      ],
+      [
+        "S12206-RETIRED-REFUSES-AT-THE-VERB",
+        "scripts/mutation_rows.py",
+        "        return retired(root, args.base)\n    except (OSError, json.JSONDecodeError, PopulationRefused, UnresolvableTarget) as refusal:\n",
+        "        return retired(root, args.base)\n    except (OSError, json.JSONDecodeError, UnresolvableTarget) as refusal:\n",
+        "the retirement check exits 2 naming the refusal, as `count` and `ids` do, where a refusal would have been a traceback (SPEC-122 R3)",
+        "test_band_repeated_key.TheReaderRefusesARepeatedKey.test_retired_over_a_revision_whose_band_file_repeats_a_key_is_refused"
+      ],
+      [
+        "S12207-PLAN-REFUSES-A-REPEATED-KEY",
+        "scripts/mutation-verdict.py",
+        "        except mutation_rows.PopulationRefused as refusal:\n            print(f\"mutation: plan: REFUSED: {refusal}\", file=sys.stderr)",
+        "        except ZeroDivisionError as refusal:\n            print(f\"mutation: plan: REFUSED: {refusal}\", file=sys.stderr)",
+        "the plan meets a band file that repeats a key with the one-line refusal and exit 1, where the refusal would have been a traceback (SPEC-122 R6)",
+        "test_verdict_repeated_key.ThePlanRefusesARepeatedKey.test_a_band_file_that_repeats_a_key_is_refused_by_the_plan_without_a_traceback"
+      ],
+      [
+        "S12208-RECORDS-READ-BY-THE-ONE-PARSER",
+        "scripts/mutation-verdict.py",
+        "mutation_rows.parse_document(\n                f\"{RECORDS}/{path.name}\", path.read_text(encoding=\"utf-8\")\n            )",
+        "json.loads(path.read_text(encoding=\"utf-8\"))",
+        "an equivalence record is read by the parser that refuses a repeated key, not by a plain json.loads that keeps the last value (SPEC-122 R7)",
+        "test_verdict_repeated_key.TheEquivalenceRecordsRefuseARepeatedKey.test_a_record_fragment_that_repeats_a_key_at_the_top_is_refused"
+      ],
+      [
+        "S12209-RECORD-REFUSAL-IS-A-PROBLEM",
+        "scripts/mutation-verdict.py",
+        "            problems.append(str(refusal))\n            continue\n        except (OSError",
+        "            continue\n        except (OSError",
+        "a record fragment that repeats a key is reported by name as a problem, not dropped in silence (SPEC-122 R7)",
+        "test_verdict_repeated_key.TheEquivalenceRecordsRefuseARepeatedKey.test_a_record_that_repeats_a_key_inside_an_entry_is_refused"
+      ],
+      [
+        "S12210-RETIRED-LIST-READ-BY-THE-ONE-PARSER",
+        "scripts/mutation_rows.py",
+        "listed = parse_document(RETIRED, path.read_text(encoding=\"utf-8\"))",
+        "listed = json.loads(path.read_text(encoding=\"utf-8\"))",
+        "the retirement list is read by the parser that refuses a repeated key, not by a plain json.loads that keeps the last value (SPEC-122 R8)",
+        "test_band_repeated_key.TheRetiredListRefusesARepeatedKey.test_a_retired_list_that_repeats_a_key_is_refused_naming_it"
+      ]
+    ]
+  }
+}

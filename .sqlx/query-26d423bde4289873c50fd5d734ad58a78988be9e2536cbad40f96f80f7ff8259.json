@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COUNT(*) AS \"rows!: i64\" FROM writing_log WHERE study_day <= ?1",
+  "describe": {
+    "columns": [
+      {
+        "name": "rows!: i64",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "26d423bde4289873c50fd5d734ad58a78988be9e2536cbad40f96f80f7ff8259"
+}

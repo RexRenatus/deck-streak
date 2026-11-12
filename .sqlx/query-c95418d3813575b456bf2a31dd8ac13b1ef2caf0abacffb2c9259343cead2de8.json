@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id AS \"id!\", dedupe_key, claim AS \"claim!\" FROM notification_queue\n           WHERE state = 'sending' AND CAST(claim AS INTEGER) <= ? ORDER BY id",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "notification_queue",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "dedupe_key",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "notification_queue",
+            "name": "dedupe_key"
+          }
+        }
+      },
+      {
+        "name": "claim!",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "notification_queue",
+            "name": "claim"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "c95418d3813575b456bf2a31dd8ac13b1ef2caf0abacffb2c9259343cead2de8"
+}

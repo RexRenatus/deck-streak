@@ -1,0 +1,278 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S11801-SAFE-CHARS",
+        "vault",
+        "src/inbox.rs",
+        "        .filter(|c| c.is_ascii_alphanumeric() || *c == '_' || *c == '-')",
+        "        .filter(|c| c.is_alphanumeric() || *c == '_' || *c == '-')",
+        "inbox_capture::the_stub_and_stem_match_the_predecessors_golden",
+        "the safe unique keeps only ASCII letters, digits, _ and -, and the golden holds a unique of other letters (SPEC-118 R1, A1)"
+      ],
+      [
+        "S11802-CUT-32",
+        "vault",
+        "src/inbox.rs",
+        "pub const UNIQUE_CHARS: usize = 32;",
+        "pub const UNIQUE_CHARS: usize = 33;",
+        "inbox_capture::the_stub_and_stem_match_the_predecessors_golden",
+        "the safe unique is cut to 32 characters, and the golden names 32, 33 and 40 (SPEC-118 R1, A1)"
+      ],
+      [
+        "S11803-CAPTURE-FALLBACK",
+        "vault",
+        "src/inbox.rs",
+        "        FALLBACK_UNIQUE.to_owned()",
+        "        String::new()",
+        "inbox_capture::the_stub_and_stem_match_the_predecessors_golden",
+        "a unique that leaves nothing reads capture, and the golden holds an empty one and one of symbols only (SPEC-118 R1, A1)"
+      ],
+      [
+        "S11804-ATTACH-FIRST",
+        "vault",
+        "src/inbox.rs",
+        "    if let Some(file) = attachment {\n        file.stream.land()?;\n    }\n    atomic::write(fs, &inbox.folder.join(stub_name(&stem)), stub.as_bytes())?;",
+        "    atomic::write(fs, &inbox.folder.join(stub_name(&stem)), stub.as_bytes())?;\n    if let Some(file) = attachment {\n        file.stream.land()?;\n    }",
+        "inbox_capture::the_attachment_lands_before_its_stub",
+        "the attachment is renamed into place before its stub is written, so the curator never sees a stub before its attachment (SPEC-118 R3, A2)"
+      ],
+      [
+        "S11805-NO-MKDIR",
+        "vault",
+        "src/inbox.rs",
+        "            || !is_folder(fs, &configured, \"read the inbox folder\")?",
+        "            || false",
+        "inbox_capture::a_missing_inbox_is_refused_and_never_created",
+        "a missing inbox folder, or a file in its place, refuses with vault_missing and nothing is created (SPEC-118 R4, A3)"
+      ],
+      [
+        "S11807-JOURNAL-REFUSED",
+        "vault",
+        "src/atomic.rs",
+        "    if journal.iter().any(under) {",
+        "    if journal.iter().any(under) && journal.is_empty() {",
+        "atomic::no_vault_write_reaches_a_journal_folder",
+        "a path under a journal folder is refused with journal_refused (SPEC-118 R5, A5)"
+      ],
+      [
+        "S11808-PHOTO-LAST",
+        "bot",
+        "src/capture.rs",
+        "    if let Some(photo) = message.photo.as_ref().and_then(|sizes| sizes.last()) {",
+        "    if let Some(photo) = message.photo.as_ref().and_then(|sizes| sizes.first()) {",
+        "media_capture::media_choice_matches_the_predecessors_golden",
+        "a photo is saved at its last size, and the golden holds a photo of several sizes (SPEC-118 R6, A7)"
+      ],
+      [
+        "S11809-EXT-RULE",
+        "bot",
+        "src/capture.rs",
+        "            if (1..=10).contains(&ext.len()) && ext.bytes().all(|b| b.is_ascii_alphanumeric()) =>",
+        "            if (1..=11).contains(&ext.len()) && ext.bytes().all(|b| b.is_ascii_alphanumeric()) =>",
+        "media_capture::a_document_extension_off_the_rule_reads_bin",
+        "a document keeps an extension of 1 to 10 letters or digits, and the test names 10 and 11 (SPEC-118 R7, A8)"
+      ],
+      [
+        "S11810-SIZE-CAP",
+        "bot",
+        "src/capture.rs",
+        "    size.is_none_or(|size| size <= MAX_DOWNLOAD_BYTES)",
+        "    size.is_none_or(|size| size < MAX_DOWNLOAD_BYTES)",
+        "media_capture::a_file_over_twenty_megabytes_is_never_fetched",
+        "a file declared over 20 MB is never fetched, and the test names the cap and one byte more (SPEC-118 R8, A9)"
+      ],
+      [
+        "S11811-STREAM-CAP",
+        "bot",
+        "src/transport.rs",
+        "                    if received > cap {",
+        "                    if received > cap + 1 {",
+        "media_capture::a_stream_past_the_cap_is_stopped_and_discarded",
+        "a stream that passes the cap is stopped and discarded; the fake stream is finite, so a mutant that keeps reading ends (SPEC-118 R8, A10)"
+      ],
+      [
+        "S11813-OWNER-MEDIA",
+        "bot",
+        "src/gate.rs",
+        "    if !from_owner {",
+        "    if !from_owner && message.text.is_some() {",
+        "media_capture::media_is_admitted_from_the_owner_only",
+        "media is admitted from the owner only, and a stranger's photo is dropped as not_owner (SPEC-118 R6, A14)"
+      ],
+      [
+        "S11815-RESOLVED-TARGET",
+        "vault",
+        "src/atomic.rs",
+        "    refuse_journal(journal, &resolve(fs, path))",
+        "    Ok(())",
+        "atomic::a_write_stream_or_rename_into_a_journal_folder_through_a_link_is_refused",
+        "a write, a stream or a rename whose target reaches a journal folder through a link is refused with journal_refused (SPEC-118 R5, as amended)"
+      ],
+      [
+        "S11816-RESOLVED-JOURNAL",
+        "vault",
+        "src/fs.rs",
+        "                folders.push(folder);",
+        "",
+        "inbox_capture::an_inbox_that_is_a_journal_folder_through_a_link_takes_no_capture",
+        "the journal guard adds the folder each journal folder resolves to, so a journal folder whose name is a link guards the folder it reaches (SPEC-118 R5, as amended)"
+      ],
+      [
+        "S11817-RESOLVED-INBOX",
+        "vault",
+        "src/inbox.rs",
+        "            .map(|folder| atomic::resolve(fs, folder))",
+        "            .cloned()",
+        "inbox_capture::an_inbox_that_is_a_journal_folder_through_a_link_takes_no_capture",
+        "locating the inbox compares it with each journal folder as it resolves, so an inbox that is a journal folder through a link is refused (SPEC-118 R5, as amended)"
+      ],
+      [
+        "S11818-WRITE-GUARDED",
+        "vault",
+        "src/staged.rs",
+        "                atomic::write(&guard, &target, &bytes)",
+        "                atomic::write(&self.fs, &target, &bytes)",
+        "staged_guard::a_note_written_through_a_new_link_into_the_journal_is_refused",
+        "a staged note is written through the run's journal guard, so a folder relinked into a journal folder after the checks takes no note (SPEC-118 R5, as amended; ADR-316)"
+      ],
+      [
+        "S11819-FOLDER-GUARDED",
+        "vault",
+        "src/staged.rs",
+        "                atomic::refuse_journal_resolved(guard, &folder)?;\n                guard\n                    .create_dir(&folder)",
+        "                let _ = guard;\n                self.fs\n                    .create_dir(&folder)",
+        "staged_guard::a_folder_created_through_a_new_link_into_the_journal_is_refused",
+        "a staged run's folder is created through the run's journal guard, so no folder is created through a link into a journal folder (SPEC-118 R5, as amended; ADR-316)"
+      ],
+      [
+        "S11820-TARGET-GUARDED",
+        "vault",
+        "src/staged.rs",
+        "                atomic::refuse_journal_resolved(&guard, &target)?;\n                guard\n                    .rename(&source, &target)",
+        "                self.fs\n                    .rename(&source, &target)",
+        "staged_guard::a_capture_filed_through_a_new_link_into_the_journal_is_refused",
+        "a capture is filed through the run's journal guard, so no capture is filed through a link into a journal folder (SPEC-118 R5, as amended; ADR-316)"
+      ],
+      [
+        "S11821-SOURCE-REFUSED",
+        "vault",
+        "src/staged.rs",
+        "            atomic::refuse_journal_resolved(&guard, &self.vault.join(from))?;",
+        "            let _ = from;",
+        "staged_guard::a_capture_taken_through_a_new_link_out_of_the_journal_is_refused",
+        "a move's source is refused when it lies in a journal folder, so no note is taken out of the journal through a link (SPEC-118 R5, as amended; ADR-316)"
+      ],
+      [
+        "S11822-SOURCE-RESOLVED",
+        "vault",
+        "src/staged.rs",
+        "            atomic::refuse_journal_resolved(&guard, &self.vault.join(from))?;",
+        "            atomic::refuse_journal(guard.journal(), &self.vault.join(from))?;",
+        "staged_guard::a_capture_taken_through_a_new_link_out_of_the_journal_is_refused",
+        "a move's source is compared with the journal folders as it resolves at the moment of the move, not by its name (SPEC-118 R5, as amended; ADR-316)"
+      ],
+      [
+        "S11823-STOPPED-AT",
+        "vault",
+        "src/staged.rs",
+        "                        applied,\n                        refusal: VaultError::JournalRefused,",
+        "                        applied: applied + 1,\n                        refusal: VaultError::JournalRefused,",
+        "staged_guard::a_note_written_through_a_new_link_into_the_journal_is_refused",
+        "a run the guard refuses stops, and its outcome counts the operations applied before the refusal (SPEC-118 R5, as amended; ADR-316)"
+      ],
+      [
+        "S11824-STOPPED-REPORTED",
+        "vault",
+        "src/staged.rs",
+        "                Err(VaultError::JournalRefused) => {",
+        "                Err(VaultError::NotARegularFile) => {",
+        "staged_guard::a_capture_filed_through_a_new_link_into_the_journal_is_refused",
+        "an apply-time refusal is reported in the run's outcome as journal_refused, never raised (SPEC-118 R5, as amended; ADR-316)"
+      ],
+      [
+        "S11825-NO-FILE-SILENT",
+        "bot",
+        "src/capture.rs",
+        "        self.file_id.is_empty()",
+        "        false",
+        "media_capture::capture_replies_match_the_predecessors_golden",
+        "media with no file id is ignored silently, and the golden holds a case with no file id (SPEC-118 R6, A11)"
+      ],
+      [
+        "S11826-QUOTE-ESCAPED",
+        "bot",
+        "src/capture.rs",
+        "            '\\'' => escaped.push_str(\"&#x27;\"),",
+        "            '\\'' => escaped.push('\\''),",
+        "media_capture::capture_replies_match_the_predecessors_golden",
+        "the saved name is HTML-escaped, its apostrophe included, and the golden names a file holding &, <, >, \" and ' (SPEC-118 R9, A11)"
+      ],
+      [
+        "S11827-UNIQUE-FALLBACK",
+        "bot",
+        "src/capture.rs",
+        "            &self.file_id\n        } else {",
+        "            &self.file_unique_id\n        } else {",
+        "media_capture::capture_replies_match_the_predecessors_golden",
+        "a capture whose unique id is empty is named by its file id, and the golden holds an empty unique id (SPEC-118 R6, A11)"
+      ],
+      [
+        "S11828-CAPTION-DEFAULT",
+        "bot",
+        "src/capture.rs",
+        "        caption: if caption.is_empty() { name } else { caption },",
+        "        caption,",
+        "media_capture::media_choice_matches_the_predecessors_golden",
+        "a document's caption defaults to its file name, and the golden holds documents with no caption and an empty one (SPEC-118 R6, A7)"
+      ],
+      [
+        "S11829-CAP-VALUE",
+        "bot",
+        "src/capture.rs",
+        "pub const MAX_DOWNLOAD_BYTES: u64 = 20 * 1024 * 1024;",
+        "pub const MAX_DOWNLOAD_BYTES: u64 = 21 * 1024 * 1024;",
+        "media_capture::a_file_over_twenty_megabytes_is_never_fetched",
+        "the download cap is 20 x 1024 x 1024 bytes, and the test spells it as a literal (SPEC-118 R8, A9)"
+      ],
+      [
+        "S11830-DOWNLOAD-TIMEOUT",
+        "bot",
+        "src/transport.rs",
+        "pub const DOWNLOAD_TIMEOUT: Duration = Duration::from_mins(5);",
+        "pub const DOWNLOAD_TIMEOUT: Duration = Duration::from_millis(5);",
+        "media_capture::a_download_held_past_the_clients_timeout_still_lands",
+        "a file's download is bounded by its own timeout, which outlasts the client's, so a file the Bot API holds for three of the client's timeouts still lands (SPEC-118 R8)"
+      ]
+    ],
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S11806-ONCE",
+        "migrations/011801_vault_inbox_captures.sql",
+        "    stem TEXT NOT NULL PRIMARY KEY CHECK (length(stem) > 0),",
+        "    stem TEXT NOT NULL CHECK (length(stem) > 0),",
+        "vault",
+        "inbox_capture::a_capture_sent_twice_is_written_once",
+        "the stem is the table's primary key, so a resend of a recorded stem meets the first row and writes nothing (SPEC-118 R3, R12, A4)"
+      ],
+      [
+        "S11812-TEXT-BOUND",
+        "crates/vault/src/inbox.rs",
+        "    (1..=QUICK_TEXT_CHARS).contains(&chars)",
+        "    (1..QUICK_TEXT_CHARS).contains(&chars)",
+        "api",
+        "inbox_capture_route::the_quick_capture_is_owner_only_and_bounds_its_text",
+        "a quick capture holds 1 to 4000 characters, and the route test sends 0, 4000 and 4001 through the whole stack (SPEC-118 R10, A18, section 10)"
+      ],
+      [
+        "S11814-RETRY-KEY",
+        "migrations/011801_vault_inbox_captures.sql",
+        "CREATE UNIQUE INDEX inbox_captures_miniapp_key ON inbox_captures (capture_key)",
+        "CREATE INDEX inbox_captures_miniapp_key ON inbox_captures (capture_key)",
+        "vault",
+        "inbox_capture::a_miniapp_retry_on_a_later_utc_day_answers_the_first_name",
+        "a Mini App capture key is unique among the Mini App's captures, so a retry after UTC midnight meets the first row (SPEC-118 R10, R12, A24)"
+      ]
+    ]
+  }
+}

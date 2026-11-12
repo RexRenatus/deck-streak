@@ -1,0 +1,28 @@
+{
+  "adapter": "from_a_constructed_bot",
+  "cases": [
+    {
+      "input": {},
+      "output": {
+        "http_timeout_seconds": {
+          "connect": 60.0,
+          "pool": 60.0,
+          "read": 60.0,
+          "write": 60.0
+        },
+        "long_poll_seconds": 50
+      }
+    }
+  ],
+  "function": "bot.CommandBot",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Builds the predecessor's CommandBot with a synthetic token and chat id and no pipeline, and reads the long-poll timeout and the HTTP client's timeouts it holds; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_026.py",
+  "registry_sha256": "0d992c558eeed01b5c8da6a91225e5eae98fbb63b7bf247f77bf797d548aa1df",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

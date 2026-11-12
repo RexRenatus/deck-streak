@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE owner_last_message SET message_id = ?, arrived_at = ? WHERE id = 1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "476849c29dc875447b60adafde080401473230c8a76e6e51733bd3372c53210c"
+}

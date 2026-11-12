@@ -1,0 +1,110 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S34600-BINDINGS-FILE-SET",
+        ".github/workflows/xcframework.yml",
+        "          test \"$files\" = \"deck_streak_ffi.swift deck_streak_ffiFFI.h module.modulemap \"",
+        "          true",
+        "the one-module step stops comparing the bindings' file set with the umbrella's three files, so a second crate's bindings pass (SPEC-346 R5, A6)",
+        "test_ci_workflows.TheAppHasOneRustStaticLibrary.test_the_bindings_hold_one_module"
+      ],
+      [
+        "S34601-BINDINGS-ONE-MODULE",
+        ".github/workflows/xcframework.yml",
+        "          test \"$modules\" -eq 1",
+        "          true",
+        "the one-module step stops counting the modules the modulemap declares, so a modulemap declaring two passes (SPEC-346 R5, A6)",
+        "test_ci_workflows.TheAppHasOneRustStaticLibrary.test_the_bindings_hold_one_module"
+      ],
+      [
+        "S34602-XCFRAMEWORK-LIBRARY-SET",
+        ".github/workflows/xcframework.yml",
+        "          test \"$libraries\" = \"ios-arm64-simulator/libdeck_streak_ffi.a ios-arm64/libdeck_streak_ffi.a \"",
+        "          true",
+        "the one-library step stops comparing the XCFramework's archives with the umbrella's one per slice, so a third library or a missing slice passes (SPEC-346 R5, A7)",
+        "test_ci_workflows.TheAppHasOneRustStaticLibrary.test_the_xcframework_holds_one_rust_library_per_slice"
+      ],
+      [
+        "S34603-XCFRAMEWORK-EVERY-ARCHIVE",
+        ".github/workflows/xcframework.yml",
+        "find . -name '*.a'",
+        "find . -name 'libdeck_streak_ffi.a'",
+        "the one-library step finds only archives named like the umbrella's, so a library of another name goes unseen (SPEC-346 R5, A7)",
+        "test_ci_workflows.TheAppHasOneRustStaticLibrary.test_the_xcframework_holds_one_rust_library_per_slice"
+      ],
+      [
+        "S34604-STATICLIB-IS-THE-UMBRELLA",
+        ".github/workflows/xcframework.yml",
+        "-p deck-streak-ffi --lib --crate-type staticlib",
+        "-p deck-streak-engine-core --lib --crate-type staticlib",
+        "the Apple job builds the engine core as the static library in place of the umbrella (SPEC-346 R3, A5)",
+        "test_ci_workflows.TheAppHasOneRustStaticLibrary.test_only_the_umbrella_is_built_as_a_static_library"
+      ],
+      [
+        "S34605-CALLER-WATCHES-THE-CORE",
+        ".github/workflows/apple-on-change.yml",
+        "      - \"crates/engine-core/**\"\n",
+        "",
+        "the change caller stops watching the engine core, a crate the umbrella links, so a change to it starts no Apple build (SPEC-346 R6, A8)",
+        "test_ci_workflows.TheAppHasOneRustStaticLibrary.test_the_change_caller_watches_every_crate_the_umbrella_links"
+      ],
+      [
+        "S34606-NO-STATICLIB-CRATE-TYPE",
+        "crates/ffi/Cargo.toml",
+        "[features]",
+        "[lib]\ncrate-type = [\"lib\", \"staticlib\"]\n\n[features]",
+        "the umbrella's manifest declares the staticlib crate type, which the census must refuse by name (SPEC-346 R3, A1)",
+        "test_one_static_library.NoMemberIsAStaticLibrary.test_no_member_declares_the_staticlib_crate_type"
+      ],
+      [
+        "S34607-ONE-BINARY-TARGET",
+        "ios/EnginePackage/Package.swift",
+        ".binaryTarget(name: \"deck_streak_ffiFFI\", path: \"DeckStreakFFI.xcframework\"),",
+        ".binaryTarget(name: \"deck_streak_ffiFFI\", path: \"DeckStreakFFI.xcframework\"),\n        .binaryTarget(name: \"deck_streak_xpFFI\", path: \"DeckStreakXP.xcframework\"),",
+        "the engine package gains a second binary target, a second Rust library on the Swift side, which the census must refuse (SPEC-346 R4, A3)",
+        "test_one_static_library.TheSwiftSideLinksOneLibrary.test_the_engine_package_has_one_local_binary_target"
+      ],
+      [
+        "S34608-CLOSURE-IS-TRANSITIVE",
+        "scripts/tests/test_one_static_library.py",
+        "for _table, name in dependencies(found[directory], workspace, (NORMAL, BUILD))",
+        "for _table, name in []",
+        "the closure's walk stops after the umbrella's own tables, so a crate reached through another member goes unwatched (SPEC-346 R6, A8)",
+        "test_ci_workflows.TheAppHasOneRustStaticLibrary.test_the_change_caller_watches_every_crate_the_umbrella_links"
+      ],
+      [
+        "S34609-UNIFFI-IN-TARGET-TABLES",
+        "scripts/tests/test_one_static_library.py",
+        "        sections += [(f\"target.{cfg}.{table}\", body.get(table, {})) for table in tables]",
+        "        sections += []",
+        "the dependency reader drops every [target.<cfg>] table, so uniffi named in one goes unseen (SPEC-346 R2, A2)",
+        "test_one_static_library.UniffiLivesInTheUmbrella.test_only_the_umbrella_names_uniffi"
+      ],
+      [
+        "S34610-AT-LEAST-ONE-BINARY-TARGET",
+        "scripts/tests/test_one_static_library.py",
+        "    if len(found) != 1:",
+        "    if len(found) > 1:",
+        "the binary-target census admits a Swift side with none, so the umbrella's library could go unlinked (SPEC-346 R4, A3)",
+        "test_one_static_library.TheSwiftSideLinksOneLibrary.test_the_engine_package_has_one_local_binary_target"
+      ],
+      [
+        "S34611-ARCHIVES-ARE-BUILT-LIBRARIES",
+        "scripts/tests/test_one_static_library.py",
+        "(a|dylib|so)",
+        "(dylib|so)",
+        "the built-library census stops reading static archives, so a committed .a goes unseen (SPEC-346 R4, A4)",
+        "test_one_static_library.TheSwiftSideLinksOneLibrary.test_no_built_library_is_committed"
+      ],
+      [
+        "S34612-EVERY-GENERATOR-SPEC-IS-READ",
+        "scripts/tests/test_one_static_library.py",
+        "    return [path for path in tracked if path.startswith(\"ios/\") and path.endswith(\".yml\")]",
+        "    return [path for path in tracked if path == \"ios/project.yml\"]",
+        "the generator-spec population narrows back to ios/project.yml alone, so a second tracked ios/*.yml goes unread (SPEC-346 R4, A3)",
+        "test_one_static_library.TheSwiftSideLinksOneLibrary.test_the_engine_package_has_one_local_binary_target"
+      ]
+    ]
+  }
+}

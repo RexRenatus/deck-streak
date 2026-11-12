@@ -1,0 +1,110 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, study_day, due_count, state, reason, cards_moved, tariff_unfunded, undone_at FROM skip_days ORDER BY id",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "skip_days",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "study_day",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "skip_days",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "due_count",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "skip_days",
+            "name": "due_count"
+          }
+        }
+      },
+      {
+        "name": "state",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "skip_days",
+            "name": "state"
+          }
+        }
+      },
+      {
+        "name": "reason",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "skip_days",
+            "name": "reason"
+          }
+        }
+      },
+      {
+        "name": "cards_moved",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "skip_days",
+            "name": "cards_moved"
+          }
+        }
+      },
+      {
+        "name": "tariff_unfunded",
+        "ordinal": 6,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "skip_days",
+            "name": "tariff_unfunded"
+          }
+        }
+      },
+      {
+        "name": "undone_at",
+        "ordinal": 7,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "skip_days",
+            "name": "undone_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "5b52c4cde55149aa932eedabf67c51b44691989dd171211b237063a23b0f324a"
+}

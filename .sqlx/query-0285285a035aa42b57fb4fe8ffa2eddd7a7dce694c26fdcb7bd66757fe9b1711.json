@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM cron_fires WHERE fire_date < ?1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "0285285a035aa42b57fb4fe8ffa2eddd7a7dce694c26fdcb7bd66757fe9b1711"
+}

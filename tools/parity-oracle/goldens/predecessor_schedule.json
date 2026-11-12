@@ -1,0 +1,122 @@
+{
+  "adapter": "with_default_settings",
+  "cases": [
+    {
+      "class": "defaults",
+      "input": {},
+      "output": {
+        "jobs": [
+          {
+            "fields": {
+              "hour": "*",
+              "minute": "2,17,32,47"
+            },
+            "id": "sync",
+            "trigger": "CronTrigger"
+          },
+          {
+            "fields": {
+              "hour": "9",
+              "minute": "5"
+            },
+            "id": "daily_digest",
+            "trigger": "CronTrigger"
+          },
+          {
+            "fields": {
+              "hour": "4",
+              "minute": "5"
+            },
+            "id": "vault_stats_bridge",
+            "trigger": "CronTrigger"
+          },
+          {
+            "fields": {
+              "day_of_week": "sun",
+              "hour": "9",
+              "minute": "10"
+            },
+            "id": "weekly_report",
+            "trigger": "CronTrigger"
+          },
+          {
+            "fields": {
+              "hour": "8",
+              "minute": "0"
+            },
+            "id": "morning_brief",
+            "trigger": "CronTrigger"
+          },
+          {
+            "fields": {
+              "hour": "20",
+              "minute": "0"
+            },
+            "id": "streak_risk",
+            "trigger": "CronTrigger"
+          },
+          {
+            "fields": {
+              "hour": "22",
+              "minute": "0"
+            },
+            "id": "last_chance",
+            "trigger": "CronTrigger"
+          },
+          {
+            "fields": {
+              "hour": "22",
+              "minute": "43"
+            },
+            "id": "landmarks",
+            "trigger": "CronTrigger"
+          },
+          {
+            "fields": {
+              "hour": "4",
+              "minute": "21"
+            },
+            "id": "db_maintenance",
+            "trigger": "CronTrigger"
+          },
+          {
+            "fields": {
+              "hour": "*",
+              "minute": "9,39"
+            },
+            "id": "drill_postback_poll",
+            "trigger": "CronTrigger"
+          },
+          {
+            "fields": {
+              "hour": "4",
+              "minute": "33"
+            },
+            "id": "preread",
+            "trigger": "CronTrigger"
+          },
+          {
+            "fields": {
+              "hour": "*",
+              "minute": "51"
+            },
+            "id": "liveness_watch",
+            "trigger": "CronTrigger"
+          }
+        ],
+        "sync_interval_min": 15
+      }
+    }
+  ],
+  "function": "scheduler.create_scheduler",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Builds the scheduler with the settings an empty environment resolves to and a stub pipeline, in the UTC zone, and lists each job's id, its trigger's type and the trigger fields that are not their defaults; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_027.py",
+  "registry_sha256": "ac5bdf68d64e1d17d9f6b93a5f237600e878d693b9d4c61f9655dbd37d8d6540",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

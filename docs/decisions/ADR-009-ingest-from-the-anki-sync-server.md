@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: "2026-09-27"
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---
@@ -18,26 +18,26 @@ only for the skip day. Anki's Python package is itself a binding over Anki's Rus
 
 - The owner's instruction: port to Rust, and measure before choosing.
 - The day set must be the scheduler's own answer, which only Anki's engine gives.
-- The VM has 1.9 GiB of RAM and never compiles; the binary must fit a memory budget.
+- The host is small and never compiles; the binary must fit a memory budget.
 
 ## Considered Options (the alternatives it was chosen against)
 
-- Anki's `rslib` as a pinned git dependency of `ingest` — proposed: the same engine the predecessor's Python package wraps, native sync, the scheduler's queue and `set_due_date`, one language.
-- A native client of the sync protocol — rejected because reimplementing incremental sync is the unmaintainable option the predecessor's own ADR-002 rejected, and a full download every cycle would move the whole collection every 15 minutes.
-- A minimal Python sidecar running the predecessor's proven sync — kept as the fallback: proven today, but it keeps Python on the VM and a second language in the port; chosen only if the measurement below fails.
+- Anki's `rslib` as a pinned git dependency of `ingest` — chosen: the same engine the predecessor's Python package wraps, native sync, the scheduler's queue and `set_due_date`, one language.
+- A native client of the sync protocol — rejected because reimplementing incremental sync is the unmaintainable option the predecessor's own ADR-002 rejected, and a full download every cycle would move the whole collection on every sync.
+- A minimal Python sidecar running the predecessor's proven sync — kept as the fallback: proven today, but it adds a Python runtime to DeckStreak's deployment and a second language to the port; chosen only if the measurement below fails.
 - AnkiConnect — rejected because it needs a desktop Anki running.
 
 ## Decision Outcome
 
-Proposed option: `ingest` depends on `rslib` from Anki's repository at the tag matching the
+Chosen option: `ingest` depends on `rslib` from Anki's repository at the tag matching the
 collection's version, behind an `AnkiEngine` port so the rest of the workspace sees only its own
-types. The first W0 ingest delivery is a measured spike that makes this ADR final or selects the
-sidecar: it builds the dependency in CI and records the build time and the release binary's size,
-syncs a synthetic collection against a local sync server, and records resident memory while
-opening a large synthetic collection and resolving the new-card queue. The decision is accepted
-if resident memory stays inside the ingest budget in `deploy/host-budget.json` and the build fits
-the CI time budget; otherwise the sidecar is chosen and this ADR is superseded. Reads stay
-read-only SQLite over the copy (`mode=ro`), bounded to the 400-day window.
+types. The first W0 ingest delivery was a measured spike that would make this ADR final or select
+the sidecar: it built the dependency in CI and recorded the build time and the release binary's
+size, synced a synthetic collection against a local sync server, and recorded resident memory
+while opening a large synthetic collection and resolving the new-card queue, and during a full
+download. ADR-022 fixed every budget before the measurement; every one held (Confirmation), so the
+engine is chosen and the sidecar stays unbuilt. Reads stay read-only SQLite over the copy
+(`mode=ro`), bounded to the 400-day window.
 
 ### Consequences
 
@@ -46,7 +46,42 @@ read-only SQLite over the copy (`mode=ro`), bounded to the 400-day window.
 
 ### Confirmation
 
-The W0 ingest spike's measurements, recorded in its SPEC's problem section and in this ADR's status change.
+SPEC-022's spike measured the engine at tag `26.05` with ADR-022's protocol, in
+`engine-measure.yml` run 36357990387 at 0d8c102, on a GitHub-hosted `ubuntu-24.04` runner with 4
+CPUs: a cold build with no cache restored, the stripped `engine_probe`, the budget tests in the
+release profile that build compiled, and `cargo deny check licenses`.
+
+| measure | budget | measured | verdict |
+|---|---|---|---|
+| cold build | at most 20 minutes | 4.7 minutes | pass |
+| binary size | at most 100 MiB | 20.6 MiB | pass |
+| open and queue | at most 256 MiB | 29.4 MiB | pass |
+| full download | at most 256 MiB | 234.0 MiB | pass |
+| incremental sync | at most 60 seconds | 0.12 seconds | pass |
+| licences | pass | pass | pass |
+
+The full download is the tightest: the engine holds the whole downloaded collection in memory
+before it writes it beside the copy, so its peak grows with the collection. The gate re-asserts
+every memory and time budget on every run, in its test profile, so a regression past a budget is
+a red gate rather than a surprise on the host.
+
+SPEC-055 moved the engine to upstream tag `26.09.3`, which the root manifest's `[patch]` entry
+replaces with the maintainer's fork at `57382da085e6752738dc4bb617789be836a23300`: that tag plus
+the one fix for the engine's rebuild on every cargo command (ADR-058). ADR-022's protocol ran again
+at that commit, unchanged, in `engine-measure.yml` run 36386849300 at 4df16b0, on a GitHub-hosted
+`ubuntu-24.04` runner with 4 CPUs:
+
+| measure | budget | measured | verdict |
+|---|---|---|---|
+| cold build | at most 20 minutes | 4.4 minutes | pass |
+| binary size | at most 100 MiB | 19.3 MiB | pass |
+| open and queue | at most 256 MiB | 28.7 MiB | pass |
+| full download | at most 256 MiB | 232.2 MiB | pass |
+| incremental sync | at most 60 seconds | 0.14 seconds | pass |
+| licences | pass | pass | pass |
+
+Every budget holds at the pinned commit, and the status stands. The full download is still the
+tightest, at 90.7 % of its budget.
 
 ## What would make this wrong
 
@@ -55,4 +90,10 @@ The W0 ingest spike's measurements, recorded in its SPEC's problem section and i
 
 ## More Information
 
-The predecessor's ADR-002 (sync via the Anki package, read via stdlib SQLite); the vm-survey's capacity figures; ADR-008.
+The predecessor's ADR-002 (sync via the Anki package, read via stdlib SQLite); the maintainer's survey (private input); ADR-008.
+
+Amendment (2026-09-28): two passages describing the host's capacity and its other services, in a
+decision driver and a considered option, were redacted under the public-prose rule (ADR-059).
+
+Amendment (2026-09-28): the name of the maintainer's private tooling was replaced with a neutral one
+under the public-text rule (ADR-059).

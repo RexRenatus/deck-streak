@@ -1,0 +1,454 @@
+{
+  "cases": [
+    {
+      "class": "boundary",
+      "input": {
+        "remaining": 0,
+        "target": 10
+      },
+      "output": false
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "remaining": -1,
+        "target": 10
+      },
+      "output": false
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "remaining": 1,
+        "target": 0
+      },
+      "output": false
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "remaining": 1,
+        "target": -5
+      },
+      "output": false
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "remaining": 5,
+        "target": 100
+      },
+      "output": true
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "remaining": 5.0,
+        "target": 1000
+      },
+      "output": true
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "remaining": 5,
+        "target": 40
+      },
+      "output": true
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "remaining": 5.5,
+        "target": 40
+      },
+      "output": false
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "remaining": 5.5,
+        "target": 100
+      },
+      "output": true
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "remaining": 6,
+        "target": 100
+      },
+      "output": true
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "remaining": 10,
+        "target": 100
+      },
+      "output": true
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "remaining": 10.5,
+        "target": 100
+      },
+      "output": false
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "remaining": 11,
+        "target": 100
+      },
+      "output": false
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "remaining": 0.5,
+        "target": 3
+      },
+      "output": true
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "remaining": 30,
+        "target": 300
+      },
+      "output": true
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "remaining": 31,
+        "target": 300
+      },
+      "output": false
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "remaining": 29.99,
+        "target": 300
+      },
+      "output": true
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "remaining": 6,
+        "target": 60
+      },
+      "output": true
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "remaining": 6,
+        "target": 59
+      },
+      "output": false
+    },
+    {
+      "class": "boundary",
+      "input": {
+        "remaining": 6,
+        "target": 61
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "remaining": 14,
+        "target": 50
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 3,
+        "target": 10
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "remaining": 925,
+        "target": 1000
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": -1,
+        "target": 50
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 102,
+        "target": 250
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": -1,
+        "target": 10
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 18,
+        "target": 50
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 241,
+        "target": 250
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 458,
+        "target": 1000
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 51,
+        "target": 250
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 18,
+        "target": 50
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 40,
+        "target": 100
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 21,
+        "target": 250
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "remaining": 822,
+        "target": 1000
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 101,
+        "target": 250
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 1,
+        "target": 10
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "remaining": 246,
+        "target": 1000
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 1,
+        "target": 10
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "remaining": -1,
+        "target": 10
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 14,
+        "target": 50
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 37,
+        "target": 100
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 18,
+        "target": 100
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 118,
+        "target": 1000
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 2,
+        "target": 10
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "remaining": 12,
+        "target": 50
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 241,
+        "target": 1000
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": -2,
+        "target": 10
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 305,
+        "target": 1000
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 15,
+        "target": 100
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 74,
+        "target": 100
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 230,
+        "target": 250
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 38,
+        "target": 50
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 69,
+        "target": 100
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 38,
+        "target": 250
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 23,
+        "target": 50
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 9,
+        "target": 10
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 47,
+        "target": 50
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 436,
+        "target": 1000
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 26,
+        "target": 100
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "remaining": 7,
+        "target": 10
+      },
+      "output": false
+    }
+  ],
+  "function": "gamification.ladder.near_miss_ok",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_084.py",
+  "registry_sha256": "d94121fc9e1af11dff03656086884c0469daf7c5443f325a08a51ce9430f21bc",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

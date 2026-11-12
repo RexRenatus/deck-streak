@@ -1,0 +1,150 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S41000-THE-VIDEO-TABLE-READS-MP4",
+        "engine-core",
+        "src/media.rs",
+        "    (\"mp4\", \"video/mp4\"),",
+        "    (\"mpx\", \"video/mp4\"),",
+        "face::a_sound_tags_video_is_written_into_the_face_for_a_reader_that_asks",
+        "a sound tag naming an .mp4 is shown as video for a reader that asks; with the row's extension changed, sign.mp4 stays a sound and the question's text loses sign's element (SPEC-410 R1, R3, A1)"
+      ],
+      [
+        "S41001-THE-VIDEO-TABLE-TYPES-MP4-AS-VIDEO-MP4",
+        "engine-core",
+        "src/media.rs",
+        "    (\"mp4\", \"video/mp4\"),",
+        "    (\"mp4\", \"video/webm\"),",
+        "face::a_sound_tags_video_is_written_into_the_face_for_a_reader_that_asks",
+        "an .mp4's element names the type video/mp4; typed video/webm, sign's element names a type its bytes are not (SPEC-410 R1, R3, A1)"
+      ],
+      [
+        "S41002-THE-VIDEO-TABLE-READS-M4V",
+        "engine-core",
+        "src/media.rs",
+        "    (\"m4v\", \"video/mp4\"),",
+        "    (\"m4x\", \"video/mp4\"),",
+        "face::a_sound_tags_video_is_written_into_the_face_for_a_reader_that_asks",
+        "a sound tag naming an .m4v is shown as video for a reader that asks; with the row's extension changed, wave.m4v is refused as a sound and the question's text loses wave's element (SPEC-410 R1, R3, A1)"
+      ],
+      [
+        "S41003-THE-VIDEO-TABLE-TYPES-M4V-AS-VIDEO-MP4",
+        "engine-core",
+        "src/media.rs",
+        "    (\"m4v\", \"video/mp4\"),",
+        "    (\"m4v\", \"video/webm\"),",
+        "face::a_sound_tags_video_is_written_into_the_face_for_a_reader_that_asks",
+        "an .m4v's element names the type video/mp4; typed video/webm, wave's element names a type its bytes are not (SPEC-410 R1, R3, A1)"
+      ],
+      [
+        "S41004-THE-VIDEO-TABLE-READS-MOV",
+        "engine-core",
+        "src/media.rs",
+        "    (\"mov\", \"video/quicktime\"),",
+        "    (\"mox\", \"video/quicktime\"),",
+        "face::the_answer_shows_the_question_videos_then_its_own_unless_the_preset_skips",
+        "a sound tag naming a .mov, in any case, is shown as video for a reader that asks; with the row's extension changed, turn.MOV is refused and the answer's text loses turn's element (SPEC-410 R1, R3, A2)"
+      ],
+      [
+        "S41005-THE-VIDEO-TABLE-TYPES-MOV-AS-QUICKTIME",
+        "engine-core",
+        "src/media.rs",
+        "    (\"mov\", \"video/quicktime\"),",
+        "    (\"mov\", \"video/mp4\"),",
+        "face::the_answer_shows_the_question_videos_then_its_own_unless_the_preset_skips",
+        "a .mov's element names the type video/quicktime; typed video/mp4, turn's element names a type its bytes are not (SPEC-410 R1, R3, A2)"
+      ],
+      [
+        "S41006-A-READER-SHOWS-NO-VIDEO-BY-DEFAULT",
+        "engine-core",
+        "src/media.rs",
+        "    fn shows_video(&self) -> bool {\n        false",
+        "    fn shows_video(&self) -> bool {\n        true",
+        "face::a_reader_that_does_not_ask_keeps_a_video_tag_as_a_sound",
+        "a reader that does not ask shows no video by default; answering true, the web's reader turns sign.mp4 from a sound into an element (SPEC-410 R2, R7, A4)"
+      ],
+      [
+        "S41007-THE-MEDIA-FOLDER-SHOWS-VIDEO",
+        "ffi",
+        "src/face.rs",
+        "    fn shows_video(&self) -> bool {\n        true",
+        "    fn shows_video(&self) -> bool {\n        false",
+        "face::a_sound_tags_video_plays_inline_in_the_native_document",
+        "the native media folder asks for video; answering false, the native document holds no video element and sign.mp4 replays as a sound (SPEC-410 R2, R5, A5)"
+      ],
+      [
+        "S41008-A-VIDEO-IS-ADMITTED-UNDER-THE-VIDEO-KIND",
+        "engine-core",
+        "src/media.rs",
+        "        self.take(written, &VIDEO_TYPES, \"video/\")",
+        "        self.take(written, &VIDEO_TYPES, \"audio/\")",
+        "face::a_sound_tags_video_is_written_into_the_face_for_a_reader_that_asks",
+        "a video is admitted under the kind video/; under audio/, no row of the video table matches, so sign.mp4 and wave.m4v are refused and named in omitted (SPEC-410 R4, A1)"
+      ],
+      [
+        "S41009-THE-ELEMENT-CARRIES-CONTROLS",
+        "engine-core",
+        "src/media.rs",
+        "    \"<video controls \",",
+        "    \"<video \",",
+        "face::a_sound_tags_video_is_written_into_the_face_for_a_reader_that_asks",
+        "the element carries native controls, the only way to start it; without them a video that never autoplays cannot be started (SPEC-410 R3, A1)"
+      ],
+      [
+        "S41010-THE-ELEMENT-FITS-THE-CARD-WIDTH",
+        "engine-core",
+        "src/media.rs",
+        "    \"style=\\\"display:block;max-width:100%;height:auto;margin:0 auto\\\" \",",
+        "    \"style=\\\"display:block;max-width:none;height:auto;margin:0 auto\\\" \",",
+        "face::a_sound_tags_video_is_written_into_the_face_for_a_reader_that_asks",
+        "the element is held to the card's width; at max-width:none a wide video overflows the face (SPEC-410 R3, A1)"
+      ],
+      [
+        "S41011-THE-VIDEOS-JOIN-THE-FACE-TEXT",
+        "engine-core",
+        "src/face.rs",
+        "    let text = text + &videos.concat();",
+        "    let text = text + &videos.concat()[..0];",
+        "face::a_sound_tags_video_is_written_into_the_face_for_a_reader_that_asks",
+        "the side's elements are appended to its rewritten text; dropped, an admitted video yields no clip and no element, so it vanishes from the face (SPEC-410 R3, A1)"
+      ],
+      [
+        "S41012-ONLY-A-READER-THAT-ASKS-ROUTES-A-VIDEO",
+        "engine-core",
+        "src/media.rs",
+        "        self.reader.shows_video() && media_type(written, &VIDEO_TYPES).is_some()",
+        "        (self.reader.shows_video() || true) && media_type(written, &VIDEO_TYPES).is_some()",
+        "face::a_reader_that_does_not_ask_keeps_a_video_tag_as_a_sound",
+        "the routing guard's first operand: only a reader that asks routes a video name; taken as yes, the web's reader turns sign.mp4 from a sound into an element (SPEC-410 R3, R7, A4)"
+      ],
+      [
+        "S41013-ONLY-A-VIDEO-NAME-IS-ROUTED",
+        "engine-core",
+        "src/media.rs",
+        "        self.reader.shows_video() && media_type(written, &VIDEO_TYPES).is_some()",
+        "        self.reader.shows_video() && (media_type(written, &VIDEO_TYPES).is_some() || true)",
+        "face::a_sound_tags_video_is_written_into_the_face_for_a_reader_that_asks",
+        "the routing guard's second operand: only a name in the video table is routed; taken as yes, beep.mp3 is routed, refused under the video kind and named in omitted, and the replay loses it (SPEC-410 R3, R6, A1)"
+      ],
+      [
+        "S41014-THE-ANSWER-SKIPS-THE-QUESTION-VIDEOS-WITH-THE-PRESET",
+        "engine-core",
+        "src/face.rs",
+        "            if !preset.skip_question_when_replaying_answer {\n                replay = clips(&question_tags, &mut budget, &mut question_videos);\n            }",
+        "            let question = clips(&question_tags, &mut budget, &mut question_videos);\n            if !preset.skip_question_when_replaying_answer {\n                replay = question;\n            }",
+        "face::the_answer_shows_the_question_videos_then_its_own_unless_the_preset_skips",
+        "the answer side collects the question's videos only when the preset replays the question; collected outside that guard, a deck that skips the question shows sign's and wave's elements before turn's (SPEC-410 R3, A2)"
+      ],
+      [
+        "S41015-THE-QUESTION-VIDEOS-COME-FIRST-ON-THE-ANSWER",
+        "engine-core",
+        "src/face.rs",
+        "            videos = [question_videos, answer_videos].concat();",
+        "            videos = [answer_videos, question_videos].concat();",
+        "face::the_answer_shows_the_question_videos_then_its_own_unless_the_preset_skips",
+        "on the answer side the question's videos come first, in replay order; swapped, turn's element precedes sign's and wave's (SPEC-410 R3, A2)"
+      ]
+    ]
+  }
+}

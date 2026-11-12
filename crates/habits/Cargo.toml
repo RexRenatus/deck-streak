@@ -13,3 +13,18 @@ workspace = true
 
 [dependencies]
 deck-streak-kernel.workspace = true
+# SPEC-078 R21: the data-rights port's rows are JSON values (ADR-029), and the minutes log's
+# queries run on the caller's connection, checked into .sqlx/.
+serde_json.workspace = true
+sqlx.workspace = true
+# SPEC-078 R2: an entry's refusal names the rule it broke.
+thiserror.workspace = true
+
+[dev-dependencies]
+# ADR-029: the parity oracle's golden reader, compiled into the goldens tests by path.
+serde.workspace = true
+# The goldens' numbers are compared exactly, so the reader parses them exactly (SPEC-071 section 7).
+serde_json = { workspace = true, features = ["float_roundtrip"] }
+# The store's tests: a file-backed database per test.
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread", "sync"] }

@@ -1,0 +1,33 @@
+{
+  "_": [
+    "DeckStreak's hand-proved mutation rows (SPEC-039 R8, ADR-057 D5), in the mutation-rows pack's shape.",
+    "This file is the header alone; its tables stay empty. Each SPEC's rows live in its own band",
+    "fragment, scripts/mutation-rows.d/S<NNN>00-S<NNN>99.json: SPEC-NNN owns S<NNN>00 to S<NNN>99.",
+    "A row is an id S<n>-<NAME>, its target, a find that occurs exactly once in the target, one",
+    "replacement, a killer that names exactly one test, and the behaviour the mutant removes.",
+    "A cargo killer is <target>::<test path>: an integration-test target of the killer's crate",
+    "(crates/<crate>/tests/<target>.rs), or lib for its unit tests, then the test's path in it.",
+    "A script killer is <module>.<Class>.<method>, a unittest id in scripts/tests or tools/parity-oracle.",
+    "Prove a row with python3 scripts/mutation_rows.py prove --row <id>, on a committed tree.",
+    "A row leaves only with its target, or with the maintainer's approval in scripts/mutation-rows.retired.json.",
+    "target spelling: MUTATIONS is crate-relative, crates/{cell 1}/{cell 2}",
+    "target spelling: SCRIPT_MUTATIONS is repo-rooted, {cell 1}",
+    "target spelling: CARGO_KILLED_SCRIPT_MUTATIONS is repo-rooted, {cell 1}"
+  ],
+  "arities": {
+    "MUTATIONS": [
+      7
+    ],
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      7
+    ],
+    "SCRIPT_MUTATIONS": [
+      6
+    ]
+  },
+  "tables": {
+    "MUTATIONS": [],
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [],
+    "SCRIPT_MUTATIONS": []
+  }
+}

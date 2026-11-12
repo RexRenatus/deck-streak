@@ -1,0 +1,31 @@
+name: planted
+
+# A planted workflow (SPEC-034 A10): steps inside a `parallel` block, which GitHub's workflow schema
+# reads as steps, a block inside it holding one more: a checkout of another repository, a checkout
+# from another server two blocks deep, and a clone after the inner block. The names are synthetic.
+# scripts/tests/test_ci_workflows.py judges it; nothing runs it.
+on:
+  pull_request:
+    branches: [dev]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - parallel:
+          - name: a checkout of another repository in a parallel block
+            uses: actions/checkout@0123456789abcdef0123456789abcdef01234567
+            with:
+              repository: example-org/other-repository
+              persist-credentials: false
+          - parallel:
+              - name: a checkout from another server, two blocks deep
+                uses: actions/checkout@0123456789abcdef0123456789abcdef01234567
+                with:
+                  github-server-url: https://example-host.example
+                  persist-credentials: false
+          - name: a clone after the inner block
+            run: git clone https://github.com/example-org/other-repository.git

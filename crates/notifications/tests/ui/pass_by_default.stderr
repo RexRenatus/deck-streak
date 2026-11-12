@@ -1,0 +1,5 @@
+error[E0599]: no associated function or constant named `default` found for struct `Pass` in the current scope
+ --> tests/ui/pass_by_default.rs:8:30
+  |
+8 |         .push_message(&Pass::default(), "a line the router never decided")
+  |                              ^^^^^^^ associated function or constant not found in `Pass`

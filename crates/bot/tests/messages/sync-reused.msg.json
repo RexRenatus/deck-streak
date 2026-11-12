@@ -1,0 +1,12 @@
+{
+  "duty": "bot-commands",
+  "schema": "phx.duty.message.v1",
+  "send": {
+    "link_preview_options": {
+      "is_disabled": true
+    },
+    "parse_mode": "HTML",
+    "text": "A sync had just succeeded, so no new one ran.\nYour scores were recomputed from the copy here."
+  },
+  "x-message": "sync-reused"
+}

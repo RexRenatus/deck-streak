@@ -1,0 +1,4 @@
+# Two listed files, each listed at 2000000 bytes: one at its recorded size and one a byte under
+# it. Neither is a site (SPEC-673 R5).
+100644 blob 2000000	assets/listed.bin
+100644 blob 1999999	assets/shrunk.bin

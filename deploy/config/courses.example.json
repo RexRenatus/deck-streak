@@ -1,0 +1,40 @@
+{
+  "schema": "deckstreak.courses.v1",
+  "courses": [
+    {
+      "code": "qaa",
+      "name": "Example course A",
+      "flag": "🏳️",
+      "deck_root": "Example Course A",
+      "alias": "a",
+      "writing": true,
+      "unit_bands": {
+        "A1": [1, 10],
+        "A2": [11, 20],
+        "B1": [21, 30],
+        "B2": [31, 40],
+        "C1": [41, 50],
+        "C2": [51, 60]
+      }
+    },
+    {
+      "code": "qab",
+      "name": "Example course B",
+      "flag": "🏳️",
+      "deck_root": "Example Course B",
+      "alias": "b",
+      "writing": false,
+      "unit_bands": {
+        "A1": [1, 8],
+        "A2": [9, 16]
+      }
+    }
+  ],
+  "focus_subjects": [
+    {
+      "code": "qac",
+      "name": "Example subject C",
+      "alias": "c"
+    }
+  ]
+}

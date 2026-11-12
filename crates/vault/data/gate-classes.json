@@ -1,0 +1,110 @@
+{
+  "schema": "phx.skills.checks.v1",
+  "checks": [
+    {
+      "id": "note-properties",
+      "severity": "block",
+      "probe": {
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "id": "note-links",
+      "severity": "block",
+      "probe": {
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "id": "note-names",
+      "severity": "block",
+      "probe": {
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "id": "write-confinement",
+      "severity": "block",
+      "probe": {
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "id": "no-executable",
+      "severity": "block",
+      "probe": {
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "id": "never-deletes",
+      "severity": "block",
+      "probe": {
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "id": "daily-note",
+      "severity": "block",
+      "probe": {
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "id": "synthesis-cites",
+      "severity": "block",
+      "probe": {
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "id": "journal-never-leaks",
+      "severity": "block",
+      "probe": {
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "id": "nothing-leaves",
+      "severity": "block",
+      "probe": {
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "id": "no-dates",
+      "severity": "block",
+      "probe": {
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "id": "claim-sentences",
+      "severity": "advisory",
+      "probe": {
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "id": "synthesis-own-words",
+      "severity": "advisory",
+      "probe": {
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "id": "orphan-notes",
+      "severity": "advisory",
+      "probe": {
+        "timeout_seconds": 120
+      }
+    },
+    {
+      "id": "inbox-zero",
+      "severity": "advisory",
+      "probe": {
+        "timeout_seconds": 120
+      }
+    }
+  ]
+}

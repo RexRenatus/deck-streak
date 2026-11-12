@@ -1,0 +1,48 @@
+# Red-first record: SPEC-633
+
+The SPEC, ADR-656, the schematic and the changelog fragment were committed alone. Then came the
+tests of A1 and A2 with a module runner that keeps every input (the suites, `PYTHON_STAGE_JOBS`, the
+serial tail, the output order and the verdict line) but runs every module one after another, so the
+A1 test ran and failed at its barrier.
+
+```red-first
+A2: not red: the serial runner already keeps the verdict line, the output order and the tail lines, and the criterion pins them
+A1: red at 6ac0863d: scripts/tests/test_python_stage.py:82: AssertionError: Lists differ: ['AssertionError: barrier timeout: module b did not arrive within 10 s'] != [] (job 128147372614)
+A1: green at f4500f50
+A3: red at 866fe1b5: scripts/tests/test_check_gate.py:236: AssertionError: 'Ran 2 tests' not found in "python3: can't open file (box run)
+A3: green at 0f78e662
+A4: red at 300d6919: scripts/tests/test_python_stage.py:183: AssertionError: Lists differ: ['sibling.cpython-312.pyc', 'test_imports.cpython-312.pyc'] != [] (box run)
+A4: green at b9aeac5f
+A5: red at 3c68e5b7: scripts/tests/test_python_stage.py:257: AssertionError: examined 0 module lines: the population is empty, so nothing was judged (box run)
+A5: green at 11d87d72
+```
+
+A1 was committed with a module runner that keeps every input and runs each module one after
+another (6ac0863d); it read red by name in the python stage of the pull request run. The pool replaced
+the serial runner in f4500f50, with every test unchanged, and the A1 test read green on that tree. A3,
+SPEC-054 A13's test, read red on a local run once the stage called the runner in 866fe1b5, because the
+tree it plants had no runner. 0f78e662, the one commit that changes a test file between a red and its
+green, plants the runner and keeps the text of every assertion, and A3 read green. A2 pins rules
+the serial runner already keeps, so it has no red line. The commit after 0f78e662 changes only this
+record.
+
+A4 was committed alone with its test, against the runner whose module processes inherit the stage's
+environment as it is, so a planted module that imports a planted sibling leaves bytecode under its
+suite and the A4 test fails on the bytecode it finds.
+
+300d6919 is the one commit that changes a test file between A4's red and its green: it adds the
+A4 test, which read red on a local run because the planted suite held bytecode. b9aeac5f changes
+only the runner, which starts each module process with bytecode writes off, and the A4 test read
+green. The same cure ends the test_deploy_templates red of job 128188919143. 99f3b257 moves
+`test_memory_scope.py` from `SERIAL_MODULES` into the pool and, beside it, drops the same entry
+from `TAIL` in `scripts/tests/test_python_stage.py`, the tail that the A2 test plants, and
+derives the verdict of A2's fifth planted case from `len(TAIL) + 1` in place of its literal
+count; `test_python_stage.py` read Ran 3, OK on a local run at that commit. No test, planted
+case or assertion goes. 1f0168de cures the test_coverage_report red of job 128188919143: the
+stage keeps the suite list that the python lane test reads. The A4 test method's source, read
+by `ast`, is byte-equal at b9aeac5f and at the tip.
+
+A5 was committed with its test alone, against the runner that prints no module line, so the A5
+test read red on a local run: the stage printed no `module:` line. The commit after it changes
+only the runner, which prints each module's line after that module's output, and this record,
+and the A5 test read green on that tree. The commit after that changes only this record.

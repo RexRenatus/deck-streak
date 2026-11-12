@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT study_day, kind, created_at FROM buffs ORDER BY study_day, kind",
+  "describe": {
+    "columns": [
+      {
+        "name": "study_day",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "buffs",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "kind",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "buffs",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "name": "created_at",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "buffs",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "d9d28ec4fd6ac6430f3136222f557b346797d9725a4b71e70d7db53608a5e9e3"
+}

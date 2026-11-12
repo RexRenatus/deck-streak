@@ -1,0 +1,15 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S02701-SPREAD-JUDGE-RECORDS-THE-OFFSET",
+        "coordination",
+        "tests/job_table.rs",
+        "    handed.push((hour, minutes, now.epoch_millis()));",
+        "    handed.push((hour, 0, now.epoch_millis()));",
+        "job_table::the_job_table_holds_sync_to_one_daily_slot_claimed_per_study_day",
+        "each judge of the sync's spread records the UTC offset of the rule it is handed, inside its own call, so a spread that folds its offsets is refused by the distinct member count (SPEC-027 section 8, A17)"
+      ]
+    ]
+  }
+}

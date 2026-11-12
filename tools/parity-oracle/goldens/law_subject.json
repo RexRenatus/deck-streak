@@ -1,0 +1,394 @@
+{
+  "adapter": "under_the_synthetic_taxonomy",
+  "cases": [
+    {
+      "input": {
+        "deck_name": "Casebook"
+      },
+      "output": "Casebook"
+    },
+    {
+      "input": {
+        "deck_name": "Casebook\u001fMethod"
+      },
+      "output": "Method"
+    },
+    {
+      "input": {
+        "deck_name": "Casebook\u001fEvidence"
+      },
+      "output": "Evidence"
+    },
+    {
+      "input": {
+        "deck_name": "Casebook\u001fEvidence\u001fUnit 01"
+      },
+      "output": "Evidence"
+    },
+    {
+      "input": {
+        "deck_name": "Casebook\u001fYear One"
+      },
+      "output": "Year One"
+    },
+    {
+      "input": {
+        "deck_name": "Casebook\u001fYear One\u001fPublic Law"
+      },
+      "output": "Public Law"
+    },
+    {
+      "input": {
+        "deck_name": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law"
+      },
+      "output": "Constitutional Law"
+    },
+    {
+      "input": {
+        "deck_name": "Casebook\u001fYear One\u001fPublic Law\u001fConstitutional Law\u001fUnit 02"
+      },
+      "output": "Constitutional Law"
+    },
+    {
+      "input": {
+        "deck_name": "Casebook\u001fYear Two\u001fPrivate Law\u001fTorts"
+      },
+      "output": "Torts"
+    },
+    {
+      "input": {
+        "deck_name": "Casebook\u001fYear Two\u001fPrivate Law\u001fProcedure & Proof"
+      },
+      "output": "Procedure & Proof"
+    },
+    {
+      "input": {
+        "deck_name": "Casebook\u001fYear Three\u001fSkills\u001fCivil_Procedure -- Practice"
+      },
+      "output": "Civil_Procedure -- Practice"
+    },
+    {
+      "input": {
+        "deck_name": "Casebook\u001f  Contracts  "
+      },
+      "output": "  Contracts  "
+    },
+    {
+      "input": {
+        "deck_name": "Tongue Alpha"
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "deck_name": "Tongue Alpha\u001fUnit 01"
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "deck_name": "Tongue Beta"
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "deck_name": "Tongue Beta\u001fUnit 03"
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "deck_name": "Composition"
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "deck_name": "Composition\u001fAlpha"
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "deck_name": "Composition\u001fBeta\u001fEssays"
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "deck_name": "Composition\u001fGamma"
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "deck_name": "Cram"
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "deck_name": "Misc"
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "deck_name": "Casebooks"
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "deck_name": "casebook"
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "deck_name": "Other\u001fCasebook"
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "deck_name": "\u001fCasebook"
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "deck_name": "Casebook\u001f"
+      },
+      "output": ""
+    },
+    {
+      "input": {
+        "deck_name": "Casebook\u001f\u001fEvidence"
+      },
+      "output": ""
+    },
+    {
+      "input": {
+        "deck_name": "Casebook\u001fyear one\u001fPublic Law\u001fTorts"
+      },
+      "output": "year one"
+    },
+    {
+      "input": {
+        "deck_name": "Casebook\u001fYear One \u001fPublic Law\u001fTorts"
+      },
+      "output": "Year One "
+    },
+    {
+      "input": {
+        "deck_name": "Casebook\u001fYear Two\u001fPrivate Law"
+      },
+      "output": "Private Law"
+    },
+    {
+      "input": {
+        "deck_name": "Casebook\u001fYear Three\u001fSkills\u001fAdvocacy\u001fUnit 04\u001fPart 2"
+      },
+      "output": "Advocacy"
+    },
+    {
+      "input": {
+        "deck_name": "Casebook\u001fProc\u00e9dure"
+      },
+      "output": "Proc\u00e9dure"
+    },
+    {
+      "input": {
+        "deck_name": "Casebook\u001f\u5951\u7d04\u001fUnit 01"
+      },
+      "output": "\u5951\u7d04"
+    },
+    {
+      "input": {
+        "deck_name": "Casebook\u001fCasebook"
+      },
+      "output": "Casebook"
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_name": "Evidence\u001fYear One"
+      },
+      "output": null
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_name": "Year Two\u001fCasebook\u001fUnit 01"
+      },
+      "output": null
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_name": "Year One\u001fYear One\u001fYear Two\u001fTorts"
+      },
+      "output": null
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_name": "Misc\u001fUnit 01\u001fMethod\u001fMethod"
+      },
+      "output": null
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_name": "Torts\u001fTorts\u001fUnit 01"
+      },
+      "output": null
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_name": ""
+      },
+      "output": null
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_name": "Unit 01\u001fYear One\u001fMethod\u001fMethod"
+      },
+      "output": null
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_name": "Method"
+      },
+      "output": null
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_name": "Year One"
+      },
+      "output": null
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_name": "Evidence\u001fEvidence"
+      },
+      "output": null
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_name": "Evidence\u001fYear Two\u001fYear One"
+      },
+      "output": null
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_name": "Evidence"
+      },
+      "output": null
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_name": "Method\u001fMethod"
+      },
+      "output": null
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_name": "Casebook"
+      },
+      "output": "Casebook"
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_name": "Evidence\u001fEvidence\u001fYear Two\u001fTorts\u001fMisc"
+      },
+      "output": null
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_name": "Evidence\u001f"
+      },
+      "output": null
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_name": "Year Two\u001fYear Two\u001fUnit 01\u001fYear One"
+      },
+      "output": null
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_name": "Unit 01\u001fTorts"
+      },
+      "output": null
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_name": "Year One\u001fCasebook"
+      },
+      "output": null
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_name": "Method\u001fUnit 01\u001fYear Two\u001fYear Two\u001fYear One"
+      },
+      "output": null
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_name": "Evidence"
+      },
+      "output": null
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_name": "Torts"
+      },
+      "output": null
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_name": "Misc\u001f\u001fCasebook\u001fYear Two"
+      },
+      "output": null
+    },
+    {
+      "class": "drawn",
+      "input": {
+        "deck_name": "Misc"
+      },
+      "output": null
+    }
+  ],
+  "function": "leeches._law_subject",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Replaces every private deck constant the predecessor reads with the synthetic taxonomy of the readings' example taxonomy file, and calls it on the case's deck name; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_045.py",
+  "registry_sha256": "9485c5ea023fbd822a60c6e10d64bbe937aeb57330a74f85e3ae7951caaefafa",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

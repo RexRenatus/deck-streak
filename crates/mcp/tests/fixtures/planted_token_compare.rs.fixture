@@ -1,0 +1,25 @@
+// A planted guard that compares tokens and digests by hand (SPEC-119 A16). It is never compiled:
+// A16's census must refuse exactly its three comparisons, on lines 14, 19 and 24, and nothing
+// that only a comment or a string says.
+//
+// A comment saying `presented_token == granted_token` is prose, and so is a string.
+
+use subtle::ConstantTimeEq;
+
+const NOTE: &str = "compare the presented token != the granted token by hand";
+
+/// Compares the tokens: a timing leak.
+fn planted_tokens(presented_token: &str, granted_token: &str) -> bool {
+    // The comparison a timing attack reads, one byte at a time:
+    presented_token == granted_token
+}
+
+/// Compares the digests' bytes: the same leak, in another spelling.
+fn planted_digests(presented_digest: &[u8], granted: &[u8]) -> bool {
+    presented_digest.eq(granted)
+}
+
+/// Compares a prefix: a leak that also admits every prefix of a granted token.
+fn planted_prefix(token: &str, granted: &str) -> bool {
+    granted.starts_with(token)
+}

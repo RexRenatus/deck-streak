@@ -1,0 +1,94 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S62901-THE-CENSUS-JUDGES-JAPANESE-SPACING",
+        "scripts/locale_census.py",
+        "SPACED_LOCALES = (\"ja\", \"zh-Hans\", \"zh-Hant\")",
+        "SPACED_LOCALES = (\"zh-Hans\", \"zh-Hant\")",
+        "the census judges the spacing of Japanese values; without it a typed space in Japanese is not refused (SPEC-629 R1)",
+        "test_locale_census.TheWebCensus.test_a_space_typed_between_a_cjk_letter_and_a_latin_letter_digit_or_percent_is_refused"
+      ],
+      [
+        "S62902-THE-CENSUS-JUDGES-SIMPLIFIED-CHINESE-SPACING",
+        "scripts/locale_census.py",
+        "SPACED_LOCALES = (\"ja\", \"zh-Hans\", \"zh-Hant\")",
+        "SPACED_LOCALES = (\"ja\", \"zh-Hant\")",
+        "the census judges the spacing of Simplified Chinese values; without it a typed space in Simplified Chinese is not refused (SPEC-629 R1)",
+        "test_locale_census.TheWebCensus.test_a_space_typed_between_a_cjk_letter_and_a_latin_letter_digit_or_percent_is_refused"
+      ],
+      [
+        "S62903-THE-CENSUS-JUDGES-TRADITIONAL-CHINESE-SPACING",
+        "scripts/locale_census.py",
+        "SPACED_LOCALES = (\"ja\", \"zh-Hans\", \"zh-Hant\")",
+        "SPACED_LOCALES = (\"ja\", \"zh-Hans\")",
+        "the census judges the spacing of Traditional Chinese values; without it a typed space in Traditional Chinese is not refused (SPEC-629 R1)",
+        "test_locale_census.TheWebCensus.test_a_space_typed_between_a_cjk_letter_and_a_placeholder_is_refused"
+      ],
+      [
+        "S62904-THE-LATIN-SIDE-HOLDS-DIGITS",
+        "scripts/locale_census.py",
+        "LATIN = re.compile(r\"[A-Za-z0-9%]\")",
+        "LATIN = re.compile(r\"[A-Za-z%]\")",
+        "a digit is on the Latin side; without it a space typed between a CJK letter and a digit is not refused (SPEC-629 R3)",
+        "test_locale_census.TheWebCensus.test_a_space_typed_between_a_cjk_letter_and_a_latin_letter_digit_or_percent_is_refused"
+      ],
+      [
+        "S62905-THE-LATIN-SIDE-HOLDS-THE-PERCENT-SIGN",
+        "scripts/locale_census.py",
+        "LATIN = re.compile(r\"[A-Za-z0-9%]\")",
+        "LATIN = re.compile(r\"[A-Za-z0-9]\")",
+        "a percent sign is on the Latin side; without it a space typed between a percent sign and a CJK letter is not refused (SPEC-629 R3)",
+        "test_locale_census.TheWebCensus.test_a_space_typed_between_a_cjk_letter_and_a_latin_letter_digit_or_percent_is_refused"
+      ],
+      [
+        "S62906-AN-OPENING-BRACE-FOLLOWS-A-CJK-LETTER",
+        "scripts/locale_census.py",
+        "after == \"{\"",
+        "after == \"[\"",
+        "an opening placeholder brace after a CJK letter is on the Latin side; without it a space typed before a placeholder is not refused (SPEC-629 R3)",
+        "test_locale_census.TheWebCensus.test_a_space_typed_between_a_cjk_letter_and_a_placeholder_is_refused"
+      ],
+      [
+        "S62907-A-CLOSING-BRACE-PRECEDES-A-CJK-LETTER",
+        "scripts/locale_census.py",
+        "before == \"}\"",
+        "before == \"]\"",
+        "a closing placeholder brace before a CJK letter is on the Latin side; without it a space typed after a placeholder is not refused (SPEC-629 R3)",
+        "test_locale_census.TheWebCensus.test_a_space_typed_between_a_cjk_letter_and_a_placeholder_is_refused"
+      ],
+      [
+        "S62908-HIRAGANA-IS-A-CJK-LETTER",
+        "scripts/locale_census.py",
+        "(0x3041, 0x3096),",
+        "(0x3096, 0x3041),",
+        "hiragana letters are CJK letters; with the range emptied a space typed after hiragana is not refused (SPEC-629 R2)",
+        "test_locale_census.TheWebCensus.test_a_space_typed_between_a_cjk_letter_and_a_latin_letter_digit_or_percent_is_refused"
+      ],
+      [
+        "S62909-KATAKANA-IS-A-CJK-LETTER",
+        "scripts/locale_census.py",
+        "(0x30A1, 0x30FA),",
+        "(0x30FA, 0x30A1),",
+        "katakana letters are CJK letters; with the range emptied a space typed after katakana is not refused (SPEC-629 R2)",
+        "test_locale_census.TheWebCensus.test_a_space_typed_between_a_cjk_letter_and_a_latin_letter_digit_or_percent_is_refused"
+      ],
+      [
+        "S62910-UNIFIED-HAN-IS-A-CJK-LETTER",
+        "scripts/locale_census.py",
+        "(0x4E00, 0x9FFF),",
+        "(0x9FFF, 0x4E00),",
+        "the unified Han ideographs are CJK letters; with the range emptied a space typed beside a Han character is not refused (SPEC-629 R2)",
+        "test_locale_census.TheWebCensus.test_a_space_typed_between_a_cjk_letter_and_a_latin_letter_digit_or_percent_is_refused"
+      ],
+      [
+        "S62911-THE-FINDING-IS-NAMED-SPACED",
+        "scripts/locale_census.py",
+        "f\"spaced {locale} {key} {runs}\"",
+        "f\"spacing {locale} {key} {runs}\"",
+        "the finding is named spaced with its locale, key and count; another word is not the refusal the tests read (SPEC-629 R5)",
+        "test_locale_census.TheWebCensus.test_a_space_typed_between_a_cjk_letter_and_a_latin_letter_digit_or_percent_is_refused"
+      ]
+    ]
+  }
+}

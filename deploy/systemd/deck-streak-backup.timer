@@ -1,0 +1,16 @@
+# The daily backup's timer (SPEC-064 R4, R6; ADR-064): once a day at 03:24, a minute of the hour that
+# no job of the table, no reserved slot and no minute of the predecessor's schedule holds. A run missed
+# while the host was down is made up at the next start, and a short random delay keeps it out of step
+# with the other timers. The calendar is written in UTC; the private rail renders it in the owner's
+# zone. With no Unit=, the timer starts the service of its own name.
+[Unit]
+Description=DeckStreak's daily backup, once a day
+
+[Timer]
+OnCalendar=*-*-* 03:24:00 UTC
+Persistent=true
+RandomizedDelaySec=30s
+AccuracySec=1us
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT min(started_at) AS \"first: i64\" FROM sync_runs",
+  "describe": {
+    "columns": [
+      {
+        "name": "first: i64",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "33cc6c442fc014335f55c36bcbaeda417434339cbd009a6fd42256401a85b751"
+}

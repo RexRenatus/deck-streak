@@ -1,0 +1,27 @@
+{
+  "clean": "clean.md",
+  "rows": {
+    "dynamic_embed_extensions:.base": "embed-base.md",
+    "executable_schemes:data": "scheme-data.md",
+    "executable_schemes:javascript": "scheme-javascript.md",
+    "executable_schemes:obsidian": "scheme-obsidian.md",
+    "executable_schemes:vbscript": "scheme-vbscript.md",
+    "fence_allow": "fence-python.md",
+    "fence_known:base": "fence-base.md",
+    "fence_known:button": "fence-button.md",
+    "fence_known:dataview": "fence-dataview.md",
+    "fence_known:dataviewjs": "fence-dataviewjs.md",
+    "fence_known:js-engine": "fence-js-engine.md",
+    "fence_known:meta-bind-js-view": "fence-meta-bind-js-view.md",
+    "fence_known:query": "fence-query.md",
+    "fence_known:tasks": "fence-tasks.md",
+    "fence_prefixes:run-": "fence-run-python.md",
+    "html_allow": "html-iframe.md",
+    "html_attributes_allow": "html-onclick.md",
+    "inline_query_prefixes:$=": "inline-query-script.md",
+    "inline_query_prefixes:=": "inline-query.md",
+    "math_macros_refused:href": "math-href.md",
+    "math_macros_refused:url": "math-url.md",
+    "templater_open": "templater.md"
+  }
+}

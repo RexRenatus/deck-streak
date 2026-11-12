@@ -1,0 +1,33 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S32500-A-MULTI-THREAD-WIRING-TEST-BOUNDS-ITS-RUNTIME",
+        "daemon",
+        "src/wiring.rs",
+        "\"multi_thread\", worker_threads = 2)]\n    async fn every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name",
+        "\"multi_thread\")]\n    async fn every_failing_step_refuses_the_owners_sync_by_its_own_code_and_name",
+        "lib::wiring::tests::every_multi_thread_wiring_test_bounds_its_runtime_to_two_workers",
+        "the heaviest multi-thread wiring test runs on two workers; without its worker_threads its runtime takes one worker per host core again, and the census refuses its attribute by its line; an attribute is no cargo-mutants mutation, so a hand row"
+      ],
+      [
+        "S32501-THE-BOUNDED-ATTRIBUTE-RUNS-TWO-WORKERS",
+        "daemon",
+        "src/wiring.rs",
+        "\"multi_thread\", worker_threads = 2)]\n    async fn a_multi_thread_wiring_test_runs_on_two_workers_whatever_the_host",
+        "\"multi_thread\", worker_threads = 3)]\n    async fn a_multi_thread_wiring_test_runs_on_two_workers_whatever_the_host",
+        "lib::wiring::tests::a_multi_thread_wiring_test_runs_on_two_workers_whatever_the_host",
+        "A1 reads the worker count from its own runtime; a runtime of any other size than the attribute's two (three here, whatever the host) fails it, so the test observes the runtime and not the attribute's text"
+      ],
+      [
+        "S32502-THE-RUNTIME-CENSUS-CAN-REFUSE",
+        "daemon",
+        "src/wiring.rs",
+        ".filter(|line| *line != BOUNDED_MULTI_THREAD)",
+        ".filter(|line| *line != BOUNDED_MULTI_THREAD && false)",
+        "lib::wiring::tests::every_multi_thread_wiring_test_bounds_its_runtime_to_two_workers",
+        "the census keeps every multi-thread attribute that is not the bounded spelling; a census that keeps none passes the module and the count, and fails only its planted unbounded control, which is why the control sits beside it"
+      ]
+    ]
+  }
+}

@@ -3,3 +3,24 @@ allow-unwrap-in-tests = true
 allow-expect-in-tests = true
 allow-dbg-in-tests = true
 allow-print-in-tests = true
+
+# Request capability is named by the compiler's resolved path (SPEC-041 A18): reqwest's client is
+# made only at the annotated sites the request allow-list names
+# (`crates/notifications/tests/request_allow_list.rs`: the bot transport's, and the static
+# library's read of the sync statement, SPEC-374 R9), whatever name a source binds it to.
+disallowed-types = [
+    { path = "reqwest::Client", reason = "a request to the Bot API is made only by the bot transport's annotated site" },
+]
+disallowed-methods = [
+    { path = "reqwest::get", reason = "a request to the Bot API is made only by the bot transport's annotated site" },
+    { path = "reqwest::Client::new", reason = "a request to the Bot API is made only by the bot transport's annotated site" },
+    { path = "reqwest::Client::builder", reason = "a request to the Bot API is made only by the bot transport's annotated site" },
+]
+
+# Code the build selects is compiled in one build and not the other, so a test run in the dev
+# profile may not prove the shipped release build (SPEC-330, ADR-330, #473). A use that must stay
+# is allowed by name at its site with #[expect(clippy::disallowed_macros, reason = "...")].
+disallowed-macros = [
+    { path = "std::cfg", reason = "cfg! selects code by the build configuration, so the dev-profile tests may not prove the release build the daemon ships from; the test-release stage runs the release profile, and a use that must stay is allowed by name with its reason" },
+    { path = "std::option_env", reason = "option_env! reads the build environment at compile time, so one build holds a value another does not; a use that must stay is allowed by name with its reason" },
+]

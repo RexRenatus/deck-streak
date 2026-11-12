@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE notification_queue SET state = 'abandoned' WHERE id = ? AND state = 'sending' AND claim = ? RETURNING dedupe_key",
+  "describe": {
+    "columns": [
+      {
+        "name": "dedupe_key",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "notification_queue",
+            "name": "dedupe_key"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "da4ee8877a9f9b5985e5b46737ea757b51481341668c1ca18d2a47c81de4ea49"
+}

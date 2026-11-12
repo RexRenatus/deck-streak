@@ -1,0 +1,100 @@
+name: planted
+
+# A planted workflow (SPEC-034 A10): an environment whose variables the checker cannot read, which
+# may configure git: an `env` of the workflow, a job, a job's container and a step, and a job's
+# container, each one `${{ }}` expression, which GitHub evaluates when the job or the step runs;
+# and a job's container whose `options`, `image`, `ports` or `volumes` is one `${{ }}` expression,
+# or holds one, each alone and all at once. The names are synthetic.
+# scripts/tests/test_ci_workflows.py judges it; nothing runs it.
+on:
+  pull_request:
+    branches: [dev]
+
+permissions:
+  contents: read
+
+env: ${{ fromJSON(vars.PLANTED_ENV) }}
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    env: ${{ fromJSON(vars.PLANTED_ENV) }}
+    container: ${{ fromJSON(vars.PLANTED_CONTAINER) }}
+    steps:
+      - run: echo ready
+        env: ${{ fromJSON(vars.PLANTED_ENV) }}
+  contained:
+    runs-on: ubuntu-24.04
+    container:
+      image: ubuntu:24.04
+      env: ${{ fromJSON(vars.PLANTED_ENV) }}
+    steps:
+      - run: echo ready
+  given-options:
+    runs-on: ubuntu-24.04
+    container:
+      image: ubuntu:24.04
+      options: ${{ vars.PLANTED_OPTIONS }}
+    steps:
+      - run: echo ready
+  holding-options:
+    runs-on: ubuntu-24.04
+    container:
+      image: ubuntu:24.04
+      options: --cpus 1 ${{ vars.PLANTED_OPTIONS }}
+    steps:
+      - run: echo ready
+  given-image:
+    runs-on: ubuntu-24.04
+    container:
+      image: ${{ vars.PLANTED_IMAGE }}
+    steps:
+      - run: echo ready
+  holding-image:
+    runs-on: ubuntu-24.04
+    container:
+      image: ubuntu:${{ vars.PLANTED_TAG }}
+    steps:
+      - run: echo ready
+  given-ports:
+    runs-on: ubuntu-24.04
+    container:
+      image: ubuntu:24.04
+      ports: ${{ fromJSON(vars.PLANTED_PORTS) }}
+    steps:
+      - run: echo ready
+  holding-ports:
+    runs-on: ubuntu-24.04
+    container:
+      image: ubuntu:24.04
+      ports:
+        - 8080:80
+        - ${{ vars.PLANTED_PORT }}
+    steps:
+      - run: echo ready
+  given-volumes:
+    runs-on: ubuntu-24.04
+    container:
+      image: ubuntu:24.04
+      volumes: ${{ fromJSON(vars.PLANTED_VOLUMES) }}
+    steps:
+      - run: echo ready
+  holding-volumes:
+    runs-on: ubuntu-24.04
+    container:
+      image: ubuntu:24.04
+      volumes:
+        - planted-cache:/cache
+        - ${{ vars.PLANTED_VOLUME }}
+    steps:
+      - run: echo ready
+  given-every-property:
+    runs-on: ubuntu-24.04
+    container:
+      image: ${{ vars.PLANTED_IMAGE }}
+      options: ${{ vars.PLANTED_OPTIONS }}
+      env: ${{ fromJSON(vars.PLANTED_ENV) }}
+      ports: ${{ fromJSON(vars.PLANTED_PORTS) }}
+      volumes: ${{ fromJSON(vars.PLANTED_VOLUMES) }}
+    steps:
+      - run: echo ready

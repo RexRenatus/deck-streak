@@ -1,0 +1,21 @@
+{
+  "schema": "phx.law.corpus.v1",
+  "subject": "law/evidence",
+  "sources": [
+    {
+      "id": "fre-401",
+      "title": "Federal Rules of Evidence, Rule 401, Test for Relevant Evidence",
+      "text": "Evidence is relevant if: (a) it has any tendency to make a fact more or less probable than it would be without the evidence; and (b) the fact is of consequence in determining the action."
+    },
+    {
+      "id": "fre-402",
+      "title": "Federal Rules of Evidence, Rule 402, General Admissibility of Relevant Evidence",
+      "text": "Relevant evidence is admissible unless any of the following provides otherwise: the United States Constitution; a federal statute; these rules; or other rules prescribed by the Supreme Court. Irrelevant evidence is not admissible."
+    },
+    {
+      "id": "fre-403",
+      "title": "Federal Rules of Evidence, Rule 403, Excluding Relevant Evidence for Prejudice, Confusion, Waste of Time, or Other Reasons",
+      "text": "The court may exclude relevant evidence if its probative value is substantially outweighed by a danger of one or more of the following: unfair prejudice, confusing the issues, misleading the jury, undue delay, wasting time, or needlessly presenting cumulative evidence."
+    }
+  ]
+}

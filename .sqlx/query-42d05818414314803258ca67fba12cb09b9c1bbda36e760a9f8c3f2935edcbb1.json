@@ -1,0 +1,74 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT course, reviews, seconds, answered, passed FROM daily_lang_stats WHERE study_day = ?1 ORDER BY course",
+  "describe": {
+    "columns": [
+      {
+        "name": "course",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "daily_lang_stats",
+            "name": "course"
+          }
+        }
+      },
+      {
+        "name": "reviews",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_lang_stats",
+            "name": "reviews"
+          }
+        }
+      },
+      {
+        "name": "seconds",
+        "ordinal": 2,
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "daily_lang_stats",
+            "name": "seconds"
+          }
+        }
+      },
+      {
+        "name": "answered",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_lang_stats",
+            "name": "answered"
+          }
+        }
+      },
+      {
+        "name": "passed",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_lang_stats",
+            "name": "passed"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "42d05818414314803258ca67fba12cb09b9c1bbda36e760a9f8c3f2935edcbb1"
+}

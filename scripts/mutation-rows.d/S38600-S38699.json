@@ -1,0 +1,195 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S38600-RESET-FACTOR",
+        "fsrs7",
+        "src/convert.rs",
+        "row.kind == RESET_KIND && row.factor == 0",
+        "row.kind == RESET_KIND && row.factor != 0",
+        "convert::a_reset_cuts_every_earlier_review_of_its_card",
+        "the engine's Forget is a manual entry with the factor 0, which its set-due-date entry never carries; testing for a non-zero factor would cut a history at a set-due-date entry and keep every review before a Forget (SPEC-386 R2, A2)"
+      ],
+      [
+        "S38601-RESET-KIND",
+        "fsrs7",
+        "src/convert.rs",
+        "pub const RESET_KIND: u8 = 4;",
+        "pub const RESET_KIND: u8 = 5;",
+        "convert::a_reset_cuts_every_earlier_review_of_its_card",
+        "the Forget row is the engine's manual entry, kind 4; kind 5 is a reschedule, so the cut would follow reschedules and never a Forget (SPEC-386 R2, A2)"
+      ],
+      [
+        "S38602-LAST-RESET",
+        "fsrs7",
+        "src/convert.rs",
+        "rows.iter().rposition(reset)",
+        "rows.iter().position(reset)",
+        "convert::a_reset_cuts_every_earlier_review_of_its_card",
+        "a history is cut at its card's last reset; cut at the first, a card reset twice would keep the reviews between its two resets (SPEC-386 R2, A2)"
+      ],
+      [
+        "S38603-LAST-ID",
+        "fsrs7",
+        "src/convert.rs",
+        "let last_id = selected.last()?.id;",
+        "let last_id = selected.first()?.id;",
+        "convert::the_history_names_its_last_kept_review",
+        "a history names its last kept review, the review a due counts from; its first would date every schedule from the card's first kept review (SPEC-386 R3, A3)"
+      ],
+      [
+        "S38604-STOCK-RETENTION",
+        "fsrs7",
+        "src/stock.rs",
+        "pub const STOCK_RETENTION: f32 = 0.9;",
+        "pub const STOCK_RETENTION: f32 = 0.8;",
+        "stock::the_stock_stability_is_the_ninety_percent_interval",
+        "a stock client reads a stability as the interval at which the forgetting curve reads 0.9; another point would write a stability every stock client misreads (SPEC-386 R6, A7)"
+      ],
+      [
+        "S38605-D-CLAMP-LOW",
+        "fsrs7",
+        "src/stock.rs",
+        "pub const DIFFICULTY_MIN: f32 = 1.0;",
+        "pub const DIFFICULTY_MIN: f32 = 2.0;",
+        "stock::the_difficulty_is_clamped_and_the_interval_meets_the_retention",
+        "a stock difficulty is at least 1; a floor of 2 would raise every easier card's difficulty (SPEC-386 R6, A8)"
+      ],
+      [
+        "S38606-D-CLAMP-HIGH",
+        "fsrs7",
+        "src/stock.rs",
+        "pub const DIFFICULTY_MAX: f32 = 10.0;",
+        "pub const DIFFICULTY_MAX: f32 = 9.0;",
+        "stock::the_difficulty_is_clamped_and_the_interval_meets_the_retention",
+        "a stock difficulty is at most 10; a ceiling of 9 would lower every hardest card's difficulty (SPEC-386 R6, A8)"
+      ],
+      [
+        "S38607-HOME-DECK",
+        "engine-core",
+        "src/dispatch.rs",
+        "(CASE WHEN c.odid != 0 THEN c.odid ELSE c.did END)",
+        "(c.did)",
+        "replay::a_deck_sets_replay_reads_only_its_home_decks_cards",
+        "a card in a filtered deck belongs to its home deck's set; reading its current deck would leave it out of its home deck's replay (SPEC-386 R8, A11)"
+      ],
+      [
+        "S38608-DECK-SET",
+        "engine-core",
+        "src/dispatch.rs",
+        "IN (SELECT value FROM json_each(?1))",
+        "NOT IN (SELECT value FROM json_each(?1))",
+        "replay::a_deck_sets_replay_reads_only_its_home_decks_cards",
+        "the read takes the cards whose home deck is in the set; negated, it would replay every other deck's cards and none of the set's (SPEC-386 R8, A11)"
+      ],
+      [
+        "S38609-IVL-FLOOR",
+        "engine-core",
+        "src/replay.rs",
+        "let ivl = rounded.min(max_ivl).max(1);",
+        "let ivl = rounded.min(max_ivl);",
+        "replay::a_review_cards_due_is_its_last_review_day_plus_its_interval",
+        "a review card's interval is at least one day; without the floor a first Again's interval rounds to 0 and the card is due on its last review's own day (SPEC-386 R9, A14)"
+      ],
+      [
+        "S38610-DUE-SUM",
+        "engine-core",
+        "src/replay.rs",
+        "day_of(day, last_review) + i64::from(ivl)",
+        "day_of(day, last_review)",
+        "replay::a_review_cards_due_is_its_last_review_day_plus_its_interval",
+        "a review card is due its last review's engine day plus its interval; without the interval every card would be due on the day it was last reviewed (SPEC-386 R9, A14)"
+      ],
+      [
+        "S38611-REVIEW-TYPE",
+        "engine-core",
+        "src/replay.rs",
+        "types.get(&history.cid) == Some(&REVIEW_TYPE)",
+        "types.get(&history.cid).is_some()",
+        "replay::a_learning_card_keeps_its_due_and_interval",
+        "only a review card is given a schedule; a learning card given one would lose its own due and interval at the switch (SPEC-386 R9, A15)"
+      ],
+      [
+        "S38612-EMPTY-ENTRY",
+        "fsrs7",
+        "src/convert.rs",
+        "let last_id = selected.last()?.id;",
+        "let last_id = selected.last().map_or(0, |row| row.id);",
+        "convert::manual_rescheduled_and_unrated_entries_are_dropped",
+        "a card with no kept review is no item, so the replay gives it no entry; an empty item with a last id of 0 would give it one (SPEC-342 R4, SPEC-386 R8, A13)"
+      ],
+      [
+        "S38613-ONE-SEAM",
+        "engine-core",
+        "tests/graph.rs",
+        ".filter(|file| file.as_str() != SEAM_FILE)",
+        ".filter(|file| file.as_str() != SEAM_FILE).filter(|_| false)",
+        "graph::only_the_replay_module_names_the_fsrs7_crate",
+        "the seam census refuses every core source but the replay module that names the crate; a census that refuses none would admit the planted second file (SPEC-386 R7, A9)"
+      ],
+      [
+        "S38614-IVL-CEILING",
+        "engine-core",
+        "src/replay.rs",
+        "let ivl = rounded.min(max_ivl).max(1);",
+        "let ivl = rounded.max(1);",
+        "replay::a_review_cards_due_is_its_last_review_day_plus_its_interval",
+        "a review card's interval is held to the preset's maximum; without the ceiling a long interval would pass it (SPEC-386 R9, A14)"
+      ],
+      [
+        "S38615-PARAMS-LENGTH",
+        "engine-core",
+        "src/replay.rs",
+        "const PARAMETER_COUNT: usize = 34;",
+        "const PARAMETER_COUNT: usize = 35;",
+        "replay::a_parameter_vector_of_another_length_is_refused_whole",
+        "a fitted parameter vector is 34 values; at another count a 34-value vector would be refused and a vector of an older model's length replayed (SPEC-386 R8)"
+      ],
+      [
+        "S38616-RESET-SINCE",
+        "fsrs7",
+        "src/convert.rs",
+        "rposition(reset).unwrap_or(0)",
+        "rposition(reset).unwrap_or(1)",
+        "convert::a_cards_reviews_become_fractional_day_intervals_from_zero",
+        "a card with no reset keeps its history from its first row; starting at its second would drop its first review (SPEC-342 R4, SPEC-386 R2)"
+      ],
+      [
+        "S38617-REVIEW-TYPE-VALUE",
+        "engine-core",
+        "src/replay.rs",
+        "const REVIEW_TYPE: i64 = 2;",
+        "const REVIEW_TYPE: i64 = 3;",
+        "replay::a_review_cards_due_is_its_last_review_day_plus_its_interval",
+        "a review card is the engine's card type 2; at 3, the relearning type, no review card would be given a schedule (SPEC-386 R9, A14)"
+      ],
+      [
+        "S38618-MS-PER-SECOND",
+        "engine-core",
+        "src/replay.rs",
+        "const MS_PER_SECOND: i64 = 1_000;",
+        "const MS_PER_SECOND: i64 = 1;",
+        "replay::a_review_cards_due_is_its_last_review_day_plus_its_interval",
+        "a review-log id is an instant in milliseconds and the engine's rollover one in seconds; read as seconds, a review's engine day would fall far past today's (SPEC-386 R9, A14)"
+      ],
+      [
+        "S38619-SECONDS-PER-DAY",
+        "engine-core",
+        "src/replay.rs",
+        "const SECONDS_PER_DAY: i64 = 86_400;",
+        "const SECONDS_PER_DAY: i64 = 1;",
+        "replay::a_review_cards_due_is_its_last_review_day_plus_its_interval",
+        "one engine day is 86400 seconds; at another length a review's engine day, and so its due, would move (SPEC-386 R9, A14)"
+      ],
+      [
+        "S38620-STOCK-SCHEDULE",
+        "engine-core",
+        "src/replay.rs",
+        "if let Some(schedule) = self.schedule {",
+        "if let Some(schedule) = self.schedule.filter(|_| false) {",
+        "replay::the_stock_fields_survive_a_sync_round_trip_alone",
+        "the mapping writes a review card's interval and due beside its memory state; without them the switch would leave the card on its old schedule (SPEC-386 R11, A17)"
+      ]
+    ]
+  }
+}

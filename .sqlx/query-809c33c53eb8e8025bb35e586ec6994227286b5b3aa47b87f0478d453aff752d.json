@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO daily_rollup (study_day, reviews, learn_count, review_count, relearn_count, filtered_count, seconds, answered, passed, true_retention, graduations, decks_studied, avg_answer_seconds, young_answered, young_passed, mature_answered, mature_passed, score, consistency, retention, workload, volume, mastery, fingerprint, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?25) ON CONFLICT (study_day) DO UPDATE SET reviews = excluded.reviews, learn_count = excluded.learn_count, review_count = excluded.review_count, relearn_count = excluded.relearn_count, filtered_count = excluded.filtered_count, seconds = excluded.seconds, answered = excluded.answered, passed = excluded.passed, true_retention = excluded.true_retention, graduations = excluded.graduations, decks_studied = excluded.decks_studied, avg_answer_seconds = excluded.avg_answer_seconds, young_answered = excluded.young_answered, young_passed = excluded.young_passed, mature_answered = excluded.mature_answered, mature_passed = excluded.mature_passed, fingerprint = excluded.fingerprint, updated_at = excluded.updated_at WHERE daily_rollup.fingerprint IS NOT excluded.fingerprint OR daily_rollup.reviews IS NOT excluded.reviews OR daily_rollup.learn_count IS NOT excluded.learn_count OR daily_rollup.review_count IS NOT excluded.review_count OR daily_rollup.relearn_count IS NOT excluded.relearn_count OR daily_rollup.filtered_count IS NOT excluded.filtered_count OR daily_rollup.seconds IS NOT excluded.seconds OR daily_rollup.answered IS NOT excluded.answered OR daily_rollup.passed IS NOT excluded.passed OR daily_rollup.true_retention IS NOT excluded.true_retention OR daily_rollup.graduations IS NOT excluded.graduations OR daily_rollup.decks_studied IS NOT excluded.decks_studied OR daily_rollup.avg_answer_seconds IS NOT excluded.avg_answer_seconds OR daily_rollup.young_answered IS NOT excluded.young_answered OR daily_rollup.young_passed IS NOT excluded.young_passed OR daily_rollup.mature_answered IS NOT excluded.mature_answered OR daily_rollup.mature_passed IS NOT excluded.mature_passed",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 25
+    },
+    "nullable": []
+  },
+  "hash": "809c33c53eb8e8025bb35e586ec6994227286b5b3aa47b87f0478d453aff752d"
+}

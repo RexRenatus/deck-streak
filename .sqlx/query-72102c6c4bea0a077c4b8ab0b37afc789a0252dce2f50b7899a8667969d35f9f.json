@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT (SELECT COALESCE(SUM(amount), 0) FROM xp_ledger\n                           WHERE track = ?1 AND study_day = ?2)\n                    + (SELECT COALESCE(SUM(amount), 0) FROM xp_settlement\n                           WHERE track = ?1 AND study_day = ?2)\n                    AS \"total!: u64\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "total!: u64",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "72102c6c4bea0a077c4b8ab0b37afc789a0252dce2f50b7899a8667969d35f9f"
+}

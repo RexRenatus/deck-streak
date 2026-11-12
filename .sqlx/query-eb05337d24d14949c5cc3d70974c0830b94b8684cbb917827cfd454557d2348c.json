@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT stopped, set_by, reason, set_at FROM write_class_stop WHERE id = 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "stopped",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "write_class_stop",
+            "name": "stopped"
+          }
+        }
+      },
+      {
+        "name": "set_by",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "write_class_stop",
+            "name": "set_by"
+          }
+        }
+      },
+      {
+        "name": "reason",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "write_class_stop",
+            "name": "reason"
+          }
+        }
+      },
+      {
+        "name": "set_at",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "write_class_stop",
+            "name": "set_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "eb05337d24d14949c5cc3d70974c0830b94b8684cbb917827cfd454557d2348c"
+}

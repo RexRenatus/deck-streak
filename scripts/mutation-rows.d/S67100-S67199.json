@@ -1,0 +1,94 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S67101-A-FLAG-AFTER-THE-SEPARATOR-IS-NO-LOCK-FLAG",
+        "scripts/tests/test_ci_lock_flags.py",
+        "        before = words[: words.index(\"--\")] if \"--\" in words else words",
+        "        before = words",
+        "the cargo arm reads the lock flag only before ` -- `; without it a flag passed to the test binary reads as the lock flag (SPEC-671 R4)",
+        "test_ci_lock_flags.TheCensusReadsEachPlantedForm.test_each_cargo_form_is_a_site_or_clean_as_its_lock_flag_says"
+      ],
+      [
+        "S67102-THE-TOOL-WORD-IS-READ-AFTER-ANY-WRAPPER",
+        "scripts/tests/test_ci_lock_flags.py",
+        "        if name in TOOLS:",
+        "        if name in TOOLS and index == 0:",
+        "the tool word is found at any position of a simple command; without it a command run after a wrapper is not read (SPEC-671 R3)",
+        "test_ci_lock_flags.TheCensusReadsEachPlantedForm.test_each_cargo_form_is_a_site_or_clean_as_its_lock_flag_says"
+      ],
+      [
+        "S67103-A-CONTINUED-COMMAND-IS-READ-WHOLE",
+        "scripts/tests/test_ci_lock_flags.py",
+        "        if current[1].endswith(\"\\\\\"):",
+        "        if False:",
+        "a backslash continuation is joined before a command is read; without it a flag on a continuation line is not read (SPEC-671 R2)",
+        "test_ci_lock_flags.TheCensusReadsEachPlantedForm.test_each_cargo_form_is_a_site_or_clean_as_its_lock_flag_says"
+      ],
+      [
+        "S67104-A-BARE-PNPM-INSTALL-IS-A-SITE",
+        "scripts/tests/test_ci_lock_flags.py",
+        "            locked = \"--frozen-lockfile\" in rest and \"--no-frozen-lockfile\" not in rest",
+        "            locked = True",
+        "a pnpm install needs `--frozen-lockfile` in its text; without it a bare install is clean (SPEC-671 R4)",
+        "test_ci_lock_flags.TheCensusReadsEachPlantedForm.test_each_node_and_apple_and_pip_form_is_a_site_or_clean_as_its_lock_flag_says"
+      ],
+      [
+        "S67105-CARGO-METADATA-READS-NO-LOCK-FLAG",
+        "scripts/tests/test_ci_lock_flags.py",
+        "CARGO_NO_LOCK = (\"fmt\", \"metadata\", \"tree\", \"version\", \"help\")",
+        "CARGO_NO_LOCK = (\"fmt\", \"tree\", \"version\", \"help\")",
+        "`cargo metadata` is a form that is not a site; without it the unlocked lock check reads as a site (SPEC-671 R5)",
+        "test_ci_lock_flags.TheCensusReadsEachPlantedForm.test_each_cargo_form_is_a_site_or_clean_as_its_lock_flag_says"
+      ],
+      [
+        "S67106-A-PYTHON-HERE-DOCUMENT-IS-NOT-SHELL",
+        "scripts/tests/test_ci_lock_flags.py",
+        "            other = bool(head) and OTHER_LANGUAGE.match(head[0]) is not None",
+        "            other = False",
+        "a here-document fed to Python or Node is not read; without it a Python body that names a tool reads as undecided (SPEC-671 R6)",
+        "test_ci_lock_flags.TheCensusReadsEachPlantedForm.test_each_node_and_apple_and_pip_form_is_a_site_or_clean_as_its_lock_flag_says"
+      ],
+      [
+        "S67107-A-STALE-ENTRY-FAILS",
+        "scripts/tests/test_ci_lock_flags.py",
+        "        if key not in sites:",
+        "        if False:",
+        "a listed entry no current site matches is STALE; without it a stale entry passes (SPEC-671 R7)",
+        "test_ci_lock_flags.TheVerdictKeepsItsLevel.test_a_stale_entry_fails_at_both_levels"
+      ],
+      [
+        "S67108-AN-UNLISTED-SITE-FAILS-ONLY-AT-FAIL",
+        "scripts/tests/test_ci_lock_flags.py",
+        "            if level == \"fail\":",
+        "            if level == \"warn\":",
+        "an unlisted site fails only at the fail level; without it the warn level fails on it (SPEC-671 R7)",
+        "test_ci_lock_flags.TheVerdictKeepsItsLevel.test_an_unlisted_site_warns_at_warn_and_fails_at_fail"
+      ],
+      [
+        "S67109-AN-EMPTY-POPULATION-IS-VOID",
+        "scripts/tests/test_ci_lock_flags.py",
+        "    workflows = examined(",
+        "    workflows = (lambda what, items: list(items))(",
+        "the workflow set is examined and an empty one refused; without it an empty population passes (SPEC-671 R1)",
+        "test_ci_lock_flags.TheVerdictKeepsItsLevel.test_an_empty_population_is_void"
+      ],
+      [
+        "S67110-A-SWIFT-BUILD-WITHOUT-ITS-RESOLVED-FILE-FLAG-IS-A-SITE",
+        "scripts/tests/test_ci_lock_flags.py",
+        "        if sub not in SWIFT_RESOLVES:",
+        "        if True:",
+        "a swift build, test or run is judged by its resolved-file flag; without it neither form is read (SPEC-671 R4)",
+        "test_ci_lock_flags.TheCensusReadsEachPlantedForm.test_each_node_and_apple_and_pip_form_is_a_site_or_clean_as_its_lock_flag_says"
+      ],
+      [
+        "S67111-CARGO-MUTANTS-TAKES-ITS-LOCK-FLAG-BY-CARGO-ARG",
+        "scripts/tests/test_ci_lock_flags.py",
+        "                word in (\"--cargo-arg=--locked\", \"--cargo-arg=--frozen\")",
+        "                word in (\"--cargo-arg=--unlocked\", \"--cargo-arg=--frozen\")",
+        "cargo-mutants passes its lock flag by `--cargo-arg`; without it a locked listing reads as a site (SPEC-671 R4)",
+        "test_ci_lock_flags.TheCensusReadsEachPlantedForm.test_each_cargo_form_is_a_site_or_clean_as_its_lock_flag_says"
+      ]
+    ]
+  }
+}

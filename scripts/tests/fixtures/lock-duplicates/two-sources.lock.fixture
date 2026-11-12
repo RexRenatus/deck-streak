@@ -1,0 +1,21 @@
+# Planted for test_lock_duplicates.py, read as text and never run: delta at one version from two
+# sources, a site; the git dependency string drops the source's #fragment, as cargo writes it.
+version = 4
+
+[[package]]
+name = "delta"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "delta"
+version = "1.0.0"
+source = "git+https://example.org/planted/delta.git?branch=main#planted"
+
+[[package]]
+name = "planted-root"
+version = "0.1.0"
+dependencies = [
+ "delta 1.0.0 (git+https://example.org/planted/delta.git?branch=main)",
+ "delta 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]

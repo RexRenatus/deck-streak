@@ -1,0 +1,177 @@
+//! The `bot` role: the Telegram bot, long-polling for the owner's updates (SPEC-026 R1, R13;
+//! ADR-010, ADR-025, ADR-026, ADR-038).
+//!
+//! It starts in the order `docs/schematics/bot-update-loop.md` draws. The settings are read, and a
+//! missing or malformed one refuses start by name: the kernel's, the state directory, the Mini
+//! App's URL and the Bot API's base URL. Identity's two credentials, the owner's user id and the bot
+//! token, are read through the kernel's loader with the redactor the log writer reads, so neither
+//! value can reach a later line. The shutdown signal's handlers are installed, and the database
+//! opens under the open lock. Then the loop starts: no webhook, the owner's menu, the drain, and
+//! systemd hears `READY=1` as the first long poll is issued, the heartbeat following at once. On
+//! SIGTERM the loop finishes the batch in hand and confirms its offset; the role says `STOPPING=1`,
+//! closes the database and returns.
+//!
+//! The owner's `/sync` runs no cycle in this role: it requests the sync job (SPEC-059). The
+//! compiled notification policy is read at start, and a policy it refuses refuses start by its key;
+//! the router built over it is joined to this role's transport (SPEC-041 R13).
+//!
+//! The owner's media is saved into the vault inbox the api role's quick capture uses, when the vault
+//! is configured (SPEC-118 R6); with none, the owner is told the capture was not saved.
+
+use std::cell::Cell;
+use std::sync::Arc;
+
+use deck_streak_bot::{ApiUrl, Commands, MiniAppUrl, Transport, TransportError};
+use deck_streak_identity::owner::TELEGRAM_BOT_TOKEN;
+use deck_streak_identity::{IdentityError, Owner};
+use deck_streak_kernel::{
+    Clock, ConventionsError, Courses, CredentialLoader, CredentialsDirectory, Environment,
+    KernelSettings, Offload, Redactor, SettingsError, SystemClock,
+};
+use deck_streak_notifications::{Policy, PolicyError};
+
+use crate::drill_vault;
+use crate::lifecycle::{self, Notifier, NotifyState, ShutdownSignal};
+use crate::sync_request::{self, FileDoorbell, SqliteRequestLedger, SyncRequester, TokioPause};
+use crate::wiring::{self, StateDirectory, WiringError};
+
+/// Why the `bot` role stopped with an error.
+#[derive(Debug, thiserror::Error)]
+pub enum BotRoleError {
+    /// A setting refused start.
+    #[error(transparent)]
+    Settings(#[from] SettingsError),
+    /// One of identity's credentials refused start, by its id.
+    #[error(transparent)]
+    Identity(#[from] IdentityError),
+    /// The Bot API's client could not be built.
+    #[error(transparent)]
+    Transport(#[from] TransportError),
+    /// The shutdown signal's handlers could not be installed.
+    #[error("the role could not install its shutdown signal handlers")]
+    Signals(#[source] std::io::Error),
+    /// The database could not be opened.
+    #[error("the database could not be opened")]
+    Database(#[source] WiringError),
+    /// The owner's note conventions refused start (SPEC-094 R2; ADR-096).
+    #[error(transparent)]
+    Conventions(#[from] ConventionsError),
+    /// The compiled notification policy refused start, by its key.
+    #[error(transparent)]
+    Policy(#[from] PolicyError),
+}
+
+/// Runs the `bot` role until SIGTERM (or SIGINT), and returns once the batch in hand is handled
+/// and its offset confirmed. `redactor` is the one the process's log writer reads: every
+/// credential the role loads is registered with it.
+///
+/// # Errors
+///
+/// Every refusal of [`BotRoleError`], each before the first request to the Bot API.
+pub async fn run(env: &Environment, redactor: &Redactor) -> Result<(), BotRoleError> {
+    // Every role reads the kernel's settings, so a malformed one refuses start in each of them.
+    let kernel = KernelSettings::from_env(env)?;
+    let state = StateDirectory::from_env(env)?;
+    let app = MiniAppUrl::from_env(env)?;
+    let api = ApiUrl::from_env(env)?;
+    let request = sync_request::request_path(env)?;
+    let credentials = CredentialsDirectory::from_env(env)?;
+    let loader = CredentialLoader::new(credentials, redactor.clone());
+    let owner = Owner::load(&loader)?;
+    let token = loader
+        .load(TELEGRAM_BOT_TOKEN)
+        .map_err(IdentityError::from)?;
+    if token.expose().trim().is_empty() {
+        return Err(IdentityError::Malformed {
+            id: TELEGRAM_BOT_TOKEN,
+            expected: "the bot's token, not blank",
+        }
+        .into());
+    }
+    let policy = Policy::compiled()?;
+    let transport = Arc::new(Transport::new(&api, &token)?);
+    let notifier = Notifier::from_env(env);
+    let shutdown = ShutdownSignal::install().map_err(BotRoleError::Signals)?;
+
+    let clock: Arc<dyn Clock> = Arc::new(SystemClock);
+    let offload = Offload::new(kernel.offload_workers, Arc::clone(&clock));
+    let db = wiring::open_database(&offload, &state)
+        .await
+        .map_err(BotRoleError::Database)?;
+    // ONE router: the sync's flush and the minutes log's level-up both speak through it (SPEC-078
+    // R18), so the once-ever key is claimed in one place.
+    let router = Arc::new(wiring::router(
+        policy,
+        db.clone(),
+        kernel.study_day_rule,
+        Arc::clone(&transport),
+        owner,
+    ));
+    let sync = SyncRequester::new(
+        SystemClock,
+        SqliteRequestLedger::new(db.clone()),
+        FileDoorbell::new(request),
+        TokioPause,
+    )
+    .with_flush(Arc::clone(&router));
+    let instruments = wiring::instruments_for_role(
+        env,
+        db.clone(),
+        &state,
+        offload.clone(),
+        kernel.study_day_rule,
+    )?;
+    let mut commands = Commands::new(
+        Arc::clone(&transport),
+        owner,
+        app,
+        db.clone(),
+        sync,
+        kernel.study_day_rule,
+        clock,
+    );
+    if let Some(instruments) = instruments {
+        commands = commands.with_instruments(instruments);
+    }
+    if let Some(notes) = drill_vault::open(env) {
+        commands = commands.with_drills(notes);
+    }
+    if let Some(captures) = wiring::inbox_captures(env) {
+        commands = commands.with_capture(captures);
+    }
+    commands = commands.with_courses(courses(env));
+    commands = commands.with_habits(courses(env), router);
+
+    let heartbeat = Cell::new(None);
+    deck_streak_bot::run(&transport, &mut commands, shutdown.received(), || {
+        tracing::info!("the bot role serves");
+        notifier.notify(NotifyState::Ready);
+        heartbeat.set(lifecycle::spawn_heartbeat(notifier.clone(), env));
+    })
+    .await;
+
+    notifier.notify(NotifyState::Stopping);
+    if let Some(heartbeat) = heartbeat.take() {
+        heartbeat.abort();
+    }
+    db.close().await;
+    tracing::info!("the bot role stopped");
+    Ok(())
+}
+
+/// The owner's courses, from the settings, which the bot's two readers share: the progress command
+/// answers from them (SPEC-077 R16) and the minutes log resolves an entry against them (SPEC-078
+/// R2). A setting that refuses leaves the default courses, which are none, and the log says why. A
+/// refused setting never refuses start: the bot's other commands read no course.
+fn courses(env: &Environment) -> Courses {
+    match Courses::load(env) {
+        Ok(courses) => courses,
+        Err(error) => {
+            tracing::warn!(
+                %error,
+                "the progress command and the minutes log use no course: the setting refused"
+            );
+            Courses::default()
+        }
+    }
+}

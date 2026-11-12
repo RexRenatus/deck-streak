@@ -1,0 +1,21 @@
+{
+  "schema": "deckstreak.agent.roster.v1",
+  "personas": {
+    "law-evidence": {
+      "name": "Example Professor",
+      "bio": "An example bio, one line long, that the private roster replaces.",
+      "voice": "An example voice, one line long, that the private roster replaces.",
+      "personality": "An example personality, one line long, that the private roster replaces."
+    },
+    "language-mentor-es": {
+      "name": "Example Mentor",
+      "bio": "An example bio, one line long, that the private roster replaces.",
+      "voice": "An example voice, one line long, that the private roster replaces.",
+      "personality": "An example personality, one line long, that the private roster replaces."
+    }
+  },
+  "topics": {
+    "example/law-topic": {"template": "law-evidence"},
+    "example/language-topic": {"template": "language-mentor-es", "cefr": "A2"}
+  }
+}

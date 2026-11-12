@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT trigger, status FROM sync_runs WHERE study_day = ?1 ORDER BY status = 'error', id DESC LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "trigger",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "sync_runs",
+            "name": "trigger"
+          }
+        }
+      },
+      {
+        "name": "status",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "sync_runs",
+            "name": "status"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "e0a0f2386b68ca257017044ceb1c7320192d46e31751e060c29148627ee3db2c"
+}

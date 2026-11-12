@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT per_day_max, vault_hour FROM chest_settings WHERE id = 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "per_day_max",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chest_settings",
+            "name": "per_day_max"
+          }
+        }
+      },
+      {
+        "name": "vault_hour",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chest_settings",
+            "name": "vault_hour"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "e5a0d3a405e3630988dafc3b2c01d934c2347bc6284f760accc3a826884725bb"
+}

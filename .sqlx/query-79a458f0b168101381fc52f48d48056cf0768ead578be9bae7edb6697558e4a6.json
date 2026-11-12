@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM drill_answers",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "79a458f0b168101381fc52f48d48056cf0768ead578be9bae7edb6697558e4a6"
+}

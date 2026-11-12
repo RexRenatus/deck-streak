@@ -1,0 +1,134 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT course AS \"course!: String\", name, flag, mastery_pct, current_band,\n                  mature_cards, total_cards, current_unit, bands, updated_at\n               FROM language_progress ORDER BY course",
+  "describe": {
+    "columns": [
+      {
+        "name": "course!: String",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "language_progress",
+            "name": "course"
+          }
+        }
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "language_progress",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "name": "flag",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "language_progress",
+            "name": "flag"
+          }
+        }
+      },
+      {
+        "name": "mastery_pct",
+        "ordinal": 3,
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "language_progress",
+            "name": "mastery_pct"
+          }
+        }
+      },
+      {
+        "name": "current_band",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "language_progress",
+            "name": "current_band"
+          }
+        }
+      },
+      {
+        "name": "mature_cards",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "language_progress",
+            "name": "mature_cards"
+          }
+        }
+      },
+      {
+        "name": "total_cards",
+        "ordinal": 6,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "language_progress",
+            "name": "total_cards"
+          }
+        }
+      },
+      {
+        "name": "current_unit",
+        "ordinal": 7,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "language_progress",
+            "name": "current_unit"
+          }
+        }
+      },
+      {
+        "name": "bands",
+        "ordinal": 8,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "language_progress",
+            "name": "bands"
+          }
+        }
+      },
+      {
+        "name": "updated_at",
+        "ordinal": 9,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "language_progress",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "21e2efcf69cc0c370899664541d957b929fd93e4a98b266f9aa1c838ac0d77e6"
+}

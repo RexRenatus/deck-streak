@@ -1,0 +1,58 @@
+{
+  "records": [
+    {
+      "file": "crates/search/src/eval.rs",
+      "mutant": "replace && with || in order",
+      "anchor": "&cards[index];\n        card.original_deck_id != 0 && named(card.original_deck_id)",
+      "reason": "The cards the mutant adds to the borrowed list are cards no query with that deck term selects, so the selected cards keep their order.",
+      "evidence": "order runs only inside eval, which keeps the cards Scope::holds selects. Its deck name is the top-level deck term, which every selected card meets, and Scope::deck admits a card outside the named decks only when its original deck is nonzero and named, which is this line's original condition. The mutant moves from the others list to the borrowed list only cards that fail that condition (an original deck that is nonzero and not named, or 0 when a deck with id 0 is named), and each fails the deck term and is filtered out. The selected cards in each list are the same, and the stable sort by original deck and id keeps them in the same relative order, so eval returns the same list for every query and collection.",
+      "reached_by": "eval_terms::a_deck_search_lists_its_own_cards_by_queue_and_due_then_the_borrowed_by_original_deck",
+      "issue": "#295"
+    },
+    {
+      "file": "crates/search/src/pattern.rs",
+      "mutant": "replace + with * in wildcard",
+      "anchor": "t = star_t + 1;",
+      "reason": "star_t * 1 is star_t, a Many token, so the next pass re-reads that token, which stores the same star and steps t to star_t + 1, where the original puts t at once.",
+      "evidence": "Both bodies leave s at star_s + 1 and star at (star_t, star_s + 1). While s is inside the text, the mutant's next pass reads tokens[star_t], a Many, whose arm sets star to (star_t, s), the value it already holds, and t to star_t + 1 without moving s, so both bodies then hold the same t, s and star. When s has reached the end of the text, the loop stops and the tail check reads tokens[star_t..] in place of tokens[star_t + 1..]; tokens[star_t] is a Many, so the all-Many answer is the same. With the mutant applied by hand, every test of the package passes, and like and Glob::matches answer as a reference matcher written apart on all 693,547 pairs of a pattern of up to six of a, b, % and _ with a text of up to six of a and b, where deleting the One arm fails that comparison at (\"_\", \"a\").",
+      "reached_by": "eval_golden::eval_equals_the_engines_search_golden",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/search/src/pattern.rs",
+      "mutant": "replace + with * in wildcard",
+      "anchor": "s = star_s + 1;",
+      "reason": "star_s * 1 restarts the failed attempt once more at the same place, which fails the same way, after which every restart lands where the original's does: only the work grows.",
+      "evidence": "A star is stored as (star_t, star_s) when the Many arm leaves t at star_t + 1 and s at star_s, so the mutant's first backtrack from it sets t and s back to that same state, with star moved to star_s + 1. The attempt that failed met no Many (one would have replaced the star) and reads only t, s and the text, so the repeat fails at the same token; from then on the stored star_s runs one ahead of the original's, each restart sets s to the position the original's sets, and both stop at the end of the text with the same t. With the mutant applied by hand, every test of the package passes, and like and Glob::matches answer as a reference matcher written apart on all 693,547 pairs of a pattern of up to six of a, b, % and _ with a text of up to six of a and b.",
+      "reached_by": "eval_golden::eval_equals_the_engines_search_golden",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/search/src/parse.rs",
+      "mutant": "replace match guard at + 1 < chars.len() with true in Parser<'_>::term",
+      "anchor": "'\\\\' if at + 1 < chars.len() =>",
+      "reason": "Every backslash term() meets opens an escape pair with a character after it, so its guard is already true wherever it is read.",
+      "evidence": "term() reads only text that unquoted() or quoted() built, and each pushes a backslash only together with the character after it, refusing a backslash with nothing after it as BadEscape or UnclosedQuote; so that text is plain characters other than a backslash and two-character pairs that open with one. term() walks it with the same pairing from its first character, stepping two over a pair and one over any other character, and stops at a plain colon before it reads further, so each backslash it meets opens a pair and at + 1 < chars.len() holds there. With the mutant applied by hand, every test of the package passes, and every search of up to seven characters of a, colon, backslash, quote, both parentheses, space and star (2,696,336 parses under the operator and skip profiles) answers as it does unmutated, by one digest of every answer, which the guard replaced with false moves.",
+      "reached_by": "grammar_edges::an_escaped_colon_in_a_term_is_text_and_splits_no_key",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/search/src/parse.rs",
+      "mutant": "replace + with * in Parser<'_>::term",
+      "anchor": "'\\\\' if at + 1 < chars.len() =>",
+      "reason": "at * 1 < chars.len() is at < chars.len(), the while condition the arm sits inside, so the guard is true wherever it is read, as the original's is.",
+      "evidence": "The arm is read only inside while at < chars.len(), so the mutated guard is always true there. The original guard is always true there as well: unquoted() and quoted() push a backslash only together with the character after it, and term() walks the same pairs from the first character, so each backslash it meets opens a pair. With the mutant applied by hand, every test of the package passes, and the digest of all 2,696,336 parses of every search of up to seven characters of a, colon, backslash, quote, both parentheses, space and star equals the unmutated digest.",
+      "reached_by": "grammar_edges::an_escaped_colon_in_a_term_is_text_and_splits_no_key",
+      "issue": "#1060"
+    },
+    {
+      "file": "crates/search/src/parse.rs",
+      "mutant": "replace < with <= in Parser<'_>::term",
+      "anchor": "'\\\\' if at + 1 < chars.len() =>",
+      "reason": "at + 1 <= chars.len() is at < chars.len(), the while condition the arm sits inside, so the guard is true wherever it is read, as the original's is.",
+      "evidence": "For whole numbers at + 1 <= n holds exactly when at < n, and the arm is read only inside while at < chars.len(), so the mutated guard is always true there. The original guard is always true there as well, since each backslash term() meets opens a pair that unquoted() or quoted() pushed whole. With the mutant applied by hand, every test of the package passes, and the digest of all 2,696,336 parses of every search of up to seven characters of a, colon, backslash, quote, both parentheses, space and star equals the unmutated digest.",
+      "reached_by": "grammar_edges::an_escaped_colon_in_a_term_is_text_and_splits_no_key",
+      "issue": "#1060"
+    }
+  ]
+}

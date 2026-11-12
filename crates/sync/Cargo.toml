@@ -1,0 +1,29 @@
+[package]
+name = "deck-streak-sync"
+description = "DeckStreak's sync core: the typed operations, their one byte encoding, the hybrid clock, the id allocator, the review key, the field merge and the pending queue, with no dependency and no I/O, for the server and both clients. See docs/CONTEXT-MAP.md."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+# ADR-527 D1: the crate depends on nothing, so the server, the web client's wasm32 module and the
+# native client's static library link one encoding and one clock. Its census
+# (tests/crate_shape.rs) refuses a dependency table, a build script and a reach outside.
+
+[dev-dependencies]
+# ADR-029: the golden reader; here it reads the Lean writers' vectors under formal/vectors.
+serde_json.workspace = true
+
+# The Kani witness features (ADR-527 D7): each switches on one recorded defect, under which its
+# harness in src/kani_proofs.rs must fail. They are off by default and no other manifest names
+# them, so a defect behind one never ships.
+[features]
+kani-witness-sync-codec-len = []
+kani-witness-key-order-noseq = []
+kani-witness-hlc-plain-add = []
+kani-witness-next-id-residue = []

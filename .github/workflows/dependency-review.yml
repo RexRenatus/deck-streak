@@ -1,0 +1,37 @@
+name: dependency-review
+
+# Every pull request into dev is reviewed for the dependencies it adds or changes (SPEC-038 R17 to
+# R20, ADR-055): GitHub's dependency review fails the job on one that carries a known advisory of
+# any severity in any scope, or a licence outside the allow list of deny.toml, the one licence
+# list. It reads every ecosystem the dependency graph reads, Rust's crates too; cargo deny stays
+# the judge of the whole Rust graph. No advisory is allowed, no package is exempt, and nothing
+# warns in place of failing. The token is read-only, nothing is checked out, no secret is read,
+# and the action is pinned by its full commit SHA. The job, `dependency-review`, is the check a
+# pull request into dev must pass.
+on:
+  pull_request:
+    branches: [dev]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+# A pull request's runs share its ref's group, and a newer push to it cancels the run it supersedes
+# (SPEC-190). Any other event has a group of its own, its run id, so it is never cancelled.
+concurrency:
+  group: dependency-review-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: low
+          fail-on-scopes: runtime, development, unknown
+          allow-licenses: AGPL-3.0-or-later, Apache-2.0, Apache-2.0 WITH LLVM-exception, BSD-2-Clause, BSD-3-Clause, BSL-1.0, CC0-1.0, CDLA-Permissive-2.0, ISC, MIT, MPL-2.0, Unicode-3.0, Zlib
+          license-check: true
+          vulnerability-check: true
+          show-patched-versions: true

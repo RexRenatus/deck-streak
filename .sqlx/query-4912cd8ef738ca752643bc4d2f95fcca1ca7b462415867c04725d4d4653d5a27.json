@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT since_epic, since_legendary FROM pity WHERE id = 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "since_epic",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "pity",
+            "name": "since_epic"
+          }
+        }
+      },
+      {
+        "name": "since_legendary",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "pity",
+            "name": "since_legendary"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "4912cd8ef738ca752643bc4d2f95fcca1ca7b462415867c04725d4d4653d5a27"
+}

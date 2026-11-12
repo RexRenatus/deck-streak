@@ -1,0 +1,38 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S49201-THE-ROW-LOCATOR-FORWARDS-ITS-CRATE",
+        "scripts/mutation_rows.py",
+        "    return locate_test(root, row.crate, row.killer)",
+        "    return locate_test(root, None, row.killer)",
+        "locate_killer hands a row's crate cell to locate_test, so a cargo row is located in its crate and never read as a script killer (SPEC-492 R5)",
+        "test_mutation_rows_survivor_kills.TheLocateKiller.test_a_cargo_row_is_located_in_its_crate"
+      ],
+      [
+        "S49202-THE-ROW-RESOLVER-FORWARDS-ITS-CRATE",
+        "scripts/mutation_rows.py",
+        "    return resolve_test(root, row.crate, row.killer)",
+        "    return resolve_test(root, None, row.killer)",
+        "resolve_killer hands a row's crate cell to resolve_test, so a cargo row resolves to its one test function in its crate (SPEC-492 R5)",
+        "test_mutation_rows_survivor_kills.TheResolveKiller.test_a_cargo_row_resolves_to_its_one_test_function"
+      ],
+      [
+        "S49203-A-RUST-RECORDS-REACHED-BY-RESOLVES-IN-ITS-CRATE",
+        "scripts/mutation-verdict.py",
+        "            mutation_rows.resolve_test(root, crate, reached)",
+        "            mutation_rows.resolve_test(root, None, reached)",
+        "a Rust record's reached_by is resolved in its record's crate, as a row's killer is, never as a script killer (SPEC-492 R5)",
+        "test_mutation_verdict_survivor_kills.TheRecordProblems.test_a_rust_records_reached_by_resolves_in_its_crate"
+      ],
+      [
+        "S49204-A-PUSHS-EMPTY-SUBJECT-IS-NEVER-SEARCHED",
+        "scripts/mutation-verdict.py",
+        ".rstrip()) if subject else None",
+        ".rstrip()) if not subject else None",
+        "a push's subject is searched for a squash number only when it holds text, so a squash merge reads not applicable and an empty subject reads its diff (SPEC-492 R4)",
+        "test_mutation_verdict_survivor_kills.TheScopeOf.test_a_squash_push_is_not_applicable_and_an_empty_subject_is_a_diff"
+      ]
+    ]
+  }
+}

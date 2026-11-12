@@ -27,10 +27,9 @@ ADR before the code, never a builder's call.
    reason "inert" until the owner revives it.
 2. **Two surfaces, one policy.** The Mini App and the bot are two views of one service. Every
    celebration and nudge passes through ONE router, so an event can never celebrate twice.
-3. **One small host.** The backend runs as systemd units behind Caddy on one small VM (two vCPU,
-   under 2 GiB of RAM), beside the services already there, within a stated memory budget. The VM
-   never compiles: binaries are built elsewhere and deployed as artifacts, from a SemVer tag on
-   `main` only.
+3. **One small host.** The backend runs as systemd units behind Caddy on one small host shared
+   with other services, within a stated budget (ADR-032). The host never compiles: binaries are
+   built elsewhere and deployed as artifacts, from a SemVer tag on `main` only.
 4. **Pull, then read.** DeckStreak syncs a private copy of the collection and reads it read-only.
    The skip day is the ONLY write back to Anki.
 
@@ -81,12 +80,14 @@ ADR before the code, never a builder's call.
 
 ### The AI agent
 
-16. **Claude Code through the owner's subscription proxy, fail closed.** The agent runs on the VM
-    with its own device key, reaches the proxy over a reverse tunnel opened from the maintainer's
-    machine, and never uses an `apiKeyHelper`. Each run is capped in turns and time. When the
-    proxy, the tunnel or the gate fails, the AI step says so and changes nothing: the digest goes
-    out in its deterministic form with a line saying coaching was unavailable, and the vault is
-    untouched. A silent skip is a defect.
+16. **An optional AI route, fail closed (ADR-015, ADR-054).** The AI route is off unless the owner
+    enables one, and DeckStreak is whole without it: every AI duty then records `ai_route_absent`,
+    the surfaces say readings are not enabled, and nothing alerts. When enabled through the owner's
+    subscription proxy, the agent runs on the VM with its own device key, reaches the proxy over a
+    reverse tunnel opened from the maintainer's machine, and never uses an `apiKeyHelper`. Each run
+    is capped in turns and time. When an enabled route, the tunnel or the gate fails, the AI step
+    says so and changes nothing: the digest goes out in its deterministic form with a line saying
+    coaching was unavailable, and the vault is untouched. A silent skip is a defect.
 17. **Every AI output is gated before delivery** by the packs' blocking checks (no dates, the
     scrubber, memory scope, no human claim, the output contract; citations for law). Untrusted
     text (cards, vault notes, the learner's writing) is fenced as data, and an agent reading it
@@ -113,3 +114,135 @@ ADR before the code, never a builder's call.
     DeckStreak consumes is wired into its gate or CI.
 21. **`main` changes only by a release pull request from `dev`.** Builders open pull requests into
     `dev`; required checks are the bar; nobody force-pushes or deletes a protected branch.
+
+### The scheduler
+
+22. **Rex schedules, on the device, and fails closed.** Rex is DeckStreak's own memory model and
+    its only scheduler; FSRS stays only as the yardstick Rex is measured against. Rex reads one
+    learner's whole review history in time order, same-day reviews included. For each card it
+    keeps a small memory that changes when the card is reviewed, and for the learner a memory that
+    changes once per study day; with summaries of linked cards (same note, same deck, review
+    order) it predicts the chance of each grade at the next review. A curve head turns that state
+    into a recall curve over whole days, and a card's next interval aims at the desired retention
+    of the owner's home preset. Rex also sets the same-day learning and relearning steps. The
+    study screens offer two grades, Again and Good. Rex's live inputs are the review log, the links
+    between cards, reading and exposure events, and content embeddings.
+    - **Where it runs.** A frozen Rex version runs in a Rust core on the iPhone and iPad and in the
+      web app, and folds every event in one fixed order, so every device reaches the same state,
+      checked by a hash. That inference core, the part of Rex that runs on the device, is public:
+      it enters this repository as the 2026-10-18 ruling signed. The server only relays: it never
+      computes a learner's Rex state, and the core's x86_64 build serves tools and parity checks
+      only. A personal adapter of at most 18 values learns on the device from the learner's own
+      history, is never synced, and stays off until it shows a held-out gain.
+    - **How it is fitted and trained.** A population model is trained centrally on research data
+      only: the licensed research collections of review logs (anki-revlogs-10k and
+      FSRS-Anki-20k), whose rows never leave the training machines and are never committed or
+      redistributed, and, for content-aware terms, the public KAR3L study log, whose terms enter
+      at zero weight until they earn a held-out gain. The owner's own reviews, deck content and
+      palace data never train the central model. Each version is fitted against FSRS-6 and FSRS-7
+      on learners split once into development learners and a sealed confirmation set that is
+      opened once per version, scored on log loss, AUC and calibration, and judged by a scheduling
+      simulator. Lower log loss alone does not promote a version: a version is promoted only when
+      the simulator shows it scheduling-ready, its formal proofs hold and the release gates are
+      met. Beating FSRS-6 and FSRS-7 stays a reported goal, not a gate.
+    - **Fail closed.** With no promoted, usable Rex version, no Rex due is written and the learner
+      keeps DeckStreak's own path. No 1.0 release ships without Rex scheduling every review. A Rex
+      upgrade is a delivery: it re-runs that delivery's evaluation, and the learner's history
+      replays through the new version.
+    - **One scheduler per collection.** A collection Rex schedules is studied only in DeckStreak's
+      apps; the stock Anki apps stop studying it at the switch, so no second scheduler writes its
+      dues. Every other model stays reorder-only (constraint 4 as amended, ADR-339).
+    - **What stays private.** Rex's training, fitting and research stay in Rex's private
+      repositories: their programs, the licensed review data, the raw research (fit runs, their
+      records and logs) and every per-learner row stay out of this repository. Weights trained on
+      the licensed collections ship in a build that anyone but the owner uses only once written
+      permission from the data's holder is on file.
+
+## Amendments
+
+Amendment (2026-09-28): one passage of constraint 3, which described the host's size and its other
+services, was redacted under the public-prose rule (ADR-059).
+
+Amendment (2026-10-01): constraint 4 is amended by ADR-301, the owner's decision at #514, which
+the owner's signed ruling records. Its earlier sentence, "The skip day is the ONLY write back to
+Anki.", is kept above as it was, and no longer stands alone: DeckStreak writes to the collection
+only through declared write classes, each with its own ADR in ADR-089's form. The skip day is the
+first such class, and ADR-089 is its ADR.
+
+Amendment (the app-surfaces ruling): constraint 2 is amended by the owner's signed ruling
+`docs/rulings/OWNER-RULING-2026-10-04-app-surfaces.md`, and ADR-341 carries it. Constraint 2's text
+above is kept as it was. The ruling words what replaces it:
+
+> **Charter 2: one router, one policy.** DeckStreak's surfaces are a web client, a universal iPhone
+> and iPad client and native push (APNs and web push). Every celebration and nudge still passes
+> through ONE router, so an event can never celebrate twice. The Mini App and the bot remain until
+> the new surfaces carry the router, and the v9 cutover runs on today's surfaces. Native nudges are
+> opt-in, at most one a day (NOTIF-01).
+
+Amendment (the app-surfaces ruling): constraint 4 is amended again by the same ruling,
+`docs/rulings/OWNER-RULING-2026-10-04-app-surfaces.md`. ADR-337 carries the owner's own answers and
+gestures, and ADR-338 and ADR-339 carry its scheduler sentence. Constraint 4's text above, and the
+note on ADR-301 before this one, are kept as they were. The ruling words what replaces it:
+
+> **Charter 4: pull, then read, and the owner's own study.** The private copy stays read-only for
+> the game. The study client writes the owner's own answers, and the owner's own gestures under
+> `docs/rulings/OWNER-RULING-2026-10-04-owner-taps.md`. Every other write goes through a declared
+> write class (ADR-301). An experimental model only reorders cards the stock scheduler already made
+> due (OQ4), except FSRS-7 on the one preset the owner switches (OQ1).
+
+Amendment (the app-surfaces ruling): constraint 14 is amended by the same ruling,
+`docs/rulings/OWNER-RULING-2026-10-04-app-surfaces.md`, and ADR-335 carries it with the sign-in on
+the iPhone and iPad. Constraint 14's text above is kept as it was. The ruling words what replaces
+it:
+
+> **Charter 14: one owner, on every surface.** "The service answers one owner" is unchanged. Sign-in
+> on the web and on the iPhone and iPad pins to the one owner account, which is configuration held
+> in a secret, by the methods ADR-131 and ADR-132 specify (AUTH-01). The Telegram `initData` gate
+> stays while the Mini App and the bot exist. Commands with stakes or destructive effects carry the
+> same gate on every surface. No surface opens a session before its gate is built.
+
+Amendment (the web-and-iOS ruling): the mission and constraints 2, 14 and 19 are amended, and
+constraint 22 is added, by the owner's signed ruling
+`docs/rulings/OWNER-RULING-2026-10-29-web-and-ios-and-rex.md`, and ADR-589 carries it. The
+mission's text and the text of constraints 2, 14 and 19 above are kept as they were, and so are
+constraint 4 and every earlier amendment note. The replacements of constraints 2 and 14 below
+supersede the ones the app-surfaces amendments quote. The ruling words what replaces each:
+
+> **The mission.** DeckStreak turns the reviews its owner does into XP, levels, streaks, quests and
+> badges, in a web app and a universal iPhone and iPad app. Both apps study the owner's own Anki
+> collection over the same engine, against the owner's own Anki sync server; DeckStreak scores
+> every study day and speaks through one policy that decides when to celebrate, when to nudge and
+> when to stay quiet. Its scheduler is **Rex**, DeckStreak's own memory model (constraint 22). Its
+> flagship is the **daily pre-study reading**: each morning, one short text per topic that primes
+> the day's new cards, written by a named mentor for that subject, read in the apps and archived to
+> the owner's second-brain vault. The Telegram Mini App and the Telegram bot DeckStreak began as
+> are deprecated.
+>
+> DeckStreak is a full-parity successor to its predecessor, a private single-user service ("v9"),
+> rebuilt as a public, AGPL-licensed Rust workspace with a SvelteKit web app and a SwiftUI iPhone
+> and iPad app. The predecessor is the behavioural oracle: its numbers are proved, never
+> re-derived.
+
+> **Charter 2: two apps, one policy.** DeckStreak's surfaces are the web app and the universal
+> iPhone and iPad app, with native push (APNs and web push) as the router's way to reach the owner
+> outside them. Every celebration and nudge passes through ONE router, so an event can never
+> celebrate twice. Native nudges are opt-in, at most one a day. The Telegram Mini App and the
+> Telegram bot are deprecated, and neither gains a feature. The Mini App and the bot remain until
+> the new surfaces carry the router, as signed on 2026-10-04, and the v9 cutover runs on the web
+> app; their code then leaves the tree in its own removal delivery.
+
+> **Charter 14: owner-only is a safety property.** The service answers one owner. Sign-in on the
+> web app and on the iPhone and iPad app pins to the one owner account, which is configuration held
+> in a secret, by the methods ADR-131 and ADR-132 specify, and no surface opens a session before
+> its gate is built. Commands with stakes or destructive effects (panic, pardon, contracts, the
+> agent's on-demand run) carry the same gate on every surface. While the deprecated Telegram
+> surfaces remain in the tree, the bot gates every command on the owner's identity and the Mini App
+> validates Telegram `initData` on the server and pins it to the owner's user id; both gates leave
+> with their code.
+
+> **Charter 19, one clause.** "the Mini App is the primary surface" reads "the web app and the
+> iPhone and iPad app are the primary surfaces"; every other reading rule is unchanged.
+
+The 10-04 replacement of constraint 4 is superseded where it allows FSRS-7 on the preset the owner
+switches: the signed 10-18 ruling removed FSRS from live scheduling, and rule 22 keeps FSRS only as
+the yardstick.

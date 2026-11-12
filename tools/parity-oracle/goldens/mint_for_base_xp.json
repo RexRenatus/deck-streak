@@ -1,0 +1,930 @@
+{
+  "cases": [
+    {
+      "class": "zero",
+      "input": {
+        "base_xp": 0
+      },
+      "output": 0
+    },
+    {
+      "class": "negative",
+      "input": {
+        "base_xp": -1
+      },
+      "output": 0
+    },
+    {
+      "class": "negative",
+      "input": {
+        "base_xp": -25
+      },
+      "output": 0
+    },
+    {
+      "class": "negative",
+      "input": {
+        "base_xp": -1000000
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "base_xp": -1
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "base_xp": 0
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "base_xp": 1
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "base_xp": 24
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "base_xp": 25
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "base_xp": 26
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "base_xp": 49
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "base_xp": 50
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "base_xp": 51
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "base_xp": 74
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "base_xp": 75
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "base_xp": 76
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "base_xp": 99
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "base_xp": 100
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "base_xp": 101
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "base_xp": 124
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "base_xp": 125
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "base_xp": 126
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "base_xp": 149
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "base_xp": 150
+      },
+      "output": 6
+    },
+    {
+      "input": {
+        "base_xp": 151
+      },
+      "output": 6
+    },
+    {
+      "input": {
+        "base_xp": 174
+      },
+      "output": 6
+    },
+    {
+      "input": {
+        "base_xp": 175
+      },
+      "output": 7
+    },
+    {
+      "input": {
+        "base_xp": 176
+      },
+      "output": 7
+    },
+    {
+      "input": {
+        "base_xp": 199
+      },
+      "output": 7
+    },
+    {
+      "input": {
+        "base_xp": 200
+      },
+      "output": 8
+    },
+    {
+      "input": {
+        "base_xp": 201
+      },
+      "output": 8
+    },
+    {
+      "input": {
+        "base_xp": 224
+      },
+      "output": 8
+    },
+    {
+      "input": {
+        "base_xp": 225
+      },
+      "output": 9
+    },
+    {
+      "input": {
+        "base_xp": 226
+      },
+      "output": 9
+    },
+    {
+      "input": {
+        "base_xp": 249
+      },
+      "output": 9
+    },
+    {
+      "input": {
+        "base_xp": 250
+      },
+      "output": 10
+    },
+    {
+      "input": {
+        "base_xp": 251
+      },
+      "output": 10
+    },
+    {
+      "input": {
+        "base_xp": 274
+      },
+      "output": 10
+    },
+    {
+      "input": {
+        "base_xp": 275
+      },
+      "output": 11
+    },
+    {
+      "input": {
+        "base_xp": 276
+      },
+      "output": 11
+    },
+    {
+      "input": {
+        "base_xp": 299
+      },
+      "output": 11
+    },
+    {
+      "input": {
+        "base_xp": 300
+      },
+      "output": 12
+    },
+    {
+      "input": {
+        "base_xp": 301
+      },
+      "output": 12
+    },
+    {
+      "input": {
+        "base_xp": 324
+      },
+      "output": 12
+    },
+    {
+      "input": {
+        "base_xp": 325
+      },
+      "output": 13
+    },
+    {
+      "input": {
+        "base_xp": 326
+      },
+      "output": 13
+    },
+    {
+      "input": {
+        "base_xp": 349
+      },
+      "output": 13
+    },
+    {
+      "input": {
+        "base_xp": 350
+      },
+      "output": 14
+    },
+    {
+      "input": {
+        "base_xp": 351
+      },
+      "output": 14
+    },
+    {
+      "input": {
+        "base_xp": 374
+      },
+      "output": 14
+    },
+    {
+      "input": {
+        "base_xp": 375
+      },
+      "output": 15
+    },
+    {
+      "input": {
+        "base_xp": 376
+      },
+      "output": 15
+    },
+    {
+      "input": {
+        "base_xp": 399
+      },
+      "output": 15
+    },
+    {
+      "input": {
+        "base_xp": 400
+      },
+      "output": 16
+    },
+    {
+      "input": {
+        "base_xp": 401
+      },
+      "output": 16
+    },
+    {
+      "input": {
+        "base_xp": 424
+      },
+      "output": 16
+    },
+    {
+      "input": {
+        "base_xp": 425
+      },
+      "output": 17
+    },
+    {
+      "input": {
+        "base_xp": 426
+      },
+      "output": 17
+    },
+    {
+      "input": {
+        "base_xp": 449
+      },
+      "output": 17
+    },
+    {
+      "input": {
+        "base_xp": 450
+      },
+      "output": 18
+    },
+    {
+      "input": {
+        "base_xp": 451
+      },
+      "output": 18
+    },
+    {
+      "input": {
+        "base_xp": 474
+      },
+      "output": 18
+    },
+    {
+      "input": {
+        "base_xp": 475
+      },
+      "output": 19
+    },
+    {
+      "input": {
+        "base_xp": 476
+      },
+      "output": 19
+    },
+    {
+      "input": {
+        "base_xp": 499
+      },
+      "output": 19
+    },
+    {
+      "input": {
+        "base_xp": 500
+      },
+      "output": 20
+    },
+    {
+      "input": {
+        "base_xp": 501
+      },
+      "output": 20
+    },
+    {
+      "input": {
+        "base_xp": 524
+      },
+      "output": 20
+    },
+    {
+      "input": {
+        "base_xp": 525
+      },
+      "output": 21
+    },
+    {
+      "input": {
+        "base_xp": 526
+      },
+      "output": 21
+    },
+    {
+      "input": {
+        "base_xp": 549
+      },
+      "output": 21
+    },
+    {
+      "input": {
+        "base_xp": 550
+      },
+      "output": 22
+    },
+    {
+      "input": {
+        "base_xp": 551
+      },
+      "output": 22
+    },
+    {
+      "input": {
+        "base_xp": 574
+      },
+      "output": 22
+    },
+    {
+      "input": {
+        "base_xp": 575
+      },
+      "output": 23
+    },
+    {
+      "input": {
+        "base_xp": 576
+      },
+      "output": 23
+    },
+    {
+      "input": {
+        "base_xp": 599
+      },
+      "output": 23
+    },
+    {
+      "input": {
+        "base_xp": 600
+      },
+      "output": 24
+    },
+    {
+      "input": {
+        "base_xp": 601
+      },
+      "output": 24
+    },
+    {
+      "input": {
+        "base_xp": 624
+      },
+      "output": 24
+    },
+    {
+      "input": {
+        "base_xp": 625
+      },
+      "output": 25
+    },
+    {
+      "input": {
+        "base_xp": 626
+      },
+      "output": 25
+    },
+    {
+      "input": {
+        "base_xp": 649
+      },
+      "output": 25
+    },
+    {
+      "input": {
+        "base_xp": 650
+      },
+      "output": 26
+    },
+    {
+      "input": {
+        "base_xp": 651
+      },
+      "output": 26
+    },
+    {
+      "input": {
+        "base_xp": 674
+      },
+      "output": 26
+    },
+    {
+      "input": {
+        "base_xp": 675
+      },
+      "output": 27
+    },
+    {
+      "input": {
+        "base_xp": 676
+      },
+      "output": 27
+    },
+    {
+      "input": {
+        "base_xp": 699
+      },
+      "output": 27
+    },
+    {
+      "input": {
+        "base_xp": 700
+      },
+      "output": 28
+    },
+    {
+      "input": {
+        "base_xp": 701
+      },
+      "output": 28
+    },
+    {
+      "input": {
+        "base_xp": 724
+      },
+      "output": 28
+    },
+    {
+      "input": {
+        "base_xp": 725
+      },
+      "output": 29
+    },
+    {
+      "input": {
+        "base_xp": 726
+      },
+      "output": 29
+    },
+    {
+      "input": {
+        "base_xp": 749
+      },
+      "output": 29
+    },
+    {
+      "input": {
+        "base_xp": 750
+      },
+      "output": 30
+    },
+    {
+      "input": {
+        "base_xp": 751
+      },
+      "output": 30
+    },
+    {
+      "input": {
+        "base_xp": 774
+      },
+      "output": 30
+    },
+    {
+      "input": {
+        "base_xp": 775
+      },
+      "output": 31
+    },
+    {
+      "input": {
+        "base_xp": 776
+      },
+      "output": 31
+    },
+    {
+      "input": {
+        "base_xp": 799
+      },
+      "output": 31
+    },
+    {
+      "input": {
+        "base_xp": 800
+      },
+      "output": 32
+    },
+    {
+      "input": {
+        "base_xp": 801
+      },
+      "output": 32
+    },
+    {
+      "input": {
+        "base_xp": 824
+      },
+      "output": 32
+    },
+    {
+      "input": {
+        "base_xp": 825
+      },
+      "output": 33
+    },
+    {
+      "input": {
+        "base_xp": 826
+      },
+      "output": 33
+    },
+    {
+      "input": {
+        "base_xp": 849
+      },
+      "output": 33
+    },
+    {
+      "input": {
+        "base_xp": 850
+      },
+      "output": 34
+    },
+    {
+      "input": {
+        "base_xp": 851
+      },
+      "output": 34
+    },
+    {
+      "input": {
+        "base_xp": 874
+      },
+      "output": 34
+    },
+    {
+      "input": {
+        "base_xp": 875
+      },
+      "output": 35
+    },
+    {
+      "input": {
+        "base_xp": 876
+      },
+      "output": 35
+    },
+    {
+      "input": {
+        "base_xp": 899
+      },
+      "output": 35
+    },
+    {
+      "input": {
+        "base_xp": 900
+      },
+      "output": 36
+    },
+    {
+      "input": {
+        "base_xp": 901
+      },
+      "output": 36
+    },
+    {
+      "input": {
+        "base_xp": 924
+      },
+      "output": 36
+    },
+    {
+      "input": {
+        "base_xp": 925
+      },
+      "output": 37
+    },
+    {
+      "input": {
+        "base_xp": 926
+      },
+      "output": 37
+    },
+    {
+      "input": {
+        "base_xp": 949
+      },
+      "output": 37
+    },
+    {
+      "input": {
+        "base_xp": 950
+      },
+      "output": 38
+    },
+    {
+      "input": {
+        "base_xp": 951
+      },
+      "output": 38
+    },
+    {
+      "input": {
+        "base_xp": 974
+      },
+      "output": 38
+    },
+    {
+      "input": {
+        "base_xp": 975
+      },
+      "output": 39
+    },
+    {
+      "input": {
+        "base_xp": 976
+      },
+      "output": 39
+    },
+    {
+      "input": {
+        "base_xp": 999
+      },
+      "output": 39
+    },
+    {
+      "input": {
+        "base_xp": 1000
+      },
+      "output": 40
+    },
+    {
+      "input": {
+        "base_xp": 1001
+      },
+      "output": 40
+    },
+    {
+      "input": {
+        "base_xp": 1024
+      },
+      "output": 40
+    },
+    {
+      "input": {
+        "base_xp": 1025
+      },
+      "output": 40
+    },
+    {
+      "input": {
+        "base_xp": 1026
+      },
+      "output": 40
+    },
+    {
+      "input": {
+        "base_xp": 1049
+      },
+      "output": 40
+    },
+    {
+      "input": {
+        "base_xp": 1050
+      },
+      "output": 40
+    },
+    {
+      "input": {
+        "base_xp": 1051
+      },
+      "output": 40
+    },
+    {
+      "class": "cap",
+      "input": {
+        "base_xp": 999
+      },
+      "output": 39
+    },
+    {
+      "class": "cap",
+      "input": {
+        "base_xp": 1000
+      },
+      "output": 40
+    },
+    {
+      "class": "cap",
+      "input": {
+        "base_xp": 1001
+      },
+      "output": 40
+    },
+    {
+      "class": "cap",
+      "input": {
+        "base_xp": 1025
+      },
+      "output": 40
+    },
+    {
+      "class": "cap",
+      "input": {
+        "base_xp": 10000
+      },
+      "output": 40
+    },
+    {
+      "class": "cap",
+      "input": {
+        "base_xp": 1000000000
+      },
+      "output": 40
+    },
+    {
+      "input": {
+        "base_xp": 2760
+      },
+      "output": 40
+    },
+    {
+      "input": {
+        "base_xp": 2610
+      },
+      "output": 40
+    },
+    {
+      "input": {
+        "base_xp": 2939
+      },
+      "output": 40
+    },
+    {
+      "input": {
+        "base_xp": 419
+      },
+      "output": 16
+    },
+    {
+      "input": {
+        "base_xp": 864
+      },
+      "output": 34
+    },
+    {
+      "input": {
+        "base_xp": 2560
+      },
+      "output": 40
+    },
+    {
+      "input": {
+        "base_xp": 2403
+      },
+      "output": 40
+    },
+    {
+      "input": {
+        "base_xp": 215
+      },
+      "output": 8
+    },
+    {
+      "input": {
+        "base_xp": 1141
+      },
+      "output": 40
+    },
+    {
+      "input": {
+        "base_xp": 2146
+      },
+      "output": 40
+    },
+    {
+      "input": {
+        "base_xp": 493
+      },
+      "output": 19
+    },
+    {
+      "input": {
+        "base_xp": -90
+      },
+      "output": 0
+    }
+  ],
+  "function": "gamification.economy.mint_for_base_xp",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_082.py",
+  "registry_sha256": "a69a0d3ef28d4d443743ee93fd7a1541597ecbfc742b280cff28d41faea8a8d8",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

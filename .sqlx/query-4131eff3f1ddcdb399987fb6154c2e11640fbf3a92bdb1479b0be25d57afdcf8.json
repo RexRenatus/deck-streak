@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT study_day, delta, reason FROM freeze_events ORDER BY id",
+  "describe": {
+    "columns": [
+      {
+        "name": "study_day",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "freeze_events",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "delta",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "freeze_events",
+            "name": "delta"
+          }
+        }
+      },
+      {
+        "name": "reason",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "freeze_events",
+            "name": "reason"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "4131eff3f1ddcdb399987fb6154c2e11640fbf3a92bdb1479b0be25d57afdcf8"
+}

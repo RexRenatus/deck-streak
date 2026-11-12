@@ -1,0 +1,131 @@
+---
+status: accepted
+date: "2026-10-02"
+decision-makers: "@RexRenatus (owner), the DeckStreak orchestrator"
+---
+
+# The settings guard keeps a pin only where one cfg evaluator proves it compiled, and refuses by name every spelling it does not expand
+
+## Context and Problem Statement
+
+SPEC-192's guard (`scripts/tests/test_setting_shapes.py`) reads Rust source with a hand-written
+lexer. Four issues record where its reading still disagrees with rustc after ADR-304. #436: it
+found an implementation by a pattern anchored at a line start, so a raw identifier, an import alias,
+a macro-made implementation, an attribute on the same line and a second item on the line were not
+examined. #449: it read the whole text of a test module, so a pin inside an item a `cfg` strips
+counted. #535: four spellings fail open: an attribute a macro passes in, a macro that passes its
+tokens through, a `#[path]` rival declared in a block or by a macro, and `include!`. #536: three
+trees rustc reads plainly are refused, and `modules()` returns a value its caller drops. A first
+pass at the four still left three spellings open: an implementation whose trait path is a
+repetition or whose `impl` keyword a macro passes in, a file under `tests/` read as a crate root
+whether or not cargo builds it, and an `include!` imported under another name. How does the guard
+close all four without growing into a Rust front end?
+
+## Decision Drivers
+
+- A guard that errs must err toward refusing: a pin it reads and should not is a shape nobody pins.
+- The guard stays a unittest over source text, with no cargo, and with rustc only as a test oracle.
+- Each arm must be killable by a test that plants the shape, and carried by a row.
+- Over the repository, each new refusal must examine a stated number of files and refuse none.
+
+## Considered Options (the alternatives it was chosen against)
+
+- Read an item under a predicate the guard cannot evaluate as compiled (#449) — rejected because a
+  `feature = ...`, a target key or a `cfg_attr` may strip it, and then a pin rustc never compiles is
+  read, which fails open.
+- Evaluate item attributes and the macro narrowing with two functions (#449, #536) — rejected
+  because two readings of one attribute drift apart, and the narrowing could then read as proven
+  what the item walk treats as unknown.
+- Expand macros, or narrow each macro module not plainly `cfg(test)` — rejected because a macro
+  expander is the compiler's job (#436, #535, #536), and a narrowing that only looks for `test`
+  reopens #441: `cfg(any(test, feature = "slow"))` is a test-only module whenever the feature is
+  off.
+- Model rustc's block-scope module paths and follow `include!` (#535) — rejected because a text
+  reader would approximate both, and an approximation that names the wrong file reads a production
+  file as a test.
+- Resolve a trait alias per scope (#436) — rejected because it needs name resolution across modules,
+  globs and re-exports; a crate-wide closure over `use ... as` can only add names, so its one error
+  is a disclosed false refusal.
+- Disclose three spellings as limits (#436, #535) — rejected because each fails open: a trait
+  path that is a repetition, an `impl` keyword a macro passes in and an `include!` imported under
+  another name would each write or include a pin the guard never sees.
+- Read every file under `tests/` as a crate root (#449) — rejected because cargo builds only
+  `tests/<name>.rs` and `tests/<dir>/main.rs`, and rustc compiles another file there only through a
+  kept `mod`, so a pin in a file nothing declares, or one a stripped `mod` names, would be read.
+- One evaluator, every unexpanded spelling refused by name, `tests/` as cargo builds it — chosen
+  because macros, block scope and `include!` are each refused by name, so each disagreement ends
+  in an arm that reads what rustc reads or refuses by name, and every doubt resolves to a refusal.
+
+## Decision Outcome
+
+Chosen option: "One evaluator, every unexpanded spelling refused by name, `tests/` as cargo builds
+it", because it closes #436, #449, #535 and #536 with arms that each read what rustc reads or
+refuse.
+
+- **One cfg evaluator.** `rustc_keeps(attributes, test)` decides both #449's items and #536's
+  narrowing. It evaluates `cfg` over `test`, `any`, `all`, `not`, `true` and `false` exactly;
+  every other option, every `cfg_attr` and every attribute it cannot read is unknown. An item it
+  does not read as true under `test` counts as not compiled, so an unknown can only cause a false
+  refusal.
+- **Macros stay fail-closed.** An implementation a macro body or a macro invocation writes is
+  refused by its file (#436), one whose trait path is a repetition or whose `impl` keyword is passed
+  in among them. A module a macro body or invocation declares is refused by its file
+  when an attribute that reaches it holds a metavariable or names `path` (#535), or names `cfg` or
+  `cfg_attr` with `test` (#441). #536 narrows only the last arm, and only where `rustc_keeps`
+  proves the module is no test-only module; an out-of-line module a macro declares that
+  `rustc_keeps` does not prove removed without `test` is a declaration that may name any file, by
+  ADR-304's #458 rule.
+- **Block scope and `include!` are refused by name.** An out-of-line module declared in a block,
+  unless `rustc_keeps` proves it removed without `test`, and every `include!`, refuse their file
+  (#535), and so does a `use` that may import `include` under any name and a macro name a macro
+  passes in.
+- **`tests/` is read as cargo builds it.** A crate root is `tests/<name>.rs` or
+  `tests/<dir>/main.rs`; any other file under `tests/` is read only through a `mod` that a read file
+  declares under attributes `rustc_keeps` keeps under `test`, from the module directory that
+  declaration gives it (#449).
+
+### Consequences
+
+- Good, because a pin in a stripped item is never read, and a file under `tests/` is read only where
+  cargo's default target discovery and rustc compile it (a manifest's `autotests = false` or `[[test]]`
+  table is not read, as "What would make this wrong" discloses): a generated population, judged by
+  rustc, holds the guard to it.
+- Good, because an attribute inside a macro repetition is read with its module: a pass that refused
+  it was removed, not kept as a refusal rustc does not make.
+- Good, because every new refusal is by name, so a refused tree says which file to change.
+- Bad, because an item under a feature, a target key or a `cfg_attr` is not read even where rustc
+  compiles it, and a kept item that holds such an attribute is not read at all; each is a disclosed
+  false refusal.
+- Bad, because a shadowing alias makes the guard read an implementation of another trait as a
+  `Setting` one, and refuse it when it has no pinned shape.
+- Bad, because refusing by the word refuses shapes rustc pins: a `use` that imports `include` and
+  never invokes it, a `use` that binds another item to the name `include`, a lone `impl` an
+  invocation passes to a macro that makes another trait's implementation, every out-of-line test
+  module file of a crate whose `macro_rules!` body declares an out-of-line module it never expands,
+  and a `tests/` module whose file sits in both module directories of a file that is both a crate
+  root and a module. Each is a disclosed false refusal, never a false pass.
+- Bad, because a `cfg(any(test, P))` module a macro declares stays refused when `rustc_keeps`
+  cannot decide P. It is kept on purpose and disclosed by count: A22 asserts 1 such shape,
+  `cfg(any(test, feature = "..."))`, refused, and the #441 arm refuses 0 of the repository's 217
+  crate files.
+
+### Confirmation
+
+SPEC-192's A19 to A22 decide it: `TheGuardReadsAnImplementationByToken`,
+`TheGuardReadsOnlyTheItemsRustcCompilesUnderTest`, `TheGuardRefusesASpellingItDoesNotExpand` with
+`EverySettingShapeIsPinnedByItsLiteral`, and `TheGuardReadsATreeItOverRefused`. The guard's R8
+population stays green, and each new row, in `scripts/mutation-rows.d/S19300-S19399.json` from
+S19315 and in `scripts/mutation-rows.d/S19400-S19499.json`, is proved KILLED by full id.
+
+## What would make this wrong
+
+- A repository file that needs a pin under a feature or a `cfg_attr`: the guard would refuse it,
+  and the answer is a measured arm that evaluates that predicate, not reading it as compiled.
+- A rustc change to how a cfg strips an item: the population's oracle would go red first.
+- A repository file that declares a module in a block, or uses `include!`, on purpose: the arm
+  refuses it, and the answer is to move the declaration or to write a resolver with a measured
+  population, not to loosen this arm.
+- A crate whose manifest sets `autotests = false` or adds a `[[test]]` target: the guard reads
+  `tests/` by cargo's default discovery, so it would read a root cargo does not build, or miss one
+  it does. No manifest of the repository holds either; the answer is to read the manifest's
+  targets, not to keep the default.

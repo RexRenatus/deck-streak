@@ -1,0 +1,22 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S39200-THE-FACTORY-STRIPS-EVERY-CARD",
+        "ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift",
+        "load(LinkStrip.stripped(html), into: view)",
+        "load(html, into: view)",
+        "the factory hands a card past the link strip, so the card's link elements reach the card view (SPEC-392 R1, L14)",
+        "test_card_web_view_layers.TheFactoryStripsEveryCard.test_the_factory_hands_every_card_through_the_link_strip"
+      ],
+      [
+        "S39201-THE-CARD-LAYERS-NAME-THE-LINK-STRIP",
+        "ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift",
+        "case L1, L2, L3, L4, L5, L6, L7, L8, L10, L11, L12, L13, L14",
+        "case L1, L2, L3, L4, L5, L6, L7, L8, L10, L11, L12, L13",
+        "CardLayer does not name L14, so the link strip is no layer of the card view (SPEC-392 R3, L14)",
+        "test_card_web_view_layers.TheFactoryStripsEveryCard.test_the_factory_hands_every_card_through_the_link_strip"
+      ]
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+// A planted MCP tool the census has not declared (SPEC-381 R6): it would return a card's text.
+
+// #[tool(name = "commented")] is a comment, not a tool.
+const NOTE: &str = "#[tool(name = \"quoted\")]";
+
+pub struct Server;
+
+#[tool_router]
+impl Server {
+    #[tool(
+        name = "get_card_text",
+        annotations(read_only_hint = true)
+    )]
+    async fn get_card_text(&self) -> String {
+        String::new()
+    }
+}

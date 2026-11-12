@@ -1,0 +1,961 @@
+{
+  "adapter": "through_the_filter",
+  "cases": [
+    {
+      "class": "secret",
+      "input": {
+        "secrets": [
+          "kitten-stapler"
+        ],
+        "text": "sync as kitten-stapler failed"
+      },
+      "output": "sync as ***REDACTED*** failed"
+    },
+    {
+      "class": "secret",
+      "input": {
+        "secrets": [
+          "kitten-stapler"
+        ],
+        "text": "kitten-stapler"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "repeat",
+      "input": {
+        "secrets": [
+          "loom-harbor"
+        ],
+        "text": "loom-harbor then loom-harbor again"
+      },
+      "output": "***REDACTED*** then ***REDACTED*** again"
+    },
+    {
+      "class": "repeat",
+      "input": {
+        "secrets": [
+          "abcabc"
+        ],
+        "text": "abcabcabcabcabc: overlapping repeats"
+      },
+      "output": "***REDACTED******REDACTED***abc: overlapping repeats"
+    },
+    {
+      "class": "overlap",
+      "input": {
+        "secrets": [
+          "river",
+          "riverstone-gate"
+        ],
+        "text": "via riverstone-gate and river"
+      },
+      "output": "via ***REDACTED*** and ***REDACTED***"
+    },
+    {
+      "class": "overlap",
+      "input": {
+        "secrets": [
+          "stone-gate",
+          "riverstone"
+        ],
+        "text": "riverstone-gate end"
+      },
+      "output": "***REDACTED***-gate end"
+    },
+    {
+      "class": "overlap",
+      "input": {
+        "secrets": [
+          "bbbb",
+          "aaaa"
+        ],
+        "text": "aaaabbbb bbbbaaaa"
+      },
+      "output": "***REDACTED******REDACTED*** ***REDACTED******REDACTED***"
+    },
+    {
+      "class": "short",
+      "input": {
+        "secrets": [
+          "abc"
+        ],
+        "text": "abc stays when it is three"
+      },
+      "output": "abc stays when it is three"
+    },
+    {
+      "class": "short",
+      "input": {
+        "secrets": [
+          "abcd"
+        ],
+        "text": "abcd goes when it is four"
+      },
+      "output": "***REDACTED*** goes when it is four"
+    },
+    {
+      "class": "short",
+      "input": {
+        "secrets": [
+          "\u00e9t\u00e9"
+        ],
+        "text": "\u00e9t\u00e9 has six bytes"
+      },
+      "output": "\u00e9t\u00e9 has six bytes"
+    },
+    {
+      "class": "short",
+      "input": {
+        "secrets": [
+          "\u00e9t\u00e9s"
+        ],
+        "text": "\u00e9t\u00e9s has four chars"
+      },
+      "output": "***REDACTED*** has four chars"
+    },
+    {
+      "class": "short",
+      "input": {
+        "secrets": [
+          ""
+        ],
+        "text": "an empty secret registers nothing"
+      },
+      "output": "an empty secret registers nothing"
+    },
+    {
+      "class": "marker",
+      "input": {
+        "secrets": [
+          "REDA",
+          "long-secret-value"
+        ],
+        "text": "long-secret-value and REDA"
+      },
+      "output": "******REDACTED***CTED*** and ***REDACTED***"
+    },
+    {
+      "class": "marker",
+      "input": {
+        "secrets": [
+          "REDACTED"
+        ],
+        "text": "an earlier ***REDACTED*** stays marked"
+      },
+      "output": "an earlier ******REDACTED****** stays marked"
+    },
+    {
+      "class": "token",
+      "input": {
+        "secrets": [],
+        "text": "polling 241592:d00jnqO850AzOQQ2l_ZkAFezmkyGKN now"
+      },
+      "output": "polling ***REDACTED*** now"
+    },
+    {
+      "class": "token",
+      "input": {
+        "secrets": [],
+        "text": "polling 241592:d00jnqO850AzOQQ2l_ZkAFezmkyGKN"
+      },
+      "output": "polling ***REDACTED***"
+    },
+    {
+      "class": "token",
+      "input": {
+        "secrets": [],
+        "text": "polling 42910:IDCEhbMJrQ5tJ3uvZpq2SCogy3wwko now"
+      },
+      "output": "polling 42910:IDCEhbMJrQ5tJ3uvZpq2SCogy3wwko now"
+    },
+    {
+      "class": "token",
+      "input": {
+        "secrets": [],
+        "text": "polling 405678:gvp6QbjnlQGkMfdyCbudrNq1JnXmB now"
+      },
+      "output": "polling 405678:gvp6QbjnlQGkMfdyCbudrNq1JnXmB now"
+    },
+    {
+      "class": "token",
+      "input": {
+        "secrets": [],
+        "text": "33314286217:_awyNZmLAUMsmaJhXVKY7mi8BbiRbwJLm."
+      },
+      "output": "***REDACTED***."
+    },
+    {
+      "class": "token",
+      "input": {
+        "secrets": [],
+        "text": "api/bot0033969:kUK4grWYYGa6l_ODzL5RWAgSrlVcp9E/status?page=5"
+      },
+      "output": "api/bot***REDACTED***/status?page=5"
+    },
+    {
+      "class": "token",
+      "input": {
+        "secrets": [],
+        "text": "8240255:scD35FYXLLk-ITq7E_qTPspIeyVYBN and 722240:jvRJFOksHHmqMj-ff88YmrN1v649twyzLp"
+      },
+      "output": "***REDACTED*** and ***REDACTED***"
+    },
+    {
+      "class": "token",
+      "input": {
+        "secrets": [],
+        "text": "8240255:scD35FYXLLk-ITq7E_qTPspIeyVYBN722240:jvRJFOksHHmqMj-ff88YmrN1v649twyzLp"
+      },
+      "output": "***REDACTED***:jvRJFOksHHmqMj-ff88YmrN1v649twyzLp"
+    },
+    {
+      "class": "token",
+      "input": {
+        "secrets": [],
+        "text": "x3767148:oBANAK38mUFxVLtbQWsKqiweoJ1ly440:tail"
+      },
+      "output": "x***REDACTED***:tail"
+    },
+    {
+      "class": "token",
+      "input": {
+        "secrets": [],
+        "text": "12345:0221799:MuFJDpm53QEvh5ldKdGTHNZiUbhwuD"
+      },
+      "output": "12345:***REDACTED***"
+    },
+    {
+      "class": "token",
+      "input": {
+        "secrets": [],
+        "text": "1760093 : X7lK7LQn5ytpeTxzxCLapgC2WJRqOg"
+      },
+      "output": "1760093 : X7lK7LQn5ytpeTxzxCLapgC2WJRqOg"
+    },
+    {
+      "class": "token",
+      "input": {
+        "secrets": [
+          "amber-lattice"
+        ],
+        "text": "amber-lattice 0188872:sASqsLmvM7AkptdtTNUcHd5aOK86Ng"
+      },
+      "output": "***REDACTED*** ***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "0123456789:dekcN1J6Jk2jdYcHbiaOn-3nQdbpeD"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u0660\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669:5FSVipiFG57-ff7kxuBFzEKfqS6O4-"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u06f0\u06f1\u06f2\u06f3\u06f4\u06f5\u06f6\u06f7\u06f8\u06f9:aMpUzKswhDGwebnyn86IDh3FKQNFS_"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u07c0\u07c1\u07c2\u07c3\u07c4\u07c5\u07c6\u07c7\u07c8\u07c9:2iAAB-7Pt6Zids8Bg9Gan7fCpcrjCX"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u0966\u0967\u0968\u0969\u096a\u096b\u096c\u096d\u096e\u096f:dRAGJOBD1gGbE4R1PVklY8wIqjtfrD"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u09e6\u09e7\u09e8\u09e9\u09ea\u09eb\u09ec\u09ed\u09ee\u09ef:pdBlQEf_DrYn6GAgOYj2421pCFOmcy"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u0a66\u0a67\u0a68\u0a69\u0a6a\u0a6b\u0a6c\u0a6d\u0a6e\u0a6f:afRv1RgDtHM8KnPjD6CKbBWpAl4Z91"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u0ae6\u0ae7\u0ae8\u0ae9\u0aea\u0aeb\u0aec\u0aed\u0aee\u0aef:ArlrY9h6FlXPikVqBffFqdnqH83Gv7"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u0b66\u0b67\u0b68\u0b69\u0b6a\u0b6b\u0b6c\u0b6d\u0b6e\u0b6f:xrfyoT78PgOQXnc4xi4qzO3yuSfsMS"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u0be6\u0be7\u0be8\u0be9\u0bea\u0beb\u0bec\u0bed\u0bee\u0bef:HiEX-gbc9UDYk8OA4mZlnx2YsMrKLU"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u0c66\u0c67\u0c68\u0c69\u0c6a\u0c6b\u0c6c\u0c6d\u0c6e\u0c6f:w3VRJBEQoaK_rR8BVMCQL4ktHmKA_k"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u0ce6\u0ce7\u0ce8\u0ce9\u0cea\u0ceb\u0cec\u0ced\u0cee\u0cef:J9rWkfeMJtevQeGdG2-fhrervcXJoD"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u0d66\u0d67\u0d68\u0d69\u0d6a\u0d6b\u0d6c\u0d6d\u0d6e\u0d6f:hvhmJKspN0pCniue0XdgYTZwqdGPaN"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u0de6\u0de7\u0de8\u0de9\u0dea\u0deb\u0dec\u0ded\u0dee\u0def:_5GNFpouIlDJ6MNFkIeKkMu7J2ikV8"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u0e50\u0e51\u0e52\u0e53\u0e54\u0e55\u0e56\u0e57\u0e58\u0e59:Djq9KTiHZB52OMWbT8uUd64944-OTN"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u0ed0\u0ed1\u0ed2\u0ed3\u0ed4\u0ed5\u0ed6\u0ed7\u0ed8\u0ed9:hnQbl9Sq4wsqoc_GLGLtrB-Ouk-20E"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u0f20\u0f21\u0f22\u0f23\u0f24\u0f25\u0f26\u0f27\u0f28\u0f29:2bfIWTgk5wm4GNPzfaBRlf_QtdF681"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u1040\u1041\u1042\u1043\u1044\u1045\u1046\u1047\u1048\u1049:dkM6YkNBRD6mNSKXH16UhQil-YOwV2"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u1090\u1091\u1092\u1093\u1094\u1095\u1096\u1097\u1098\u1099:MI37Yzhe0hJhvoDsc4odqSuAgH4HbZ"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u17e0\u17e1\u17e2\u17e3\u17e4\u17e5\u17e6\u17e7\u17e8\u17e9:n7q3VxnUVMU7L_D2-1KlkdvkT2VgpA"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u1810\u1811\u1812\u1813\u1814\u1815\u1816\u1817\u1818\u1819:Zv2oHsHSoEMBAY-912gw7pgyEAYEvu"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u1946\u1947\u1948\u1949\u194a\u194b\u194c\u194d\u194e\u194f:FZkBKaCoN-tRx3rfdR_Uw_j2VaoiHn"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u19d0\u19d1\u19d2\u19d3\u19d4\u19d5\u19d6\u19d7\u19d8\u19d9:KyBLgdCuCK0F2Q0rxNokTeloWWNjd8"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u1a80\u1a81\u1a82\u1a83\u1a84\u1a85\u1a86\u1a87\u1a88\u1a89:GWtuvsC77KXWe8mYkpfDEDXPgYaD8Q"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u1a90\u1a91\u1a92\u1a93\u1a94\u1a95\u1a96\u1a97\u1a98\u1a99:AMbSFwKDf4S_3TyYIXVmKvIx2siFqI"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u1b50\u1b51\u1b52\u1b53\u1b54\u1b55\u1b56\u1b57\u1b58\u1b59:SUUdvY5rksL3YPPnguTUODB1yyMdFX"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u1bb0\u1bb1\u1bb2\u1bb3\u1bb4\u1bb5\u1bb6\u1bb7\u1bb8\u1bb9:mlfYWHqN2o5uX_6DHpHwJ6azKsnerb"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u1c40\u1c41\u1c42\u1c43\u1c44\u1c45\u1c46\u1c47\u1c48\u1c49:ULd8BGv95xUdCddHhEdJeNoqkt9C29"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\u1c50\u1c51\u1c52\u1c53\u1c54\u1c55\u1c56\u1c57\u1c58\u1c59:o8jhCBBAeWn_HyW93nTXxa1OSJFWP1"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ua620\ua621\ua622\ua623\ua624\ua625\ua626\ua627\ua628\ua629:DgSvhOmcQp6cO-I6UO3KI6BKpox947"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ua8d0\ua8d1\ua8d2\ua8d3\ua8d4\ua8d5\ua8d6\ua8d7\ua8d8\ua8d9:GrcOaoiMV1RNzo_tEx160LjMycDuv-"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ua900\ua901\ua902\ua903\ua904\ua905\ua906\ua907\ua908\ua909:kM-kkOaltsB4X9E-_5xpa61F7__oxt"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ua9d0\ua9d1\ua9d2\ua9d3\ua9d4\ua9d5\ua9d6\ua9d7\ua9d8\ua9d9:s_A4gI-DDnTo_Pmduqb3stNdcxiMtJ"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ua9f0\ua9f1\ua9f2\ua9f3\ua9f4\ua9f5\ua9f6\ua9f7\ua9f8\ua9f9:cnjJEv3cX4Dsjax3rBJSogkUrTMKvH"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\uaa50\uaa51\uaa52\uaa53\uaa54\uaa55\uaa56\uaa57\uaa58\uaa59:DAt_t2PfjYTJQvyrhrIKFx8KL0ykTY"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\uabf0\uabf1\uabf2\uabf3\uabf4\uabf5\uabf6\uabf7\uabf8\uabf9:agqsKw7zPnn1oW46j2z7Pp1hz3qYJY"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\uff10\uff11\uff12\uff13\uff14\uff15\uff16\uff17\uff18\uff19:fLHjT-Gp0Kv18fwX_bjcc1lOsCXbVn"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud801\udca0\ud801\udca1\ud801\udca2\ud801\udca3\ud801\udca4\ud801\udca5\ud801\udca6\ud801\udca7\ud801\udca8\ud801\udca9:752_IDK2FIbVP2w7i_bEoQaNakuOvW"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud803\udd30\ud803\udd31\ud803\udd32\ud803\udd33\ud803\udd34\ud803\udd35\ud803\udd36\ud803\udd37\ud803\udd38\ud803\udd39:dyxmxxa4s3sPeZb0ESGrwR7jfnarP1"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud804\udc66\ud804\udc67\ud804\udc68\ud804\udc69\ud804\udc6a\ud804\udc6b\ud804\udc6c\ud804\udc6d\ud804\udc6e\ud804\udc6f:-Qn78JO-jCJdNu7aJlRGLa-yuNoOhS"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud804\udcf0\ud804\udcf1\ud804\udcf2\ud804\udcf3\ud804\udcf4\ud804\udcf5\ud804\udcf6\ud804\udcf7\ud804\udcf8\ud804\udcf9:ukLCyfPf6hgHG4sddOp3C3IBsy5hSK"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud804\udd36\ud804\udd37\ud804\udd38\ud804\udd39\ud804\udd3a\ud804\udd3b\ud804\udd3c\ud804\udd3d\ud804\udd3e\ud804\udd3f:fOtSrnBdTgpo0M87-CgDMhcIwUgIyy"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud804\uddd0\ud804\uddd1\ud804\uddd2\ud804\uddd3\ud804\uddd4\ud804\uddd5\ud804\uddd6\ud804\uddd7\ud804\uddd8\ud804\uddd9:Hj9wDISPCG4JMameNNDxzyo2EBXpvq"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud804\udef0\ud804\udef1\ud804\udef2\ud804\udef3\ud804\udef4\ud804\udef5\ud804\udef6\ud804\udef7\ud804\udef8\ud804\udef9:XujWLXzKUu87GJ_rWBWtFvhpCm1bIB"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud805\udc50\ud805\udc51\ud805\udc52\ud805\udc53\ud805\udc54\ud805\udc55\ud805\udc56\ud805\udc57\ud805\udc58\ud805\udc59:pKbDmn-Swnd4VBmyP2A1YtKF8ZUQ6K"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud805\udcd0\ud805\udcd1\ud805\udcd2\ud805\udcd3\ud805\udcd4\ud805\udcd5\ud805\udcd6\ud805\udcd7\ud805\udcd8\ud805\udcd9:98QscGsJbifgX7OHvR10OH16Nts4br"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud805\ude50\ud805\ude51\ud805\ude52\ud805\ude53\ud805\ude54\ud805\ude55\ud805\ude56\ud805\ude57\ud805\ude58\ud805\ude59:GpWshHoThaddPxv8-QPwpIQ-5NavqJ"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud805\udec0\ud805\udec1\ud805\udec2\ud805\udec3\ud805\udec4\ud805\udec5\ud805\udec6\ud805\udec7\ud805\udec8\ud805\udec9:l6cytgdH-qi_mSegVJj8zjC47flvWz"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud805\udf30\ud805\udf31\ud805\udf32\ud805\udf33\ud805\udf34\ud805\udf35\ud805\udf36\ud805\udf37\ud805\udf38\ud805\udf39:vcbURXgypcO2w82tj0LGGjISQduasa"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud806\udce0\ud806\udce1\ud806\udce2\ud806\udce3\ud806\udce4\ud806\udce5\ud806\udce6\ud806\udce7\ud806\udce8\ud806\udce9:2qG4Qb8Ecj8epPaCB9IWqZ5bP4Vlgu"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud806\udd50\ud806\udd51\ud806\udd52\ud806\udd53\ud806\udd54\ud806\udd55\ud806\udd56\ud806\udd57\ud806\udd58\ud806\udd59:476ivyzg7DIapcVJN51QLvBcwX8dsq"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud807\udc50\ud807\udc51\ud807\udc52\ud807\udc53\ud807\udc54\ud807\udc55\ud807\udc56\ud807\udc57\ud807\udc58\ud807\udc59:3BakUvSqGhmObo7DqtaWg_6OD4InIP"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud807\udd50\ud807\udd51\ud807\udd52\ud807\udd53\ud807\udd54\ud807\udd55\ud807\udd56\ud807\udd57\ud807\udd58\ud807\udd59:smHje9sPhIfhd5WNihQzK_s8Q2hNYH"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud807\udda0\ud807\udda1\ud807\udda2\ud807\udda3\ud807\udda4\ud807\udda5\ud807\udda6\ud807\udda7\ud807\udda8\ud807\udda9:pq-Z30L-iK9-WENSKpdY0CL3ELsMSx"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud807\udf50\ud807\udf51\ud807\udf52\ud807\udf53\ud807\udf54\ud807\udf55\ud807\udf56\ud807\udf57\ud807\udf58\ud807\udf59:PnGhRmj_e36pyZeCWbQeHvDtCqPfYb"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud81a\ude60\ud81a\ude61\ud81a\ude62\ud81a\ude63\ud81a\ude64\ud81a\ude65\ud81a\ude66\ud81a\ude67\ud81a\ude68\ud81a\ude69:8hdFQrX7EYn2oOK7lsszOCWLPFc753"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud81a\udec0\ud81a\udec1\ud81a\udec2\ud81a\udec3\ud81a\udec4\ud81a\udec5\ud81a\udec6\ud81a\udec7\ud81a\udec8\ud81a\udec9:PCDRgTOPFCg5O3mzmBiThRtsYbY-he"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud81a\udf50\ud81a\udf51\ud81a\udf52\ud81a\udf53\ud81a\udf54\ud81a\udf55\ud81a\udf56\ud81a\udf57\ud81a\udf58\ud81a\udf59:5W7IhDIGYRdclfK3lZZ9YWLJ76rkfi"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud835\udfce\ud835\udfcf\ud835\udfd0\ud835\udfd1\ud835\udfd2\ud835\udfd3\ud835\udfd4\ud835\udfd5\ud835\udfd6\ud835\udfd7:WEvLyZvVzniYVRminy10mbr53bydg6"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud835\udfd8\ud835\udfd9\ud835\udfda\ud835\udfdb\ud835\udfdc\ud835\udfdd\ud835\udfde\ud835\udfdf\ud835\udfe0\ud835\udfe1:wLDYwg_DO7v42ZaF9_A2vgcfhbXpiJ"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud835\udfe2\ud835\udfe3\ud835\udfe4\ud835\udfe5\ud835\udfe6\ud835\udfe7\ud835\udfe8\ud835\udfe9\ud835\udfea\ud835\udfeb:3i4yzDHBpzgckdUrjt8byLcHxbjOoG"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud835\udfec\ud835\udfed\ud835\udfee\ud835\udfef\ud835\udff0\ud835\udff1\ud835\udff2\ud835\udff3\ud835\udff4\ud835\udff5:LBOwioCGHEbWj_XXF7KCoX0x315rn6"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud835\udff6\ud835\udff7\ud835\udff8\ud835\udff9\ud835\udffa\ud835\udffb\ud835\udffc\ud835\udffd\ud835\udffe\ud835\udfff:UHp5iZNrswzGPIyVAsyd0KIcOE-ZFe"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud838\udd40\ud838\udd41\ud838\udd42\ud838\udd43\ud838\udd44\ud838\udd45\ud838\udd46\ud838\udd47\ud838\udd48\ud838\udd49:fefRk7P7pP8WnTt9nhZW4e5-jvq6K6"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud838\udef0\ud838\udef1\ud838\udef2\ud838\udef3\ud838\udef4\ud838\udef5\ud838\udef6\ud838\udef7\ud838\udef8\ud838\udef9:yT0-0EtaK-3z3HqPm9YVSJV9gJHPyw"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud839\udcf0\ud839\udcf1\ud839\udcf2\ud839\udcf3\ud839\udcf4\ud839\udcf5\ud839\udcf6\ud839\udcf7\ud839\udcf8\ud839\udcf9:8lhiadO8CFw9WzSVPZ33F0-WrqV8gK"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud83a\udd50\ud83a\udd51\ud83a\udd52\ud83a\udd53\ud83a\udd54\ud83a\udd55\ud83a\udd56\ud83a\udd57\ud83a\udd58\ud83a\udd59:4ZMkN_5SKahcG81VVFJqSkY-wwGvqI"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "decimal-run",
+      "input": {
+        "secrets": [],
+        "text": "\ud83e\udff0\ud83e\udff1\ud83e\udff2\ud83e\udff3\ud83e\udff4\ud83e\udff5\ud83e\udff6\ud83e\udff7\ud83e\udff8\ud83e\udff9:ojiIjYI_y0VhSQZP6R2yDkt3W7nlqW"
+      },
+      "output": "***REDACTED***"
+    },
+    {
+      "class": "numeric-not-decimal",
+      "input": {
+        "secrets": [],
+        "text": "\ud802\ude7d\ud804\udc57\ud802\uddd7\ud802\ude7d\u00b3\u217e\ud802\uddd7:6crROgBpj20gTAn63iO6kVh6pjFDJl"
+      },
+      "output": "\ud802\ude7d\ud804\udc57\ud802\uddd7\ud802\ude7d\u00b3\u217e\ud802\uddd7:6crROgBpj20gTAn63iO6kVh6pjFDJl"
+    },
+    {
+      "class": "numeric-not-decimal",
+      "input": {
+        "secrets": [],
+        "text": "\u0d71\ud83b\udd37\ud802\udf7b\u0d71\ud83b\udc8e\ud800\udd70\u17f6:eSm40TmpBTb5BXnLT_eiKBoWLZXEuv"
+      },
+      "output": "\u0d71\ud83b\udd37\ud802\udf7b\u0d71\ud83b\udc8e\ud800\udd70\u17f6:eSm40TmpBTb5BXnLT_eiKBoWLZXEuv"
+    },
+    {
+      "class": "numeric-not-decimal",
+      "input": {
+        "secrets": [],
+        "text": "\ud800\udd54\u24f0\u216f\u2177\u24ee\u24f0\u24ee:Wz95YDiBESEKbSYiN7Wyx_czE79AhQ"
+      },
+      "output": "\ud800\udd54\u24f0\u216f\u2177\u24ee\u24f0\u24ee:Wz95YDiBESEKbSYiN7Wyx_czE79AhQ"
+    },
+    {
+      "class": "numeric-not-decimal",
+      "input": {
+        "secrets": [],
+        "text": "\ud800\udd60\u249b\u246b\u2153\ud802\ude9d\ud802\ude9d\ud807\udfd0:7JEI-aaY7M_vP74Af50duybU4v8PiZ"
+      },
+      "output": "\ud800\udd60\u249b\u246b\u2153\ud802\ude9d\ud802\ude9d\ud807\udfd0:7JEI-aaY7M_vP74Af50duybU4v8PiZ"
+    },
+    {
+      "class": "none",
+      "input": {
+        "secrets": [],
+        "text": "nothing secret here"
+      },
+      "output": "nothing secret here"
+    },
+    {
+      "class": "none",
+      "input": {
+        "secrets": [
+          "quiet-meadow"
+        ],
+        "text": "a different line"
+      },
+      "output": "a different line"
+    },
+    {
+      "class": "none",
+      "input": {
+        "secrets": [
+          "percent-sign-value"
+        ],
+        "text": "100% of %s and %d"
+      },
+      "output": "100% of %s and %d"
+    },
+    {
+      "class": "secret",
+      "input": {
+        "secrets": [
+          "tab\tand space"
+        ],
+        "text": "held tab\tand space here"
+      },
+      "output": "held ***REDACTED*** here"
+    },
+    {
+      "input": {
+        "secrets": [],
+        "text": "puiimlc vw irdgemtx"
+      },
+      "output": "puiimlc vw irdgemtx"
+    },
+    {
+      "input": {
+        "secrets": [
+          "korvoapima"
+        ],
+        "text": "119608:lI9JJdhcEadwLv4_3DXWoRiPIs-KE4cDG fgoitfwz myiuv rra vkxkiyvx korvoapima jb rus"
+      },
+      "output": "***REDACTED*** fgoitfwz myiuv rra vkxkiyvx ***REDACTED*** jb rus"
+    },
+    {
+      "input": {
+        "secrets": [
+          "dnbor",
+          "xghwlbwbn"
+        ],
+        "text": "dnbor khqpufwt xghwlbwbn 6878391:JiuBMwiUmgkgrvWoi3UQTsQAkbdFNQppNb jq ychrdq"
+      },
+      "output": "***REDACTED*** khqpufwt ***REDACTED*** ***REDACTED*** jq ychrdq"
+    },
+    {
+      "input": {
+        "secrets": [
+          "ekwq"
+        ],
+        "text": "ekwq jnmr ansfg urppol flmrv"
+      },
+      "output": "***REDACTED*** jnmr ansfg urppol flmrv"
+    },
+    {
+      "input": {
+        "secrets": [],
+        "text": "gqcj whdilxcj ceoq dxpfqlxg"
+      },
+      "output": "gqcj whdilxcj ceoq dxpfqlxg"
+    },
+    {
+      "input": {
+        "secrets": [
+          "tgczhyir"
+        ],
+        "text": "oeig vgm wymq tgczhyir brnffl jewulm uxapsonm gnwmay"
+      },
+      "output": "oeig vgm wymq ***REDACTED*** brnffl jewulm uxapsonm gnwmay"
+    },
+    {
+      "input": {
+        "secrets": [
+          "jibnxiqg",
+          "hoxk",
+          "igxjyrtxwh"
+        ],
+        "text": "hoxk kvtslf pgce jibnxiqg pgf igxjyrtxwh"
+      },
+      "output": "***REDACTED*** kvtslf pgce ***REDACTED*** pgf ***REDACTED***"
+    },
+    {
+      "input": {
+        "secrets": [
+          "rxf"
+        ],
+        "text": "gpmka sspqn ycaszana rxf jqkpodli"
+      },
+      "output": "gpmka sspqn ycaszana rxf jqkpodli"
+    },
+    {
+      "input": {
+        "secrets": [
+          "yynijwsk",
+          "rdntc",
+          "joem"
+        ],
+        "text": "ix sagelh lovw sfkuch xbhulyg joem yynijwsk xghssltc swk rdntc"
+      },
+      "output": "ix sagelh lovw sfkuch xbhulyg ***REDACTED*** ***REDACTED*** xghssltc swk ***REDACTED***"
+    },
+    {
+      "input": {
+        "secrets": [],
+        "text": "kikthve diaojita uzy qsa codi uvrnqzh khu"
+      },
+      "output": "kikthve diaojita uzy qsa codi uvrnqzh khu"
+    }
+  ],
+  "function": "logging_redact.SecretRedactingFilter",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Constructs the filter with secrets as its own values, runs one log record carrying text through it, and returns the record's message; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_020.py",
+  "registry_sha256": "d52ea86a9eebf02d6ca6cdcc2223a97f1a5acf8d57378b6ca434020c1a3907d8",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

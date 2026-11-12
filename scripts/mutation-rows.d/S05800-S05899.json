@@ -1,0 +1,78 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S05801-A-WEB-AUDIT-THAT-EXAMINED-NOTHING-IS-VOID",
+        "scripts/audit-web-verdict.py",
+        "    if total == 0:\n",
+        "    if total < 0:\n",
+        "a report that examined 0 packages reads VOID, never a pass (SPEC-058 R3)",
+        "test_audit_web.TheWebAuditRefusesAnEmptyRun.test_a_web_audit_that_examined_nothing_is_void"
+      ],
+      [
+        "S05802-VOID-NEVER-EXITS-0",
+        "scripts/audit-web-verdict.py",
+        "EXIT_OK, EXIT_FAILED, EXIT_VOID = 0, 1, 3\n",
+        "EXIT_OK, EXIT_FAILED, EXIT_VOID = 0, 1, 0\n",
+        "a VOID verdict fails the stage with its own exit, 3, never 0 (SPEC-058 R3)",
+        "test_audit_web.TheWebAuditRefusesAnEmptyRun.test_a_web_audit_that_examined_nothing_is_void"
+      ],
+      [
+        "S05803-AN-ADVISORY-AT-THE-LEVEL-FAILS",
+        "scripts/audit-web-verdict.py",
+        "    return GRADES.index(severity) >= GRADES.index(level)\n",
+        "    return GRADES.index(severity) > GRADES.index(level)\n",
+        "an advisory at the level itself fails the stage, not only one above it (SPEC-058 R3)",
+        "test_audit_web.TheWebAuditFailsOnAnAdvisory.test_an_advisory_at_the_failing_level_fails_the_web_audit"
+      ],
+      [
+        "S05804-AN-ADVISORY-OF-NO-KNOWN-GRADE-FAILS",
+        "scripts/audit-web-verdict.py",
+        "    if severity not in GRADES:\n        return True\n",
+        "    if severity not in GRADES:\n        return False\n",
+        "an advisory of none of pnpm's grades fails the stage, never read as clean (SPEC-058 R3)",
+        "test_audit_web.TheWebAuditFailsOnAnAdvisory.test_an_advisory_at_the_failing_level_fails_the_web_audit"
+      ],
+      [
+        "S05805-A-FAILED-PNPM-IS-NEVER-A-PASS",
+        "scripts/audit-web-verdict.py",
+        "    if pnpm_exit != 0:\n",
+        "    if pnpm_exit > 1:\n",
+        "a pnpm that exited non-zero fails the stage when its report names no advisory (SPEC-058 R3)",
+        "test_audit_web.TheWebAuditFailsOnAnAdvisory.test_an_advisory_at_the_failing_level_fails_the_web_audit"
+      ],
+      [
+        "S05806-THE-WEB-AUDIT-COVERS-EVERY-DEPENDENCY-CLASS",
+        "scripts/check.sh",
+        "    report=$(pnpm audit --json --audit-level \"$AUDIT_WEB_LEVEL\")\n",
+        "    report=$(pnpm audit --prod --json --audit-level \"$AUDIT_WEB_LEVEL\")\n",
+        "the web audit names no dependency class, so it audits the development dependencies too (SPEC-058 R1)",
+        "test_audit_web.TheWebAuditCoversEveryDependency.test_the_web_audit_covers_the_development_dependencies_too"
+      ],
+      [
+        "S05807-THE-WEB-AUDIT-HOLDS-EVERY-GRADE",
+        "scripts/check.sh",
+        "AUDIT_WEB_LEVEL=low\n",
+        "AUDIT_WEB_LEVEL=moderate\n",
+        "the web audit's level is low, so every advisory pnpm grades fails the stage (SPEC-058 R2)",
+        "test_audit_web.TheWebAuditFailsOnAnAdvisory.test_an_advisory_at_the_failing_level_fails_the_web_audit"
+      ],
+      [
+        "S05808-THE-VERDICT-HEARS-PNPMS-EXIT",
+        "scripts/check.sh",
+        "    python3 scripts/audit-web-verdict.py --level \"$AUDIT_WEB_LEVEL\" --pnpm-exit \"$code\" \\\n",
+        "    python3 scripts/audit-web-verdict.py --level \"$AUDIT_WEB_LEVEL\" --pnpm-exit 0 \\\n",
+        "the verdict is given pnpm's own exit, so a failed pnpm is never a pass (SPEC-058 R3)",
+        "test_audit_web.TheWebAuditFailsOnAnAdvisory.test_an_advisory_at_the_failing_level_fails_the_web_audit"
+      ],
+      [
+        "S05809-THE-WEB-AUDIT-CHECKS-PYTHON3",
+        "scripts/check.sh",
+        "    need_node && need_python || return 1\n",
+        "    need_node || return 1\n",
+        "the web audit fails by name without the python3 its verdict runs on (SPEC-058 R4)",
+        "test_check_gate.EachStageChecksItsOwnTools.test_every_stage_fails_by_name_without_each_tool_it_runs"
+      ]
+    ]
+  }
+}

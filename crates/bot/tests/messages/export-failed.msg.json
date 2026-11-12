@@ -1,0 +1,12 @@
+{
+  "duty": "bot-commands",
+  "schema": "phx.duty.message.v1",
+  "send": {
+    "link_preview_options": {
+      "is_disabled": true
+    },
+    "parse_mode": "HTML",
+    "text": "The export could not be made, so nothing was sent. Send /export to try again."
+  },
+  "x-message": "export-failed"
+}

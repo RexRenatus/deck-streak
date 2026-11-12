@@ -1,0 +1,4400 @@
+{
+  "cases": [
+    {
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 0,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 0,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 1,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 1,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 2,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 2,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 3,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 3,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 4,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 4
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 4,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 5,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 4
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 5,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          1,
+          0
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 0,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 0,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 0,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 1,
+        "t5_used": 1
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 0,
+        "t4_used": 1,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 1,
+        "t5_used": 1
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 0,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 0,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 1,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 1,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 1,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 1,
+        "t5_used": 1
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 1,
+        "t4_used": 1,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 1,
+        "t5_used": 1
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 1,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 1,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 2,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 2,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 2,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 1,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 2,
+        "t4_used": 1,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 1,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 2,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 2,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 3,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 3,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 3
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 3,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 1,
+        "t5_used": 1
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 3,
+        "t4_used": 1,
+        "t5_used": 1
+      },
+      "output": 3
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 1,
+        "t5_used": 1
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 3,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 3,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 3
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 4,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 4
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 4,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 4
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 4,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 4
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 1,
+        "t5_used": 1
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 4,
+        "t4_used": 1,
+        "t5_used": 1
+      },
+      "output": 4
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 1,
+        "t5_used": 1
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 4,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 4,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 3
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 5,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 5
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 5,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 4
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 5,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 5
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 1,
+        "t5_used": 0
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 1,
+        "t5_used": 1
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 5,
+        "t4_used": 1,
+        "t5_used": 1
+      },
+      "output": 4
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 1,
+        "t5_used": 1
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 5,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 5
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 5,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 3
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          2,
+          1
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 0,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 0,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 0,
+        "t5_used": 2
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 0,
+        "t4_used": 0,
+        "t5_used": 2
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 0,
+        "t5_used": 2
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 0,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 0,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 2,
+        "t5_used": 2
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 0,
+        "t4_used": 2,
+        "t5_used": 2
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 2,
+        "t5_used": 2
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 3,
+        "t5_used": 0
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 0,
+        "t4_used": 3,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 3,
+        "t5_used": 0
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 3,
+        "t5_used": 1
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 0,
+        "t4_used": 3,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 3,
+        "t5_used": 1
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 3,
+        "t5_used": 2
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 0,
+        "t4_used": 3,
+        "t5_used": 2
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 0,
+        "t4_used": 3,
+        "t5_used": 2
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 1,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 1,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 0,
+        "t5_used": 2
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 1,
+        "t4_used": 0,
+        "t5_used": 2
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 0,
+        "t5_used": 2
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 1,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 1,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 2,
+        "t5_used": 2
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 1,
+        "t4_used": 2,
+        "t5_used": 2
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 2,
+        "t5_used": 2
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 3,
+        "t5_used": 0
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 1,
+        "t4_used": 3,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 3,
+        "t5_used": 0
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 3,
+        "t5_used": 1
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 1,
+        "t4_used": 3,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 3,
+        "t5_used": 1
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 3,
+        "t5_used": 2
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 1,
+        "t4_used": 3,
+        "t5_used": 2
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 1,
+        "t4_used": 3,
+        "t5_used": 2
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 2,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 2,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 0,
+        "t5_used": 2
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 2,
+        "t4_used": 0,
+        "t5_used": 2
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 0,
+        "t5_used": 2
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 2,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 2,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 2,
+        "t5_used": 2
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 2,
+        "t4_used": 2,
+        "t5_used": 2
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 2,
+        "t5_used": 2
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 3,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 2,
+        "t4_used": 3,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 3,
+        "t5_used": 0
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 3,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 2,
+        "t4_used": 3,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 3,
+        "t5_used": 1
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 3,
+        "t5_used": 2
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 2,
+        "t4_used": 3,
+        "t5_used": 2
+      },
+      "output": 2
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 2,
+        "t4_used": 3,
+        "t5_used": 2
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 3,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 3,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 3
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 0,
+        "t5_used": 2
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 3,
+        "t4_used": 0,
+        "t5_used": 2
+      },
+      "output": 3
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 0,
+        "t5_used": 2
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 3,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 3,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 3
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 2,
+        "t5_used": 2
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 3,
+        "t4_used": 2,
+        "t5_used": 2
+      },
+      "output": 3
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 2,
+        "t5_used": 2
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 3,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 3,
+        "t4_used": 3,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 3,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 3,
+        "t5_used": 1
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 3,
+        "t4_used": 3,
+        "t5_used": 1
+      },
+      "output": 3
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 3,
+        "t5_used": 1
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 3,
+        "t5_used": 2
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 3,
+        "t4_used": 3,
+        "t5_used": 2
+      },
+      "output": 3
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 3,
+        "t4_used": 3,
+        "t5_used": 2
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 4,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 4
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 4,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 4
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 0,
+        "t5_used": 2
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 4,
+        "t4_used": 0,
+        "t5_used": 2
+      },
+      "output": 4
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 0,
+        "t5_used": 2
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 4,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 4
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 4,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 4
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 2,
+        "t5_used": 2
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 4,
+        "t4_used": 2,
+        "t5_used": 2
+      },
+      "output": 4
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 2,
+        "t5_used": 2
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 3,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 4,
+        "t4_used": 3,
+        "t5_used": 0
+      },
+      "output": 3
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 3,
+        "t5_used": 0
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 3,
+        "t5_used": 1
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 4,
+        "t4_used": 3,
+        "t5_used": 1
+      },
+      "output": 3
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 3,
+        "t5_used": 1
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 3,
+        "t5_used": 2
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 4,
+        "t4_used": 3,
+        "t5_used": 2
+      },
+      "output": 3
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 4,
+        "t4_used": 3,
+        "t5_used": 2
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 5,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 5
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 0,
+        "t5_used": 0
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 5,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 5
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 0,
+        "t5_used": 1
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 0,
+        "t5_used": 2
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 5,
+        "t4_used": 0,
+        "t5_used": 2
+      },
+      "output": 4
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 0,
+        "t5_used": 2
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 5,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 5
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 2,
+        "t5_used": 0
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 5,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 5
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 2,
+        "t5_used": 1
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 2,
+        "t5_used": 2
+      },
+      "output": 4
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 5,
+        "t4_used": 2,
+        "t5_used": 2
+      },
+      "output": 4
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 2,
+        "t5_used": 2
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 3,
+        "t5_used": 0
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 5,
+        "t4_used": 3,
+        "t5_used": 0
+      },
+      "output": 5
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 3,
+        "t5_used": 0
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 3,
+        "t5_used": 1
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 5,
+        "t4_used": 3,
+        "t5_used": 1
+      },
+      "output": 5
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 3,
+        "t5_used": 1
+      },
+      "output": 5
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 3,
+        "t5_used": 2
+      },
+      "output": 3
+    },
+    {
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": false,
+        "rare": true,
+        "requested": 5,
+        "t4_used": 3,
+        "t5_used": 2
+      },
+      "output": 3
+    },
+    {
+      "class": "exempt",
+      "input": {
+        "budget": [
+          3,
+          2
+        ],
+        "exempt": true,
+        "rare": false,
+        "requested": 5,
+        "t4_used": 3,
+        "t5_used": 2
+      },
+      "output": 5
+    }
+  ],
+  "function": "gamification.ladder.apply_budget",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_084.py",
+  "registry_sha256": "d94121fc9e1af11dff03656086884c0469daf7c5443f325a08a51ce9430f21bc",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

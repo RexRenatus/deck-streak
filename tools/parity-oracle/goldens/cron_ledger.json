@@ -1,0 +1,2542 @@
+{
+  "adapter": "with_temporary_store",
+  "cases": [
+    {
+      "class": "claim",
+      "input": {
+        "fire_day": 36830,
+        "job_id": "db_maintenance",
+        "steps": [
+          {
+            "at_ms": 3182168370175,
+            "op": "claim"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": true,
+        "steps": [
+          {
+            "result": true,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 3182168370175,
+              "last_fire_at": 3182168370175,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 3182168370175
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "claim",
+      "input": {
+        "fire_day": 39011,
+        "job_id": "db_maintenance",
+        "steps": [
+          {
+            "at_ms": 3370633755961,
+            "op": "claim"
+          },
+          {
+            "at_ms": 3370634845757,
+            "op": "claim"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": true,
+        "steps": [
+          {
+            "result": true,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 3370633755961,
+              "last_fire_at": 3370633755961,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 3370633755961
+            }
+          },
+          {
+            "result": false,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 3370633755961,
+              "last_fire_at": 3370633755961,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 3370633755961
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "claim",
+      "input": {
+        "fire_day": 32345,
+        "job_id": "db_maintenance",
+        "steps": [
+          {
+            "at_ms": 2794627154798,
+            "op": "record",
+            "outcome": "ok"
+          },
+          {
+            "at_ms": 2794627580590,
+            "op": "claim"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": true,
+        "steps": [
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 2794627154798,
+              "last_fire_at": 2794627154798,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 1,
+              "updated_at": 2794627154798
+            }
+          },
+          {
+            "result": false,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 2794627154798,
+              "last_fire_at": 2794627154798,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 1,
+              "updated_at": 2794627154798
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "claim",
+      "input": {
+        "fire_day": 16696,
+        "job_id": "db_maintenance",
+        "steps": [
+          {
+            "at_ms": 1442562218690,
+            "op": "record",
+            "outcome": "error"
+          },
+          {
+            "at_ms": 1442562929114,
+            "op": "claim"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": true,
+        "steps": [
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 1,
+              "first_seen_at": 1442562218690,
+              "last_fire_at": 1442562218690,
+              "last_outcome": "error",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 1442562218690
+            }
+          },
+          {
+            "result": false,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 1,
+              "first_seen_at": 1442562218690,
+              "last_fire_at": 1442562218690,
+              "last_outcome": "error",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 1442562218690
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "claim",
+      "input": {
+        "fire_day": 20929,
+        "job_id": "db_maintenance",
+        "steps": [
+          {
+            "at_ms": 1808298816010,
+            "op": "record",
+            "outcome": "catchup"
+          },
+          {
+            "at_ms": 1808299130618,
+            "op": "claim"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": true,
+        "steps": [
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 1808298816010,
+              "last_fire_at": 1808298816010,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 1808298816010
+            }
+          },
+          {
+            "result": false,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 1808298816010,
+              "last_fire_at": 1808298816010,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 1808298816010
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "claim",
+      "input": {
+        "fire_day": 6368,
+        "job_id": "db_maintenance",
+        "steps": [
+          {
+            "at_ms": 550200598400,
+            "op": "record",
+            "outcome": "missed"
+          },
+          {
+            "at_ms": 550202588201,
+            "op": "claim"
+          },
+          {
+            "at_ms": 550205023689,
+            "op": "claim"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": true,
+        "steps": [
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 550200598400,
+              "last_fire_at": null,
+              "last_outcome": "missed",
+              "missed_count": 1,
+              "ok_count": 0,
+              "updated_at": 550200598400
+            }
+          },
+          {
+            "result": true,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 550200598400,
+              "last_fire_at": 550202588201,
+              "last_outcome": "catchup",
+              "missed_count": 1,
+              "ok_count": 0,
+              "updated_at": 550202588201
+            }
+          },
+          {
+            "result": false,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 550200598400,
+              "last_fire_at": 550202588201,
+              "last_outcome": "catchup",
+              "missed_count": 1,
+              "ok_count": 0,
+              "updated_at": 550202588201
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "release",
+      "input": {
+        "fire_day": 20950,
+        "job_id": "db_maintenance",
+        "steps": [
+          {
+            "at_ms": 1810112268333,
+            "op": "claim"
+          },
+          {
+            "at_ms": 1810113106423,
+            "op": "record",
+            "outcome": "ok"
+          },
+          {
+            "at_ms": 1810114435615,
+            "op": "release"
+          },
+          {
+            "at_ms": 1810117058622,
+            "op": "claim"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": true,
+        "steps": [
+          {
+            "result": true,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 1810112268333,
+              "last_fire_at": 1810112268333,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 1810112268333
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 1810112268333,
+              "last_fire_at": 1810113106423,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 1,
+              "updated_at": 1810113106423
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 1810112268333,
+              "last_fire_at": 1810113106423,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 1810114435615
+            }
+          },
+          {
+            "result": true,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 1810112268333,
+              "last_fire_at": 1810117058622,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 1810117058622
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "release",
+      "input": {
+        "fire_day": 34693,
+        "job_id": "db_maintenance",
+        "steps": [
+          {
+            "at_ms": 2997496174013,
+            "op": "claim"
+          },
+          {
+            "at_ms": 2997497552854,
+            "op": "release"
+          },
+          {
+            "at_ms": 2997499345382,
+            "op": "release"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": true,
+        "steps": [
+          {
+            "result": true,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 2997496174013,
+              "last_fire_at": 2997496174013,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 2997496174013
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 2997496174013,
+              "last_fire_at": 2997496174013,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 2997497552854
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 2997496174013,
+              "last_fire_at": 2997496174013,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 2997499345382
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "release",
+      "input": {
+        "fire_day": 31918,
+        "job_id": "db_maintenance",
+        "steps": [
+          {
+            "at_ms": 2757769423808,
+            "op": "release"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": true,
+        "steps": [
+          {
+            "result": null,
+            "row": null
+          }
+        ]
+      }
+    },
+    {
+      "class": "release",
+      "input": {
+        "fire_day": 42840,
+        "job_id": "db_maintenance",
+        "steps": [
+          {
+            "at_ms": 3701428867452,
+            "op": "record",
+            "outcome": "ok"
+          },
+          {
+            "at_ms": 3701430565865,
+            "op": "record",
+            "outcome": "ok"
+          },
+          {
+            "at_ms": 3701430907559,
+            "op": "record",
+            "outcome": "error"
+          },
+          {
+            "at_ms": 3701431773026,
+            "op": "release"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": true,
+        "steps": [
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 3701428867452,
+              "last_fire_at": 3701428867452,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 1,
+              "updated_at": 3701428867452
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 3701428867452,
+              "last_fire_at": 3701430565865,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 2,
+              "updated_at": 3701430565865
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 1,
+              "first_seen_at": 3701428867452,
+              "last_fire_at": 3701430907559,
+              "last_outcome": "error",
+              "missed_count": 0,
+              "ok_count": 2,
+              "updated_at": 3701430907559
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 1,
+              "first_seen_at": 3701428867452,
+              "last_fire_at": 3701430907559,
+              "last_outcome": "error",
+              "missed_count": 0,
+              "ok_count": 1,
+              "updated_at": 3701431773026
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "missed",
+      "input": {
+        "fire_day": 12356,
+        "job_id": "db_maintenance",
+        "steps": [
+          {
+            "at_ms": 1067613954597,
+            "op": "record",
+            "outcome": "missed"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": true,
+        "steps": [
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 1067613954597,
+              "last_fire_at": null,
+              "last_outcome": "missed",
+              "missed_count": 1,
+              "ok_count": 0,
+              "updated_at": 1067613954597
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "missed",
+      "input": {
+        "fire_day": 4782,
+        "job_id": "db_maintenance",
+        "steps": [
+          {
+            "at_ms": 413184005448,
+            "op": "record",
+            "outcome": "missed"
+          },
+          {
+            "at_ms": 413184803782,
+            "op": "record",
+            "outcome": "missed"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": true,
+        "steps": [
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 413184005448,
+              "last_fire_at": null,
+              "last_outcome": "missed",
+              "missed_count": 1,
+              "ok_count": 0,
+              "updated_at": 413184005448
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 413184005448,
+              "last_fire_at": null,
+              "last_outcome": "missed",
+              "missed_count": 1,
+              "ok_count": 0,
+              "updated_at": 413184005448
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "missed",
+      "input": {
+        "fire_day": 35306,
+        "job_id": "db_maintenance",
+        "steps": [
+          {
+            "at_ms": 3050518429446,
+            "op": "record",
+            "outcome": "ok"
+          },
+          {
+            "at_ms": 3050519618416,
+            "op": "record",
+            "outcome": "missed"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": true,
+        "steps": [
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 3050518429446,
+              "last_fire_at": 3050518429446,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 1,
+              "updated_at": 3050518429446
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 3050518429446,
+              "last_fire_at": 3050518429446,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 1,
+              "updated_at": 3050518429446
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "missed",
+      "input": {
+        "fire_day": 35110,
+        "job_id": "db_maintenance",
+        "steps": [
+          {
+            "at_ms": 3033558225541,
+            "op": "claim"
+          },
+          {
+            "at_ms": 3033558910679,
+            "op": "record",
+            "outcome": "missed"
+          },
+          {
+            "at_ms": 3033561527745,
+            "op": "record",
+            "outcome": "error"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": true,
+        "steps": [
+          {
+            "result": true,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 3033558225541,
+              "last_fire_at": 3033558225541,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 3033558225541
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 3033558225541,
+              "last_fire_at": 3033558225541,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 3033558225541
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 1,
+              "first_seen_at": 3033558225541,
+              "last_fire_at": 3033561527745,
+              "last_outcome": "error",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 3033561527745
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "record",
+      "input": {
+        "fire_day": 46087,
+        "job_id": "db_maintenance",
+        "steps": [
+          {
+            "at_ms": 3981940285585,
+            "op": "record",
+            "outcome": "ok"
+          },
+          {
+            "at_ms": 3981941407786,
+            "op": "record",
+            "outcome": "error"
+          },
+          {
+            "at_ms": 3981944368058,
+            "op": "record",
+            "outcome": "catchup"
+          },
+          {
+            "at_ms": 3981945349356,
+            "op": "record",
+            "outcome": "ok"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": true,
+        "steps": [
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 3981940285585,
+              "last_fire_at": 3981940285585,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 1,
+              "updated_at": 3981940285585
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 1,
+              "first_seen_at": 3981940285585,
+              "last_fire_at": 3981941407786,
+              "last_outcome": "error",
+              "missed_count": 0,
+              "ok_count": 1,
+              "updated_at": 3981941407786
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 1,
+              "first_seen_at": 3981940285585,
+              "last_fire_at": 3981944368058,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 1,
+              "updated_at": 3981944368058
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 1,
+              "first_seen_at": 3981940285585,
+              "last_fire_at": 3981945349356,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 2,
+              "updated_at": 3981945349356
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "claim",
+      "input": {
+        "fire_day": 42843,
+        "job_id": "liveness_watch",
+        "steps": [
+          {
+            "at_ms": 3701657623875,
+            "op": "claim"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": false,
+        "steps": [
+          {
+            "result": true,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 3701657623875,
+              "last_fire_at": 3701657623875,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 3701657623875
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "claim",
+      "input": {
+        "fire_day": 12108,
+        "job_id": "liveness_watch",
+        "steps": [
+          {
+            "at_ms": 1046142303165,
+            "op": "claim"
+          },
+          {
+            "at_ms": 1046142357608,
+            "op": "claim"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": false,
+        "steps": [
+          {
+            "result": true,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 1046142303165,
+              "last_fire_at": 1046142303165,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 1046142303165
+            }
+          },
+          {
+            "result": false,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 1046142303165,
+              "last_fire_at": 1046142303165,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 1046142303165
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "claim",
+      "input": {
+        "fire_day": 32848,
+        "job_id": "liveness_watch",
+        "steps": [
+          {
+            "at_ms": 2838112980250,
+            "op": "record",
+            "outcome": "ok"
+          },
+          {
+            "at_ms": 2838114241671,
+            "op": "claim"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": false,
+        "steps": [
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 2838112980250,
+              "last_fire_at": 2838112980250,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 1,
+              "updated_at": 2838112980250
+            }
+          },
+          {
+            "result": false,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 2838112980250,
+              "last_fire_at": 2838112980250,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 1,
+              "updated_at": 2838112980250
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "claim",
+      "input": {
+        "fire_day": 6973,
+        "job_id": "liveness_watch",
+        "steps": [
+          {
+            "at_ms": 602498341231,
+            "op": "record",
+            "outcome": "error"
+          },
+          {
+            "at_ms": 602501054416,
+            "op": "claim"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": false,
+        "steps": [
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 1,
+              "first_seen_at": 602498341231,
+              "last_fire_at": 602498341231,
+              "last_outcome": "error",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 602498341231
+            }
+          },
+          {
+            "result": false,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 1,
+              "first_seen_at": 602498341231,
+              "last_fire_at": 602498341231,
+              "last_outcome": "error",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 602498341231
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "claim",
+      "input": {
+        "fire_day": 30538,
+        "job_id": "liveness_watch",
+        "steps": [
+          {
+            "at_ms": 2638555443503,
+            "op": "record",
+            "outcome": "catchup"
+          },
+          {
+            "at_ms": 2638557319987,
+            "op": "claim"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": false,
+        "steps": [
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 2638555443503,
+              "last_fire_at": 2638555443503,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 2638555443503
+            }
+          },
+          {
+            "result": false,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 2638555443503,
+              "last_fire_at": 2638555443503,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 2638555443503
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "claim",
+      "input": {
+        "fire_day": 7799,
+        "job_id": "liveness_watch",
+        "steps": [
+          {
+            "at_ms": 673910984837,
+            "op": "record",
+            "outcome": "missed"
+          },
+          {
+            "at_ms": 673912133249,
+            "op": "claim"
+          },
+          {
+            "at_ms": 673914463979,
+            "op": "claim"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": false,
+        "steps": [
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 673910984837,
+              "last_fire_at": null,
+              "last_outcome": "missed",
+              "missed_count": 1,
+              "ok_count": 0,
+              "updated_at": 673910984837
+            }
+          },
+          {
+            "result": true,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 673910984837,
+              "last_fire_at": 673912133249,
+              "last_outcome": "catchup",
+              "missed_count": 1,
+              "ok_count": 0,
+              "updated_at": 673912133249
+            }
+          },
+          {
+            "result": false,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 673910984837,
+              "last_fire_at": 673912133249,
+              "last_outcome": "catchup",
+              "missed_count": 1,
+              "ok_count": 0,
+              "updated_at": 673912133249
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "release",
+      "input": {
+        "fire_day": 22063,
+        "job_id": "liveness_watch",
+        "steps": [
+          {
+            "at_ms": 1906248040317,
+            "op": "claim"
+          },
+          {
+            "at_ms": 1906248731000,
+            "op": "record",
+            "outcome": "ok"
+          },
+          {
+            "at_ms": 1906250432945,
+            "op": "release"
+          },
+          {
+            "at_ms": 1906253397171,
+            "op": "claim"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": false,
+        "steps": [
+          {
+            "result": true,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 1906248040317,
+              "last_fire_at": 1906248040317,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 1906248040317
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 1906248040317,
+              "last_fire_at": 1906248731000,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 1,
+              "updated_at": 1906248731000
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 1906248040317,
+              "last_fire_at": 1906248731000,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 1906250432945
+            }
+          },
+          {
+            "result": true,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 1906248040317,
+              "last_fire_at": 1906253397171,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 1906253397171
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "release",
+      "input": {
+        "fire_day": 6157,
+        "job_id": "liveness_watch",
+        "steps": [
+          {
+            "at_ms": 531991159985,
+            "op": "claim"
+          },
+          {
+            "at_ms": 531991685063,
+            "op": "release"
+          },
+          {
+            "at_ms": 531994955665,
+            "op": "release"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": false,
+        "steps": [
+          {
+            "result": true,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 531991159985,
+              "last_fire_at": 531991159985,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 531991159985
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 531991159985,
+              "last_fire_at": 531991159985,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 531991685063
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 531991159985,
+              "last_fire_at": 531991159985,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 531994955665
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "release",
+      "input": {
+        "fire_day": 21801,
+        "job_id": "liveness_watch",
+        "steps": [
+          {
+            "at_ms": 1883689755372,
+            "op": "release"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": false,
+        "steps": [
+          {
+            "result": null,
+            "row": null
+          }
+        ]
+      }
+    },
+    {
+      "class": "release",
+      "input": {
+        "fire_day": 5926,
+        "job_id": "liveness_watch",
+        "steps": [
+          {
+            "at_ms": 512065830383,
+            "op": "record",
+            "outcome": "ok"
+          },
+          {
+            "at_ms": 512066047787,
+            "op": "record",
+            "outcome": "ok"
+          },
+          {
+            "at_ms": 512068226679,
+            "op": "record",
+            "outcome": "error"
+          },
+          {
+            "at_ms": 512069037843,
+            "op": "release"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": false,
+        "steps": [
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 512065830383,
+              "last_fire_at": 512065830383,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 1,
+              "updated_at": 512065830383
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 512065830383,
+              "last_fire_at": 512066047787,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 2,
+              "updated_at": 512066047787
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 1,
+              "first_seen_at": 512065830383,
+              "last_fire_at": 512068226679,
+              "last_outcome": "error",
+              "missed_count": 0,
+              "ok_count": 2,
+              "updated_at": 512068226679
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 1,
+              "first_seen_at": 512065830383,
+              "last_fire_at": 512068226679,
+              "last_outcome": "error",
+              "missed_count": 0,
+              "ok_count": 1,
+              "updated_at": 512069037843
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "missed",
+      "input": {
+        "fire_day": 8770,
+        "job_id": "liveness_watch",
+        "steps": [
+          {
+            "at_ms": 757789449983,
+            "op": "record",
+            "outcome": "missed"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": false,
+        "steps": [
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 757789449983,
+              "last_fire_at": null,
+              "last_outcome": "missed",
+              "missed_count": 1,
+              "ok_count": 0,
+              "updated_at": 757789449983
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "missed",
+      "input": {
+        "fire_day": 4117,
+        "job_id": "liveness_watch",
+        "steps": [
+          {
+            "at_ms": 355793350016,
+            "op": "record",
+            "outcome": "missed"
+          },
+          {
+            "at_ms": 355796638101,
+            "op": "record",
+            "outcome": "missed"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": false,
+        "steps": [
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 355793350016,
+              "last_fire_at": null,
+              "last_outcome": "missed",
+              "missed_count": 1,
+              "ok_count": 0,
+              "updated_at": 355793350016
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 355793350016,
+              "last_fire_at": null,
+              "last_outcome": "missed",
+              "missed_count": 2,
+              "ok_count": 0,
+              "updated_at": 355796638101
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "missed",
+      "input": {
+        "fire_day": 14957,
+        "job_id": "liveness_watch",
+        "steps": [
+          {
+            "at_ms": 1292287865967,
+            "op": "record",
+            "outcome": "ok"
+          },
+          {
+            "at_ms": 1292291263437,
+            "op": "record",
+            "outcome": "missed"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": false,
+        "steps": [
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 1292287865967,
+              "last_fire_at": 1292287865967,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 1,
+              "updated_at": 1292287865967
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 1292287865967,
+              "last_fire_at": 1292287865967,
+              "last_outcome": "missed",
+              "missed_count": 1,
+              "ok_count": 1,
+              "updated_at": 1292291263437
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "missed",
+      "input": {
+        "fire_day": 40645,
+        "job_id": "liveness_watch",
+        "steps": [
+          {
+            "at_ms": 3511787629523,
+            "op": "claim"
+          },
+          {
+            "at_ms": 3511790449220,
+            "op": "record",
+            "outcome": "missed"
+          },
+          {
+            "at_ms": 3511793510160,
+            "op": "record",
+            "outcome": "error"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": false,
+        "steps": [
+          {
+            "result": true,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 3511787629523,
+              "last_fire_at": 3511787629523,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 3511787629523
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 3511787629523,
+              "last_fire_at": 3511787629523,
+              "last_outcome": "missed",
+              "missed_count": 1,
+              "ok_count": 0,
+              "updated_at": 3511790449220
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 1,
+              "first_seen_at": 3511787629523,
+              "last_fire_at": 3511793510160,
+              "last_outcome": "error",
+              "missed_count": 1,
+              "ok_count": 0,
+              "updated_at": 3511793510160
+            }
+          }
+        ]
+      }
+    },
+    {
+      "class": "record",
+      "input": {
+        "fire_day": 27015,
+        "job_id": "liveness_watch",
+        "steps": [
+          {
+            "at_ms": 2334134953912,
+            "op": "record",
+            "outcome": "ok"
+          },
+          {
+            "at_ms": 2334138153824,
+            "op": "record",
+            "outcome": "error"
+          },
+          {
+            "at_ms": 2334141196681,
+            "op": "record",
+            "outcome": "catchup"
+          },
+          {
+            "at_ms": 2334141424682,
+            "op": "record",
+            "outcome": "ok"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": false,
+        "steps": [
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 2334134953912,
+              "last_fire_at": 2334134953912,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 1,
+              "updated_at": 2334134953912
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 1,
+              "first_seen_at": 2334134953912,
+              "last_fire_at": 2334138153824,
+              "last_outcome": "error",
+              "missed_count": 0,
+              "ok_count": 1,
+              "updated_at": 2334138153824
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 1,
+              "first_seen_at": 2334134953912,
+              "last_fire_at": 2334141196681,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 1,
+              "updated_at": 2334141196681
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 1,
+              "first_seen_at": 2334134953912,
+              "last_fire_at": 2334141424682,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 2,
+              "updated_at": 2334141424682
+            }
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "fire_day": 16978,
+        "job_id": "weekly_report",
+        "steps": [
+          {
+            "at_ms": 1466977379695,
+            "op": "record",
+            "outcome": "error"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": true,
+        "steps": [
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 1,
+              "first_seen_at": 1466977379695,
+              "last_fire_at": 1466977379695,
+              "last_outcome": "error",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 1466977379695
+            }
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "fire_day": 4356,
+        "job_id": "db_maintenance",
+        "steps": [
+          {
+            "at_ms": 376425293065,
+            "op": "record",
+            "outcome": "missed"
+          },
+          {
+            "at_ms": 376428569455,
+            "op": "claim"
+          },
+          {
+            "at_ms": 376429831979,
+            "op": "claim"
+          },
+          {
+            "at_ms": 376432615504,
+            "op": "record",
+            "outcome": "ok"
+          },
+          {
+            "at_ms": 376432801400,
+            "op": "record",
+            "outcome": "ok"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": true,
+        "steps": [
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 376425293065,
+              "last_fire_at": null,
+              "last_outcome": "missed",
+              "missed_count": 1,
+              "ok_count": 0,
+              "updated_at": 376425293065
+            }
+          },
+          {
+            "result": true,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 376425293065,
+              "last_fire_at": 376428569455,
+              "last_outcome": "catchup",
+              "missed_count": 1,
+              "ok_count": 0,
+              "updated_at": 376428569455
+            }
+          },
+          {
+            "result": false,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 376425293065,
+              "last_fire_at": 376428569455,
+              "last_outcome": "catchup",
+              "missed_count": 1,
+              "ok_count": 0,
+              "updated_at": 376428569455
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 376425293065,
+              "last_fire_at": 376432615504,
+              "last_outcome": "ok",
+              "missed_count": 1,
+              "ok_count": 1,
+              "updated_at": 376432615504
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 376425293065,
+              "last_fire_at": 376432801400,
+              "last_outcome": "ok",
+              "missed_count": 1,
+              "ok_count": 2,
+              "updated_at": 376432801400
+            }
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "fire_day": 35667,
+        "job_id": "db_maintenance",
+        "steps": [
+          {
+            "at_ms": 3081667605323,
+            "op": "release"
+          },
+          {
+            "at_ms": 3081668261996,
+            "op": "record",
+            "outcome": "catchup"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": true,
+        "steps": [
+          {
+            "result": null,
+            "row": null
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 3081668261996,
+              "last_fire_at": 3081668261996,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 3081668261996
+            }
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "fire_day": 5531,
+        "job_id": "db_maintenance",
+        "steps": [
+          {
+            "at_ms": 477924288525,
+            "op": "record",
+            "outcome": "missed"
+          },
+          {
+            "at_ms": 477924702237,
+            "op": "record",
+            "outcome": "catchup"
+          },
+          {
+            "at_ms": 477925616604,
+            "op": "release"
+          },
+          {
+            "at_ms": 477926622414,
+            "op": "record",
+            "outcome": "ok"
+          },
+          {
+            "at_ms": 477927450937,
+            "op": "release"
+          },
+          {
+            "at_ms": 477928400504,
+            "op": "record",
+            "outcome": "error"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": true,
+        "steps": [
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 477924288525,
+              "last_fire_at": null,
+              "last_outcome": "missed",
+              "missed_count": 1,
+              "ok_count": 0,
+              "updated_at": 477924288525
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 477924288525,
+              "last_fire_at": 477924702237,
+              "last_outcome": "catchup",
+              "missed_count": 1,
+              "ok_count": 0,
+              "updated_at": 477924702237
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 477924288525,
+              "last_fire_at": 477924702237,
+              "last_outcome": "catchup",
+              "missed_count": 1,
+              "ok_count": 0,
+              "updated_at": 477925616604
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 477924288525,
+              "last_fire_at": 477926622414,
+              "last_outcome": "ok",
+              "missed_count": 1,
+              "ok_count": 1,
+              "updated_at": 477926622414
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 477924288525,
+              "last_fire_at": 477926622414,
+              "last_outcome": "ok",
+              "missed_count": 1,
+              "ok_count": 0,
+              "updated_at": 477927450937
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 1,
+              "first_seen_at": 477924288525,
+              "last_fire_at": 477928400504,
+              "last_outcome": "error",
+              "missed_count": 1,
+              "ok_count": 0,
+              "updated_at": 477928400504
+            }
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "fire_day": 7102,
+        "job_id": "db_maintenance",
+        "steps": [
+          {
+            "at_ms": 613694181037,
+            "op": "release"
+          },
+          {
+            "at_ms": 613694528085,
+            "op": "record",
+            "outcome": "catchup"
+          },
+          {
+            "at_ms": 613696409309,
+            "op": "record",
+            "outcome": "error"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": true,
+        "steps": [
+          {
+            "result": null,
+            "row": null
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 613694528085,
+              "last_fire_at": 613694528085,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 613694528085
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 1,
+              "first_seen_at": 613694528085,
+              "last_fire_at": 613696409309,
+              "last_outcome": "error",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 613696409309
+            }
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "fire_day": 41418,
+        "job_id": "sync",
+        "steps": [
+          {
+            "at_ms": 3578520286760,
+            "op": "release"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": false,
+        "steps": [
+          {
+            "result": null,
+            "row": null
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "fire_day": 15192,
+        "job_id": "liveness_watch",
+        "steps": [
+          {
+            "at_ms": 1312640992495,
+            "op": "claim"
+          },
+          {
+            "at_ms": 1312643829764,
+            "op": "record",
+            "outcome": "ok"
+          },
+          {
+            "at_ms": 1312646873079,
+            "op": "release"
+          },
+          {
+            "at_ms": 1312647286963,
+            "op": "record",
+            "outcome": "ok"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": false,
+        "steps": [
+          {
+            "result": true,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 1312640992495,
+              "last_fire_at": 1312640992495,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 1312640992495
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 1312640992495,
+              "last_fire_at": 1312643829764,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 1,
+              "updated_at": 1312643829764
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 1312640992495,
+              "last_fire_at": 1312643829764,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 1312646873079
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 1312640992495,
+              "last_fire_at": 1312647286963,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 1,
+              "updated_at": 1312647286963
+            }
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "fire_day": 20146,
+        "job_id": "db_maintenance",
+        "steps": [
+          {
+            "at_ms": 1740678717078,
+            "op": "claim"
+          },
+          {
+            "at_ms": 1740680657026,
+            "op": "record",
+            "outcome": "error"
+          },
+          {
+            "at_ms": 1740684055224,
+            "op": "record",
+            "outcome": "ok"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": true,
+        "steps": [
+          {
+            "result": true,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 1740678717078,
+              "last_fire_at": 1740678717078,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 1740678717078
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 1,
+              "first_seen_at": 1740678717078,
+              "last_fire_at": 1740680657026,
+              "last_outcome": "error",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 1740680657026
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 1,
+              "first_seen_at": 1740678717078,
+              "last_fire_at": 1740684055224,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 1,
+              "updated_at": 1740684055224
+            }
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "fire_day": 10760,
+        "job_id": "db_maintenance",
+        "steps": [
+          {
+            "at_ms": 929728601577,
+            "op": "record",
+            "outcome": "catchup"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": true,
+        "steps": [
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 929728601577,
+              "last_fire_at": 929728601577,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 929728601577
+            }
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "fire_day": 14976,
+        "job_id": "db_maintenance",
+        "steps": [
+          {
+            "at_ms": 1293980012800,
+            "op": "record",
+            "outcome": "catchup"
+          },
+          {
+            "at_ms": 1293983561093,
+            "op": "record",
+            "outcome": "ok"
+          },
+          {
+            "at_ms": 1293983980047,
+            "op": "record",
+            "outcome": "missed"
+          },
+          {
+            "at_ms": 1293983990266,
+            "op": "claim"
+          },
+          {
+            "at_ms": 1293984163227,
+            "op": "release"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": true,
+        "steps": [
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 1293980012800,
+              "last_fire_at": 1293980012800,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 1293980012800
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 1293980012800,
+              "last_fire_at": 1293983561093,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 1,
+              "updated_at": 1293983561093
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 1293980012800,
+              "last_fire_at": 1293983561093,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 1,
+              "updated_at": 1293983561093
+            }
+          },
+          {
+            "result": false,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 1293980012800,
+              "last_fire_at": 1293983561093,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 1,
+              "updated_at": 1293983561093
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 0,
+              "first_seen_at": 1293980012800,
+              "last_fire_at": 1293983561093,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 1293984163227
+            }
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "fire_day": 43127,
+        "job_id": "weekly_report",
+        "steps": [
+          {
+            "at_ms": 3726238947859,
+            "op": "release"
+          },
+          {
+            "at_ms": 3726242259631,
+            "op": "record",
+            "outcome": "catchup"
+          },
+          {
+            "at_ms": 3726243446444,
+            "op": "record",
+            "outcome": "error"
+          },
+          {
+            "at_ms": 3726245303615,
+            "op": "record",
+            "outcome": "missed"
+          },
+          {
+            "at_ms": 3726245512831,
+            "op": "record",
+            "outcome": "catchup"
+          },
+          {
+            "at_ms": 3726248910480,
+            "op": "claim"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": true,
+        "steps": [
+          {
+            "result": null,
+            "row": null
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 0,
+              "first_seen_at": 3726242259631,
+              "last_fire_at": 3726242259631,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 3726242259631
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 1,
+              "first_seen_at": 3726242259631,
+              "last_fire_at": 3726243446444,
+              "last_outcome": "error",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 3726243446444
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 1,
+              "first_seen_at": 3726242259631,
+              "last_fire_at": 3726243446444,
+              "last_outcome": "error",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 3726243446444
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 2,
+              "error_count": 1,
+              "first_seen_at": 3726242259631,
+              "last_fire_at": 3726245512831,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 3726245512831
+            }
+          },
+          {
+            "result": false,
+            "row": {
+              "catchup_count": 2,
+              "error_count": 1,
+              "first_seen_at": 3726242259631,
+              "last_fire_at": 3726245512831,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 3726245512831
+            }
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "fire_day": 40712,
+        "job_id": "weekly_report",
+        "steps": [
+          {
+            "at_ms": 3517597143273,
+            "op": "record",
+            "outcome": "error"
+          },
+          {
+            "at_ms": 3517599067962,
+            "op": "record",
+            "outcome": "catchup"
+          },
+          {
+            "at_ms": 3517599452598,
+            "op": "record",
+            "outcome": "error"
+          },
+          {
+            "at_ms": 3517601893496,
+            "op": "record",
+            "outcome": "error"
+          },
+          {
+            "at_ms": 3517603957114,
+            "op": "record",
+            "outcome": "ok"
+          }
+        ]
+      },
+      "output": {
+        "once_daily": true,
+        "steps": [
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 0,
+              "error_count": 1,
+              "first_seen_at": 3517597143273,
+              "last_fire_at": 3517597143273,
+              "last_outcome": "error",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 3517597143273
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 1,
+              "first_seen_at": 3517597143273,
+              "last_fire_at": 3517599067962,
+              "last_outcome": "catchup",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 3517599067962
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 2,
+              "first_seen_at": 3517597143273,
+              "last_fire_at": 3517599452598,
+              "last_outcome": "error",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 3517599452598
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 3,
+              "first_seen_at": 3517597143273,
+              "last_fire_at": 3517601893496,
+              "last_outcome": "error",
+              "missed_count": 0,
+              "ok_count": 0,
+              "updated_at": 3517601893496
+            }
+          },
+          {
+            "result": null,
+            "row": {
+              "catchup_count": 1,
+              "error_count": 3,
+              "first_seen_at": 3517597143273,
+              "last_fire_at": 3517603957114,
+              "last_outcome": "ok",
+              "missed_count": 0,
+              "ok_count": 1,
+              "updated_at": 3517603957114
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "function": "database.GamifyStore",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Opens the store on a fresh temporary database and runs each step in order: a claim, a release, or a record through the pipeline's passthrough on a stand-in holding only the store; the store's clock reads each step's instant, and each step's result and the row after it are returned, with whether the predecessor counts the job as firing at most once a day; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_027.py",
+  "registry_sha256": "ac5bdf68d64e1d17d9f6b93a5f237600e878d693b9d4c61f9655dbd37d8d6540",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

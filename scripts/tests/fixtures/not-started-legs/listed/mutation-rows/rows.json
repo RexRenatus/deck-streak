@@ -1,0 +1,117 @@
+[
+  {
+    "id": "S05750-THE-OPEN-LOCK-KEEPS-ITS-FILE-NAME",
+    "target": "crates/daemon/src/wiring.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S05751-THE-STATE-DIRECTORY-REFUSAL-NAMES-ITS-SHAPE",
+    "target": "crates/daemon/src/wiring.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S05755-THE-NOTIFY-ADDRESS-STATES-ITS-SHAPE",
+    "target": "crates/daemon/src/lifecycle.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S05756-THE-MICROSECONDS-SETTING-STATES-ITS-SHAPE",
+    "target": "crates/daemon/src/lifecycle.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S05757-THE-TEXT-SETTING-STATES-ITS-SHAPE",
+    "target": "crates/daemon/src/lifecycle.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S05901-ONLY-THE-STORED-FLAG-SAYS-THE-OWNER-ASKED",
+    "target": "crates/daemon/src/sync_request.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S05906-THE-DOORBELL-WRITES-ITS-FILE",
+    "target": "crates/daemon/src/sync_request.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S05907-THE-BOT-FLUSHES-AFTER-THE-OWNERS-SYNC-SUCCEEDS",
+    "target": "crates/daemon/src/sync_request.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S12801-A-REFUSAL-AT-THE-REQUESTS-OWN-INSTANT-ANSWERS-IT",
+    "target": "crates/daemon/src/sync_request.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S12802-A-REFUSAL-BEFORE-THE-REQUEST-IS-IGNORED",
+    "target": "crates/daemon/src/sync_request.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S12803-THE-RECOMPUTE-SETUP-REFUSAL-IS-RECORDED-UNDER-ITS-OWN-CODE",
+    "target": "crates/daemon/src/role_job.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S12804-THE-CYCLES-REFUSAL-IS-RECORDED-WITH-THE-FLAG-CLEARED",
+    "target": "crates/daemon/src/role_job.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S12806-A-REFUSAL-AFTER-THE-OWNERS-RUN-IS-NOT-HIDDEN-BY-THE-RUN",
+    "target": "crates/daemon/src/sync_request.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S12809-THE-CYCLES-SETTINGS-REFUSAL-NAMES-ITS-OWN-VARIANT",
+    "target": "crates/daemon/src/wiring.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S12810-A-FAILED-OBLIGATIONS-READ-IS-NAMED-BY-ITS-OWN-VARIANT",
+    "target": "crates/daemon/src/wiring.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S12811-THE-REFUSAL-RETURNED-IS-THE-ONE-LOGGED-AND-GIVEN",
+    "target": "crates/daemon/src/wiring.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S12812-A-SWALLOWED-CREDENTIALS-DIRECTORY-REFUSAL-IS-NOT-AN-ANSWER",
+    "target": "crates/daemon/src/wiring.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S12813-A-SWALLOWED-RESCORE-REQUEST-REFUSAL-IS-NOT-IGNORED",
+    "target": "crates/daemon/src/wiring.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S12814-THE-CYCLES-OWN-REFUSAL-IS-RECORDED-BY-THE-CODE-ITS-STEP-GIVES",
+    "target": "crates/daemon/src/wiring.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S12815-A-SYNC-STEP-FAILURE-IS-REFUSED-BY-THE-SYNC-CODE",
+    "target": "crates/daemon/src/wiring.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S12816-A-GATE-STEP-FAILURE-IS-REFUSED-BY-THE-RECOMPUTE-CODE",
+    "target": "crates/daemon/src/wiring.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S12817-A-WINDOW-STEP-FAILURE-IS-REFUSED-BY-THE-RECOMPUTE-CODE",
+    "target": "crates/daemon/src/wiring.rs",
+    "verdict": "KILLED"
+  },
+  {
+    "id": "S19215-THE-REQUEST-FILE-STATES-ITS-SHAPE",
+    "target": "crates/daemon/src/sync_request.rs",
+    "verdict": "KILLED"
+  }
+]

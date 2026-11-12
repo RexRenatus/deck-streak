@@ -2,8 +2,9 @@
 
 - **Wave:** W1. **Issue:** #38 (epic #2). **Context(s):** `deck-streak-bot` (the command and its reply); `deck-streak-coordination` (the morning line; the listing is SPEC-051's today view); the `reading_ready` kind routed by `deck-streak-notifications`.
 - **Decided by:** ADR-006 (the bot's owner gate), ADR-011 (side by side: DeckStreak sends only kinds
-  the predecessor does not), ADR-019 (tap to pick, never a typed topic), and ADR-052 (the command's
-  name, replies outside the router, deep links for the buttons, and golden replies).
+  the predecessor does not), ADR-019 (tap to pick, never a typed topic), ADR-054 (with no AI route,
+  the bot says readings are not enabled), and ADR-052 (the command's name, replies outside the
+  router, deep links for the buttons, and golden replies).
 - **Status:** planned (in `docs/specs/planned/`) until the delivery that builds it moves it to
   `docs/specs/` with its tests and `docs/red-first/SPEC-052.md` (ADR-016).
 
@@ -54,6 +55,10 @@ R7. The `/prestudy` reply's golden is committed as `prestudy.reply.json`, outsid
 R8. `/prestudy` is in the owner's command menu with the description "today's pre-study readings",
     and `/read` keeps its own meaning.
 R9. An update from anyone but the owner gets no answer (SPEC-026's owner gate).
+R10. With the AI route absent (ADR-054), `/prestudy` answers "Readings are not enabled", read from
+    SPEC-051's today view, with no topic line and no button, since there is nothing to open or
+    regenerate; the reply is committed as its own golden, `prestudy-not-enabled.reply.json`, and
+    checked like R7's. The morning job raises no line then, because no reading is ready (R5).
 
 ## 3. Acceptance criteria
 
@@ -68,6 +73,7 @@ R9. An update from anyone but the owner gets no answer (SPEC-026's owner gate).
 | A7 | after this delivery the `one-router` row is still green: the reply path calls no transport call | notifications-policy `one-router`; `test_the_bot_calls_no_transport_outside_the_router` |
 | A8 | `/prestudy` is in the owner's menu, and `/read` is untouched | `prestudy_is_in_the_menu_and_distinct_from_read` |
 | A9 | a stranger's `/prestudy` gets no answer | `a_stranger_gets_no_prestudy_answer` |
+| A10 | with the route absent, `/prestudy` answers "Readings are not enabled" with no topic and no button, equal to its golden reply | `prestudy_says_readings_are_not_enabled_when_the_route_is_absent` |
 
 ```acceptance
 A1: cargo test -p deck-streak-bot --test prestudy -- --exact prestudy_answers_with_a_button_per_topic_and_startapp_links
@@ -79,6 +85,7 @@ A6: python3 -m unittest discover -s scripts/tests -p test_prestudy_messages.py -
 A7: python3 -m unittest discover -s scripts/tests -p test_prestudy_messages.py -k test_the_bot_calls_no_transport_outside_the_router
 A8: cargo test -p deck-streak-bot --test prestudy -- --exact prestudy_is_in_the_menu_and_distinct_from_read
 A9: cargo test -p deck-streak-bot --test prestudy -- --exact a_stranger_gets_no_prestudy_answer
+A10: cargo test -p deck-streak-bot --test prestudy -- --exact prestudy_says_readings_are_not_enabled_when_the_route_is_absent
 ```
 
 ## 4. File manifest
@@ -89,6 +96,7 @@ A9: cargo test -p deck-streak-bot --test prestudy -- --exact a_stranger_gets_no_
 | `crates/bot/src/commands.rs` | `deck-streak-bot` | changed: registers the prestudy command in the command table and the owner's menu |
 | `crates/bot/tests/prestudy.rs` | `deck-streak-bot` | added |
 | `crates/bot/tests/replies/prestudy.reply.json` | `deck-streak-bot` | added: the golden reply, synthetic |
+| `crates/bot/tests/replies/prestudy-not-enabled.reply.json` | `deck-streak-bot` | added: the golden reply with no AI route |
 | `crates/bot/src/links.rs` | `deck-streak-bot` | added: deep links from the configured bot username and short name |
 | `crates/coordination/src/readings/morning.rs` | `deck-streak-coordination` | added: the morning job's ready line |
 | `crates/coordination/tests/readings_morning.rs` | `deck-streak-coordination` | added |

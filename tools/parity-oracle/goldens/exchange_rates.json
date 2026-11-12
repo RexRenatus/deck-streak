@@ -1,0 +1,1486 @@
+{
+  "adapter": "with_a_ledger",
+  "cases": [
+    {
+      "class": "empty",
+      "input": {
+        "rollups": [],
+        "rows": []
+      },
+      "output": []
+    },
+    {
+      "class": "one-bucket-one-day",
+      "input": {
+        "rollups": [
+          {
+            "day": 20000,
+            "graduations": 4
+          }
+        ],
+        "rows": [
+          {
+            "amount": 30,
+            "day": 20000,
+            "source": "quest:1"
+          },
+          {
+            "amount": 45,
+            "day": 20000,
+            "source": "quest:2"
+          },
+          {
+            "amount": 25,
+            "day": 20000,
+            "source": "quest:3"
+          }
+        ]
+      },
+      "output": [
+        {
+          "graduated_cards": 4,
+          "rate": 25.0,
+          "rate_defined": true,
+          "source": "quest:",
+          "total_xp": 100
+        }
+      ]
+    },
+    {
+      "class": "a-day-with-no-rollup",
+      "input": {
+        "rollups": [
+          {
+            "day": 19999,
+            "graduations": 3
+          }
+        ],
+        "rows": [
+          {
+            "amount": 120,
+            "day": 19999,
+            "source": "reviews"
+          },
+          {
+            "amount": 80,
+            "day": 20000,
+            "source": "reviews"
+          }
+        ]
+      },
+      "output": [
+        {
+          "graduated_cards": 3,
+          "rate": 66.66666666666667,
+          "rate_defined": true,
+          "source": "reviews",
+          "total_xp": 200
+        }
+      ]
+    },
+    {
+      "class": "xp-and-no-graduation",
+      "input": {
+        "rollups": [
+          {
+            "day": 19998,
+            "graduations": 0
+          },
+          {
+            "day": 20000,
+            "graduations": 2
+          }
+        ],
+        "rows": [
+          {
+            "amount": 50,
+            "day": 19998,
+            "source": "focus"
+          },
+          {
+            "amount": 60,
+            "day": 19997,
+            "source": "focus"
+          },
+          {
+            "amount": 7,
+            "day": 20000,
+            "source": "reviews"
+          }
+        ]
+      },
+      "output": [
+        {
+          "graduated_cards": 0,
+          "rate": null,
+          "rate_defined": false,
+          "source": "focus",
+          "total_xp": 110
+        },
+        {
+          "graduated_cards": 2,
+          "rate": 3.5,
+          "rate_defined": true,
+          "source": "reviews",
+          "total_xp": 7
+        }
+      ]
+    },
+    {
+      "class": "graduations-and-no-xp",
+      "input": {
+        "rollups": [
+          {
+            "day": 20000,
+            "graduations": 5
+          },
+          {
+            "day": 19999,
+            "graduations": 1
+          }
+        ],
+        "rows": [
+          {
+            "amount": 0,
+            "day": 20000,
+            "source": "freespin"
+          },
+          {
+            "amount": 0,
+            "day": 19999,
+            "source": "freespin"
+          }
+        ]
+      },
+      "output": [
+        {
+          "graduated_cards": 6,
+          "rate": 0.0,
+          "rate_defined": true,
+          "source": "freespin",
+          "total_xp": 0
+        }
+      ]
+    },
+    {
+      "class": "a-third",
+      "input": {
+        "rollups": [
+          {
+            "day": 20000,
+            "graduations": 3
+          }
+        ],
+        "rows": [
+          {
+            "amount": 100,
+            "day": 20000,
+            "source": "consistency"
+          }
+        ]
+      },
+      "output": [
+        {
+          "graduated_cards": 3,
+          "rate": 33.333333333333336,
+          "rate_defined": true,
+          "source": "consistency",
+          "total_xp": 100
+        }
+      ]
+    },
+    {
+      "input": {
+        "rollups": [
+          {
+            "day": 19999,
+            "graduations": 4
+          },
+          {
+            "day": 19998,
+            "graduations": 11
+          },
+          {
+            "day": 19997,
+            "graduations": 9
+          },
+          {
+            "day": 19996,
+            "graduations": 2
+          },
+          {
+            "day": 19995,
+            "graduations": 8
+          },
+          {
+            "day": 19994,
+            "graduations": 2
+          },
+          {
+            "day": 19993,
+            "graduations": 6
+          },
+          {
+            "day": 19991,
+            "graduations": 12
+          },
+          {
+            "day": 19990,
+            "graduations": 5
+          },
+          {
+            "day": 19989,
+            "graduations": 1
+          },
+          {
+            "day": 19987,
+            "graduations": 6
+          },
+          {
+            "day": 19986,
+            "graduations": 2
+          },
+          {
+            "day": 19983,
+            "graduations": 0
+          },
+          {
+            "day": 19982,
+            "graduations": 10
+          },
+          {
+            "day": 19981,
+            "graduations": 7
+          },
+          {
+            "day": 19979,
+            "graduations": 1
+          },
+          {
+            "day": 19978,
+            "graduations": 8
+          },
+          {
+            "day": 19977,
+            "graduations": 0
+          },
+          {
+            "day": 19973,
+            "graduations": 4
+          }
+        ],
+        "rows": [
+          {
+            "amount": 392,
+            "day": 19979,
+            "source": ":bare"
+          },
+          {
+            "amount": 133,
+            "day": 19972,
+            "source": "consistency"
+          },
+          {
+            "amount": 434,
+            "day": 19979,
+            "source": "read:es"
+          },
+          {
+            "amount": 446,
+            "day": 19972,
+            "source": "reviews_law"
+          },
+          {
+            "amount": 463,
+            "day": 19990,
+            "source": "focusgoal:law:3"
+          },
+          {
+            "amount": 210,
+            "day": 19995,
+            "source": "reviews"
+          },
+          {
+            "amount": 52,
+            "day": 19987,
+            "source": "reviews_law"
+          },
+          {
+            "amount": 242,
+            "day": 19996,
+            "source": "graduations"
+          },
+          {
+            "amount": 210,
+            "day": 19982,
+            "source": "quest:2"
+          },
+          {
+            "amount": 162,
+            "day": 19994,
+            "source": "focus"
+          },
+          {
+            "amount": 171,
+            "day": 19980,
+            "source": "read:es"
+          },
+          {
+            "amount": 47,
+            "day": 19990,
+            "source": "quest:1"
+          },
+          {
+            "amount": 412,
+            "day": 19980,
+            "source": "chest:7"
+          },
+          {
+            "amount": 207,
+            "day": 19974,
+            "source": "quest:2"
+          },
+          {
+            "amount": 293,
+            "day": 19998,
+            "source": "focus"
+          },
+          {
+            "amount": 103,
+            "day": 19993,
+            "source": "reviews"
+          },
+          {
+            "amount": 97,
+            "day": 19997,
+            "source": "reviews_law"
+          },
+          {
+            "amount": 391,
+            "day": 19992,
+            "source": "2x:reviews"
+          },
+          {
+            "amount": 353,
+            "day": 19991,
+            "source": "streak"
+          },
+          {
+            "amount": 319,
+            "day": 19992,
+            "source": "consistency"
+          },
+          {
+            "amount": 136,
+            "day": 19997,
+            "source": "reviews"
+          },
+          {
+            "amount": 439,
+            "day": 19978,
+            "source": "focus"
+          },
+          {
+            "amount": 293,
+            "day": 19974,
+            "source": "focus"
+          }
+        ]
+      },
+      "output": [
+        {
+          "graduated_cards": 0,
+          "rate": null,
+          "rate_defined": false,
+          "source": "2x:",
+          "total_xp": 391
+        },
+        {
+          "graduated_cards": 1,
+          "rate": 392.0,
+          "rate_defined": true,
+          "source": ":",
+          "total_xp": 392
+        },
+        {
+          "graduated_cards": 0,
+          "rate": null,
+          "rate_defined": false,
+          "source": "chest:",
+          "total_xp": 412
+        },
+        {
+          "graduated_cards": 0,
+          "rate": null,
+          "rate_defined": false,
+          "source": "consistency",
+          "total_xp": 452
+        },
+        {
+          "graduated_cards": 21,
+          "rate": 56.523809523809526,
+          "rate_defined": true,
+          "source": "focus",
+          "total_xp": 1187
+        },
+        {
+          "graduated_cards": 5,
+          "rate": 92.6,
+          "rate_defined": true,
+          "source": "focusgoal:",
+          "total_xp": 463
+        },
+        {
+          "graduated_cards": 2,
+          "rate": 121.0,
+          "rate_defined": true,
+          "source": "graduations",
+          "total_xp": 242
+        },
+        {
+          "graduated_cards": 15,
+          "rate": 30.933333333333334,
+          "rate_defined": true,
+          "source": "quest:",
+          "total_xp": 464
+        },
+        {
+          "graduated_cards": 1,
+          "rate": 605.0,
+          "rate_defined": true,
+          "source": "read:",
+          "total_xp": 605
+        },
+        {
+          "graduated_cards": 23,
+          "rate": 19.52173913043478,
+          "rate_defined": true,
+          "source": "reviews",
+          "total_xp": 449
+        },
+        {
+          "graduated_cards": 15,
+          "rate": 39.666666666666664,
+          "rate_defined": true,
+          "source": "reviews_law",
+          "total_xp": 595
+        },
+        {
+          "graduated_cards": 12,
+          "rate": 29.416666666666668,
+          "rate_defined": true,
+          "source": "streak",
+          "total_xp": 353
+        }
+      ]
+    },
+    {
+      "input": {
+        "rollups": [
+          {
+            "day": 20000,
+            "graduations": 8
+          },
+          {
+            "day": 19999,
+            "graduations": 2
+          },
+          {
+            "day": 19997,
+            "graduations": 7
+          },
+          {
+            "day": 19995,
+            "graduations": 3
+          },
+          {
+            "day": 19994,
+            "graduations": 6
+          },
+          {
+            "day": 19992,
+            "graduations": 3
+          },
+          {
+            "day": 19991,
+            "graduations": 9
+          },
+          {
+            "day": 19990,
+            "graduations": 2
+          },
+          {
+            "day": 19987,
+            "graduations": 0
+          },
+          {
+            "day": 19986,
+            "graduations": 5
+          },
+          {
+            "day": 19985,
+            "graduations": 6
+          },
+          {
+            "day": 19984,
+            "graduations": 12
+          },
+          {
+            "day": 19981,
+            "graduations": 3
+          }
+        ],
+        "rows": [
+          {
+            "amount": 403,
+            "day": 19979,
+            "source": "reviews"
+          },
+          {
+            "amount": 112,
+            "day": 20000,
+            "source": "focus"
+          },
+          {
+            "amount": 358,
+            "day": 19984,
+            "source": "chest:7"
+          },
+          {
+            "amount": 12,
+            "day": 20000,
+            "source": "consistency"
+          },
+          {
+            "amount": 269,
+            "day": 19979,
+            "source": "2x:reviews"
+          },
+          {
+            "amount": 447,
+            "day": 19996,
+            "source": "streak"
+          },
+          {
+            "amount": 140,
+            "day": 19996,
+            "source": "quest:1"
+          },
+          {
+            "amount": 50,
+            "day": 19997,
+            "source": "quest:1"
+          },
+          {
+            "amount": 101,
+            "day": 19994,
+            "source": "focus"
+          },
+          {
+            "amount": 154,
+            "day": 19993,
+            "source": "reviews_law"
+          }
+        ]
+      },
+      "output": [
+        {
+          "graduated_cards": 0,
+          "rate": null,
+          "rate_defined": false,
+          "source": "2x:",
+          "total_xp": 269
+        },
+        {
+          "graduated_cards": 12,
+          "rate": 29.833333333333332,
+          "rate_defined": true,
+          "source": "chest:",
+          "total_xp": 358
+        },
+        {
+          "graduated_cards": 8,
+          "rate": 1.5,
+          "rate_defined": true,
+          "source": "consistency",
+          "total_xp": 12
+        },
+        {
+          "graduated_cards": 14,
+          "rate": 15.214285714285714,
+          "rate_defined": true,
+          "source": "focus",
+          "total_xp": 213
+        },
+        {
+          "graduated_cards": 7,
+          "rate": 27.142857142857142,
+          "rate_defined": true,
+          "source": "quest:",
+          "total_xp": 190
+        },
+        {
+          "graduated_cards": 0,
+          "rate": null,
+          "rate_defined": false,
+          "source": "reviews",
+          "total_xp": 403
+        },
+        {
+          "graduated_cards": 0,
+          "rate": null,
+          "rate_defined": false,
+          "source": "reviews_law",
+          "total_xp": 154
+        },
+        {
+          "graduated_cards": 0,
+          "rate": null,
+          "rate_defined": false,
+          "source": "streak",
+          "total_xp": 447
+        }
+      ]
+    },
+    {
+      "input": {
+        "rollups": [
+          {
+            "day": 19999,
+            "graduations": 2
+          },
+          {
+            "day": 19997,
+            "graduations": 0
+          },
+          {
+            "day": 19995,
+            "graduations": 3
+          },
+          {
+            "day": 19994,
+            "graduations": 4
+          },
+          {
+            "day": 19992,
+            "graduations": 10
+          },
+          {
+            "day": 19991,
+            "graduations": 5
+          },
+          {
+            "day": 19990,
+            "graduations": 0
+          },
+          {
+            "day": 19989,
+            "graduations": 6
+          },
+          {
+            "day": 19988,
+            "graduations": 3
+          },
+          {
+            "day": 19987,
+            "graduations": 6
+          },
+          {
+            "day": 19986,
+            "graduations": 8
+          },
+          {
+            "day": 19985,
+            "graduations": 9
+          },
+          {
+            "day": 19983,
+            "graduations": 4
+          },
+          {
+            "day": 19982,
+            "graduations": 11
+          },
+          {
+            "day": 19981,
+            "graduations": 7
+          },
+          {
+            "day": 19980,
+            "graduations": 7
+          },
+          {
+            "day": 19979,
+            "graduations": 5
+          },
+          {
+            "day": 19978,
+            "graduations": 10
+          },
+          {
+            "day": 19977,
+            "graduations": 10
+          }
+        ],
+        "rows": [
+          {
+            "amount": 365,
+            "day": 19981,
+            "source": "graduations"
+          },
+          {
+            "amount": 142,
+            "day": 20000,
+            "source": "consistency"
+          },
+          {
+            "amount": 433,
+            "day": 19991,
+            "source": "focusgoal:law:3"
+          },
+          {
+            "amount": 21,
+            "day": 19997,
+            "source": "reviews"
+          },
+          {
+            "amount": 105,
+            "day": 19994,
+            "source": "2x:reviews"
+          },
+          {
+            "amount": 352,
+            "day": 19981,
+            "source": "quest:1"
+          },
+          {
+            "amount": 298,
+            "day": 19981,
+            "source": "reviews_law"
+          },
+          {
+            "amount": 144,
+            "day": 19989,
+            "source": ":bare"
+          },
+          {
+            "amount": 414,
+            "day": 19986,
+            "source": "reviews"
+          },
+          {
+            "amount": 450,
+            "day": 19980,
+            "source": "consistency"
+          },
+          {
+            "amount": 201,
+            "day": 19983,
+            "source": "quest:1"
+          },
+          {
+            "amount": 409,
+            "day": 19992,
+            "source": "reviews"
+          },
+          {
+            "amount": 46,
+            "day": 19976,
+            "source": "quest:2"
+          },
+          {
+            "amount": 163,
+            "day": 19982,
+            "source": "quest:2"
+          },
+          {
+            "amount": 102,
+            "day": 19993,
+            "source": ":bare"
+          },
+          {
+            "amount": 454,
+            "day": 19991,
+            "source": "quest:2"
+          },
+          {
+            "amount": 105,
+            "day": 19990,
+            "source": "quest:1"
+          }
+        ]
+      },
+      "output": [
+        {
+          "graduated_cards": 4,
+          "rate": 26.25,
+          "rate_defined": true,
+          "source": "2x:",
+          "total_xp": 105
+        },
+        {
+          "graduated_cards": 6,
+          "rate": 41.0,
+          "rate_defined": true,
+          "source": ":",
+          "total_xp": 246
+        },
+        {
+          "graduated_cards": 7,
+          "rate": 84.57142857142857,
+          "rate_defined": true,
+          "source": "consistency",
+          "total_xp": 592
+        },
+        {
+          "graduated_cards": 5,
+          "rate": 86.6,
+          "rate_defined": true,
+          "source": "focusgoal:",
+          "total_xp": 433
+        },
+        {
+          "graduated_cards": 7,
+          "rate": 52.142857142857146,
+          "rate_defined": true,
+          "source": "graduations",
+          "total_xp": 365
+        },
+        {
+          "graduated_cards": 27,
+          "rate": 48.925925925925924,
+          "rate_defined": true,
+          "source": "quest:",
+          "total_xp": 1321
+        },
+        {
+          "graduated_cards": 18,
+          "rate": 46.888888888888886,
+          "rate_defined": true,
+          "source": "reviews",
+          "total_xp": 844
+        },
+        {
+          "graduated_cards": 7,
+          "rate": 42.57142857142857,
+          "rate_defined": true,
+          "source": "reviews_law",
+          "total_xp": 298
+        }
+      ]
+    },
+    {
+      "input": {
+        "rollups": [
+          {
+            "day": 20000,
+            "graduations": 1
+          },
+          {
+            "day": 19999,
+            "graduations": 4
+          },
+          {
+            "day": 19998,
+            "graduations": 1
+          },
+          {
+            "day": 19997,
+            "graduations": 4
+          },
+          {
+            "day": 19995,
+            "graduations": 0
+          },
+          {
+            "day": 19993,
+            "graduations": 7
+          },
+          {
+            "day": 19992,
+            "graduations": 11
+          },
+          {
+            "day": 19990,
+            "graduations": 11
+          },
+          {
+            "day": 19989,
+            "graduations": 8
+          },
+          {
+            "day": 19988,
+            "graduations": 2
+          },
+          {
+            "day": 19987,
+            "graduations": 7
+          },
+          {
+            "day": 19986,
+            "graduations": 2
+          },
+          {
+            "day": 19985,
+            "graduations": 3
+          },
+          {
+            "day": 19984,
+            "graduations": 4
+          },
+          {
+            "day": 19982,
+            "graduations": 7
+          },
+          {
+            "day": 19981,
+            "graduations": 7
+          },
+          {
+            "day": 19979,
+            "graduations": 10
+          },
+          {
+            "day": 19977,
+            "graduations": 11
+          }
+        ],
+        "rows": [
+          {
+            "amount": 270,
+            "day": 19980,
+            "source": "reviews"
+          },
+          {
+            "amount": 200,
+            "day": 19994,
+            "source": "graduations"
+          },
+          {
+            "amount": 259,
+            "day": 19994,
+            "source": "chest:7"
+          },
+          {
+            "amount": 416,
+            "day": 19978,
+            "source": "streak"
+          },
+          {
+            "amount": 91,
+            "day": 19985,
+            "source": "read:es"
+          },
+          {
+            "amount": 140,
+            "day": 19996,
+            "source": "consistency"
+          },
+          {
+            "amount": 342,
+            "day": 20000,
+            "source": "focusgoal:law:3"
+          },
+          {
+            "amount": 87,
+            "day": 19998,
+            "source": ":bare"
+          },
+          {
+            "amount": 125,
+            "day": 19990,
+            "source": "streak"
+          }
+        ]
+      },
+      "output": [
+        {
+          "graduated_cards": 1,
+          "rate": 87.0,
+          "rate_defined": true,
+          "source": ":",
+          "total_xp": 87
+        },
+        {
+          "graduated_cards": 0,
+          "rate": null,
+          "rate_defined": false,
+          "source": "chest:",
+          "total_xp": 259
+        },
+        {
+          "graduated_cards": 0,
+          "rate": null,
+          "rate_defined": false,
+          "source": "consistency",
+          "total_xp": 140
+        },
+        {
+          "graduated_cards": 1,
+          "rate": 342.0,
+          "rate_defined": true,
+          "source": "focusgoal:",
+          "total_xp": 342
+        },
+        {
+          "graduated_cards": 0,
+          "rate": null,
+          "rate_defined": false,
+          "source": "graduations",
+          "total_xp": 200
+        },
+        {
+          "graduated_cards": 3,
+          "rate": 30.333333333333332,
+          "rate_defined": true,
+          "source": "read:",
+          "total_xp": 91
+        },
+        {
+          "graduated_cards": 0,
+          "rate": null,
+          "rate_defined": false,
+          "source": "reviews",
+          "total_xp": 270
+        },
+        {
+          "graduated_cards": 11,
+          "rate": 49.18181818181818,
+          "rate_defined": true,
+          "source": "streak",
+          "total_xp": 541
+        }
+      ]
+    },
+    {
+      "input": {
+        "rollups": [
+          {
+            "day": 19999,
+            "graduations": 12
+          },
+          {
+            "day": 19998,
+            "graduations": 2
+          },
+          {
+            "day": 19997,
+            "graduations": 8
+          },
+          {
+            "day": 19996,
+            "graduations": 8
+          },
+          {
+            "day": 19994,
+            "graduations": 9
+          },
+          {
+            "day": 19991,
+            "graduations": 6
+          },
+          {
+            "day": 19989,
+            "graduations": 9
+          },
+          {
+            "day": 19988,
+            "graduations": 7
+          },
+          {
+            "day": 19987,
+            "graduations": 11
+          },
+          {
+            "day": 19985,
+            "graduations": 2
+          },
+          {
+            "day": 19983,
+            "graduations": 11
+          },
+          {
+            "day": 19982,
+            "graduations": 2
+          },
+          {
+            "day": 19981,
+            "graduations": 4
+          },
+          {
+            "day": 19980,
+            "graduations": 1
+          },
+          {
+            "day": 19978,
+            "graduations": 6
+          },
+          {
+            "day": 19977,
+            "graduations": 12
+          },
+          {
+            "day": 19976,
+            "graduations": 8
+          },
+          {
+            "day": 19975,
+            "graduations": 8
+          },
+          {
+            "day": 19973,
+            "graduations": 1
+          }
+        ],
+        "rows": [
+          {
+            "amount": 444,
+            "day": 19977,
+            "source": "streak"
+          },
+          {
+            "amount": 147,
+            "day": 19994,
+            "source": "chest:7"
+          },
+          {
+            "amount": 48,
+            "day": 19987,
+            "source": "quest:2"
+          },
+          {
+            "amount": 125,
+            "day": 19989,
+            "source": "chest:7"
+          },
+          {
+            "amount": 498,
+            "day": 19977,
+            "source": ":bare"
+          },
+          {
+            "amount": 292,
+            "day": 19995,
+            "source": "chest:7"
+          },
+          {
+            "amount": 77,
+            "day": 19989,
+            "source": "streak"
+          }
+        ]
+      },
+      "output": [
+        {
+          "graduated_cards": 12,
+          "rate": 41.5,
+          "rate_defined": true,
+          "source": ":",
+          "total_xp": 498
+        },
+        {
+          "graduated_cards": 18,
+          "rate": 31.333333333333332,
+          "rate_defined": true,
+          "source": "chest:",
+          "total_xp": 564
+        },
+        {
+          "graduated_cards": 11,
+          "rate": 4.363636363636363,
+          "rate_defined": true,
+          "source": "quest:",
+          "total_xp": 48
+        },
+        {
+          "graduated_cards": 21,
+          "rate": 24.80952380952381,
+          "rate_defined": true,
+          "source": "streak",
+          "total_xp": 521
+        }
+      ]
+    },
+    {
+      "input": {
+        "rollups": [
+          {
+            "day": 20000,
+            "graduations": 4
+          },
+          {
+            "day": 19999,
+            "graduations": 10
+          },
+          {
+            "day": 19997,
+            "graduations": 0
+          },
+          {
+            "day": 19995,
+            "graduations": 2
+          },
+          {
+            "day": 19994,
+            "graduations": 10
+          },
+          {
+            "day": 19992,
+            "graduations": 6
+          }
+        ],
+        "rows": [
+          {
+            "amount": 183,
+            "day": 19996,
+            "source": ":bare"
+          }
+        ]
+      },
+      "output": [
+        {
+          "graduated_cards": 0,
+          "rate": null,
+          "rate_defined": false,
+          "source": ":",
+          "total_xp": 183
+        }
+      ]
+    },
+    {
+      "input": {
+        "rollups": [
+          {
+            "day": 20000,
+            "graduations": 12
+          }
+        ],
+        "rows": [
+          {
+            "amount": 276,
+            "day": 20000,
+            "source": "quest:1"
+          },
+          {
+            "amount": 146,
+            "day": 20000,
+            "source": "reviews_law"
+          },
+          {
+            "amount": 439,
+            "day": 20000,
+            "source": "2x:reviews"
+          },
+          {
+            "amount": 53,
+            "day": 20000,
+            "source": "graduations"
+          },
+          {
+            "amount": 76,
+            "day": 20000,
+            "source": "focus"
+          },
+          {
+            "amount": 103,
+            "day": 20000,
+            "source": "read:es"
+          },
+          {
+            "amount": 63,
+            "day": 20000,
+            "source": "reviews"
+          },
+          {
+            "amount": 325,
+            "day": 20000,
+            "source": "chest:7"
+          },
+          {
+            "amount": 174,
+            "day": 20000,
+            "source": "focusgoal:law:3"
+          },
+          {
+            "amount": 423,
+            "day": 20000,
+            "source": "consistency"
+          }
+        ]
+      },
+      "output": [
+        {
+          "graduated_cards": 12,
+          "rate": 36.583333333333336,
+          "rate_defined": true,
+          "source": "2x:",
+          "total_xp": 439
+        },
+        {
+          "graduated_cards": 12,
+          "rate": 27.083333333333332,
+          "rate_defined": true,
+          "source": "chest:",
+          "total_xp": 325
+        },
+        {
+          "graduated_cards": 12,
+          "rate": 35.25,
+          "rate_defined": true,
+          "source": "consistency",
+          "total_xp": 423
+        },
+        {
+          "graduated_cards": 12,
+          "rate": 6.333333333333333,
+          "rate_defined": true,
+          "source": "focus",
+          "total_xp": 76
+        },
+        {
+          "graduated_cards": 12,
+          "rate": 14.5,
+          "rate_defined": true,
+          "source": "focusgoal:",
+          "total_xp": 174
+        },
+        {
+          "graduated_cards": 12,
+          "rate": 4.416666666666667,
+          "rate_defined": true,
+          "source": "graduations",
+          "total_xp": 53
+        },
+        {
+          "graduated_cards": 12,
+          "rate": 23.0,
+          "rate_defined": true,
+          "source": "quest:",
+          "total_xp": 276
+        },
+        {
+          "graduated_cards": 12,
+          "rate": 8.583333333333334,
+          "rate_defined": true,
+          "source": "read:",
+          "total_xp": 103
+        },
+        {
+          "graduated_cards": 12,
+          "rate": 5.25,
+          "rate_defined": true,
+          "source": "reviews",
+          "total_xp": 63
+        },
+        {
+          "graduated_cards": 12,
+          "rate": 12.166666666666666,
+          "rate_defined": true,
+          "source": "reviews_law",
+          "total_xp": 146
+        }
+      ]
+    },
+    {
+      "input": {
+        "rollups": [
+          {
+            "day": 20000,
+            "graduations": 4
+          },
+          {
+            "day": 19999,
+            "graduations": 11
+          },
+          {
+            "day": 19997,
+            "graduations": 11
+          },
+          {
+            "day": 19995,
+            "graduations": 0
+          },
+          {
+            "day": 19994,
+            "graduations": 12
+          },
+          {
+            "day": 19993,
+            "graduations": 11
+          },
+          {
+            "day": 19992,
+            "graduations": 7
+          },
+          {
+            "day": 19991,
+            "graduations": 0
+          }
+        ],
+        "rows": [
+          {
+            "amount": 493,
+            "day": 19998,
+            "source": "chest:7"
+          },
+          {
+            "amount": 104,
+            "day": 19996,
+            "source": "quest:2"
+          },
+          {
+            "amount": 79,
+            "day": 19999,
+            "source": "reviews_law"
+          },
+          {
+            "amount": 79,
+            "day": 20000,
+            "source": "focusgoal:law:3"
+          }
+        ]
+      },
+      "output": [
+        {
+          "graduated_cards": 0,
+          "rate": null,
+          "rate_defined": false,
+          "source": "chest:",
+          "total_xp": 493
+        },
+        {
+          "graduated_cards": 4,
+          "rate": 19.75,
+          "rate_defined": true,
+          "source": "focusgoal:",
+          "total_xp": 79
+        },
+        {
+          "graduated_cards": 0,
+          "rate": null,
+          "rate_defined": false,
+          "source": "quest:",
+          "total_xp": 104
+        },
+        {
+          "graduated_cards": 11,
+          "rate": 7.181818181818182,
+          "rate_defined": true,
+          "source": "reviews_law",
+          "total_xp": 79
+        }
+      ]
+    }
+  ],
+  "function": "exchange.exchange_rates",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Drives it on a temporary store filled with the case's XP rows and rollups and returns each source rate's fields; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_075.py",
+  "registry_sha256": "647cd71a23f67d493c65619d7640845186beeb2f58afe24a6dfe70b09bcd0091",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

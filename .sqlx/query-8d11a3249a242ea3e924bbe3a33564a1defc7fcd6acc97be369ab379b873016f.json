@@ -1,0 +1,98 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT track, current_days, longest_days, freezes, last_study_day, comeback_armed, created_at FROM streak_state ORDER BY track",
+  "describe": {
+    "columns": [
+      {
+        "name": "track",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "streak_state",
+            "name": "track"
+          }
+        }
+      },
+      {
+        "name": "current_days",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "streak_state",
+            "name": "current_days"
+          }
+        }
+      },
+      {
+        "name": "longest_days",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "streak_state",
+            "name": "longest_days"
+          }
+        }
+      },
+      {
+        "name": "freezes",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "streak_state",
+            "name": "freezes"
+          }
+        }
+      },
+      {
+        "name": "last_study_day",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "streak_state",
+            "name": "last_study_day"
+          }
+        }
+      },
+      {
+        "name": "comeback_armed",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "streak_state",
+            "name": "comeback_armed"
+          }
+        }
+      },
+      {
+        "name": "created_at",
+        "ordinal": 6,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "streak_state",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "8d11a3249a242ea3e924bbe3a33564a1defc7fcd6acc97be369ab379b873016f"
+}

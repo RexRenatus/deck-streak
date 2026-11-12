@@ -1,0 +1,267 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S04901-THREE-SILENT-DAYS-OPEN-A-LAPSE",
+        "streaks",
+        "src/lapse.rs",
+        "    if silent >= silent_days_to_open {\n",
+        "    if silent > silent_days_to_open {\n",
+        "lapse::a_skip_day_neither_counts_nor_ends_a_silent_run",
+        "a run of exactly the threshold's silent days opens a lapse, so three silent days open one and two do not (SPEC-049 R13; A12)"
+      ],
+      [
+        "S04902-A-SKIP-DAY-NEITHER-COUNTS-NOR-ENDS",
+        "streaks",
+        "src/lapse.rs",
+        "        if !skip_days.contains(&day) {\n",
+        "        if true {\n",
+        "lapse::a_skip_day_neither_counts_nor_ends_a_silent_run",
+        "a skip day is not a silent day and does not end the run, so three silent days with one skipped are two (SPEC-049 R13; A12)"
+      ],
+      [
+        "S04903-THE-ID-IS-THE-RUNS-FIRST-UNSKIPPED-DAY",
+        "streaks",
+        "src/lapse.rs",
+        "            first_silent = Some(day);\n",
+        "            first_silent = first_silent.or(Some(day));\n",
+        "lapse::one_episode_keeps_one_lapse_id_until_a_study_day_closes_it",
+        "the id is the earliest unskipped silent day of the run, so every day of one episode reports one id (SPEC-049 R13; A13)"
+      ],
+      [
+        "S04904-A-STUDY-REVIEW-CLOSES-THE-RUN",
+        "streaks",
+        "src/lapse.rs",
+        "        if review_counts.get(&day).copied().unwrap_or(0) > 0 {\n",
+        "        if review_counts.get(&day).copied().unwrap_or(0) > 100 {\n",
+        "lapse::one_episode_keeps_one_lapse_id_until_a_study_day_closes_it",
+        "a day holding a study review ends the walk, so the run counts only the silent days after it (SPEC-049 R13; A13)"
+      ],
+      [
+        "S04905-COORDINATION-COUNTS-BY-THE-STUDY-DAY-RULE",
+        "coordination",
+        "src/lapse.rs",
+        "                    .study_day(deck_streak_kernel::UtcMillis::from_epoch_millis(review.id)),\n",
+        "                    .study_day(deck_streak_kernel::UtcMillis::from_epoch_millis(review.id - 28_800_000)),\n",
+        "lapse::the_open_lapse_is_counted_from_the_study_reviews_read",
+        "a review is counted on the study day SPEC-020's rule gives its instant, not on a day of its own (SPEC-049 R15; A15)"
+      ],
+      [
+        "S04906-ONLY-STUDY-EVENTS-CLOSE-A-RUN",
+        "coordination",
+        "src/lapse.rs",
+        "            let studied = u32::from(is_study_event(review.kind, review.ease));\n",
+        "            let studied = 1_u32;\n",
+        "lapse::the_open_lapse_is_counted_from_the_study_reviews_read",
+        "a manual or rescheduling entry is counted as zero, so it closes no run (SPEC-049 R15; A15)"
+      ],
+      [
+        "S04907-THE-WALK-READS-THE-WINDOWS-FIRST-DAY",
+        "streaks",
+        "src/lapse.rs",
+        "    for number in (window_start..=today.epoch_day()).rev() {\n",
+        "    for number in (window_start + 1..=today.epoch_day()).rev() {\n",
+        "lapse::the_walk_reads_every_day_of_its_window_and_none_outside_it",
+        "the walk reads every day of its window, the first one included, so a silent run that starts on it counts (SPEC-049 R13; A16)"
+      ],
+      [
+        "S04908-THE-WALK-READS-NO-DAY-BEFORE-ITS-WINDOW",
+        "streaks",
+        "src/lapse.rs",
+        "    let window_start = review_counts.keys().next()?.epoch_day();\n",
+        "    let window_start = review_counts.keys().next()?.epoch_day() - 1;\n",
+        "lapse::the_walk_reads_every_day_of_its_window_and_none_outside_it",
+        "the walk stops at the earliest day the caller read and reads nothing before it (SPEC-049 R13; A16)"
+      ],
+      [
+        "S04909-A-REVIEW-COUNTS-ON-THE-RULES-DAY-NOT-THE-UTC-DATE",
+        "coordination",
+        "src/lapse.rs",
+        "                facts\n                    .rule\n                    .study_day(deck_streak_kernel::UtcMillis::from_epoch_millis(review.id)),\n",
+        "                StudyDay::from_epoch_day(review.id.div_euclid(86_400_000)),\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "a review counts on the study day the configured rule gives its instant, not on its UTC date (SPEC-049 R15; A17)"
+      ],
+      [
+        "S04910-A-REVIEW-COUNTS-BY-THE-CONFIGURED-ROLLOVER",
+        "coordination",
+        "src/lapse.rs",
+        "                facts\n                    .rule\n                    .study_day(deck_streak_kernel::UtcMillis::from_epoch_millis(review.id)),\n",
+        "                deck_streak_kernel::StudyDayRule::default()\n                    .study_day(deck_streak_kernel::UtcMillis::from_epoch_millis(review.id)),\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "a review counts by the configured offset and rollover hour, not by the default rule (SPEC-049 R15; A17)"
+      ],
+      [
+        "S04911-A-REVIEW-ONE-MILLISECOND-BEFORE-THE-ROLLOVER-IS-THE-DAY-BEFORE",
+        "coordination",
+        "src/lapse.rs",
+        "                facts\n                    .rule\n                    .study_day(deck_streak_kernel::UtcMillis::from_epoch_millis(review.id)),\n",
+        "                facts\n                    .rule\n                    .study_day(deck_streak_kernel::UtcMillis::from_epoch_millis(review.id - 1)),\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "a review counts on the day its instant falls in, so one millisecond earlier can be the day before (SPEC-049 R15; A17)"
+      ],
+      [
+        "S04912-A-REVIEW-AT-THE-ROLLOVER-BEGINS-THE-NEW-DAY",
+        "coordination",
+        "src/lapse.rs",
+        "                facts\n                    .rule\n                    .study_day(deck_streak_kernel::UtcMillis::from_epoch_millis(review.id)),\n",
+        "                facts\n                    .rule\n                    .study_day(deck_streak_kernel::UtcMillis::from_epoch_millis(review.id + 1)),\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "a review at the rollover instant counts on the new day, so one millisecond later is the same day and one earlier is not (SPEC-049 R15; A17)"
+      ],
+      [
+        "S04913-THE-WINDOWS-FIRST-DAY-IS-ITS-EARLIEST-KEY",
+        "streaks",
+        "src/lapse.rs",
+        "    let window_start = review_counts.keys().next()?.epoch_day();\n",
+        "    let window_start = review_counts.keys().next_back()?.epoch_day();\n",
+        "lapse::the_walk_reads_every_day_of_its_window_and_none_outside_it",
+        "the window's first day is its earliest key, not its latest, so the walk reads back to the earliest day the caller read (SPEC-049 R13; A16)"
+      ],
+      [
+        "S04914-THE-WALK-BEGINS-ON-THE-CURRENT-DAY",
+        "streaks",
+        "src/lapse.rs",
+        "    for number in (window_start..=today.epoch_day()).rev() {\n",
+        "    for number in (window_start..=today.epoch_day() - 1).rev() {\n",
+        "lapse::the_walk_reads_every_day_of_its_window_and_none_outside_it",
+        "the current study day is the run's last day and counts too, so the walk begins on it (SPEC-049 R13; A16)"
+      ],
+      [
+        "S04915-THE-WALK-READS-EVERY-DAY-IT-PASSES",
+        "streaks",
+        "src/lapse.rs",
+        "    for number in (window_start..=today.epoch_day()).rev() {\n",
+        "    for number in (window_start..=today.epoch_day()).rev().step_by(2) {\n",
+        "lapse::the_walk_reads_every_day_of_its_window_and_none_outside_it",
+        "the silent run is the consecutive study days, so the walk steps one day at a time and skips none (SPEC-049 R13; A16)"
+      ],
+      [
+        "S04916-THE-WINDOWS-FIRST-DAY-CAN-BE-SILENT",
+        "streaks",
+        "src/lapse.rs",
+        "        if !skip_days.contains(&day) {\n",
+        "        if !skip_days.contains(&day) && number != window_start {\n",
+        "lapse::the_walk_reads_every_day_of_its_window_and_none_outside_it",
+        "the window's first day is silent like any other day with no study review, so a run that starts on it counts it (SPEC-049 R13; A16)"
+      ],
+      [
+        "S04917-ONE-STUDY-REVIEW-ENDS-THE-RUN",
+        "streaks",
+        "src/lapse.rs",
+        "        if review_counts.get(&day).copied().unwrap_or(0) > 0 {\n",
+        "        if review_counts.get(&day).copied().unwrap_or(0) > 1 {\n",
+        "lapse::the_walk_reads_every_day_of_its_window_and_none_outside_it",
+        "one qualifying review makes a study day, so a single review ends the silent run (SPEC-049 R13; A16)"
+      ],
+      [
+        "S04918-A-REVIEW-COUNTS-BY-ITS-OWN-INSTANT",
+        "coordination",
+        "src/lapse.rs",
+        "                facts\n                    .rule\n                    .study_day(deck_streak_kernel::UtcMillis::from_epoch_millis(review.id)),\n",
+        "                facts\n                    .rule\n                    .study_day(deck_streak_kernel::UtcMillis::from_epoch_millis(review.id + 3_600_000)),\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "a review counts on the study day of its own instant, so an hour later can be the next day (SPEC-049 R15; A17)"
+      ],
+      [
+        "S04919-THE-OFFSET-IS-APPLIED-ONCE-BY-THE-RULE",
+        "coordination",
+        "src/lapse.rs",
+        "                facts\n                    .rule\n                    .study_day(deck_streak_kernel::UtcMillis::from_epoch_millis(review.id)),\n",
+        "                facts\n                    .rule\n                    .study_day(deck_streak_kernel::UtcMillis::from_epoch_millis(review.id - i64::from(facts.rule.utc_offset().minutes()) * 60_000)),\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "the configured offset is applied once, by the rule, so a review in a zone away from UTC counts on the rule's day (SPEC-049 R15; A17)"
+      ],
+      [
+        "S04921-A-SKIP-MASK-KEEPS-ITS-FIRST-PLACE",
+        "streaks",
+        "tests/lapse.rs",
+        "                    .filter(|(place, _)| (mask >> place) & 1 == 1)\n",
+        "                    .filter(|(place, _)| *place != 0 && (mask >> place) & 1 == 1)\n",
+        "lapse::the_walk_reads_every_day_of_its_window_and_none_outside_it",
+        "the window population's skip masks reach the run's first day, so a fold of that place drops distinct members while the examined count holds (SPEC-049 A19)"
+      ],
+      [
+        "S04922-A-FILL-IS-NOT-A-COPY-OF-ANOTHER",
+        "streaks",
+        "tests/lapse.rs",
+        "                fills.push(BTreeMap::from([(first, 0), (run_start - 1, 1)]));\n",
+        "                fills.push((first..run_start).map(|n| (n, 2)).collect());\n",
+        "lapse::the_walk_reads_every_day_of_its_window_and_none_outside_it",
+        "each fill of the window population is its own member, so a fill replaced by a copy of another keeps the examined count and drops distinct (SPEC-049 A19)"
+      ],
+      [
+        "S04923-A-FUTURE-STUDY-AXIS-KEEPS-BOTH-VALUES",
+        "streaks",
+        "tests/lapse.rs",
+        "                    for future_study in [false, true] {\n",
+        "                    for future_study in [false, false] {\n",
+        "lapse::the_walk_reads_every_day_of_its_window_and_none_outside_it",
+        "the window population's future-study axis holds both values, so an axis collapsed to one keeps the examined count and drops distinct (SPEC-049 A19)"
+      ],
+      [
+        "S04924-A-OFFSETS-ARE-EACH-DISTINCT",
+        "coordination",
+        "tests/lapse.rs",
+        "    for offset in [-720_i64, -300, -210, 0, 330, 345, 540, 840] {\n",
+        "    for offset in [-720_i64, -300, -210, 0, 330, 330, 540, 840] {\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "the rollover population's eight offsets are eight, so two made equal keep the examined count and drop distinct (SPEC-049 A20)"
+      ],
+      [
+        "S04925-A-ROLLOVER-HOUR-AXIS-KEEPS-BOTH-VALUES",
+        "coordination",
+        "tests/lapse.rs",
+        "        for hour in [0_i64, 4] {\n",
+        "        for hour in [4_i64, 4] {\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "the rollover population's hour axis holds both values, so an axis collapsed to one keeps the examined count and drops distinct (SPEC-049 A20)"
+      ],
+      [
+        "S04926-A-NOW-INSTANTS-ARE-EACH-DISTINCT",
+        "coordination",
+        "tests/lapse.rs",
+        "                    (begins(offset, hour, d + 2), None),\n",
+        "                    (begins(offset, hour, d + 3), Some(d + 1)),\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "the rollover population's four instants of now are four, so one replaced by a copy of another keeps the examined count and drops distinct (SPEC-049 A20)"
+      ],
+      [
+        "S04927-THE-LAPSE-JUDGE-IS-HANDED-EACH-INSTANT",
+        "coordination",
+        "tests/lapse.rs",
+        "                    review_at(t),\n",
+        "                    review_at(begins(offset, hour, d)),\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "the lapse judge is handed the review at each of the seven instants, so the review folded to its day's first instant keeps the examined count, still feeds the day judge every instant, and drops the lapse judge's distinct members (SPEC-049 A20)"
+      ],
+      [
+        "S04928-THE-DAY-JUDGE-IS-HANDED-EACH-INSTANT",
+        "coordination",
+        "tests/lapse.rs",
+        "                    day_judge(the_rule, t),\n",
+        "                    day_judge(the_rule, begins(offset, hour, d)),\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "the day judge is handed each of the seven instants, so the instant folded to its day's first keeps the examined count, still feeds the lapse judge every review, and drops the day judge's distinct members (SPEC-049 A20)"
+      ],
+      [
+        "S04929-THE-EARLIER-REVIEW-IS-ON-ITS-OWN-STUDY-DAY",
+        "coordination",
+        "tests/lapse.rs",
+        "                    review_at(begins(offset, hour, d - 10) + HOUR_MS),\n",
+        "                    review_at(t),\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "each member hands the lapse judge two study days of one review, so the earlier review moved onto the day of the later one keeps the examined count and every distinct count and drops the study days holding one review (SPEC-049 A20)"
+      ],
+      [
+        "S04930-AN-ANSWER-OF-EASE-ONE-IS-A-STUDY-REVIEW",
+        "coordination",
+        "src/lapse.rs",
+        "            let studied = u32::from(is_study_event(review.kind, review.ease));\n",
+        "            let studied = u32::from(is_study_event(review.kind, review.ease) && review.ease > 1);\n",
+        "lapse::a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary",
+        "an answer of ease 1 is a study review, so a count that reads only an ease above 1 closes no run on a day of ease-1 answers; the population hands both reviews at ease 0, 1 and 2 with every kind from -1 to 4, and the ease boundary moved one step up decides 128 of its members (SPEC-049 A20)"
+      ]
+    ]
+  }
+}

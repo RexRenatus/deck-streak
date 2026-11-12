@@ -1,0 +1,12 @@
+{
+  "duty": "bot-commands",
+  "schema": "phx.duty.message.v1",
+  "send": {
+    "link_preview_options": {
+      "is_disabled": true
+    },
+    "parse_mode": "HTML",
+    "text": "The erase stopped with an error, so some of your data may remain. Send /export to see what DeckStreak keeps, or /delete to try again."
+  },
+  "x-message": "erase-failed"
+}

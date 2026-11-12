@@ -1,0 +1,700 @@
+//! The read (SPEC-023 R1 to R5, R7): the private copy of the collection, read-only, inside the
+//! owner's deck scope, as this workspace's own types.
+//!
+//! [`CollectionReader`] opens the copy with the kernel's [`Db::open_foreign_read_only_with`]
+//! (`mode=ro`, `query_only` and the engine's `unicase` collation) under the shared collection lock,
+//! on the kernel's [`Offload`]. So a read never sees the copy mid-swap, never stalls the async
+//! runtime, never runs beside another collection read on a small host, and never writes the copy:
+//! any write through it is refused by `SQLite` itself. The collation's comparator counts its calls
+//! on that open, and a read that called it is refused: names are never compared in SQL (R4).
+//!
+//! It ports the predecessor's `anki_reader.py:read_collection` and `deck_filter.py` (predecessor
+//! `27ee2bc`): a card is read when its ORIGINAL deck's top-level name starts with an included prefix
+//! (`types.py:Card.true_did`), and a review when its card is read and it is a study event
+//! (`types.py:Review.is_study_event`). Names are read by id and matched here, never in SQL, because
+//! the collection's name columns use a `unicase` collation `SQLite` does not ship (R4). The study
+//! day is the kernel's configured rule: no rollover hour is taken from the collection (R7).
+
+use std::cmp::Ordering;
+use std::collections::{BTreeMap, BTreeSet};
+use std::future::Future;
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::sync::atomic::{self, AtomicU64};
+
+use deck_streak_anki_format::opener::{COLLATION, unicase_order};
+use deck_streak_kernel::{
+    CourseCode, Courses, Db, ForeignDb, KernelError, Offload, Track, UtcMillis,
+};
+use sqlx::AssertSqlSafe;
+use tokio::runtime::Handle;
+
+use crate::lock::CollectionLock;
+use crate::memory_state::{MemoryState, parse as parse_memory};
+use crate::schema18::{CARDS, CREATED, DECK_NAMES, REVIEWS};
+use crate::settings::{DECK_SEPARATOR, ScopeSettings, SyncSettings};
+use crate::tier::{Tier, parse_tier};
+
+/// `SQLite`'s primary result code for a write refused because the database is read-only
+/// (`SQLITE_READONLY`); every extended code of it keeps this in its low byte.
+const SQLITE_READONLY: i32 = 8;
+
+/// A card row as [`CARDS`] selects it.
+type CardRow = (
+    i64,
+    i64,
+    i64,
+    i64,
+    i64,
+    i64,
+    i64,
+    i64,
+    i64,
+    i64,
+    i64,
+    Option<String>,
+    Option<String>,
+);
+/// A review row as [`REVIEWS`] selects it.
+type ReviewRow = (i64, i64, i64, i64, i64, i64, i64, i64);
+
+/// One study review: a revlog row of type 0 to 3 with ease 1 or more (docs/LEXICON.md), whose card
+/// is in scope.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Review {
+    /// The review's id, which is the instant it was answered, in epoch milliseconds.
+    pub id: i64,
+    /// The card answered.
+    pub card_id: i64,
+    /// The answer button, 1 to 4.
+    pub ease: i64,
+    /// The interval after the answer: days when positive, seconds when negative.
+    pub interval: i64,
+    /// The interval before the answer, in the same units.
+    pub last_interval: i64,
+    /// The ease factor after the answer, in permille.
+    pub factor: i64,
+    /// How long the answer took, in milliseconds.
+    pub taken_ms: i64,
+    /// The review's type: 0 learn, 1 review, 2 relearn, 3 filtered.
+    pub kind: i64,
+}
+
+/// One card in scope, as the collection holds it now.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Card {
+    /// The card's id.
+    pub id: i64,
+    /// The note the card belongs to.
+    pub note_id: i64,
+    /// The deck the card sits in now, which is a filtered deck while it is borrowed by one.
+    pub deck_id: i64,
+    /// The deck a filtered deck borrowed the card from, or 0 when it sits in its own deck.
+    pub original_deck_id: i64,
+    /// The card's queue: -3 to -1 buried or suspended, 0 new, 1 learn, 2 review, 3 day-relearn.
+    pub queue: i64,
+    /// The card's type: 0 new, 1 learning, 2 review, 3 relearning.
+    pub kind: i64,
+    /// When the card is due, in its queue's units.
+    pub due: i64,
+    /// The card's interval: days when positive, seconds when negative.
+    pub interval: i64,
+    /// The card's ease factor, in permille.
+    pub factor: i64,
+    /// How many times the card has been answered.
+    pub reps: i64,
+    /// How many times the card has lapsed.
+    pub lapses: i64,
+    /// The card's track, from its home deck's top-level name (R3).
+    pub track: Track,
+    /// The card's course: the course whose deck root is its home deck's top-level name, or none
+    /// (SPEC-071 R2). Only the code travels with the card.
+    pub course: Option<CourseCode>,
+    /// The Bloom tier of the card's note (SPEC-072 R3), reduced from its tags inside the read; the
+    /// tags themselves never leave ingest.
+    pub tier: Option<Tier>,
+    /// The card's memory state, parsed from its stored data inside the read (SPEC-077 R1); none
+    /// when the scheduler stored no readable one.
+    pub memory: Option<MemoryState>,
+}
+
+impl Card {
+    /// The deck the card belongs to: the deck a filtered deck borrowed it from, else the deck it
+    /// sits in (the predecessor's `types.py:Card.true_did`). Scope and track are decided by it.
+    #[must_use]
+    pub const fn home_deck_id(&self) -> i64 {
+        if self.original_deck_id != 0 {
+            self.original_deck_id
+        } else {
+            self.deck_id
+        }
+    }
+}
+
+/// What one read of the copy returns (R5): only this workspace's own types.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CollectionData {
+    /// The study reviews of the cards in scope newer than the read's floor, oldest first.
+    pub reviews: Vec<Review>,
+    /// The cards in scope, by id.
+    pub cards: Vec<Card>,
+    /// When the collection was created.
+    pub created_at: UtcMillis,
+    /// Every deck's name by its id, each name's parts separated by [`DECK_SEPARATOR`].
+    pub deck_names: BTreeMap<i64, String>,
+}
+
+/// The top-level name of the deck named `name`: the text before its first [`DECK_SEPARATOR`] (the
+/// predecessor's `deck_filter.py:top_level`).
+#[must_use]
+pub fn top_level(name: &str) -> &str {
+    name.split(DECK_SEPARATOR).next().unwrap_or(name)
+}
+
+/// The decks read (R2): those whose top-level name starts with one of `prefixes`, or every deck when
+/// `prefixes` is empty (the predecessor's `deck_filter.py:allowed_deck_ids`).
+#[must_use]
+pub fn allowed_deck_ids(deck_names: &BTreeMap<i64, String>, prefixes: &[String]) -> BTreeSet<i64> {
+    deck_names
+        .iter()
+        .filter(|(_, name)| {
+            prefixes.is_empty()
+                || prefixes
+                    .iter()
+                    .any(|prefix| top_level(name).starts_with(prefix.as_str()))
+        })
+        .map(|(id, _)| *id)
+        .collect()
+}
+
+/// The course of a card whose home deck is named `name` (SPEC-071 R2): the course whose deck root
+/// EQUALS the name's top-level name, never one it only starts with (the predecessor's
+/// `progress.py:language_of`), or none. The read's scope matches by prefix (R2 above); a course never
+/// does, so a deck in scope can belong to no course.
+#[must_use]
+pub fn course_of(courses: &Courses, name: &str) -> Option<CourseCode> {
+    let root = top_level(name);
+    courses
+        .courses()
+        .iter()
+        .find(|course| course.deck_root == root)
+        .map(|course| course.code)
+}
+
+/// Whether a revlog row of type `kind` answered with `ease` is a study event (R2): a learn,
+/// review, relearn or filtered answer of ease 1 or more, and never a manual or rescheduling entry
+/// (the predecessor's `types.py:Review.is_study_event`).
+#[must_use]
+pub const fn is_study_event(kind: i64, ease: i64) -> bool {
+    matches!(kind, 0..=3) && ease >= 1
+}
+
+/// The track of a card whose home deck's top-level name is `top_level_name` (R3): law when it
+/// starts with the law root, else language.
+#[must_use]
+pub fn track_of(top_level_name: &str, law_root: Option<&str>) -> Track {
+    match law_root {
+        Some(root) if top_level_name.starts_with(root) => Track::Law,
+        _ => Track::Language,
+    }
+}
+
+/// Why the copy could not be read.
+#[derive(Debug, thiserror::Error)]
+pub enum ReadError {
+    /// The collection lock could not be taken.
+    #[error("the collection lock could not be taken")]
+    Lock(#[source] std::io::Error),
+    /// A statement tried to write the copy, and `SQLite` refused it: the copy is open read-only.
+    #[error("the copy refused a write: it is open read-only")]
+    WriteRefused,
+    /// The copy could not be opened or read; the source says why.
+    #[error("the copy could not be read")]
+    Copy(#[source] KernelError),
+}
+
+impl ReadError {
+    /// The collation tripwire's refusal this error carries, when a read was refused for calling
+    /// the copy's comparator (R4).
+    #[must_use]
+    pub fn tripwire(&self) -> Option<CollationTripwire> {
+        let mut source: Option<&(dyn std::error::Error + 'static)> = Some(self);
+        while let Some(cause) = source {
+            if let Some(fired) = cause.downcast_ref::<CollationTripwire>() {
+                return Some(*fired);
+            }
+            source = cause.source();
+        }
+        None
+    }
+}
+
+/// The collation tripwire's refusal (R4): a read's statements called the copy's `unicase`
+/// comparator, so one of them compared or sorted names in SQL. The read is refused after its rows
+/// are read, and [`ReadError::tripwire`] finds this among the error's sources.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, thiserror::Error)]
+#[error("the collation tripwire fired: the read called the unicase comparator {calls} times")]
+pub struct CollationTripwire {
+    /// How many times the comparator was called during the read.
+    pub calls: u64,
+}
+
+/// Reads the private copy, read-only, inside the owner's scope (R1 to R5).
+#[derive(Clone, Debug)]
+pub struct CollectionReader {
+    copy: PathBuf,
+    lock: CollectionLock,
+    offload: Offload,
+    scope: ScopeSettings,
+    courses: Courses,
+}
+
+impl CollectionReader {
+    /// The reader of the copy `settings` name, inside `scope`, on `offload`. It is built once, at
+    /// the service's start, so it logs R3's warning there.
+    #[must_use]
+    pub fn new(settings: &SyncSettings, scope: ScopeSettings, offload: Offload) -> Self {
+        scope.warn_if_law_root_uncovered();
+        Self {
+            copy: settings.copy_path(),
+            lock: CollectionLock::new(settings.lock_path()),
+            offload,
+            scope,
+            courses: Courses::default(),
+        }
+    }
+
+    /// This reader, giving each card it reads its course from `courses` (SPEC-071 R2), which the
+    /// kernel loaded once at start.
+    #[must_use]
+    pub fn with_courses(mut self, courses: Courses) -> Self {
+        self.courses = courses;
+        self
+    }
+
+    /// The courses this reader gives each card its course from.
+    #[must_use]
+    pub const fn courses(&self) -> &Courses {
+        &self.courses
+    }
+
+    /// The scope this reader reads inside.
+    #[must_use]
+    pub const fn scope(&self) -> &ScopeSettings {
+        &self.scope
+    }
+
+    /// Reads the cards in scope, their study reviews newer than `floor` (a review id, which is
+    /// epoch milliseconds), the collection's creation time and every deck's name (R2, R5, R6).
+    ///
+    /// # Errors
+    ///
+    /// [`ReadError::Lock`] when the collection lock cannot be taken, and [`ReadError::Copy`] when
+    /// the copy cannot be opened or read.
+    pub async fn read(&self, floor: i64) -> Result<CollectionData, ReadError> {
+        let prefixes = self.scope.include().prefixes().to_vec();
+        let law_root = self.scope.law_root().map(str::to_owned);
+        let courses = self.courses.clone();
+        self.with_copy("read_collection", move |copy| async move {
+            let deck_names = deck_names(&copy).await?;
+            let scope = scope_ids(&allowed_deck_ids(&deck_names, &prefixes));
+            let cards: Vec<CardRow> = sqlx::query_as(CARDS)
+                .bind(&scope)
+                .fetch_all(copy.reader())
+                .await
+                .map_err(read_failed)?;
+            let reviews: Vec<ReviewRow> = sqlx::query_as(REVIEWS)
+                .bind(floor)
+                .bind(&scope)
+                .fetch_all(copy.reader())
+                .await
+                .map_err(read_failed)?;
+            let created: Option<i64> = sqlx::query_scalar(CREATED)
+                .fetch_optional(copy.reader())
+                .await
+                .map_err(read_failed)?;
+            let name_of = |home: i64| deck_names.get(&home).map_or("", String::as_str);
+            let track = |home: i64| track_of(top_level(name_of(home)), law_root.as_deref());
+            let cards = cards
+                .into_iter()
+                .map(|row| {
+                    let tier = row.11.as_deref().and_then(parse_tier);
+                    let (id, note_id, deck_id, original_deck_id, queue, kind) =
+                        (row.0, row.1, row.2, row.3, row.4, row.5);
+                    let mut card = Card {
+                        id,
+                        note_id,
+                        deck_id,
+                        original_deck_id,
+                        queue,
+                        kind,
+                        due: row.6,
+                        interval: row.7,
+                        factor: row.8,
+                        reps: row.9,
+                        lapses: row.10,
+                        track: Track::Language,
+                        course: None,
+                        tier,
+                        memory: parse_memory(row.12.as_deref()),
+                    };
+                    card.track = track(card.home_deck_id());
+                    card.course = course_of(&courses, name_of(card.home_deck_id()));
+                    card
+                })
+                .collect();
+            let reviews = reviews
+                .into_iter()
+                .filter(|row| is_study_event(row.7, row.2))
+                .map(|row| Review {
+                    id: row.0,
+                    card_id: row.1,
+                    ease: row.2,
+                    interval: row.3,
+                    last_interval: row.4,
+                    factor: row.5,
+                    taken_ms: row.6,
+                    kind: row.7,
+                })
+                .collect();
+            Ok(CollectionData {
+                reviews,
+                cards,
+                created_at: UtcMillis::from_epoch_millis(created.unwrap_or(0).saturating_mul(1000)),
+                deck_names,
+            })
+        })
+        .await
+    }
+
+    /// Runs `statement` on the connection every read of this reader uses, open read-only under the
+    /// shared lock on the offload, and returns how many rows it changed. `SQLite` refuses a write
+    /// before it reaches the file, so this only ever reports a refusal, or no change: it is how the
+    /// refusal is proved rather than assumed (R1), and it returns no row, so no Anki data leaves
+    /// this crate through it.
+    ///
+    /// # Errors
+    ///
+    /// [`ReadError::WriteRefused`] for a write, [`ReadError::Lock`] when the lock cannot be taken,
+    /// and [`ReadError::Copy`] for any other failure of the statement or the copy.
+    pub async fn execute_statement(&self, statement: &str) -> Result<u64, ReadError> {
+        let statement = statement.to_owned();
+        self.with_copy("execute_statement", move |copy| async move {
+            // Audited: this door exists to run the caller's statement on the read-only connection,
+            // which refuses any write, and it returns no row.
+            sqlx::raw_sql(AssertSqlSafe(statement))
+                .execute(copy.reader())
+                .await
+                .map(|done| done.rows_affected())
+                .map_err(refusal)
+        })
+        .await
+    }
+
+    /// Runs `work` on the copy, open read-only, under the shared collection lock, on the offload
+    /// (R1): every read of this crate goes through here. `work` receives the open copy and runs to
+    /// its end on the offload's blocking thread; the copy is closed after it, and the lock released
+    /// explicitly. The lock and the read go to a task of their own (SPEC-648 R1): a caller who
+    /// stops waiting leaves the read to end and the lock to be released after it, and a task its
+    /// runtime drops keeps the lock until the process exits. The copy's `unicase` comparator counts
+    /// its calls on this open, and a read that called it is refused once its rows are read, with a
+    /// [`CollationTripwire`] (R4).
+    pub(crate) async fn with_copy<T, W, Fut>(
+        &self,
+        operation: &'static str,
+        work: W,
+    ) -> Result<T, ReadError>
+    where
+        W: FnOnce(ForeignDb) -> Fut + Send + 'static,
+        Fut: Future<Output = Result<T, ReadError>>,
+        T: Send + 'static,
+    {
+        let held = self.lock.shared().await.map_err(ReadError::Lock)?;
+        let copy = self.copy.clone();
+        let offload = self.offload.clone();
+        let runtime = Handle::current();
+        let reading = async move {
+            offload
+                .run(operation, move || {
+                    on_this_thread(&runtime, async move {
+                        let tripwire = Tripwire::default();
+                        let compare = tripwire.comparator();
+                        let db = Db::open_foreign_read_only_with(&copy, COLLATION, compare)
+                            .await
+                            .map_err(ReadError::Copy)?;
+                        let read = work(db.clone()).await;
+                        db.close().await;
+                        tripwire.check(read)
+                    })
+                })
+                .await
+        };
+        // The task keeps the lock until the read has ended, then unlocks it before the lock file
+        // closes (SPEC-022 R7); a failed unlock is released by the close that follows it.
+        let (outcome, released) = held.hold_to_end(reading).await.map_err(ReadError::Lock)?;
+        let _ = released;
+        outcome.map_err(ReadError::Copy)?
+    }
+}
+
+/// The count of the copy's `unicase` comparator calls on one open (R4): never a process-wide
+/// count, since reads can run at once.
+#[derive(Debug, Default)]
+struct Tripwire {
+    calls: Arc<AtomicU64>,
+}
+
+impl Tripwire {
+    /// The comparator `with_copy` registers as [`COLLATION`]: the engine's order, each call
+    /// counted on this open.
+    fn comparator(&self) -> impl Fn(&str, &str) -> Ordering + Send + Sync + 'static {
+        let calls = Arc::clone(&self.calls);
+        move |a: &str, b: &str| {
+            let _ = calls.fetch_add(1, atomic::Ordering::SeqCst);
+            unicase_order(a, b)
+        }
+    }
+
+    /// `read`, refused when the comparator was called during it.
+    fn check<T>(&self, read: Result<T, ReadError>) -> Result<T, ReadError> {
+        let calls = self.calls.load(atomic::Ordering::SeqCst);
+        if calls == 0 {
+            return read;
+        }
+        let fired = Box::new(CollationTripwire { calls });
+        Err(read_failed(sqlx::Error::Decode(fired)))
+    }
+}
+
+/// Drives `read` to its end on the calling thread, which is the offload's blocking thread and never
+/// a runtime worker: the offload's bound and timing cover the whole read, `SQLite`'s own work
+/// included.
+fn on_this_thread<T>(runtime: &Handle, read: impl Future<Output = T>) -> T {
+    runtime.block_on(read)
+}
+
+/// Every deck's id and stored name, from the open copy.
+pub(crate) async fn deck_names(copy: &ForeignDb) -> Result<BTreeMap<i64, String>, ReadError> {
+    let decks: Vec<(i64, String)> = sqlx::query_as(DECK_NAMES)
+        .fetch_all(copy.reader())
+        .await
+        .map_err(read_failed)?;
+    Ok(decks.into_iter().collect())
+}
+
+/// The ids of the decks read, as the JSON array a query's `json_each` expands: the ids are bound,
+/// never written into the SQL.
+pub(crate) fn scope_ids(allowed: &BTreeSet<i64>) -> String {
+    let ids: Vec<String> = allowed.iter().map(i64::to_string).collect();
+    format!("[{}]", ids.join(","))
+}
+
+/// A read's failure: the copy could not be read.
+pub(crate) fn read_failed(error: sqlx::Error) -> ReadError {
+    ReadError::Copy(KernelError::Database(error))
+}
+
+/// A statement's failure: a write the read-only copy refused, or any other failure of the copy.
+fn refusal(error: sqlx::Error) -> ReadError {
+    let read_only = error
+        .as_database_error()
+        .and_then(sqlx::error::DatabaseError::code)
+        .and_then(|code| code.parse::<i32>().ok())
+        .is_some_and(|code| code & 0xff == SQLITE_READONLY);
+    if read_only {
+        ReadError::WriteRefused
+    } else {
+        read_failed(error)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    //! SPEC-648 A1 to A3: a collection read keeps its shared collection lock until the read has
+    //! ended, whoever still waits for it. A gated read waits for a gate its test opens, a bounded
+    //! wait, and the gate's guard opens it when it drops, so no red hangs.
+
+    use std::fs::{File, OpenOptions, TryLockError};
+    use std::future::{Ready, ready};
+    use std::path::Path;
+    use std::sync::Arc;
+    use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
+    use std::time::Duration;
+
+    use deck_streak_kernel::{
+        Courses, Environment, ManualClock, Offload, OffloadWorkers, UtcMillis,
+    };
+
+    use super::{CollectionReader, ForeignDb, ReadError};
+    use crate::lock::CollectionLock;
+    use crate::settings::{INCLUDE_DECKS, ScopeSettings};
+
+    /// The longest a gated read waits for its gate, and a test for the read's end.
+    const BOUND: Duration = Duration::from_secs(30);
+
+    /// The value a read's work returns.
+    const VALUE: u32 = 7;
+
+    /// A gate a read waits for; it opens when its test opens it, or when it drops.
+    struct Gate(Option<SyncSender<()>>);
+
+    impl Gate {
+        /// Opens the gate, so the read's wait ends.
+        fn open(&mut self) {
+            if let Some(gate) = self.0.take() {
+                let _ = gate.send(());
+            }
+        }
+    }
+
+    impl Drop for Gate {
+        fn drop(&mut self) {
+            self.open();
+        }
+    }
+
+    /// A reader of a zero-length copy in `dir`, with its lock file beside it, on an offload of one
+    /// worker, its scope and courses built as the crate's test support builds them.
+    fn reader_in(dir: &Path) -> CollectionReader {
+        let copy = dir.join("collection.anki2");
+        File::create(&copy).expect("a zero-length copy");
+        let scope = ScopeSettings::from_env(&Environment::from_vars(vec![(INCLUDE_DECKS, "Law")]))
+            .expect("the scope parses");
+        let clock = Arc::new(ManualClock::new(UtcMillis::from_epoch_millis(0)));
+        CollectionReader {
+            copy,
+            lock: CollectionLock::new(dir.join("collection.lock")),
+            offload: Offload::new(OffloadWorkers::new(1).expect("one worker"), clock),
+            scope,
+            courses: Courses::default(),
+        }
+    }
+
+    /// The work of a gated read: it says it started, waits for its gate, says it ended and returns
+    /// [`VALUE`]. It runs on the offload's blocking thread, so its waits block no runtime.
+    fn gated(
+        started: SyncSender<()>,
+        gate: Receiver<()>,
+        ended: SyncSender<()>,
+    ) -> impl FnOnce(ForeignDb) -> Ready<Result<u32, ReadError>> + Send + 'static {
+        move |_copy| {
+            let _ = started.send(());
+            let _ = gate.recv_timeout(BOUND);
+            let _ = ended.send(());
+            ready(Ok(VALUE))
+        }
+    }
+
+    /// Polls `done` until it holds, and says whether it did; the polling bounds a wait for another
+    /// thread, and no assertion reads the time it took.
+    async fn until(mut done: impl FnMut() -> bool) -> bool {
+        for _ in 0..10_000 {
+            if done() {
+                return true;
+            }
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        }
+        false
+    }
+
+    /// Whether another holder has the lock file at `path`, read by a fresh open of the file and a
+    /// lock that never waits, which needs no runtime; a lock it takes, it unlocks at once.
+    fn held_elsewhere(path: &Path) -> bool {
+        let file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(path)
+            .expect("the lock file opens");
+        match file.try_lock() {
+            Ok(()) => {
+                file.unlock().expect("the probe unlocks");
+                false
+            }
+            Err(TryLockError::WouldBlock) => true,
+            Err(TryLockError::Error(error)) => panic!("the probe failed: {error}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn a_read_whose_caller_is_dropped_keeps_the_collection_lock_until_it_ends() {
+        let dir = tempfile::tempdir().expect("a directory");
+        let reader = reader_in(dir.path());
+        let lock = CollectionLock::new(dir.path().join("collection.lock"));
+        let (started_tx, started) = sync_channel(1);
+        let (ended_tx, ended) = sync_channel(1);
+        let (gate_tx, gate_rx) = sync_channel(1);
+        let mut gate = Gate(Some(gate_tx));
+        let work = gated(started_tx, gate_rx, ended_tx);
+        let caller = tokio::spawn(async move { reader.with_copy("dropped_read", work).await });
+        let began = until(|| started.try_recv().is_ok()).await;
+        // The caller is dropped while its read waits for the gate, as the request limit drops a
+        // handler.
+        caller.abort();
+        let cancelled = caller.await.is_err_and(|error| error.is_cancelled());
+        let kept = lock.try_exclusive().await.expect("the take").is_none();
+        gate.open();
+        let finished = until(|| ended.try_recv().is_ok()).await;
+        let mut free = false;
+        for _ in 0..10_000 {
+            if let Some(again) = lock.try_exclusive().await.expect("the take") {
+                again.release().expect("the release");
+                free = true;
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        }
+        assert_eq!(
+            (began, cancelled, kept, finished, free),
+            (true, true, true, true, true),
+            "(the read started, its caller dropped, the lock held while the read ran, the read \
+             ended, the lock free after it)"
+        );
+    }
+
+    #[test]
+    fn a_read_its_runtime_drops_keeps_the_collection_lock_until_the_process_ends() {
+        let dir = tempfile::tempdir().expect("a directory");
+        let path = dir.path().join("collection.lock");
+        let reader = reader_in(dir.path());
+        let (started_tx, started) = sync_channel(1);
+        let (ended_tx, ended) = sync_channel(1);
+        let (gate_tx, gate_rx) = sync_channel(1);
+        let mut gate = Gate(Some(gate_tx));
+        let work = gated(started_tx, gate_rx, ended_tx);
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("a runtime");
+        drop(runtime.spawn(async move { reader.with_copy("stopped_read", work).await }));
+        let began = runtime.block_on(until(|| started.try_recv().is_ok()));
+        // The runtime stops while the read waits for the gate, as a stopping process's does.
+        runtime.shutdown_timeout(Duration::from_millis(100));
+        let kept = held_elsewhere(&path);
+        gate.open();
+        let finished = ended.recv_timeout(BOUND).is_ok();
+        let still = held_elsewhere(&path);
+        assert_eq!(
+            (began, kept, finished, still),
+            (true, true, true, true),
+            "(the read started, the lock held after the runtime stopped while the read ran, the \
+             read ended, the lock still held after the read ended)"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_read_that_ends_releases_the_collection_lock_and_returns_its_value() {
+        let dir = tempfile::tempdir().expect("a directory");
+        let reader = reader_in(dir.path());
+        let lock = CollectionLock::new(dir.path().join("collection.lock"));
+        let value = reader
+            .with_copy("ended_read", |_copy| ready(Ok(VALUE)))
+            .await
+            .map_err(|error| error.to_string());
+        let free = lock.try_exclusive().await.expect("the take").is_some();
+        assert_eq!(
+            (value, free),
+            (Ok(VALUE), true),
+            "(the read's value, the lock free after it)"
+        );
+    }
+}

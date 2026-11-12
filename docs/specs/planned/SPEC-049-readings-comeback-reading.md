@@ -137,6 +137,7 @@ R16. While a lapse is open, the morning readings job takes this comeback branch 
 | A12 | three silent study days open a lapse and two do not, and a skip day inside the run neither counts nor ends it | `a_skip_day_neither_counts_nor_ends_a_silent_run` |
 | A13 | every day of one episode reports the same lapse id, and the next study day with a qualifying review closes it | `one_episode_keeps_one_lapse_id_until_a_study_day_closes_it` |
 | A14 | no morning line is raised during a lapse (taken over from SPEC-052) | `no_morning_line_during_a_lapse` |
+| A15 | the open lapse coordination hands on is counted from the study reviews its caller read: three study days with none after a study day open a lapse whose id is the first of them, a study review closes it, and no skip day is passed | `the_open_lapse_is_counted_from_the_study_reviews_read` |
 
 ```acceptance
 A1: cargo test -p deck-streak-coordination --test readings_comeback -- --exact one_comeback_reading_is_chosen_per_lapse_id
@@ -153,6 +154,7 @@ A11: cargo test -p deck-streak-streaks --test lapse -- --exact the_open_lapse_ma
 A12: cargo test -p deck-streak-streaks --test lapse -- --exact a_skip_day_neither_counts_nor_ends_a_silent_run
 A13: cargo test -p deck-streak-streaks --test lapse -- --exact one_episode_keeps_one_lapse_id_until_a_study_day_closes_it
 A14: cargo test -p deck-streak-coordination --test readings_morning -- --exact no_morning_line_during_a_lapse
+A15: cargo test -p deck-streak-coordination --test lapse -- --exact the_open_lapse_is_counted_from_the_study_reviews_read
 ```
 
 ## 4. File manifest
@@ -194,6 +196,10 @@ A14: cargo test -p deck-streak-coordination --test readings_morning -- --exact n
 | `docs/specs/SPEC-049-readings-comeback-reading.md` | docs | moved from `docs/specs/planned/` |
 | `docs/decisions/ADR-049-the-comeback-reading-chosen-once-per-lapse.md` | docs | added |
 | `docs/red-first/SPEC-049.md` | docs | added |
+| `crates/coordination/tests/lapse.rs` | `deck-streak-coordination` | added by the amendment: A15 (the slice) |
+| `scripts/mutation-rows.d/S04900-S04999.json` | repo | added by the amendment: the slice's rows S04901 to S04909; the remainder's from S04910 |
+| `docs/decisions/ADR-088-the-lapse-slice-is-delivered-before-the-comeback-reading.md` | docs | added by the amendment: proposed, accepted by the slice |
+| `changelog.d/` | repo | added by the amendment: one fragment per delivery, named for its branch |
 
 ## 5. What this does NOT do
 
@@ -226,3 +232,245 @@ A14: cargo test -p deck-streak-coordination --test readings_morning -- --exact n
   day brings fresh readings.
 - **A comeback text drifts into shame or loss wording.** Refused by nudge-duties' `no-shame-framing`
   on the golden envelopes (A5); the text is the pack's template, not generated.
+
+## 7. Amendment, 2026-09-29: the lapse slice is delivered first, on its own
+
+Made under ADR-088, insert-only: every earlier byte is kept in order. It inserts row A15 of the
+criteria table after A14's row and line A15 of the acceptance fence after A14's line (section 3),
+the four rows of section 4 marked "by the amendment", and this section.
+
+- **Two deliveries.** This SPEC is built by two deliveries, as SPEC-057 is built by several:
+  - *the slice*: R12, R13, R14 and R15 without its hand-off to the readings use cases, decided by
+    A11, A12, A13 and A15. Its prerequisites are SPEC-020, SPEC-023, SPEC-029 and SPEC-071, all
+    delivered, so it may be built at once. It reads no readings table and writes no file that
+    SPEC-046, SPEC-047, SPEC-048, SPEC-051 or SPEC-052 lists.
+  - *the remainder*: R1 to R11, R15's hand-off to the readings use cases, and R16, decided by A1
+    to A10 and A14. Section 1's prerequisites and build order are the remainder's, and it needs
+    the slice.
+- **Planned until the remainder.** The slice leaves this SPEC in `docs/specs/planned/`, because its
+  fence names tests the slice does not add (ADR-016). The slice adds `docs/red-first/SPEC-049.md`
+  with its own section; the remainder appends its own, accepts ADR-049 and moves this SPEC to
+  `docs/specs/`.
+- **R15, as the slice builds it.** `crates/coordination/src/lapse.rs` counts the study reviews of
+  the window its caller read (SPEC-023's `Review`, by SPEC-020's study-day rule), passes an empty
+  skip set (#108) and returns the open lapse's id, if any, as the kernel's `StudyDay`, which an
+  occasion's lapse context carries as it is (SPEC-041 R3). It opens no collection. Its callers come
+  later, SPEC-076's streak step and this SPEC's remainder, and it lies outside
+  `crates/coordination/src/readings/`, so SPEC-047's census (its A10) stays green.
+- **A15 is R15's criterion.** Without it the slice's coordination module would have no test in its
+  own delivery, and SPEC-039's diff-scoped mutation run would find its mutants unkilled.
+- **Rows.** This SPEC owns `S04900-S04999` (SPEC-039 R8). The slice writes S04901 to S04909 and the
+  remainder S04910 onward, so the two deliveries never write one id.
+- **When SPEC-076 lands before the remainder,** R15's module also passes the stored anchor (SPEC-076
+  R15, R16). The remainder reads the open lapse through that module as R3 says, and its fixtures
+  hold the streaks store the module then reads.
+
+Inserted in section 3, after A14's row and after A14's fence line:
+
+| A15 | the open lapse coordination hands on is counted from the study reviews its caller read: three study days with none after a study day open a lapse whose id is the first of them, a study review closes it, and no skip day is passed | `the_open_lapse_is_counted_from_the_study_reviews_read` |
+
+A15: cargo test -p deck-streak-coordination --test lapse -- --exact the_open_lapse_is_counted_from_the_study_reviews_read
+
+Inserted at the end of section 4's table:
+
+| `crates/coordination/tests/lapse.rs` | `deck-streak-coordination` | added by the amendment: A15 (the slice) |
+| `scripts/mutation-rows.d/S04900-S04999.json` | repo | added by the amendment: the slice's rows S04901 to S04909; the remainder's from S04910 |
+| `docs/decisions/ADR-088-the-lapse-slice-is-delivered-before-the-comeback-reading.md` | docs | added by the amendment: proposed, accepted by the slice |
+| `changelog.d/` | repo | added by the amendment: one fragment per delivery, named for its branch |
+
+## 8. Amendment, 2026-09-29: the lapse walk's first day and the rollover boundary
+
+Made for issue #422, insert-only: every earlier byte is kept in order, and the sections below are new
+last sections. It decides nothing new. It pins two rules the slice already follows, R13's window and
+R15's study day, so that a program that breaks either one fails a test.
+
+- **Class W, the walk's bounds.** `open_lapse` reads every day of its window, from the window's first
+  day (the earliest key the caller read) up to the current study day, and no day outside it. The
+  criteria table's A16 is decided by a population the test generates: silent runs that end on the
+  current study day, of one short of the threshold, the threshold and one more, and that start at
+  every position of a window whose earlier days number zero to six, the window's first day
+  included; each run under every subset of its days as skip days; the days before the run filled
+  three ways; a row of no reviews on the window's first day; a study review after the current day;
+  and other thresholds. The oracle is a function written in the test from R13's words (the latest
+  study day, then the days after it that are not skip days), and it never calls `open_lapse`. A16's
+  neighbour, A18, names the two cases the issue gave: a window whose only silent run starts on its
+  first day.
+- **Class R, the rollover boundary.** A review counts on the study day the configured rule gives its
+  instant (R15; SPEC-020's rule), at every boundary. A17 is decided by a population the test
+  generates: the offsets -720, -300, -210, 0, 330, 345, 540 and 840 minutes, the rollover hours 0 and
+  4, and instants one millisecond before the day begins, at its beginning, one millisecond after it,
+  and at 23:59, 00:01, 03:59 and 04:01 local time. The oracle is a `begins(day)` written from the
+  rule's definition (the day is the span from its beginning to the next day's), and each member
+  asserts the day and whether the lapse opens where that day decides it. The zone west of UTC with a
+  04:00 rollover is one of the members, and its four local times are also asserted by name.
+- **Rows.** This amendment writes S04907 to S04919 of this SPEC's band, one for each plant a row
+  admits: seven on the walk's bounds (A16) and six on the mapping (A17). The remainder's rows
+  start at S04921.
+- **Text fixes.** The comment in A15's test no longer says a window of only non-study entries opens
+  no lapse of its own, which R13 contradicts; and `docs/red-first/SPEC-049.md` gains an addendum
+  that reads A15's red panic as measured.
+
+Files this amendment adds or changes:
+
+| file | package | what |
+|---|---|---|
+| `crates/streaks/tests/lapse.rs` | `deck-streak-streaks` | A16 and A18 |
+| `crates/coordination/tests/lapse.rs` | `deck-streak-coordination` | A17, and the comment fix in A15's test |
+| `scripts/mutation-rows.d/S04900-S04999.json` | repo | thirteen rows |
+| `docs/red-first/SPEC-049.md` | docs | an insert-only addendum |
+| `changelog.d/lapse-walk-422.md` | repo | the fragment |
+
+Not covered here, each with its owner:
+
+- The lapse walk's production code is unchanged, because it already satisfies R13 and R15 (#422).
+- A different study-day rule than SPEC-020's, or a rollover other than 0 and 4, is not in the
+  population (#422).
+
+## 9. Acceptance criteria of the 2026-09-29 lapse walk amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A16 | the lapse walk reads every day of its window, the first included, and none outside it: for every generated window and run the answer equals R13's, and the count examined is reported | `the_walk_reads_every_day_of_its_window_and_none_outside_it` |
+| A17 | a review counts on the study day the configured rule gives its instant at every boundary of the generated offsets, rollover hours and instants, and the lapse opens where that day decides it, with the count examined reported | `a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary` |
+| A18 | a window whose only silent run starts on its first day answers the run's first day at the threshold and no lapse one day short | `a_silent_run_on_the_windows_first_day_is_read` |
+
+```acceptance
+A16: cargo test -p deck-streak-streaks --test lapse -- --exact the_walk_reads_every_day_of_its_window_and_none_outside_it
+A17: cargo test -p deck-streak-coordination --test lapse -- --exact a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary
+A18: cargo test -p deck-streak-streaks --test lapse -- --exact a_silent_run_on_the_windows_first_day_is_read
+```
+
+## 10. Amendment, 2026-09-30: what each population count pins
+
+Made for issue #453, insert-only: every earlier byte is kept in order, and the sections below are new
+last sections. It decides nothing new. The two generated populations of section 8 each assert how
+many members they generate; this amendment says what that count pins, and adds, for each line of
+the two lapse judges that a comparison or a row changes, the count of members whose answer that
+line decides. The comparisons are the study day's floor on a review's instant and on now, whether a
+review is a study event (its kind from 0 to 3 and its ease at least 1), where the walk begins and
+where its window begins, a day's count against none, the skip days a walk passes, and the silent run
+against the threshold. The day judge's one comparison, the floor on its own instant, is pinned by
+the members on each side of it, which for that judge are the members whose answer it decides.
+
+- **What the examined count pins.** It is the number of times the generator's loops reach the
+  judge: the product of their axes. A generator that keeps its loops but changes what they produce
+  leaves it unchanged, so it cannot notice a fold, an axis that has collapsed to one value, or a
+  member replaced by a copy of another.
+- **What the distinct count pins.** A member's identity is every input its judge is handed,
+  recorded from the arguments that judge is handed and not from the generator's loop variables. For
+  the walk's population (A16) that is the current study day, the days that carry a row and each
+  row's count, the skip days and the threshold. The mapping's population (A17) has two judges, and
+  one generator value feeds both: the instant is the day judge's instant and the lapse judge's
+  review. Its lapse member is the rule (the offset and the rollover hour), the instant of now and
+  each review the lapse is handed (its instant, kind and ease); its day member is the rule and the
+  instant the day judge is handed. Each judge's distinct count is the number of different such
+  members, so a fold that leaves fewer different members fails it. A fold that keeps every member
+  different, such as an input made one constant value, keeps the count, and the count does not
+  catch it. A count kept over the generator's loop variables cannot see a fold of one judge's
+  input while the other judge still reads the value.
+- **What the one-review-day count pins.** A20 also counts, over the reviews each member hands the
+  lapse judge, the study days that hold exactly one review, reading each review's day with the
+  test's own definition of the day: 2,048, two for each member. Moving the earlier review onto the
+  day of the later one keeps every member different and leaves no such day, and the count shows it.
+  It counts where reviews sit, not whose answer turns there, so it does not pin the walk's closing
+  comparison; the moves "a day closing the run at two reviews" and "every day closing the run"
+  below pin it.
+- **What the boundary counts pin.** Each population also counts, by its own oracle over the
+  arguments its judge is handed, how many members sit on each side of a boundary, asserts each count
+  beside the examined and distinct counts, and prints them. A20 counts eight (reviews, nows and day
+  instants at a rollover and a millisecond before one, and silent runs at the threshold and one
+  short of it). A19 counts seven (closing days of one review, empty windows, silent runs at the
+  threshold and one short of it, todays before the window, walks that end at the window's first
+  day, and walks that pass a skip day). A count of members at a boundary cannot tell a member whose
+  side decides its answer from one parked there: a fold can move members off a boundary, park as
+  many others on it, keep every such count, and let the row that moves that boundary survive. These
+  counts show where a population sits; the decisive counts below pin the boundaries. "Empty
+  windows" pins 0, because A19's population never reaches that boundary; the test
+  `an_empty_window_holds_no_lapse` decides it.
+- **What the decisive counts pin.** Each test holds a table of moves of its judge, and each move is
+  one line of the judge changed: a boundary it compares moved one step each way both sides exist,
+  or a line one of the judge's rows replaces. A20's lapse judge has 28: a review a millisecond
+  earlier and later; now a millisecond earlier and later; kinds -1 and 4 read as study kinds and
+  kinds 0 and 3 as not; ease 0 read as a study answer and ease 1 as not; the window begun a day
+  later, a day earlier and at its latest day; the walk begun a day before and a day after today; a
+  day closing the run at two reviews, and every day closing it; one more and one fewer silent day to
+  open; and the lines its rows replace (a review eight hours earlier and an hour later, on its UTC
+  date, by the default rule and with the offset twice, every review a study review, a day closing
+  the run at 101 reviews, the walk passing two days a step, and the id of the first silent day
+  met). A19's walk has 14: the same moves of the walk, and its skip days read as silent and its
+  silent days read as skip days. For every distinct member the test first asserts that the judge's
+  own answer equals a copy of its rule with no move; then it counts the members whose answer each
+  move changes, and asserts that each count equals its pin and is more than none. The pins are
+  re-derived by a generator outside the test. The mutant of each row on the judges' lines (S04901
+  to S04919 and S04930) answers every member as one of these moves does, so under it the judge and
+  the copy disagree on each member that move decides, and the first of them fails. A fold that
+  keeps every decisive count keeps at least one such member for every move, so it kills every row;
+  a fold that loses them changes that move's count and fails it. The class rule is one sentence:
+  for each line of a judge that a comparison or a row changes, the population pins how many of its
+  distinct members that line decides, and first asserts on each of them that the judge equals the
+  copy of its rule.
+- **The study-event block.** A20's judge asks whether each review is a study event, but section 8's
+  population hands only study reviews (kind 1, ease 3), so no member's answer turned on that
+  comparison. A20 now also hands, under each of its sixteen rules, both reviews at every kind from
+  -1 to 4 and every ease from 0 to 2, with now on the third and on the second day after the later
+  one: a study event there closes the run, and without one the run begins on the window's first
+  day. That is 576 more members, and each edge of a study event decides 64 or 128 of them.
+- **Why members of the walk's population repeat.** 336 of the 2,252 members repeat an earlier one,
+  for two reasons. The days before a run are filled three ways when the window has earlier days,
+  and two ways when it has none. When the window has one or two earlier days (`before` of 1 or 2),
+  the second fill (every earlier day a row of no reviews but the day right before the run, studied)
+  and the third (only the first day a row of no reviews, and the day right before the run studied)
+  are the same map, so the third repeats the second: 224 members. When the window has no earlier
+  day (`before` of 0), there is no closing day to skip, so the pass that skips it hands the judge
+  the same skip days as the pass before it, and repeats it: 112 members. The distinct count of the
+  population is 1,916. The judge is pure and
+  each repeat follows its first occurrence, so no repeat changes a verdict, and the repeats are
+  kept because removing them would change the examined count of A16 for no gain. The rollover
+  population has no repeat: its 1,024 lapse members are 1,024 distinct, and its day members are 112,
+  sixteen rules by seven instants.
+- **Criteria.** A19 asserts A16's population is 2,252 members and 1,916 distinct, and prints both.
+  A20 asserts A17's population, with the study-event block, is 1,024 members, 1,024 distinct lapse
+  members and 112 distinct day members, and prints all three; it also asserts, and prints, that the
+  members hold 2,048 study days of one review. A19 and A20 each also assert and print their boundary
+  counts and the members each move decides, assert that the judge equals the copy of its rule on
+  every distinct member, and assert that every decisive count is more than none.
+- **Rows.** This amendment writes S04921 to S04929 of this SPEC's band, one for each class of
+  generator fold: a skip mask that never reaches the run's first day, a fill replaced by a copy of
+  another, and an axis collapsed to one value, on the walk's population (A19); two offsets made
+  equal, the hour axis collapsed to one value, and one instant of now replaced by a copy of another,
+  on the mapping's (A20); and two that fold one judge's input at a time on the mapping's, the review
+  the lapse judge is handed folded to its day's first instant while the day judge still reads every
+  instant, and the reverse; and one that moves the earlier review onto the later one's day, which
+  keeps every member different and leaves no study day of one review. Each row's mutant edits the
+  test's generator, and its killer is the same test. It also writes S04930, which reads an answer of
+  ease 1 as no study review at the lapse judge's call of the study-event rule, a line of
+  coordination's; A20 kills it through the study-event block, and it survives A20 at the base, which
+  hands no review of ease 1. The remainder's rows start at S04931.
+
+Files this amendment adds or changes:
+
+| file | package | what |
+|---|---|---|
+| `crates/streaks/tests/lapse.rs` | `deck-streak-streaks` | A19: the distinct, boundary and decisive counts of A16's population |
+| `crates/coordination/tests/lapse.rs` | `deck-streak-coordination` | A20: the distinct, boundary and decisive counts of A17's population, and its study-event block |
+| `scripts/mutation-rows.d/S04900-S04999.json` | repo | ten rows |
+| `docs/red-first/SPEC-049.md` | docs | an insert-only addendum |
+| `changelog.d/lapse-spread-453.md` | repo | the fragment |
+
+Not covered here, each with its owner:
+
+- The lapse walk's production code is unchanged, because it already satisfies R13 and R15 (#453).
+- Other tests in the workspace that assert an exact examined count over a generated population are
+  not changed here (#453).
+
+## 11. Acceptance criteria of the 2026-09-30 population-spread amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A19 | the walk's generated population holds 2,252 members of which 1,916 are distinct, both counts printed, so a fold that leaves fewer different members fails while the examined count holds; the walk equals the copy of its rule on every distinct member, and the members each of its 14 moves decides equal their pins, each more than none | `the_walk_reads_every_day_of_its_window_and_none_outside_it` |
+| A20 | the mapping's generated population, with its study-event block, holds 1,024 members of which 1,024 are distinct lapse members, over 112 distinct day members, and 2,048 study days of one review, all four counts printed, so a fold that leaves fewer different members of either judge, or no study day of one review, fails while the examined count holds; the judge equals the copy of its rule on every distinct member, and the members each of its 28 moves decides equal their pins, each more than none | `a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary` |
+
+```acceptance
+A19: cargo test -p deck-streak-streaks --test lapse -- --exact the_walk_reads_every_day_of_its_window_and_none_outside_it
+A20: cargo test -p deck-streak-coordination --test lapse -- --exact a_review_counts_on_the_study_day_the_rule_gives_at_every_boundary
+```

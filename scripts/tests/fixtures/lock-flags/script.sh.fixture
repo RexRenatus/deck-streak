@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+build() {
+    cargo build --locked -p planted
+    cargo test -p planted
+}
+
+cargo clippy --frozen
+xargs -a packages.txt cargo nextest run --locked
+cargo nextest run $packages

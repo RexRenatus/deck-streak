@@ -1,0 +1,170 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S08401-THE-RARITY-WINS",
+        "notifications",
+        "src/ladder.rs",
+        ".and_then(|rarity| ladder.rarity.get(rarity))",
+        ".and_then(|_| None::<&Tier>)",
+        "ladder_tiers::the_requested_tier_matches_the_parity_golden",
+        "a celebration with a rarity the ladder knows asks for its rarity's tier before its event's, as the golden of requested_tier says (SPEC-084 R1)"
+      ],
+      [
+        "S08402-T5-STEPS-TO-T4",
+        "notifications",
+        "src/ladder.rs",
+        "if tier >= Tier::T5 && used.1 >= budget.1 {",
+        "if tier >= Tier::T5 && used.1 > budget.1 {",
+        "ladder_tiers::an_over_budget_tier_steps_down_as_the_parity_golden_says",
+        "a T5 steps down to T4 once the week's T5 slots are spent, not one later, as the golden of apply_budget says (SPEC-084 R3)"
+      ],
+      [
+        "S08403-THE-RARE-FLOOR",
+        "notifications",
+        "src/ladder.rs",
+        "floor.map_or(tier, |floor| tier.max(floor))",
+        "floor.map_or(tier, |floor| tier.min(floor))",
+        "ladder_tiers::an_over_budget_tier_steps_down_as_the_parity_golden_says",
+        "an Epic or a Legendary keeps its floor through the budget, and the floor never lowers a tier, as the golden of apply_budget says (SPEC-084 R3)"
+      ],
+      [
+        "S08404-THE-CAP-FOLLOWS-THE-BUDGET",
+        "notifications",
+        "src/router.rs",
+        "        Ok(budgeted.min(ladder::outcome_cap(&self.policy, broke)))",
+        "        Ok(budgeted)",
+        "ladder_render::on_a_streak_break_day_every_celebration_renders_at_most_t1",
+        "the streak-break cap is applied after the budget and its rare floor, so on a day the streak broke every celebration renders at most T1, an Epic and a Legendary included (SPEC-084 R5)"
+      ],
+      [
+        "S08405-A-BREAK-NEEDS-A-LONGER-PAST",
+        "notifications",
+        "src/ladder.rs",
+        "facts.current == 1 && facts.longest > 1",
+        "facts.current == 1 && facts.longest >= 1",
+        "ladder_tiers::the_streak_broke_on_a_day_as_the_parity_golden_says",
+        "a streak of one day that was never longer did not break, as the golden of _streak_broke_today says (SPEC-084 R5)"
+      ],
+      [
+        "S08406-A-HELD-ONE-COUNTS",
+        "notifications",
+        "src/router.rs",
+        "count += delivered + held;",
+        "count += delivered;",
+        "ladder_budget::the_week_counts_delivered_and_held_celebrations_as_the_parity_golden_does",
+        "the week's count includes celebrations still held, so a held T4 or T5 spends its slot, as the golden of celebrations_at_or_above counts (SPEC-084 R4)"
+      ],
+      [
+        "S08407-THE-FLUSH-RANKS-BY-TIER",
+        "notifications",
+        "src/router.rs",
+        "rows.sort_by_key(|row| (Reverse(row.tier_pending), row.id));",
+        "rows.sort_by_key(|row| (Reverse(Tier::T0), row.id));",
+        "ladder_flush::a_flush_ranks_re_caps_and_rolls_up_as_the_parity_golden_does",
+        "held celebrations are ranked by held tier before age, so the two rendered in full are the highest, as the golden of flush_deferred_celebrations ranks (SPEC-084 R11)"
+      ],
+      [
+        "S08408-THE-ROLLUP-SETTLES-AT-T2",
+        "notifications",
+        "src/router.rs",
+        "let tier = row.tier_pending.min(cap).min(Tier::T2);",
+        "let tier = row.tier_pending.min(cap);",
+        "ladder_flush::a_flush_ranks_re_caps_and_rolls_up_as_the_parity_golden_does",
+        "a celebration the recap line names settles at most at T2, as the golden of flush_deferred_celebrations settles it (SPEC-084 R11)"
+      ],
+      [
+        "S08412-THE-DICE-IS-THE-SLOT-MACHINE",
+        "notifications",
+        "src/ladder.rs",
+        "pub const DICE_EMOJI: &str = \"\\u{1f3b0}\";",
+        "pub const DICE_EMOJI: &str = \"\\u{1f3b2}\";",
+        "ladder_render::each_tier_makes_the_transport_calls_of_the_parity_golden_in_order",
+        "a T4 and a T5 open with the golden's dice, whole (SPEC-084 R8); cargo-mutants never mutates a constant"
+      ],
+      [
+        "S08413-THE-REACTION-IS-A-PARTY-POPPER",
+        "notifications",
+        "src/ladder.rs",
+        "pub const REACTION_EMOJI: &str = \"\\u{1f389}\";",
+        "pub const REACTION_EMOJI: &str = \"\\u{1f44d}\";",
+        "ladder_render::a_reaction_is_attempted_only_on_a_message_within_its_age",
+        "a T1 reacts with the golden's emoji, whole (SPEC-084 R8, R9); cargo-mutants never mutates a constant"
+      ],
+      [
+        "S08414-THE-REVEAL-PAUSES-2500-MS",
+        "notifications",
+        "src/ladder.rs",
+        "pub const REVEAL_PAUSE: Duration = Duration::from_millis(2_500);",
+        "pub const REVEAL_PAUSE: Duration = Duration::from_millis(2_000);",
+        "ladder_render::each_tier_makes_the_transport_calls_of_the_parity_golden_in_order",
+        "a T3 reveal holds its placeholder for the golden's pause, whole (SPEC-084 R8); cargo-mutants never mutates a constant"
+      ],
+      [
+        "S08416-A-REACTION-AGE-IS-IN-HOURS",
+        "notifications",
+        "src/ladder.rs",
+        "const HOUR_MS: i64 = 3_600_000;",
+        "const HOUR_MS: i64 = 60_000;",
+        "ladder_render::a_reaction_is_attempted_only_on_a_message_within_its_age",
+        "the reaction's age bound is counted in hours, so a message 24 hours old is still fresh and one a minute older is not, as the golden of _react_to_owner says (SPEC-084 R9); cargo-mutants never mutates a constant"
+      ],
+      [
+        "S08417-THE-OWNERS-LATEST-MESSAGE-TABLE",
+        "notifications",
+        "src/ledger.rs",
+        "pub const OWNER_MESSAGE_TABLE: &str = \"owner_last_message\";",
+        "pub const OWNER_MESSAGE_TABLE: &str = \"owner_message\";",
+        "ladder_rights::the_owners_latest_message_is_exported_and_reset_by_an_erase",
+        "the data-rights port declares the owner's latest message under the table the migration creates, so its export and its reset reach it (SPEC-084 R13, A17); cargo-mutants never mutates a constant"
+      ],
+      [
+        "S08418-THE-INTENSITY-IS-THE-PREDECESSORS-KEY",
+        "notifications",
+        "src/router.rs",
+        "pub const INTENSITY_SETTING: &str = \"celebration_intensity\";",
+        "pub const INTENSITY_SETTING: &str = \"intensity\";",
+        "ladder_render::each_tier_makes_the_transport_calls_of_the_parity_golden_in_order",
+        "the owner's intensity is read under the predecessor's key, which the v9 import writes, so the week's budget follows it (SPEC-084 R2); cargo-mutants never mutates a constant"
+      ]
+    ],
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S08409-THE-REACTION-AGE",
+        "notifications-policy.json",
+        "\"reaction_max_age_hours\": 24,",
+        "\"reaction_max_age_hours\": 12,",
+        "notifications",
+        "ladder_policy::the_policy_ladder_values_equal_the_parity_goldens",
+        "the reaction's 24-hour age is read from the policy file and equals the golden's (SPEC-084 R9, R12)"
+      ],
+      [
+        "S08410-THE-NEAR-MISS-UNITS",
+        "notifications-policy.json",
+        "\"max_units\": 5,",
+        "\"max_units\": 6,",
+        "notifications",
+        "ladder_policy::the_policy_ladder_values_equal_the_parity_goldens",
+        "the near-miss gate's five units are read from the policy file and equal the golden's (SPEC-084 R7, R12)"
+      ],
+      [
+        "S08411-THE-REVEAL-IS-A-POLICED-DELIVERY-CALL",
+        "notifications-policy.json",
+        "\"push_reveal\",",
+        "\"push_revealed\",",
+        "notifications",
+        "ladder_policy::the_policy_polices_the_reveal_beside_the_other_delivery_calls",
+        "the policy names push_reveal among the bot's delivery calls, so the one-router check polices it beside the other five (SPEC-084 R8, ADR-084)"
+      ],
+      [
+        "S08415-THE-REVEAL-OPENS-WITH-ITS-PLACEHOLDER",
+        "crates/notifications/src/ladder.rs",
+        "pub const REVEAL_PLACEHOLDER: &str = \"\\u{1f4e6} <b>opening\\u{2026}</b>\";",
+        "pub const REVEAL_PLACEHOLDER: &str = \"\\u{1f4e6} <b>opening</b>\";",
+        "bot",
+        "ladder_transport::a_reveal_edits_its_placeholder_and_falls_back_to_a_new_message",
+        "a T3 reveal opens with the predecessor's placeholder, whole, which the bot's transport sends and edits (SPEC-084 R8, A14); the bot's test pins it, so the row runs there; cargo-mutants never mutates a constant"
+      ]
+    ]
+  }
+}

@@ -1,0 +1,1094 @@
+{
+  "cases": [
+    {
+      "input": {
+        "level": 1
+      },
+      "output": [
+        "Sprout",
+        "\ud83d\udc23"
+      ]
+    },
+    {
+      "input": {
+        "level": 2
+      },
+      "output": [
+        "Sprout",
+        "\ud83d\udc23"
+      ]
+    },
+    {
+      "input": {
+        "level": 3
+      },
+      "output": [
+        "Sprout",
+        "\ud83d\udc23"
+      ]
+    },
+    {
+      "input": {
+        "level": 4
+      },
+      "output": [
+        "Sprout",
+        "\ud83d\udc23"
+      ]
+    },
+    {
+      "input": {
+        "level": 5
+      },
+      "output": [
+        "Seedling",
+        "\ud83c\udf31"
+      ]
+    },
+    {
+      "input": {
+        "level": 6
+      },
+      "output": [
+        "Seedling",
+        "\ud83c\udf31"
+      ]
+    },
+    {
+      "input": {
+        "level": 7
+      },
+      "output": [
+        "Seedling",
+        "\ud83c\udf31"
+      ]
+    },
+    {
+      "input": {
+        "level": 8
+      },
+      "output": [
+        "Seedling",
+        "\ud83c\udf31"
+      ]
+    },
+    {
+      "input": {
+        "level": 9
+      },
+      "output": [
+        "Seedling",
+        "\ud83c\udf31"
+      ]
+    },
+    {
+      "input": {
+        "level": 10
+      },
+      "output": [
+        "Apprentice",
+        "\ud83d\udcd7"
+      ]
+    },
+    {
+      "input": {
+        "level": 11
+      },
+      "output": [
+        "Apprentice",
+        "\ud83d\udcd7"
+      ]
+    },
+    {
+      "input": {
+        "level": 12
+      },
+      "output": [
+        "Apprentice",
+        "\ud83d\udcd7"
+      ]
+    },
+    {
+      "input": {
+        "level": 13
+      },
+      "output": [
+        "Apprentice",
+        "\ud83d\udcd7"
+      ]
+    },
+    {
+      "input": {
+        "level": 14
+      },
+      "output": [
+        "Apprentice",
+        "\ud83d\udcd7"
+      ]
+    },
+    {
+      "input": {
+        "level": 15
+      },
+      "output": [
+        "Apprentice",
+        "\ud83d\udcd7"
+      ]
+    },
+    {
+      "input": {
+        "level": 16
+      },
+      "output": [
+        "Apprentice",
+        "\ud83d\udcd7"
+      ]
+    },
+    {
+      "input": {
+        "level": 17
+      },
+      "output": [
+        "Apprentice",
+        "\ud83d\udcd7"
+      ]
+    },
+    {
+      "input": {
+        "level": 18
+      },
+      "output": [
+        "Apprentice",
+        "\ud83d\udcd7"
+      ]
+    },
+    {
+      "input": {
+        "level": 19
+      },
+      "output": [
+        "Apprentice",
+        "\ud83d\udcd7"
+      ]
+    },
+    {
+      "input": {
+        "level": 20
+      },
+      "output": [
+        "Scholar",
+        "\ud83d\udcd8"
+      ]
+    },
+    {
+      "input": {
+        "level": 21
+      },
+      "output": [
+        "Scholar",
+        "\ud83d\udcd8"
+      ]
+    },
+    {
+      "input": {
+        "level": 22
+      },
+      "output": [
+        "Scholar",
+        "\ud83d\udcd8"
+      ]
+    },
+    {
+      "input": {
+        "level": 23
+      },
+      "output": [
+        "Scholar",
+        "\ud83d\udcd8"
+      ]
+    },
+    {
+      "input": {
+        "level": 24
+      },
+      "output": [
+        "Scholar",
+        "\ud83d\udcd8"
+      ]
+    },
+    {
+      "input": {
+        "level": 25
+      },
+      "output": [
+        "Scholar",
+        "\ud83d\udcd8"
+      ]
+    },
+    {
+      "input": {
+        "level": 26
+      },
+      "output": [
+        "Scholar",
+        "\ud83d\udcd8"
+      ]
+    },
+    {
+      "input": {
+        "level": 27
+      },
+      "output": [
+        "Scholar",
+        "\ud83d\udcd8"
+      ]
+    },
+    {
+      "input": {
+        "level": 28
+      },
+      "output": [
+        "Scholar",
+        "\ud83d\udcd8"
+      ]
+    },
+    {
+      "input": {
+        "level": 29
+      },
+      "output": [
+        "Scholar",
+        "\ud83d\udcd8"
+      ]
+    },
+    {
+      "input": {
+        "level": 30
+      },
+      "output": [
+        "Adept",
+        "\ud83d\udcd9"
+      ]
+    },
+    {
+      "input": {
+        "level": 31
+      },
+      "output": [
+        "Adept",
+        "\ud83d\udcd9"
+      ]
+    },
+    {
+      "input": {
+        "level": 32
+      },
+      "output": [
+        "Adept",
+        "\ud83d\udcd9"
+      ]
+    },
+    {
+      "input": {
+        "level": 33
+      },
+      "output": [
+        "Adept",
+        "\ud83d\udcd9"
+      ]
+    },
+    {
+      "input": {
+        "level": 34
+      },
+      "output": [
+        "Adept",
+        "\ud83d\udcd9"
+      ]
+    },
+    {
+      "input": {
+        "level": 35
+      },
+      "output": [
+        "Adept",
+        "\ud83d\udcd9"
+      ]
+    },
+    {
+      "input": {
+        "level": 36
+      },
+      "output": [
+        "Adept",
+        "\ud83d\udcd9"
+      ]
+    },
+    {
+      "input": {
+        "level": 37
+      },
+      "output": [
+        "Adept",
+        "\ud83d\udcd9"
+      ]
+    },
+    {
+      "input": {
+        "level": 38
+      },
+      "output": [
+        "Adept",
+        "\ud83d\udcd9"
+      ]
+    },
+    {
+      "input": {
+        "level": 39
+      },
+      "output": [
+        "Adept",
+        "\ud83d\udcd9"
+      ]
+    },
+    {
+      "input": {
+        "level": 40
+      },
+      "output": [
+        "Graduate",
+        "\ud83c\udf93"
+      ]
+    },
+    {
+      "input": {
+        "level": 41
+      },
+      "output": [
+        "Graduate",
+        "\ud83c\udf93"
+      ]
+    },
+    {
+      "input": {
+        "level": 42
+      },
+      "output": [
+        "Graduate",
+        "\ud83c\udf93"
+      ]
+    },
+    {
+      "input": {
+        "level": 43
+      },
+      "output": [
+        "Graduate",
+        "\ud83c\udf93"
+      ]
+    },
+    {
+      "input": {
+        "level": 44
+      },
+      "output": [
+        "Graduate",
+        "\ud83c\udf93"
+      ]
+    },
+    {
+      "input": {
+        "level": 45
+      },
+      "output": [
+        "Graduate",
+        "\ud83c\udf93"
+      ]
+    },
+    {
+      "input": {
+        "level": 46
+      },
+      "output": [
+        "Graduate",
+        "\ud83c\udf93"
+      ]
+    },
+    {
+      "input": {
+        "level": 47
+      },
+      "output": [
+        "Graduate",
+        "\ud83c\udf93"
+      ]
+    },
+    {
+      "input": {
+        "level": 48
+      },
+      "output": [
+        "Graduate",
+        "\ud83c\udf93"
+      ]
+    },
+    {
+      "input": {
+        "level": 49
+      },
+      "output": [
+        "Graduate",
+        "\ud83c\udf93"
+      ]
+    },
+    {
+      "input": {
+        "level": 50
+      },
+      "output": [
+        "Memory Mage",
+        "\ud83e\udde0"
+      ]
+    },
+    {
+      "input": {
+        "level": 51
+      },
+      "output": [
+        "Memory Mage",
+        "\ud83e\udde0"
+      ]
+    },
+    {
+      "input": {
+        "level": 52
+      },
+      "output": [
+        "Memory Mage",
+        "\ud83e\udde0"
+      ]
+    },
+    {
+      "input": {
+        "level": 53
+      },
+      "output": [
+        "Memory Mage",
+        "\ud83e\udde0"
+      ]
+    },
+    {
+      "input": {
+        "level": 54
+      },
+      "output": [
+        "Memory Mage",
+        "\ud83e\udde0"
+      ]
+    },
+    {
+      "input": {
+        "level": 55
+      },
+      "output": [
+        "Memory Mage",
+        "\ud83e\udde0"
+      ]
+    },
+    {
+      "input": {
+        "level": 56
+      },
+      "output": [
+        "Memory Mage",
+        "\ud83e\udde0"
+      ]
+    },
+    {
+      "input": {
+        "level": 57
+      },
+      "output": [
+        "Memory Mage",
+        "\ud83e\udde0"
+      ]
+    },
+    {
+      "input": {
+        "level": 58
+      },
+      "output": [
+        "Memory Mage",
+        "\ud83e\udde0"
+      ]
+    },
+    {
+      "input": {
+        "level": 59
+      },
+      "output": [
+        "Memory Mage",
+        "\ud83e\udde0"
+      ]
+    },
+    {
+      "input": {
+        "level": 60
+      },
+      "output": [
+        "Recall Knight",
+        "\u2694\ufe0f"
+      ]
+    },
+    {
+      "input": {
+        "level": 61
+      },
+      "output": [
+        "Recall Knight",
+        "\u2694\ufe0f"
+      ]
+    },
+    {
+      "input": {
+        "level": 62
+      },
+      "output": [
+        "Recall Knight",
+        "\u2694\ufe0f"
+      ]
+    },
+    {
+      "input": {
+        "level": 63
+      },
+      "output": [
+        "Recall Knight",
+        "\u2694\ufe0f"
+      ]
+    },
+    {
+      "input": {
+        "level": 64
+      },
+      "output": [
+        "Recall Knight",
+        "\u2694\ufe0f"
+      ]
+    },
+    {
+      "input": {
+        "level": 65
+      },
+      "output": [
+        "Recall Knight",
+        "\u2694\ufe0f"
+      ]
+    },
+    {
+      "input": {
+        "level": 66
+      },
+      "output": [
+        "Recall Knight",
+        "\u2694\ufe0f"
+      ]
+    },
+    {
+      "input": {
+        "level": 67
+      },
+      "output": [
+        "Recall Knight",
+        "\u2694\ufe0f"
+      ]
+    },
+    {
+      "input": {
+        "level": 68
+      },
+      "output": [
+        "Recall Knight",
+        "\u2694\ufe0f"
+      ]
+    },
+    {
+      "input": {
+        "level": 69
+      },
+      "output": [
+        "Recall Knight",
+        "\u2694\ufe0f"
+      ]
+    },
+    {
+      "input": {
+        "level": 70
+      },
+      "output": [
+        "Retention Lord",
+        "\ud83d\udee1\ufe0f"
+      ]
+    },
+    {
+      "input": {
+        "level": 71
+      },
+      "output": [
+        "Retention Lord",
+        "\ud83d\udee1\ufe0f"
+      ]
+    },
+    {
+      "input": {
+        "level": 72
+      },
+      "output": [
+        "Retention Lord",
+        "\ud83d\udee1\ufe0f"
+      ]
+    },
+    {
+      "input": {
+        "level": 73
+      },
+      "output": [
+        "Retention Lord",
+        "\ud83d\udee1\ufe0f"
+      ]
+    },
+    {
+      "input": {
+        "level": 74
+      },
+      "output": [
+        "Retention Lord",
+        "\ud83d\udee1\ufe0f"
+      ]
+    },
+    {
+      "input": {
+        "level": 75
+      },
+      "output": [
+        "Retention Lord",
+        "\ud83d\udee1\ufe0f"
+      ]
+    },
+    {
+      "input": {
+        "level": 76
+      },
+      "output": [
+        "Retention Lord",
+        "\ud83d\udee1\ufe0f"
+      ]
+    },
+    {
+      "input": {
+        "level": 77
+      },
+      "output": [
+        "Retention Lord",
+        "\ud83d\udee1\ufe0f"
+      ]
+    },
+    {
+      "input": {
+        "level": 78
+      },
+      "output": [
+        "Retention Lord",
+        "\ud83d\udee1\ufe0f"
+      ]
+    },
+    {
+      "input": {
+        "level": 79
+      },
+      "output": [
+        "Retention Lord",
+        "\ud83d\udee1\ufe0f"
+      ]
+    },
+    {
+      "input": {
+        "level": 80
+      },
+      "output": [
+        "Synapse Dragon",
+        "\ud83d\udc09"
+      ]
+    },
+    {
+      "input": {
+        "level": 81
+      },
+      "output": [
+        "Synapse Dragon",
+        "\ud83d\udc09"
+      ]
+    },
+    {
+      "input": {
+        "level": 82
+      },
+      "output": [
+        "Synapse Dragon",
+        "\ud83d\udc09"
+      ]
+    },
+    {
+      "input": {
+        "level": 83
+      },
+      "output": [
+        "Synapse Dragon",
+        "\ud83d\udc09"
+      ]
+    },
+    {
+      "input": {
+        "level": 84
+      },
+      "output": [
+        "Synapse Dragon",
+        "\ud83d\udc09"
+      ]
+    },
+    {
+      "input": {
+        "level": 85
+      },
+      "output": [
+        "Synapse Dragon",
+        "\ud83d\udc09"
+      ]
+    },
+    {
+      "input": {
+        "level": 86
+      },
+      "output": [
+        "Synapse Dragon",
+        "\ud83d\udc09"
+      ]
+    },
+    {
+      "input": {
+        "level": 87
+      },
+      "output": [
+        "Synapse Dragon",
+        "\ud83d\udc09"
+      ]
+    },
+    {
+      "input": {
+        "level": 88
+      },
+      "output": [
+        "Synapse Dragon",
+        "\ud83d\udc09"
+      ]
+    },
+    {
+      "input": {
+        "level": 89
+      },
+      "output": [
+        "Synapse Dragon",
+        "\ud83d\udc09"
+      ]
+    },
+    {
+      "input": {
+        "level": 90
+      },
+      "output": [
+        "Mind Cosmonaut",
+        "\ud83c\udf0c"
+      ]
+    },
+    {
+      "input": {
+        "level": 91
+      },
+      "output": [
+        "Mind Cosmonaut",
+        "\ud83c\udf0c"
+      ]
+    },
+    {
+      "input": {
+        "level": 92
+      },
+      "output": [
+        "Mind Cosmonaut",
+        "\ud83c\udf0c"
+      ]
+    },
+    {
+      "input": {
+        "level": 93
+      },
+      "output": [
+        "Mind Cosmonaut",
+        "\ud83c\udf0c"
+      ]
+    },
+    {
+      "input": {
+        "level": 94
+      },
+      "output": [
+        "Mind Cosmonaut",
+        "\ud83c\udf0c"
+      ]
+    },
+    {
+      "input": {
+        "level": 95
+      },
+      "output": [
+        "Mind Cosmonaut",
+        "\ud83c\udf0c"
+      ]
+    },
+    {
+      "input": {
+        "level": 96
+      },
+      "output": [
+        "Mind Cosmonaut",
+        "\ud83c\udf0c"
+      ]
+    },
+    {
+      "input": {
+        "level": 97
+      },
+      "output": [
+        "Mind Cosmonaut",
+        "\ud83c\udf0c"
+      ]
+    },
+    {
+      "input": {
+        "level": 98
+      },
+      "output": [
+        "Mind Cosmonaut",
+        "\ud83c\udf0c"
+      ]
+    },
+    {
+      "input": {
+        "level": 99
+      },
+      "output": [
+        "Mind Cosmonaut",
+        "\ud83c\udf0c"
+      ]
+    },
+    {
+      "input": {
+        "level": 100
+      },
+      "output": [
+        "Grandmaster of Memory",
+        "\ud83d\udc51"
+      ]
+    },
+    {
+      "input": {
+        "level": 101
+      },
+      "output": [
+        "Grandmaster of Memory",
+        "\ud83d\udc51"
+      ]
+    },
+    {
+      "input": {
+        "level": 102
+      },
+      "output": [
+        "Grandmaster of Memory",
+        "\ud83d\udc51"
+      ]
+    },
+    {
+      "input": {
+        "level": 103
+      },
+      "output": [
+        "Grandmaster of Memory",
+        "\ud83d\udc51"
+      ]
+    },
+    {
+      "input": {
+        "level": 104
+      },
+      "output": [
+        "Grandmaster of Memory",
+        "\ud83d\udc51"
+      ]
+    },
+    {
+      "input": {
+        "level": 105
+      },
+      "output": [
+        "Grandmaster of Memory",
+        "\ud83d\udc51"
+      ]
+    },
+    {
+      "input": {
+        "level": 106
+      },
+      "output": [
+        "Grandmaster of Memory",
+        "\ud83d\udc51"
+      ]
+    },
+    {
+      "input": {
+        "level": 107
+      },
+      "output": [
+        "Grandmaster of Memory",
+        "\ud83d\udc51"
+      ]
+    },
+    {
+      "input": {
+        "level": 108
+      },
+      "output": [
+        "Grandmaster of Memory",
+        "\ud83d\udc51"
+      ]
+    },
+    {
+      "input": {
+        "level": 109
+      },
+      "output": [
+        "Grandmaster of Memory",
+        "\ud83d\udc51"
+      ]
+    },
+    {
+      "input": {
+        "level": 110
+      },
+      "output": [
+        "Grandmaster of Memory",
+        "\ud83d\udc51"
+      ]
+    },
+    {
+      "input": {
+        "level": 111
+      },
+      "output": [
+        "Grandmaster of Memory",
+        "\ud83d\udc51"
+      ]
+    },
+    {
+      "input": {
+        "level": 112
+      },
+      "output": [
+        "Grandmaster of Memory",
+        "\ud83d\udc51"
+      ]
+    },
+    {
+      "input": {
+        "level": 113
+      },
+      "output": [
+        "Grandmaster of Memory",
+        "\ud83d\udc51"
+      ]
+    },
+    {
+      "input": {
+        "level": 114
+      },
+      "output": [
+        "Grandmaster of Memory",
+        "\ud83d\udc51"
+      ]
+    },
+    {
+      "input": {
+        "level": 115
+      },
+      "output": [
+        "Grandmaster of Memory",
+        "\ud83d\udc51"
+      ]
+    },
+    {
+      "input": {
+        "level": 116
+      },
+      "output": [
+        "Grandmaster of Memory",
+        "\ud83d\udc51"
+      ]
+    },
+    {
+      "input": {
+        "level": 117
+      },
+      "output": [
+        "Grandmaster of Memory",
+        "\ud83d\udc51"
+      ]
+    },
+    {
+      "input": {
+        "level": 118
+      },
+      "output": [
+        "Grandmaster of Memory",
+        "\ud83d\udc51"
+      ]
+    },
+    {
+      "input": {
+        "level": 119
+      },
+      "output": [
+        "Grandmaster of Memory",
+        "\ud83d\udc51"
+      ]
+    },
+    {
+      "input": {
+        "level": 120
+      },
+      "output": [
+        "Grandmaster of Memory",
+        "\ud83d\udc51"
+      ]
+    }
+  ],
+  "function": "gamification.xp.level_title",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_072.py",
+  "registry_sha256": "d25c88fa142d319489e7334677aebdbcf5b9e0aca3dfb751f221140bead5b54f",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO law_dues (id, study_day, backlog, due_today, updated_at, created_at) VALUES (1, ?1, ?2, ?3, ?4, ?4) ON CONFLICT (id) DO UPDATE SET study_day = excluded.study_day, backlog = excluded.backlog, due_today = excluded.due_today, updated_at = excluded.updated_at",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "98c72cd9e3bf1f4d258a5f20f90fb81f284ff435bab9d0f5db406cb5037b9745"
+}

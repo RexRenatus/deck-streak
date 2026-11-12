@@ -1,0 +1,42 @@
+[package]
+name = "deck-streak-push"
+description = "DeckStreak's push adapter: APNs and web push senders for a native or web client. See docs/CONTEXT-MAP.md."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+# The push adapter depends on the kernel alone, for its clock and its time type (docs/CONTEXT-MAP.md,
+# ADR-354 D3); nothing composes it until native push carries the one router (#640).
+[dependencies]
+deck-streak-kernel.workspace = true
+# ADR-354 D1 and D2 (SPEC-343): the client, its TLS connector, the bounded read, the ES256 signer,
+# RFC 8291's encryption and base64url. Each is a package the workspace's manifest admits.
+base64ct.workspace = true
+http-body-util.workspace = true
+hyper = { workspace = true, features = ["client", "http1", "http2"] }
+hyper-rustls = { workspace = true, features = ["aws-lc-rs", "http1", "http2", "rustls-platform-verifier", "tls12"] }
+hyper-util = { workspace = true, features = ["client-legacy", "http1", "http2", "tokio"] }
+p256.workspace = true
+rustls = { workspace = true, features = ["aws_lc_rs"] }
+serde_json.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["time"] }
+tracing.workspace = true
+web-push-native.workspace = true
+
+[dev-dependencies]
+# SPEC-343 R10 (ADR-354 D5): the fakes are axum servers on loopback ports, the APNs fake over HTTP/2
+# without TLS, so axum's `http2` feature is a test's alone. The push service fake decrypts with its
+# own RFC 8291 decryption over hkdf, aes-gcm, sha2 and p256's ECDH.
+aes-gcm.workspace = true
+axum = { workspace = true, features = ["http1", "http2", "tokio"] }
+hkdf.workspace = true
+p256 = { workspace = true, features = ["ecdh"] }
+sha2.workspace = true
+tokio = { workspace = true, features = ["macros", "net", "rt", "sync", "time"] }

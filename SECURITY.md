@@ -22,6 +22,14 @@ how to reproduce it, and the impact you expect.
 - A fix, or a reasoned decision not to fix, follows within 90 days, and you are told which.
 - The advisory is published when a fixed release exists, crediting you unless you ask otherwise.
 
+## Dependency advisories
+
+Dependabot alerts are on and its automated security fixes stay off: those would open against
+`main`, which only a release pull request from `dev` may change (ADR-036). The maintainer triages
+each alert. A fixable one becomes a pull request into `dev`, and ships with the next release, or
+at once as a patch release when it cannot wait. A dismissed alert carries its reason. Version
+updates keep arriving as pull requests into `dev`.
+
 ## Handling credentials
 
 DeckStreak never stores a credential in the repository, an environment variable, a command line, a

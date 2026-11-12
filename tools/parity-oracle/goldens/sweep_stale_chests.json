@@ -1,0 +1,1422 @@
+{
+  "adapter": "with_a_stub_sweep",
+  "cases": [
+    {
+      "class": "state",
+      "input": {
+        "chests": [],
+        "today": 19679
+      },
+      "output": {
+        "grants": [],
+        "resolved": []
+      }
+    },
+    {
+      "class": "state",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 17,
+            "rarity": "common",
+            "state": "sealed",
+            "study_day": 19676
+          },
+          {
+            "choice": "",
+            "payout_xp": 44,
+            "rarity": "rare",
+            "state": "sealed",
+            "study_day": 19676
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [
+          {
+            "amount": 17,
+            "source": "chest:1",
+            "study_day": 19676,
+            "track": "language"
+          },
+          {
+            "amount": 44,
+            "source": "chest:2",
+            "study_day": 19676,
+            "track": "language"
+          }
+        ],
+        "resolved": [
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "class": "state",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 17,
+            "rarity": "common",
+            "state": "sealed",
+            "study_day": 19677
+          },
+          {
+            "choice": "",
+            "payout_xp": 44,
+            "rarity": "rare",
+            "state": "sealed",
+            "study_day": 19677
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [
+          {
+            "amount": 17,
+            "source": "chest:1",
+            "study_day": 19677,
+            "track": "language"
+          },
+          {
+            "amount": 44,
+            "source": "chest:2",
+            "study_day": 19677,
+            "track": "language"
+          }
+        ],
+        "resolved": [
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "class": "state",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 17,
+            "rarity": "common",
+            "state": "sealed",
+            "study_day": 19678
+          },
+          {
+            "choice": "",
+            "payout_xp": 44,
+            "rarity": "rare",
+            "state": "sealed",
+            "study_day": 19678
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [
+          {
+            "amount": 17,
+            "source": "chest:1",
+            "study_day": 19678,
+            "track": "language"
+          },
+          {
+            "amount": 44,
+            "source": "chest:2",
+            "study_day": 19678,
+            "track": "language"
+          }
+        ],
+        "resolved": [
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "class": "state",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 17,
+            "rarity": "common",
+            "state": "sealed",
+            "study_day": 19679
+          },
+          {
+            "choice": "",
+            "payout_xp": 44,
+            "rarity": "rare",
+            "state": "sealed",
+            "study_day": 19679
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [],
+        "resolved": []
+      }
+    },
+    {
+      "class": "state",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 17,
+            "rarity": "common",
+            "state": "sealed",
+            "study_day": 19680
+          },
+          {
+            "choice": "",
+            "payout_xp": 44,
+            "rarity": "rare",
+            "state": "sealed",
+            "study_day": 19680
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [],
+        "resolved": []
+      }
+    },
+    {
+      "class": "state",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 17,
+            "rarity": "common",
+            "state": "vaulted",
+            "study_day": 19676
+          },
+          {
+            "choice": "",
+            "payout_xp": 44,
+            "rarity": "rare",
+            "state": "vaulted",
+            "study_day": 19676
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [
+          {
+            "amount": 17,
+            "source": "chest:1",
+            "study_day": 19676,
+            "track": "language"
+          },
+          {
+            "amount": 44,
+            "source": "chest:2",
+            "study_day": 19676,
+            "track": "language"
+          }
+        ],
+        "resolved": [
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "class": "state",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 17,
+            "rarity": "common",
+            "state": "vaulted",
+            "study_day": 19677
+          },
+          {
+            "choice": "",
+            "payout_xp": 44,
+            "rarity": "rare",
+            "state": "vaulted",
+            "study_day": 19677
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [
+          {
+            "amount": 17,
+            "source": "chest:1",
+            "study_day": 19677,
+            "track": "language"
+          },
+          {
+            "amount": 44,
+            "source": "chest:2",
+            "study_day": 19677,
+            "track": "language"
+          }
+        ],
+        "resolved": [
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "class": "state",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 17,
+            "rarity": "common",
+            "state": "vaulted",
+            "study_day": 19678
+          },
+          {
+            "choice": "",
+            "payout_xp": 44,
+            "rarity": "rare",
+            "state": "vaulted",
+            "study_day": 19678
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [],
+        "resolved": []
+      }
+    },
+    {
+      "class": "state",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 17,
+            "rarity": "common",
+            "state": "vaulted",
+            "study_day": 19679
+          },
+          {
+            "choice": "",
+            "payout_xp": 44,
+            "rarity": "rare",
+            "state": "vaulted",
+            "study_day": 19679
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [],
+        "resolved": []
+      }
+    },
+    {
+      "class": "state",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 17,
+            "rarity": "common",
+            "state": "vaulted",
+            "study_day": 19680
+          },
+          {
+            "choice": "",
+            "payout_xp": 44,
+            "rarity": "rare",
+            "state": "vaulted",
+            "study_day": 19680
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [],
+        "resolved": []
+      }
+    },
+    {
+      "class": "state",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 17,
+            "rarity": "common",
+            "state": "opened",
+            "study_day": 19676
+          },
+          {
+            "choice": "",
+            "payout_xp": 44,
+            "rarity": "rare",
+            "state": "opened",
+            "study_day": 19676
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [
+          {
+            "amount": 17,
+            "source": "chest:1",
+            "study_day": 19676,
+            "track": "language"
+          },
+          {
+            "amount": 44,
+            "source": "chest:2",
+            "study_day": 19676,
+            "track": "language"
+          }
+        ],
+        "resolved": [
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "class": "state",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 17,
+            "rarity": "common",
+            "state": "opened",
+            "study_day": 19677
+          },
+          {
+            "choice": "",
+            "payout_xp": 44,
+            "rarity": "rare",
+            "state": "opened",
+            "study_day": 19677
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [
+          {
+            "amount": 17,
+            "source": "chest:1",
+            "study_day": 19677,
+            "track": "language"
+          },
+          {
+            "amount": 44,
+            "source": "chest:2",
+            "study_day": 19677,
+            "track": "language"
+          }
+        ],
+        "resolved": [
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "class": "state",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 17,
+            "rarity": "common",
+            "state": "opened",
+            "study_day": 19678
+          },
+          {
+            "choice": "",
+            "payout_xp": 44,
+            "rarity": "rare",
+            "state": "opened",
+            "study_day": 19678
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [
+          {
+            "amount": 17,
+            "source": "chest:1",
+            "study_day": 19678,
+            "track": "language"
+          },
+          {
+            "amount": 44,
+            "source": "chest:2",
+            "study_day": 19678,
+            "track": "language"
+          }
+        ],
+        "resolved": [
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "class": "state",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 17,
+            "rarity": "common",
+            "state": "opened",
+            "study_day": 19679
+          },
+          {
+            "choice": "",
+            "payout_xp": 44,
+            "rarity": "rare",
+            "state": "opened",
+            "study_day": 19679
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [],
+        "resolved": []
+      }
+    },
+    {
+      "class": "state",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 17,
+            "rarity": "common",
+            "state": "opened",
+            "study_day": 19680
+          },
+          {
+            "choice": "",
+            "payout_xp": 44,
+            "rarity": "rare",
+            "state": "opened",
+            "study_day": 19680
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [],
+        "resolved": []
+      }
+    },
+    {
+      "class": "state",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 17,
+            "rarity": "common",
+            "state": "resolved",
+            "study_day": 19676
+          },
+          {
+            "choice": "",
+            "payout_xp": 44,
+            "rarity": "rare",
+            "state": "resolved",
+            "study_day": 19676
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [],
+        "resolved": []
+      }
+    },
+    {
+      "class": "state",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 17,
+            "rarity": "common",
+            "state": "resolved",
+            "study_day": 19677
+          },
+          {
+            "choice": "",
+            "payout_xp": 44,
+            "rarity": "rare",
+            "state": "resolved",
+            "study_day": 19677
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [],
+        "resolved": []
+      }
+    },
+    {
+      "class": "state",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 17,
+            "rarity": "common",
+            "state": "resolved",
+            "study_day": 19678
+          },
+          {
+            "choice": "",
+            "payout_xp": 44,
+            "rarity": "rare",
+            "state": "resolved",
+            "study_day": 19678
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [],
+        "resolved": []
+      }
+    },
+    {
+      "class": "state",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 17,
+            "rarity": "common",
+            "state": "resolved",
+            "study_day": 19679
+          },
+          {
+            "choice": "",
+            "payout_xp": 44,
+            "rarity": "rare",
+            "state": "resolved",
+            "study_day": 19679
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [],
+        "resolved": []
+      }
+    },
+    {
+      "class": "state",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 17,
+            "rarity": "common",
+            "state": "resolved",
+            "study_day": 19680
+          },
+          {
+            "choice": "",
+            "payout_xp": 44,
+            "rarity": "rare",
+            "state": "resolved",
+            "study_day": 19680
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [],
+        "resolved": []
+      }
+    },
+    {
+      "class": "spare",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 17,
+            "rarity": "common",
+            "state": "vaulted",
+            "study_day": 19678
+          },
+          {
+            "choice": "",
+            "payout_xp": 17,
+            "rarity": "common",
+            "state": "vaulted",
+            "study_day": 19677
+          },
+          {
+            "choice": "",
+            "payout_xp": 17,
+            "rarity": "common",
+            "state": "sealed",
+            "study_day": 19678
+          },
+          {
+            "choice": "",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "state": "opened",
+            "study_day": 19678
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [
+          {
+            "amount": 17,
+            "source": "chest:2",
+            "study_day": 19677,
+            "track": "language"
+          },
+          {
+            "amount": 17,
+            "source": "chest:3",
+            "study_day": 19678,
+            "track": "language"
+          },
+          {
+            "amount": 50,
+            "source": "chest:4",
+            "study_day": 19678,
+            "track": "language"
+          }
+        ],
+        "resolved": [
+          2,
+          3,
+          4
+        ]
+      }
+    },
+    {
+      "class": "spare",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 150,
+            "rarity": "legendary",
+            "state": "vaulted",
+            "study_day": 19678
+          },
+          {
+            "choice": "",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "state": "vaulted",
+            "study_day": 19678
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [],
+        "resolved": []
+      }
+    },
+    {
+      "class": "spare",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "state": "vaulted",
+            "study_day": 19677
+          },
+          {
+            "choice": "",
+            "payout_xp": 44,
+            "rarity": "rare",
+            "state": "vaulted",
+            "study_day": 19649
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [
+          {
+            "amount": 50,
+            "source": "chest:1",
+            "study_day": 19677,
+            "track": "language"
+          },
+          {
+            "amount": 44,
+            "source": "chest:2",
+            "study_day": 19649,
+            "track": "language"
+          }
+        ],
+        "resolved": [
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "state": "sealed",
+            "study_day": 19677
+          },
+          {
+            "choice": "token",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "state": "resolved",
+            "study_day": 19677
+          },
+          {
+            "choice": "freeze",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "state": "resolved",
+            "study_day": 19677
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [
+          {
+            "amount": 50,
+            "source": "chest:1",
+            "study_day": 19677,
+            "track": "language"
+          }
+        ],
+        "resolved": [
+          1
+        ]
+      }
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "state": "vaulted",
+            "study_day": 19677
+          },
+          {
+            "choice": "token",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "state": "resolved",
+            "study_day": 19677
+          },
+          {
+            "choice": "freeze",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "state": "resolved",
+            "study_day": 19677
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [
+          {
+            "amount": 50,
+            "source": "chest:1",
+            "study_day": 19677,
+            "track": "language"
+          }
+        ],
+        "resolved": [
+          1
+        ]
+      }
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "state": "opened",
+            "study_day": 19677
+          },
+          {
+            "choice": "token",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "state": "resolved",
+            "study_day": 19677
+          },
+          {
+            "choice": "freeze",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "state": "resolved",
+            "study_day": 19677
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [
+          {
+            "amount": 50,
+            "source": "chest:1",
+            "study_day": 19677,
+            "track": "language"
+          }
+        ],
+        "resolved": [
+          1
+        ]
+      }
+    },
+    {
+      "class": "fallback",
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 150,
+            "rarity": "legendary",
+            "state": "sealed",
+            "study_day": 19674
+          },
+          {
+            "choice": "",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "state": "opened",
+            "study_day": 19674
+          },
+          {
+            "choice": "",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "state": "sealed",
+            "study_day": 19675
+          },
+          {
+            "choice": "",
+            "payout_xp": 150,
+            "rarity": "legendary",
+            "state": "opened",
+            "study_day": 19675
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [
+          {
+            "amount": 150,
+            "source": "chest:1",
+            "study_day": 19674,
+            "track": "language"
+          },
+          {
+            "amount": 50,
+            "source": "chest:2",
+            "study_day": 19674,
+            "track": "language"
+          },
+          {
+            "amount": 50,
+            "source": "chest:3",
+            "study_day": 19675,
+            "track": "language"
+          },
+          {
+            "amount": 150,
+            "source": "chest:4",
+            "study_day": 19675,
+            "track": "language"
+          }
+        ],
+        "resolved": [
+          1,
+          2,
+          3,
+          4
+        ]
+      }
+    },
+    {
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 57,
+            "rarity": "rare",
+            "state": "opened",
+            "study_day": 19677
+          },
+          {
+            "choice": "",
+            "payout_xp": 43,
+            "rarity": "rare",
+            "state": "sealed",
+            "study_day": 19675
+          },
+          {
+            "choice": "",
+            "payout_xp": 20,
+            "rarity": "common",
+            "state": "vaulted",
+            "study_day": 19679
+          },
+          {
+            "choice": "",
+            "payout_xp": 150,
+            "rarity": "legendary",
+            "state": "resolved",
+            "study_day": 19677
+          },
+          {
+            "choice": "",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "state": "opened",
+            "study_day": 19680
+          },
+          {
+            "choice": "",
+            "payout_xp": 150,
+            "rarity": "legendary",
+            "state": "resolved",
+            "study_day": 19679
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [
+          {
+            "amount": 57,
+            "source": "chest:1",
+            "study_day": 19677,
+            "track": "language"
+          },
+          {
+            "amount": 43,
+            "source": "chest:2",
+            "study_day": 19675,
+            "track": "language"
+          }
+        ],
+        "resolved": [
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 13,
+            "rarity": "common",
+            "state": "vaulted",
+            "study_day": 19676
+          },
+          {
+            "choice": "",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "state": "opened",
+            "study_day": 19677
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [
+          {
+            "amount": 13,
+            "source": "chest:1",
+            "study_day": 19676,
+            "track": "language"
+          },
+          {
+            "amount": 50,
+            "source": "chest:2",
+            "study_day": 19677,
+            "track": "language"
+          }
+        ],
+        "resolved": [
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 18,
+            "rarity": "common",
+            "state": "sealed",
+            "study_day": 19676
+          },
+          {
+            "choice": "",
+            "payout_xp": 30,
+            "rarity": "rare",
+            "state": "vaulted",
+            "study_day": 19680
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [
+          {
+            "amount": 18,
+            "source": "chest:1",
+            "study_day": 19676,
+            "track": "language"
+          }
+        ],
+        "resolved": [
+          1
+        ]
+      }
+    },
+    {
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "state": "opened",
+            "study_day": 19680
+          },
+          {
+            "choice": "freeze",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "state": "resolved",
+            "study_day": 19679
+          },
+          {
+            "choice": "",
+            "payout_xp": 150,
+            "rarity": "legendary",
+            "state": "vaulted",
+            "study_day": 19680
+          },
+          {
+            "choice": "",
+            "payout_xp": 23,
+            "rarity": "common",
+            "state": "vaulted",
+            "study_day": 19676
+          },
+          {
+            "choice": "",
+            "payout_xp": 16,
+            "rarity": "common",
+            "state": "sealed",
+            "study_day": 19676
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [
+          {
+            "amount": 23,
+            "source": "chest:4",
+            "study_day": 19676,
+            "track": "language"
+          },
+          {
+            "amount": 16,
+            "source": "chest:5",
+            "study_day": 19676,
+            "track": "language"
+          }
+        ],
+        "resolved": [
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 19,
+            "rarity": "common",
+            "state": "sealed",
+            "study_day": 19680
+          },
+          {
+            "choice": "token",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "state": "resolved",
+            "study_day": 19680
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [],
+        "resolved": []
+      }
+    },
+    {
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 20,
+            "rarity": "common",
+            "state": "resolved",
+            "study_day": 19675
+          },
+          {
+            "choice": "",
+            "payout_xp": 20,
+            "rarity": "common",
+            "state": "sealed",
+            "study_day": 19680
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [],
+        "resolved": []
+      }
+    },
+    {
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "state": "sealed",
+            "study_day": 19676
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [
+          {
+            "amount": 50,
+            "source": "chest:1",
+            "study_day": 19676,
+            "track": "language"
+          }
+        ],
+        "resolved": [
+          1
+        ]
+      }
+    },
+    {
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 10,
+            "rarity": "common",
+            "state": "vaulted",
+            "study_day": 19680
+          },
+          {
+            "choice": "",
+            "payout_xp": 43,
+            "rarity": "rare",
+            "state": "opened",
+            "study_day": 19677
+          },
+          {
+            "choice": "",
+            "payout_xp": 13,
+            "rarity": "common",
+            "state": "resolved",
+            "study_day": 19676
+          },
+          {
+            "choice": "",
+            "payout_xp": 39,
+            "rarity": "rare",
+            "state": "vaulted",
+            "study_day": 19676
+          },
+          {
+            "choice": "",
+            "payout_xp": 150,
+            "rarity": "legendary",
+            "state": "vaulted",
+            "study_day": 19678
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [
+          {
+            "amount": 43,
+            "source": "chest:2",
+            "study_day": 19677,
+            "track": "language"
+          },
+          {
+            "amount": 39,
+            "source": "chest:4",
+            "study_day": 19676,
+            "track": "language"
+          }
+        ],
+        "resolved": [
+          2,
+          4
+        ]
+      }
+    },
+    {
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 42,
+            "rarity": "rare",
+            "state": "vaulted",
+            "study_day": 19675
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [
+          {
+            "amount": 42,
+            "source": "chest:1",
+            "study_day": 19675,
+            "track": "language"
+          }
+        ],
+        "resolved": [
+          1
+        ]
+      }
+    },
+    {
+      "input": {
+        "chests": [
+          {
+            "choice": "",
+            "payout_xp": 34,
+            "rarity": "rare",
+            "state": "opened",
+            "study_day": 19680
+          },
+          {
+            "choice": "",
+            "payout_xp": 18,
+            "rarity": "common",
+            "state": "sealed",
+            "study_day": 19678
+          },
+          {
+            "choice": "",
+            "payout_xp": 0,
+            "rarity": "epic",
+            "state": "opened",
+            "study_day": 19678
+          }
+        ],
+        "today": 19679
+      },
+      "output": {
+        "grants": [
+          {
+            "amount": 18,
+            "source": "chest:2",
+            "study_day": 19678,
+            "track": "language"
+          },
+          {
+            "amount": 50,
+            "source": "chest:3",
+            "study_day": 19678,
+            "track": "language"
+          }
+        ],
+        "resolved": [
+          2,
+          3
+        ]
+      }
+    }
+  ],
+  "function": "pipeline_layers.loot.LootLayer._sweep_stale_chests",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Sweeps once on a stand-in layer over a stub store holding the case's chests of several study days and states, each with its id in the case's order; returns the chests resolved, in order, and the XP grants written; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_081.py",
+  "registry_sha256": "67257e9dfbf5070946f9cabbe897df72d7f71fa60cd8414cf384b5c83d530274",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

@@ -1,0 +1,70 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S40400-AN-OMITTED-SLOT-OBJECT-IS-REFUSED-AS-ITSELF",
+        "scripts/tests/test_formal_config.py",
+        "raise Refused(\"slot-unnamed\", \"tlc_slot is not stated\")",
+        "return tuple(SLOT_KEYS.values())",
+        "a document with no tlc_slot object is read as a slot setting, so the checker would read its compiled defaults and not the file (SPEC-404 R1)",
+        "test_formal_config.FormalConfig.test_the_checker_reads_the_slot_from_the_file_alone"
+      ],
+      [
+        "S40401-AN-OMITTED-SLOT-KEY-IS-REFUSED",
+        "scripts/tests/test_formal_config.py",
+        "raise Refused(\"slot-unnamed\", \"tlc_slot.\" + key + \" is not stated\")",
+        "continue",
+        "a document that omits one slot key is passed over, so the checker would read that key's compiled default (SPEC-404 R1)",
+        "test_formal_config.FormalConfig.test_the_checker_reads_the_slot_from_the_file_alone"
+      ],
+      [
+        "S40402-BOTH-SLOT-KEYS-ARE-JUDGED",
+        "scripts/tests/test_formal_config.py",
+        "for key, bound in SLOT_KEYS.items():",
+        "for key, bound in list(SLOT_KEYS.items())[:1]:",
+        "only the first slot key is judged, so an omitted or out-of-range second key is read as stated (SPEC-404 R1, R2)",
+        "test_formal_config.FormalConfig.test_the_checker_reads_the_slot_from_the_file_alone"
+      ],
+      [
+        "S40403-THE-CAPACITY-BOUND-IS-THE-READERS-32-BIT-WIDTH",
+        "scripts/tests/test_formal_config.py",
+        "\"capacity\": 2**32 - 1,",
+        "\"capacity\": 2**64 - 1,",
+        "the capacity bound is widened to the wait's width, so a capacity past the checker's 32-bit range is read as stated (SPEC-404 R2)",
+        "test_formal_config.FormalConfig.test_each_slot_value_is_one_the_checkers_reader_takes"
+      ],
+      [
+        "S40404-THE-WAIT-BOUND-IS-THE-READERS-64-BIT-WIDTH",
+        "scripts/tests/test_formal_config.py",
+        "\"wait_seconds\": 2**64 - 1,",
+        "\"wait_seconds\": 2**65,",
+        "the wait bound is widened past the checker's 64-bit range, so the first integer past it is read as stated (SPEC-404 R2)",
+        "test_formal_config.FormalConfig.test_each_slot_value_is_one_the_checkers_reader_takes"
+      ],
+      [
+        "S40405-A-SLOT-VALUE-AT-ITS-BOUND-IS-ADMITTED",
+        "scripts/tests/test_formal_config.py",
+        "if lever[key] > bound:",
+        "if lever[key] >= bound:",
+        "a slot value equal to its bound is refused, though the checker's reader takes it (SPEC-404 R2)",
+        "test_formal_config.FormalConfig.test_each_slot_value_is_one_the_checkers_reader_takes"
+      ],
+      [
+        "S40406-THE-FIRST-SLOT-VALUE-PAST-ITS-BOUND-IS-REFUSED",
+        "scripts/tests/test_formal_config.py",
+        "if lever[key] > bound:",
+        "if lever[key] > bound + 1:",
+        "the first integer past a slot bound is read as stated, though the checker's reader refuses it (SPEC-404 R2)",
+        "test_formal_config.FormalConfig.test_each_slot_value_is_one_the_checkers_reader_takes"
+      ],
+      [
+        "S40407-THE-SLOT-READING-IS-THE-FILES-OWN-VALUE",
+        "scripts/tests/test_formal_config.py",
+        "reading.append(lever[key])",
+        "reading.append(bound)",
+        "the slot reading is taken from the bound and not from the file, so the setting the file states is never the one read (SPEC-404 R1)",
+        "test_formal_config.FormalConfig.test_the_checker_reads_the_slot_from_the_file_alone"
+      ]
+    ]
+  }
+}

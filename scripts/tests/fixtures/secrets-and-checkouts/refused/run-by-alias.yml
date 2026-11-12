@@ -1,0 +1,21 @@
+name: planted
+
+# A planted workflow (SPEC-034 A10): a run step, a step and a job given by an alias of an anchored
+# value. The reader reads no anchor or alias, so it refuses each. The names are synthetic.
+# scripts/tests/test_ci_workflows.py judges it; nothing runs it.
+on:
+  pull_request:
+    branches: [dev]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: &clone git clone --depth 1 https://github.com/example-org/other-repository.git
+        run: echo planted
+      - run: *clone
+      - *clone
+  second: *clone

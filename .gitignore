@@ -29,3 +29,23 @@ __pycache__/
 # Playwright output
 test-results/
 playwright-report/
+
+# Mutation testing's output (SPEC-039): cargo-mutants' reports, StrykerJS's sandboxes and reports
+mutants.out/
+mutants.out.old/
+.stryker-tmp/
+web/app/reports/
+
+# The Swift harness (SPEC-339): the generated project, what CI places from the run's own artifact,
+# the app icon CI writes (SPEC-352 R19), test results, and a person's own signing settings.
+ios/*.xcodeproj/
+ios/EnginePackage/DeckStreakFFI.xcframework/
+ios/EnginePackage/Sources/DeckStreakFFI/
+ios/Harness/Resources/collection.anki2
+ios/Harness/Resources/collection.media/
+ios/Harness/Assets.xcassets/AppIcon.appiconset/AppIcon.png
+*.xcresult
+DerivedData/
+.build/
+.swiftpm/
+ios/Config/Signing.local.xcconfig

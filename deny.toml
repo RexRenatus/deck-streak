@@ -1,12 +1,14 @@
 # cargo-deny: RustSec advisories, licences, bans and sources (the web-security pack's
-# ws.dep-audit-config; run by scripts/check.sh's audit stage and by CI).
+# ws.dep-audit-config; run by scripts/check.sh's audit-rust stage and by CI's rust job).
 
 [graph]
 all-features = true
 
 [advisories]
-# Every advisory in the RustSec database is an error; an exception names its advisory id and why.
-ignore = []
+# Every advisory in the RustSec database is an error, and none is ignored: an exception is not a
+# fix (SPEC-055's amendments). Unmaintained notices are errors across the whole graph, cargo-deny's
+# default scope, written out so that no later default narrows it (SPEC-055 R15).
+unmaintained = "all"
 
 [licenses]
 # Licences compatible with shipping inside an AGPL-3.0-or-later work.
@@ -26,6 +28,11 @@ allow = [
     "Zlib",
 ]
 confidence-threshold = 0.9
+# frankenstein, the Bot API client (ADR-003, SPEC-026), is WTFPL: a permissive licence compatible with
+# the GNU GPL. It is admitted for that crate alone, never for the workspace (ADR-026).
+exceptions = [
+    { allow = ["WTFPL"], crate = "frankenstein" },
+]
 
 [licenses.private]
 # The workspace's own crates are unpublished; their licence is the repository's.
@@ -41,4 +48,30 @@ allow-wildcard-paths = true
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-allow-git = []
+# ADR-022 and ADR-058: the maintainer's fork of Anki, whose commit the root manifest's `[patch]`
+# entry puts in place of the upstream tag the engine names, and the one fork the engine's own
+# manifest pins by revision (ankitects/rust-url, for percent-encoding-iri). ADR-338 and ADR-353 add
+# a third, fsrs-rs, ADR-513 a fourth, the web-push-native fork, ADR-583 a fifth, the sqlx fork, and
+# ADR-657 the uniffi-rs, askama and frankenstein forks, below; nothing else. While the patch holds
+# no crate comes from Anki's own repository, so it is not allowed: an unpatched engine is refused by
+# name.
+allow-git = [
+    "https://github.com/RexRenatus/anki.git",
+    "https://github.com/ankitects/rust-url.git",
+    # ADR-338, ADR-353 D1: the upstream scheduler's development line, the only source of FSRS-7,
+    # pinned by a full revision in [workspace.dependencies] and used by deck-streak-fsrs7 alone. The
+    # engine keeps the released crate from the registry.
+    "https://github.com/open-spaced-repetition/fsrs-rs.git",
+    # ADR-513: the maintainer's fork of web-push-native, at the upstream change that moves it to
+    # p256 0.14, until upstream releases it; web-push-native and ece-native come from it.
+    "https://github.com/RexRenatus/web-push-native.git",
+    # ADR-583: the maintainer's fork of sqlx, at the published 0.9.0 with sha2 moved to 0.11, until
+    # a sqlx release moves to sha2 0.11; all seven sqlx crates come from it.
+    "https://github.com/RexRenatus/sqlx.git",
+    # ADR-657: the maintainer's fork of uniffi-rs, at the published 0.29.1 without the unused paste.
+    "https://github.com/RexRenatus/uniffi-rs.git",
+    # ADR-657: the maintainer's fork of askama, at the published rinja 0.3.5 on toml.
+    "https://github.com/RexRenatus/askama.git",
+    # ADR-657: the maintainer's fork of frankenstein, at the published 0.52.1 on pastey.
+    "https://github.com/RexRenatus/frankenstein.git",
+]

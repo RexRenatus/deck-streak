@@ -1,0 +1,33 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT (SELECT status FROM sync_runs ORDER BY id DESC LIMIT 1) AS \"last?: String\",\n                      EXISTS(SELECT 1 FROM sync_runs WHERE status = 'ok') AS \"any_success!: bool\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "last?: String",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "sync_runs",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "name": "any_success!: bool",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "67427155fad40e2f1555ec0447ffcdf5b9c1c9f27a99f7b8512da257f229addd"
+}

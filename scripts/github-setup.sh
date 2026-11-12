@@ -62,9 +62,12 @@ PY
 }
 
 settings() {
-    step "default branch main, discussions on" gh api -X PATCH "repos/$REPO" \
+    # A squash takes the pull request's title and a blank body, so no branch commit's message
+    # reaches the base branch through a squash; a merge that wants a body passes one.
+    step "default branch main, discussions on, squash messages" gh api -X PATCH "repos/$REPO" \
         -f default_branch=main -F has_discussions=true -F delete_branch_on_merge=true \
-        -F allow_merge_commit=true -F allow_squash_merge=true -F allow_rebase_merge=true
+        -F allow_merge_commit=true -F allow_squash_merge=true -F allow_rebase_merge=true \
+        -f squash_merge_commit_title=PR_TITLE -f squash_merge_commit_message=BLANK
 }
 
 security() {
@@ -72,7 +75,10 @@ security() {
 {"security_and_analysis": {"secret_scanning": {"status": "enabled"}, "secret_scanning_push_protection": {"status": "enabled"}}}
 JSON
     step "Dependabot alerts" gh api -X PUT "repos/$REPO/vulnerability-alerts"
-    step "Dependabot security updates" gh api -X PUT "repos/$REPO/automated-security-fixes"
+    # Security updates open against the default branch (main), which only a release pull request from
+    # dev may change, so they stay OFF; alerts stay on and are triaged into pull requests into dev
+    # (ADR-036). Deleting is idempotent, so a re-run never turns them back on.
+    step "Dependabot security updates stay off" gh api -X DELETE "repos/$REPO/automated-security-fixes"
     step "private vulnerability reporting" gh api -X PUT "repos/$REPO/private-vulnerability-reporting"
 }
 

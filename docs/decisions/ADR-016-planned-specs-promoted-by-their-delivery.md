@@ -10,7 +10,7 @@ decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 
 The architect writes each wave's SPECs before its builders start, but the tdd pack judges every
 SPEC in `docs/specs/` for tests that exist and a red-first record, so a SPEC written ahead of its
-code would read red on `dev` until the code lands. phoenix-v2 avoids this because a SPEC lands in
+code would read red on `dev` until the code lands. The packs repository avoids this because a SPEC lands in
 the same delivery as its tests.
 
 ## Decision Drivers
@@ -49,3 +49,7 @@ to `docs/specs/`, adds the tests its fence names and `docs/red-first/SPEC-NNN.md
 ## More Information
 
 The sdd and tdd packs; docs/BUILDER-BRIEF.md.
+
+Amendment (2026-09-28): names of the maintainer's private tooling were replaced with 'the box-run
+packs' and neutral names for their repository, binary and checkout under the public-text rule
+(ADR-059).

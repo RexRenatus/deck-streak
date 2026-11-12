@@ -1,0 +1,115 @@
+import SwiftUI
+
+/// The review screen's top, above the card (SPEC-348 R9, R13, R14): the deck's name; the replay,
+/// stop and voice buttons, and the bury and flag buttons, the flag's title beside its icon
+/// (SPEC-358 R5), and the undo control (SPEC-515 R6); the queue's new, learning and review counts,
+/// each a number with its word, and the "Card info" control, which opens the card info sheet over
+/// the review (SPEC-507 R14); a line naming how many media files the face could not show; and one
+/// line per note, a refusal's sentence or a sound the player refused, and the undo's sentence.
+struct ReviewChrome: View {
+    @Bindable var model: ReviewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                // The detail pane's heading, which SPEC-347 A11 reads as the detail.
+                Text(model.deck.name)
+                    .font(.headline)
+                    .accessibilityIdentifier("detail")
+                    .foregroundStyle(Color.tideInk)
+                Spacer()
+                Button {
+                    Task { await model.perform(.replay) }
+                } label: {
+                    Label("Replay", systemImage: "arrow.counterclockwise")
+                        .frame(minWidth: 44, minHeight: 44)
+                }
+                Button {
+                    Task { await model.perform(.stop) }
+                } label: {
+                    Label("Stop", systemImage: "stop.fill")
+                        .frame(minWidth: 44, minHeight: 44)
+                }
+                Button {
+                    model.showingVoices = true
+                } label: {
+                    Label("Voices", systemImage: "person.wave.2")
+                        .frame(minWidth: 44, minHeight: 44)
+                }
+                Button {
+                    Task { await model.perform(.bury) }
+                } label: {
+                    Label("Bury", systemImage: "eye.slash")
+                        .frame(minWidth: 44, minHeight: 44)
+                }
+                .accessibilityIdentifier("bury")
+                .disabled(!idle)
+                Button {
+                    Task { await model.perform(.flag) }
+                } label: {
+                    Label(flagTitle.title, systemImage: flagTitle.symbol)
+                        .labelStyle(.titleAndIcon)
+                        .frame(minWidth: 44, minHeight: 44)
+                }
+                .accessibilityIdentifier("flag")
+                .disabled(!idle)
+                UndoControl(model: model, undo: model.undo)
+            }
+            .labelStyle(.iconOnly)
+            HStack(spacing: 16) {
+                Text("\(model.counts.new) new").accessibilityIdentifier("count-new")
+                    .foregroundStyle(Color.tideInk)
+                Text("\(model.counts.learning) learning").accessibilityIdentifier("count-learning")
+                    .foregroundStyle(Color.tideInk)
+                Text("\(model.counts.review) to review").accessibilityIdentifier("count-review")
+                    .foregroundStyle(Color.tideInk)
+                Spacer()
+                // Its title is its VoiceOver label, though it shows its icon alone (SPEC-507 R16).
+                Button {
+                    Task { await model.health.open() }
+                } label: {
+                    Label("Card info", systemImage: "info.circle")
+                        .labelStyle(.iconOnly)
+                        .frame(minWidth: 44, minHeight: 44)
+                }
+                .accessibilityIdentifier("card-info")
+                .disabled(!idle)
+            }
+            .font(.subheadline)
+            if !model.face.omitted.isEmpty {
+                Text("Media files not shown: \(model.face.omitted.count)")
+                    .font(.footnote)
+                    .foregroundStyle(Color.tideMuted)
+            }
+            ForEach(Array(model.notes.enumerated()), id: \.offset) { _, note in
+                Text(note).font(.footnote)
+                    .foregroundStyle(Color.tideMuted)
+            }
+            ForEach(Array(model.undo.said.enumerated()), id: \.offset) { _, said in
+                Text(verbatim: said).font(.footnote).accessibilityIdentifier("undo-said")
+                    .foregroundStyle(Color.tideMuted)
+            }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .tint(Color.tideAccent)
+        // Closed by its Close button or by a swipe, the sheet starts the answer clock again.
+        .sheet(
+            isPresented: Bindable(model.health).showing,
+            onDismiss: { Task { await model.health.close() } }
+        ) {
+            CardHealthView(health: model.health)
+        }
+    }
+
+    /// Whether a bury or a flag may start: from a card's question or its answer, or a card the
+    /// engine withheld, never while a call runs (SPEC-358 R5, SPEC-380 R7).
+    private var idle: Bool {
+        [ReviewPhase.question, .answer, .withheld].contains(model.phase)
+    }
+
+    /// The flag button's title and symbol: an icon with a text label, never a colour alone.
+    private var flagTitle: (title: String, symbol: String) {
+        model.flagged ? ("Flagged red", "flag.fill") : ("Flag", "flag")
+    }
+}

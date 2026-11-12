@@ -1,0 +1,98 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id AS \"id!\", study_day, source, track, amount, closed, created_at\n                   FROM xp_settlement ORDER BY id",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "xp_settlement",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "study_day",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "xp_settlement",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "source",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "xp_settlement",
+            "name": "source"
+          }
+        }
+      },
+      {
+        "name": "track",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "xp_settlement",
+            "name": "track"
+          }
+        }
+      },
+      {
+        "name": "amount",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "xp_settlement",
+            "name": "amount"
+          }
+        }
+      },
+      {
+        "name": "closed",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "xp_settlement",
+            "name": "closed"
+          }
+        }
+      },
+      {
+        "name": "created_at",
+        "ordinal": 6,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "xp_settlement",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "d289416141deff3a3fa87a7abde501210dbbbd102fe2ca475f7dc74c1721a4e5"
+}

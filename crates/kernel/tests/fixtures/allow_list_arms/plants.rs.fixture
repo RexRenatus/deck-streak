@@ -1,0 +1,26 @@
+//! A planted source for the escape-hatch census of SPEC-435: never compiled, read as text by
+//! `each_arm_finds_its_planted_site_and_nothing_else`.
+
+use sqlx::AssertSqlSafe;
+use std::env;
+use std::process::Command;
+
+fn escapes(statement: String, program: &str) {
+    let _ = sqlx::raw_sql(AssertSqlSafe(statement));
+    let _ = std::env::var("PLANTED_A");
+    let _ = std::env::var_os("PLANTED_B");
+    let _ = env::vars();
+    let _ = env::vars_os();
+    let _ = env!("CARGO_PKG_NAME");
+    let _ = Command::new("bash");
+    let _ = Command::new("sh");
+    let _ = Command::new("/bin/dash");
+    let _ = Command::new("zsh");
+    let _ = Command::new("ksh");
+    let _ = Command::new("fish");
+    let _ = Command::new(program);
+    let _ = Command::new("python3");
+    // let _ = Command::new("bash"); std::env::var("PLANTED_C"); AssertSqlSafe(statement);
+    /* let _ = Command::new("sh"); env::var_os("PLANTED_D"); */
+    let _ = "Command::new(\"bash\") std::env::var(\"PLANTED_E\") AssertSqlSafe(statement)";
+}

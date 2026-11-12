@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT min(started_at) AS \"started: i64\" FROM sync_runs\n               WHERE status = 'ok' AND study_day = ?1",
+  "describe": {
+    "columns": [
+      {
+        "name": "started: i64",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "be0da267f12895dbe415814112f1001c52712b40fb9a2b10eb148742bb6b356f"
+}

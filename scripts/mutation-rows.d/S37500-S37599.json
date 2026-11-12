@@ -1,0 +1,38 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S37501-EVERY-CATEGORY-IS-REQUIRED",
+        "scripts/threat_model.py",
+        "STRIDE = \"STRIDE\"",
+        "STRIDE = \"STIDE\"",
+        "the class alphabet loses R, so a surface with no repudiation row reads complete",
+        "test_threat_model.EverySurfaceCoversStride.test_a_surface_missing_a_category_is_refused"
+      ],
+      [
+        "S37502-THE-QUOTE-IS-ON-A-CITED-LINE",
+        "scripts/threat_model.py",
+        "cited[int(first) - 1 : int(last or first)]",
+        "cited",
+        "the quote is sought in the whole file, so a quote that moved off its cited line still holds",
+        "test_threat_model.ACitationMustHoldInTheTree.test_a_citation_whose_quote_moved_is_refused"
+      ],
+      [
+        "S37503-A-SKIPPED-DIRECTORY-NAMES-NO-FILE",
+        "scripts/threat_model.py",
+        "SKIPPED = {\".git\", \"target\", \"node_modules\"}",
+        "SKIPPED = {\".git\", \"node_modules\"}",
+        "target leaves the skipped names, so a citation into a build directory holds",
+        "test_threat_model.ACitationMustHoldInTheTree.test_a_citation_naming_no_file_is_refused"
+      ],
+      [
+        "S37504-EACH-SURFACE-IS-JUDGED-ALONE",
+        "scripts/threat_model.py",
+        "letter not in classes[name]",
+        "letter not in frozenset().union(*classes.values())",
+        "completeness is judged over the union of the surfaces, so a surface missing a class hides behind another surface's row",
+        "test_threat_model.EverySurfaceCoversStride.test_a_surface_missing_a_category_is_refused"
+      ]
+    ]
+  }
+}

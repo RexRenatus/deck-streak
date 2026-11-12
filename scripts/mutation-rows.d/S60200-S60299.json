@@ -1,0 +1,24 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S60201-FORMAT-VARINT-LIMIT-STEP",
+        "anki-format",
+        "src/wire.rs",
+        "const VARINT_LIMIT: u32 = 70;",
+        "const VARINT_LIMIT: u32 = 77;",
+        "wire_walk::the_walk_refuses_a_varint_at_seventy_bits",
+        "the walk refuses a varint at seventy bits of shift; one step later it reads an eleventh byte the predecessor refuses"
+      ],
+      [
+        "S60202-FORMAT-FIELD-SEPARATOR",
+        "anki-format",
+        "src/fields.rs",
+        "pub const FIELD_SEPARATOR: char = '\\u{1f}';",
+        "pub const FIELD_SEPARATOR: char = '\\u{1e}';",
+        "field_codec::the_separator_is_the_unit_separator",
+        "a note's fields split and join on the unit separator; on the record separator every field of a note runs together"
+      ]
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO minutes_log (code, study_day, minutes, note, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "35c8604b830e9daa0202a9d0a5f732b82782f1f5032e29266f053a98da5e880b"
+}

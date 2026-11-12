@@ -1,0 +1,159 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S02601-A-STRANGERS-MESSAGE-IS-DROPPED",
+        "bot",
+        "src/gate.rs",
+        "    let from_owner = message\n        .from\n        .as_deref()\n        .is_some_and(|user| is_owner(user, owner));",
+        "    let from_owner = message.from.is_some();",
+        "gate::an_update_from_anyone_but_the_owner_is_dropped_without_a_reply",
+        "a message is dispatched only when its sender is the owner (R4, CHARTER 14); any sender at all is admitted without the comparison"
+      ],
+      [
+        "S02602-A-STRANGERS-TAP-IS-DROPPED",
+        "bot",
+        "src/gate.rs",
+        "    if !is_owner(&callback.from, owner) {",
+        "    if callback.from.id == 0 {",
+        "gate::an_update_from_anyone_but_the_owner_is_dropped_without_a_reply",
+        "a callback is dispatched and answered only when its sender is the owner (R4); a stranger's tap is admitted without the comparison"
+      ],
+      [
+        "S02603-ONLY-A-PRIVATE-CHAT-IS-THE-OWNERS",
+        "bot",
+        "src/gate.rs",
+        "    let private_chat = message.chat.type_field == ChatType::Private;",
+        "    let private_chat = message.chat.type_field != ChatType::Channel;",
+        "gate::an_update_from_anyone_but_the_owner_is_dropped_without_a_reply",
+        "the owner's message is dispatched only from a private chat (R4); a group-typed chat is admitted without the condition"
+      ],
+      [
+        "S02604-ONLY-THE-OWNERS-OWN-CHAT",
+        "bot",
+        "src/gate.rs",
+        "    let owners_chat = message.chat.id == owner.user().get();",
+        "    let owners_chat = message.chat.id != 0;",
+        "gate::an_update_from_anyone_but_the_owner_is_dropped_without_a_reply",
+        "the owner's message is dispatched only from the owner's own chat, whose id is the owner's (R4); another private chat is admitted without the condition"
+      ],
+      [
+        "S02605-THE-TEXT-CAP-IS-THE-PREDECESSORS",
+        "bot",
+        "src/gate.rs",
+        "pub const MAX_INBOUND_TEXT: usize = 4096;",
+        "pub const MAX_INBOUND_TEXT: usize = 4097;",
+        "gate::oversized_inbound_input_is_not_dispatched",
+        "a text over the predecessor's 4096 characters is dropped (R5, goldens/bot.constants.json); cargo-mutants never mutates a constant"
+      ],
+      [
+        "S02606-THE-CALLBACK-CAP-IS-THE-PREDECESSORS",
+        "bot",
+        "src/gate.rs",
+        "pub const MAX_CALLBACK_DATA_BYTES: usize = 64;",
+        "pub const MAX_CALLBACK_DATA_BYTES: usize = 65;",
+        "gate::oversized_inbound_input_is_not_dispatched",
+        "callback data over 64 bytes is answered and not dispatched (R5, goldens/bot.constants.json); cargo-mutants never mutates a constant"
+      ],
+      [
+        "S02607-THE-MENU-IS-THE-OWNERS-CHATS-ALONE",
+        "bot",
+        "src/transport.rs",
+        "        let scope = BotCommandScope::Chat(BotCommandScopeChat::builder().chat_id(chat).build());",
+        "        let scope = BotCommandScope::AllPrivateChats;",
+        "commands::the_menu_is_registered_for_the_owners_chat_only",
+        "the menu is registered for the owner's chat alone (R11); every private chat would be shown it, and cargo-mutants never swaps an enum variant"
+      ],
+      [
+        "S02608-A-BARE-429-WAITS-A-SECOND",
+        "bot",
+        "src/transport.rs",
+        "pub const DEFAULT_RETRY_AFTER: Duration = Duration::from_secs(1);",
+        "pub const DEFAULT_RETRY_AFTER: Duration = Duration::from_secs(2);",
+        "transport::a_429_waits_retry_after_seconds_and_repeats_the_same_request",
+        "a 429 with no retry_after waits the predecessor's one second (R8, goldens/send_retry.json); cargo-mutants never mutates a constant"
+      ],
+      [
+        "S02609-A-CHUNK-TAKES-THREE-ATTEMPTS",
+        "bot",
+        "src/transport.rs",
+        "pub const SEND_ATTEMPTS: u32 = 3;",
+        "pub const SEND_ATTEMPTS: u32 = 4;",
+        "transport::a_429_waits_retry_after_seconds_and_repeats_the_same_request",
+        "a chunk is sent in at most the predecessor's three attempts (R8, goldens/send_retry.json); cargo-mutants never mutates a constant"
+      ],
+      [
+        "S02610-A-MESSAGE-IS-AT-MOST-4096-UNITS",
+        "bot",
+        "src/transport.rs",
+        "pub const MAX_TEXT_UTF16: usize = 4096;",
+        "pub const MAX_TEXT_UTF16: usize = 4097;",
+        "transport::the_constants_equal_the_predecessors",
+        "a message's text is at most 4096 UTF-16 units, the predecessor's TELEGRAM_MAX_LEN and the Bot API's bound (R6); cargo-mutants never mutates a constant"
+      ],
+      [
+        "S02611-AN-AMPERSAND-IS-ESCAPED",
+        "bot",
+        "src/transport.rs",
+        "            '&' => escaped.push_str(\"&amp;\"),",
+        "            '&' => escaped.push('&'),",
+        "transport::every_dynamic_value_is_html_escaped",
+        "every dynamic value's & is written &amp; where it enters the markup (R6); cargo-mutants never mutates a string"
+      ],
+      [
+        "S02612-THE-LONG-POLL-WAITS-50-SECONDS",
+        "bot",
+        "src/poll.rs",
+        "pub const LONG_POLL_SECONDS: u32 = 50;",
+        "pub const LONG_POLL_SECONDS: u32 = 51;",
+        "transport::the_constants_equal_the_predecessors",
+        "each poll waits the predecessor's 50 seconds for an update (R2, goldens/bot.timeouts.json); cargo-mutants never mutates a constant"
+      ],
+      [
+        "S02613-THE-BACKOFF-IS-HELD-AT-A-MINUTE",
+        "bot",
+        "src/poll.rs",
+        "const BACKOFF_CEILING_SECONDS: u64 = 60;",
+        "const BACKOFF_CEILING_SECONDS: u64 = 61;",
+        "poll::the_poll_backoff_matches_the_predecessors_golden",
+        "a failed poll waits at most the predecessor's 60 seconds (R3, goldens/poll_backoff.json); cargo-mutants never mutates a constant"
+      ],
+      [
+        "S02614-ONLY-THE-LATEST-QUESTION-ERASES",
+        "bot",
+        "src/commands.rs",
+        "        let latest = self.pending_erase.is_some() && self.pending_erase == callback.message_id;",
+        "        let latest = self.pending_erase.is_some();",
+        "commands::delete_erases_only_after_the_owner_confirms",
+        "an erase needs the owner's tap on the latest /delete question's own button (R11); any tap would erase while a question is pending"
+      ],
+      [
+        "S02615-CLEARTEXT-REACHES-ONLY-LOOPBACK",
+        "bot",
+        "src/transport.rs",
+        "        let local = scheme == \"http\" && is_loopback(host);",
+        "        let local = scheme == \"http\";",
+        "transport::the_api_url_is_https_or_loopback_http",
+        "the Bot API's base URL is https, or http to a loopback host only, so the token never crosses a network in the clear (ADR-026); cargo-mutants never looks inside a method named new"
+      ],
+      [
+        "S02616-THE-MINI-APP-IS-HTTPS",
+        "bot",
+        "src/commands.rs",
+        "        let rest = text.strip_prefix(\"https://\")?;",
+        "        let rest = text.split_once(\"://\")?.1;",
+        "commands::the_mini_app_url_is_https",
+        "the Mini App's URL is https, the only scheme a web_app button opens (R11); cargo-mutants never looks inside a method named new"
+      ],
+      [
+        "S02617-THE-BASE-URL-HAS-NO-PATH",
+        "bot",
+        "src/transport.rs",
+        "            || authority.contains(['/', '?', '#', '@'])",
+        "            || authority.contains(['?', '#', '@'])",
+        "transport::the_api_url_names_no_path",
+        "the Bot API's base URL carries no path beyond its root, so the token is appended to the host's root and nowhere else (ADR-026); cargo-mutants never looks inside a method named new"
+      ]
+    ]
+  }
+}

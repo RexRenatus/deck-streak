@@ -39,7 +39,7 @@ the owner provides a domain (OWNER-SETUP); until then it is built and gated, not
 
 ### Confirmation
 
-`phxd verify seo-pipeline --subject web/site/dist` and `phxd pack probe --pack web-launch --root web/site/dist` on the box (ADR-004).
+`<binary> verify seo-pipeline --subject web/site/dist` and `<binary> pack probe --pack web-launch --root web/site/dist` on the box (ADR-004).
 
 ## What would make this wrong
 
@@ -48,3 +48,7 @@ the owner provides a domain (OWNER-SETUP); until then it is built and gated, not
 ## More Information
 
 The seo-pipeline and web-launch packs; ADR-007.
+
+Amendment (2026-09-28): names of the maintainer's private tooling were replaced with 'the box-run
+packs' and neutral names for their repository, binary and checkout under the public-text rule
+(ADR-059).

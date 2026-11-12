@@ -11,5 +11,20 @@ publish.workspace = true
 [lints]
 workspace = true
 
+# The kernel depends on one internal crate, the study day it re-exports (ADR-515), and on the
+# external crates ADR-003, ADR-020 and ADR-029 admit (docs/CONTEXT-MAP.md).
 [dependencies]
+deck-streak-study-day.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["rt", "sync"] }
+tracing.workspace = true
+tracing-subscriber.workspace = true
 
+[dev-dependencies]
+# The golden reader parses floats exactly, so a parity test compares bits (SPEC-302).
+serde_json = { workspace = true, features = ["float_roundtrip"] }
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "rt"] }

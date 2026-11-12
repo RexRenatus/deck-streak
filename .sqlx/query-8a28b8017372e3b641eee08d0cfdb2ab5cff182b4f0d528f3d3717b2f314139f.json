@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM coin_ledger",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "8a28b8017372e3b641eee08d0cfdb2ab5cff182b4f0d528f3d3717b2f314139f"
+}

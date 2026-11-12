@@ -1,0 +1,454 @@
+{
+  "adapter": "tokens_of_hex",
+  "cases": [
+    {
+      "class": "none",
+      "input": {
+        "hex": null
+      },
+      "output": {
+        "failed": false,
+        "tokens": []
+      }
+    },
+    {
+      "class": "empty",
+      "input": {
+        "hex": ""
+      },
+      "output": {
+        "failed": false,
+        "tokens": []
+      }
+    },
+    {
+      "class": "plain",
+      "input": {
+        "hex": "0a097b7b46726f6e747d7d12087b7b4261636b7d7d"
+      },
+      "output": {
+        "failed": false,
+        "tokens": [
+          "Back",
+          "Front"
+        ]
+      }
+    },
+    {
+      "class": "filter",
+      "input": {
+        "hex": "0a0e7b7b746578743a46726f6e747d7d12177b7b6675726967616e613a636c6f7a653a4261636b7d7d"
+      },
+      "output": {
+        "failed": false,
+        "tokens": [
+          "Back",
+          "Front"
+        ]
+      }
+    },
+    {
+      "class": "section",
+      "input": {
+        "hex": "0a157b7b2346726f6e747d7d787b7b2f46726f6e747d7d12137b7b5e4261636b7d7d797b7b2f4261636b7d7d"
+      },
+      "output": {
+        "failed": false,
+        "tokens": [
+          "Back",
+          "Front"
+        ]
+      }
+    },
+    {
+      "class": "section_space",
+      "input": {
+        "hex": "0a0c7b7b232046726f6e74207d7d120c7b7b205e204261636b207d7d"
+      },
+      "output": {
+        "failed": false,
+        "tokens": [
+          "Back",
+          "Front"
+        ]
+      }
+    },
+    {
+      "class": "special",
+      "input": {
+        "hex": "0a387b7b46726f6e74536964657d7d7b7b546167737d7d7b7b547970657d7d7b7b4465636b7d7d7b7b5375626465636b7d7d7b7b436172647d7d12097b7b46726f6e747d7d"
+      },
+      "output": {
+        "failed": false,
+        "tokens": [
+          "Front"
+        ]
+      }
+    },
+    {
+      "class": "special_after_filter",
+      "input": {
+        "hex": "0a127b7b746578743a46726f6e74536964657d7d120d7b7b747970653a436172647d7d"
+      },
+      "output": {
+        "failed": false,
+        "tokens": []
+      }
+    },
+    {
+      "class": "blank",
+      "input": {
+        "hex": "0a177b7b7d7d207b7b20207d7d207b7b237d7d207b7b3a7d7d1200"
+      },
+      "output": {
+        "failed": false,
+        "tokens": []
+      }
+    },
+    {
+      "class": "nested",
+      "input": {
+        "hex": "0a187b7b7b46726f6e747d7d7d207b7b7b7b4261636b7d7d7d7d1200"
+      },
+      "output": {
+        "failed": false,
+        "tokens": [
+          "Back",
+          "Front"
+        ]
+      }
+    },
+    {
+      "class": "unclosed",
+      "input": {
+        "hex": "0a0f7b7b46726f6e747d207b7b4261636b12047d7d7b7b"
+      },
+      "output": {
+        "failed": false,
+        "tokens": []
+      }
+    },
+    {
+      "class": "static_text",
+      "input": {
+        "hex": "0a0e6e6f206669656c64732068657265120a7374696c6c206e6f6e65"
+      },
+      "output": {
+        "failed": false,
+        "tokens": []
+      }
+    },
+    {
+      "class": "q_only",
+      "input": {
+        "hex": "0a097b7b46726f6e747d7d"
+      },
+      "output": {
+        "failed": false,
+        "tokens": [
+          "Front"
+        ]
+      }
+    },
+    {
+      "class": "a_only",
+      "input": {
+        "hex": "12087b7b4261636b7d7d"
+      },
+      "output": {
+        "failed": false,
+        "tokens": [
+          "Back"
+        ]
+      }
+    },
+    {
+      "class": "unicode",
+      "input": {
+        "hex": "0a0a7b7bc389637269747d7d120d7b7be4be8b3a4669656c647d7d"
+      },
+      "output": {
+        "failed": false,
+        "tokens": [
+          "Field",
+          "\u00c9crit"
+        ]
+      }
+    },
+    {
+      "class": "newline_inside",
+      "input": {
+        "hex": "0a0a7b7b46720a6f6e747d7d1200"
+      },
+      "output": {
+        "failed": false,
+        "tokens": [
+          "Fr\nont"
+        ]
+      }
+    },
+    {
+      "class": "trailing_colon",
+      "input": {
+        "hex": "0a097b7b746578743a7d7d12087b7b613a3a627d7d"
+      },
+      "output": {
+        "failed": false,
+        "tokens": [
+          "b"
+        ]
+      }
+    },
+    {
+      "class": "whitespace_name",
+      "input": {
+        "hex": "0a0f7b7b20c2a046726f6e74c2a0207d7d120a7b7b1c4261636b1f7d7d"
+      },
+      "output": {
+        "failed": false,
+        "tokens": [
+          "Back",
+          "Front"
+        ]
+      }
+    },
+    {
+      "class": "empty_string_config_q",
+      "input": {
+        "hex": "0a001200"
+      },
+      "output": {
+        "failed": false,
+        "tokens": []
+      }
+    },
+    {
+      "class": "repeated_field",
+      "input": {
+        "hex": "0a077b7b4f6e657d7d0a077b7b54776f7d7d"
+      },
+      "output": {
+        "failed": false,
+        "tokens": [
+          "Two"
+        ]
+      }
+    },
+    {
+      "class": "unknown_field",
+      "input": {
+        "hex": "4a0b7b7b49676e6f7265647d7d0a087b7b4b6570747d7d"
+      },
+      "output": {
+        "failed": false,
+        "tokens": [
+          "Kept"
+        ]
+      }
+    },
+    {
+      "class": "varint_field_skipped",
+      "input": {
+        "hex": "08050a087b7b4b6570747d7d"
+      },
+      "output": {
+        "failed": false,
+        "tokens": [
+          "Kept"
+        ]
+      }
+    },
+    {
+      "class": "fixed_field_skipped",
+      "input": {
+        "hex": "1900000000000000000a087b7b4b6570747d7d"
+      },
+      "output": {
+        "failed": false,
+        "tokens": [
+          "Kept"
+        ]
+      }
+    },
+    {
+      "class": "bad_utf8",
+      "input": {
+        "hex": "0a067b7b417d7dff"
+      },
+      "output": {
+        "failed": true,
+        "tokens": []
+      }
+    },
+    {
+      "class": "bad_utf8_overlong",
+      "input": {
+        "hex": "1202c080"
+      },
+      "output": {
+        "failed": true,
+        "tokens": []
+      }
+    },
+    {
+      "class": "bad_utf8_surrogate",
+      "input": {
+        "hex": "0a03eda080"
+      },
+      "output": {
+        "failed": true,
+        "tokens": []
+      }
+    },
+    {
+      "class": "truncated",
+      "input": {
+        "hex": "0a097b7b46726f6e74"
+      },
+      "output": {
+        "failed": true,
+        "tokens": []
+      }
+    },
+    {
+      "class": "group",
+      "input": {
+        "hex": "0b"
+      },
+      "output": {
+        "failed": true,
+        "tokens": []
+      }
+    },
+    {
+      "input": {
+        "hex": "0a117b7b6675726967616e613a48696e747d7d1200"
+      },
+      "output": {
+        "failed": false,
+        "tokens": [
+          "Hint"
+        ]
+      }
+    },
+    {
+      "input": {
+        "hex": "0a187b7b68696e743a46726f6e747d7d207b7b2f4e6f74657d7d1200"
+      },
+      "output": {
+        "failed": false,
+        "tokens": [
+          "Front",
+          "Note"
+        ]
+      }
+    },
+    {
+      "input": {
+        "hex": "0a0012097b7b234e6f74657d7d"
+      },
+      "output": {
+        "failed": false,
+        "tokens": [
+          "Note"
+        ]
+      }
+    },
+    {
+      "input": {
+        "hex": "0a247b7b2f4261636b7d7d207b7b636c6f7a653a45787472617d7d207b7b2345787472617d7d12257b7b746578743a48696e747d7d207b7b5e4e6f74657d7d207b7b746578743a4261636b7d7d"
+      },
+      "output": {
+        "failed": false,
+        "tokens": [
+          "Back",
+          "Extra",
+          "Hint",
+          "Note"
+        ]
+      }
+    },
+    {
+      "input": {
+        "hex": "0a087b7b4261636b7d7d1200"
+      },
+      "output": {
+        "failed": false,
+        "tokens": [
+          "Back"
+        ]
+      }
+    },
+    {
+      "input": {
+        "hex": "0a0012117b7b6675726967616e613a48696e747d7d"
+      },
+      "output": {
+        "failed": false,
+        "tokens": [
+          "Hint"
+        ]
+      }
+    },
+    {
+      "input": {
+        "hex": "0a237b7b6675726967616e613a48696e747d7d207b7b6675726967616e613a4261636b7d7d1200"
+      },
+      "output": {
+        "failed": false,
+        "tokens": [
+          "Back",
+          "Hint"
+        ]
+      }
+    },
+    {
+      "input": {
+        "hex": "0a00121e7b7b636c6f7a653a4261636b7d7d207b7b636c6f7a653a46726f6e747d7d"
+      },
+      "output": {
+        "failed": false,
+        "tokens": [
+          "Back",
+          "Front"
+        ]
+      }
+    },
+    {
+      "input": {
+        "hex": "0a00121c7b7b6675726967616e613a4261636b7d7d207b7b23417564696f7d7d"
+      },
+      "output": {
+        "failed": false,
+        "tokens": [
+          "Audio",
+          "Back"
+        ]
+      }
+    },
+    {
+      "input": {
+        "hex": "0a2a7b7b68696e743a48696e747d7d207b7b6675726967616e613a417564696f7d7d207b7b2f4261636b7d7d12097b7b2f48696e747d7d"
+      },
+      "output": {
+        "failed": false,
+        "tokens": [
+          "Audio",
+          "Back",
+          "Hint"
+        ]
+      }
+    }
+  ],
+  "function": "darkfields._extract_config_tokens_ex",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Builds a template config's bytes from the case's hex and returns the sorted tokens; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_094.py",
+  "registry_sha256": "65b653c5282152fc891e68568d1df2e994b7beb4822b1cd96a6bbac9b2bae5e6",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

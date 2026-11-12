@@ -1,0 +1,51 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S38900-THE-CLOSE-READS-THE-REQUESTS-FLAG",
+        "progression",
+        "src/settle.rs",
+        "if held.closed || request.closed =>",
+        "if held.closed =>",
+        "formal_vectors_xp_reconciliation::the_settle_rule_answers_every_lean_vector",
+        "a Recompute that closes an open row keeps the larger amount, closed (SPEC-389 R14, A1)"
+      ],
+      [
+        "S38901-A-RECOMPUTE-KEEPS-THE-LARGER",
+        "progression",
+        "src/settle.rs",
+        "held.amount.max(request.amount)",
+        "held.amount.min(request.amount)",
+        "formal_vectors_xp_reconciliation::the_settle_rule_answers_every_lean_vector",
+        "a Recompute over a closed row keeps the larger of the held amount and the request (SPEC-389 R14, A1)"
+      ],
+      [
+        "S38902-A-HELD-CLOSED-ROW-STAYS-CLOSED",
+        "progression",
+        "src/settle.rs",
+        "(held.amount.max(request.amount), true)",
+        "(held.amount.max(request.amount), request.closed)",
+        "formal_vectors_xp_reconciliation::the_settle_rule_answers_every_lean_vector",
+        "a closed row stays closed under an open Recompute request (SPEC-389 R14, A1)"
+      ],
+      [
+        "S38903-A-FIRST-SETTLE-KEEPS-ITS-FLAG",
+        "progression",
+        "src/settle.rs",
+        "_ => (request.amount, request.closed),",
+        "_ => (request.amount, false),",
+        "formal_vectors_xp_reconciliation::the_settle_rule_answers_every_lean_vector",
+        "a settle the closed-day arm does not take writes the request's closed flag (SPEC-389 R14, A1)"
+      ],
+      [
+        "S38904-ONLY-THE-RECOMPUTE-KEEPS-THE-LARGER",
+        "progression",
+        "src/settle.rs",
+        "(Some(held), SettleCause::Recompute) if",
+        "(Some(held), _) if",
+        "formal_vectors_xp_reconciliation::the_settle_rule_answers_every_lean_vector",
+        "only a Recompute keeps the larger amount; the owner's correction replaces a closed row (SPEC-389 R14, A1)"
+      ]
+    ]
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S47301-THE-CADDY-STEPS-RUN-THE-ONE-SETTINGS-CHECK",
+        "deploy/deploy.sh",
+        "caddy-install | caddy-remove)\n    refuse_unlisted_settings\n",
+        "caddy-install | caddy-remove)\n    :\n",
+        "both Caddy steps run the settings check the Lean entry covers (SPEC-473 A2)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_caddy_step_agrees_with_every_vector_of_its_lean_proof"
+      ],
+      [
+        "S47302-A-RECEIVED-KEY-ENDS-AT-ITS-FIRST-EQUALS",
+        "deploy/deploy.sh",
+        "key=${entry%%=*}",
+        "key=${entry%=*}",
+        "a received entry's key is its bytes before the first =, so a value that holds = is still a value (SPEC-473 A2)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_caddy_step_agrees_with_every_vector_of_its_lean_proof"
+      ],
+      [
+        "S47303-A-VALUE-IS-PRESENT-WHEN-ITS-EQUALS-IS",
+        "deploy/deploy.sh",
+        "[ \"$key\" != \"$entry\" ] ||",
+        "[ \"$key=\" != \"$entry\" ] ||",
+        "a listed setting has a value when its entry holds =, an empty value included, and no value is read (SPEC-473 A2)",
+        "test_deploy_scripts.TheCaddyInstall.test_a_caddy_step_agrees_with_every_vector_of_its_lean_proof"
+      ]
+    ]
+  }
+}

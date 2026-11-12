@@ -1,0 +1,132 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S32600-THE-FACTS-ARE-THE-LANGUAGE-STREAKS",
+        "coordination",
+        "src/ladder_facts.rs",
+        "const TRACK: &str = \"language\";",
+        "const TRACK: &str = \"languages\";",
+        "break_day_cap::an_award_raised_on_a_streak_break_day_is_decided_at_most_t1",
+        "the facts are the language track's stored streak; another track reads no row, so no break"
+      ],
+      [
+        "S32601-THE-FACTS-CARRY-THE-CURRENT-LENGTH",
+        "coordination",
+        "src/ladder_facts.rs",
+        "current: state.current,",
+        "current: state.longest,",
+        "break_day_cap::an_award_raised_on_a_streak_break_day_is_decided_at_most_t1",
+        "the facts carry the stored current length; the longest in its place reads no break"
+      ],
+      [
+        "S32602-THE-FACTS-CARRY-THE-LONGEST-LENGTH",
+        "coordination",
+        "src/ladder_facts.rs",
+        "longest: state.longest,",
+        "longest: state.current,",
+        "break_day_cap::an_award_raised_on_a_streak_break_day_is_decided_at_most_t1",
+        "the facts carry the stored longest length; the current in its place reads no break"
+      ],
+      [
+        "S32603-THE-FACTS-CARRY-THE-LAST-STUDY-DAY",
+        "coordination",
+        "src/ladder_facts.rs",
+        "last_study_day: state.last_study_day,",
+        "last_study_day: None,",
+        "break_day_cap::an_award_raised_on_a_streak_break_day_is_decided_at_most_t1",
+        "the facts carry the stored last study day; none reads no break on any day"
+      ],
+      [
+        "S32604-THE-OCCASION-CARRIES-THE-FACTS",
+        "coordination",
+        "src/ladder_facts.rs",
+        "Some(facts) => occasion.with_streak(facts),",
+        "Some(_) => occasion,",
+        "break_day_cap::an_award_raised_on_a_streak_break_day_is_decided_at_most_t1",
+        "a stored streak is carried on the occasion, so the router's ladder caps it"
+      ],
+      [
+        "S32605-A-FAILED-READ-ROUTES-NOTHING",
+        "coordination",
+        "src/ladder_facts.rs",
+        "Ok(match streak_facts(db).await? {",
+        "Ok(match streak_facts(db).await.unwrap_or(None) {",
+        "break_day_cap::an_unreadable_streak_leaves_the_award_owed_and_the_hold_held",
+        "a read that fails is an error, so the award is not routed and stays owed; fail-open routes past the cap"
+      ],
+      [
+        "S32606-A-FAILED-READ-FLUSHES-NOTHING",
+        "coordination",
+        "src/ladder_facts.rs",
+        "let facts = streak_facts(router.db()).await?;",
+        "let facts = streak_facts(router.db()).await.unwrap_or(None);",
+        "break_day_cap::an_unreadable_streak_leaves_the_award_owed_and_the_hold_held",
+        "a read that fails stops the flush, so the queue keeps its holds; fail-open renders past the cap"
+      ],
+      [
+        "S32607-THE-FLUSH-CARRIES-THE-FACTS",
+        "coordination",
+        "src/ladder_facts.rs",
+        "router.flush_with(facts).await",
+        "router.flush_with(None).await",
+        "break_day_cap::the_held_flush_job_re_caps_with_the_stored_streak",
+        "the flush re-caps with the facts it read; a flush with none renders the held line uncapped"
+      ],
+      [
+        "S32608-AN-AWARD-IS-ROUTED-WITH-THE-FACTS",
+        "coordination",
+        "src/recompute/mod.rs",
+        "let occasion = ladder_facts::with_streak_facts(self.db(), occasion).await?;",
+        "let occasion = { let _ = ladder_facts::with_streak_facts; occasion };",
+        "break_day_cap::an_award_raised_on_a_streak_break_day_is_decided_at_most_t1",
+        "the Celebrate port routes every award with the stored streak's facts"
+      ],
+      [
+        "S32609-THE-LEVEL-UP-IS-ROUTED-WITH-THE-FACTS",
+        "coordination",
+        "src/level_up.rs",
+        "let occasion = ladder_facts::with_streak_facts(router.db(), occasion).await?;",
+        "let occasion = { let _ = ladder_facts::with_streak_facts; occasion };",
+        "break_day_cap::the_level_up_on_a_streak_break_day_is_decided_at_most_t1",
+        "the level-up line is routed with the stored streak's facts"
+      ],
+      [
+        "S32610-THE-RELIGHT-IS-ROUTED-WITH-THE-FACTS",
+        "coordination",
+        "src/relight.rs",
+        "let occasion = ladder_facts::with_streak_facts(router.db(), occasion).await?;",
+        "let occasion = { let _ = ladder_facts::with_streak_facts; occasion };",
+        "break_day_cap::the_relight_on_its_streak_break_day_is_decided_at_most_t1",
+        "the relight's line is routed with the stored streak's facts"
+      ],
+      [
+        "S32611-THE-HELD-FLUSH-JOB-RE-CAPS",
+        "coordination",
+        "src/held_flush.rs",
+        "ladder_facts::flush_re_capped(self.router)",
+        "self.router.flush_with(None)",
+        "break_day_cap::the_held_flush_job_re_caps_with_the_stored_streak",
+        "the scheduled flush re-caps with the stored streak; a flush with no facts renders past the cap"
+      ],
+      [
+        "S32612-THE-CYCLES-FLUSH-RE-CAPS",
+        "coordination",
+        "src/sync_cycle.rs",
+        "ladder_facts::flush_re_capped(router)",
+        "router.flush_with(None)",
+        "level_up_cycle::a_sync_cycles_flush_re_caps_with_the_stored_streak",
+        "the flush after a sync that ran and succeeded re-caps with the stored streak"
+      ],
+      [
+        "S32613-THE-BOTS-FLUSH-RE-CAPS",
+        "daemon",
+        "src/sync_request.rs",
+        "flush_re_capped(self)",
+        "Router::flush(self)",
+        "break_day_flush::the_bots_flush_re_caps_with_the_stored_streak",
+        "the bot's flush after the owner's sync re-caps with the stored streak"
+      ]
+    ]
+  }
+}

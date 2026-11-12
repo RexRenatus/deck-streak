@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO daily_lang_stats (study_day, course, reviews, seconds, answered, passed, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7) ON CONFLICT (study_day, course) DO UPDATE SET reviews = excluded.reviews, seconds = excluded.seconds, answered = excluded.answered, passed = excluded.passed WHERE daily_lang_stats.reviews IS NOT excluded.reviews OR daily_lang_stats.seconds IS NOT excluded.seconds OR daily_lang_stats.answered IS NOT excluded.answered OR daily_lang_stats.passed IS NOT excluded.passed",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": []
+  },
+  "hash": "13d9b91920b05fbf3bf192314519ead6f276f5fd63de697dbe2cbbad2ec3884e"
+}

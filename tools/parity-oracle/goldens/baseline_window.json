@@ -1,0 +1,1328 @@
+{
+  "adapter": "with_a_stub_store",
+  "cases": [
+    {
+      "class": "today-row",
+      "input": {
+        "rollups": [
+          {
+            "day": 20000,
+            "reviews": 0,
+            "seconds": 3118
+          },
+          {
+            "day": 19996,
+            "reviews": 10,
+            "seconds": 4644
+          },
+          {
+            "day": 19995,
+            "reviews": 10,
+            "seconds": 4207
+          },
+          {
+            "day": 19990,
+            "reviews": 3,
+            "seconds": 1928
+          },
+          {
+            "day": 19989,
+            "reviews": 0,
+            "seconds": 4383
+          },
+          {
+            "day": 19988,
+            "reviews": 9,
+            "seconds": 3599
+          },
+          {
+            "day": 19987,
+            "reviews": 9,
+            "seconds": 917
+          },
+          {
+            "day": 19986,
+            "reviews": 0,
+            "seconds": 4927
+          },
+          {
+            "day": 19983,
+            "reviews": 10,
+            "seconds": 2242
+          },
+          {
+            "day": 19980,
+            "reviews": 11,
+            "seconds": 7330
+          },
+          {
+            "day": 19978,
+            "reviews": 3,
+            "seconds": 4485
+          },
+          {
+            "day": 19974,
+            "reviews": 140,
+            "seconds": 7092
+          },
+          {
+            "day": 19973,
+            "reviews": 3,
+            "seconds": 2697
+          },
+          {
+            "day": 19968,
+            "reviews": 25,
+            "seconds": 1983
+          },
+          {
+            "day": 19966,
+            "reviews": 3,
+            "seconds": 7021
+          },
+          {
+            "day": 19959,
+            "reviews": 11,
+            "seconds": 3670
+          },
+          {
+            "day": 19958,
+            "reviews": 0,
+            "seconds": 849
+          },
+          {
+            "day": 19957,
+            "reviews": 140,
+            "seconds": 3168
+          },
+          {
+            "day": 19948,
+            "reviews": 25,
+            "seconds": 2823
+          },
+          {
+            "day": 19947,
+            "reviews": 3,
+            "seconds": 1327
+          },
+          {
+            "day": 19945,
+            "reviews": 0,
+            "seconds": 4808
+          },
+          {
+            "day": 19942,
+            "reviews": 0,
+            "seconds": 5166
+          },
+          {
+            "day": 19939,
+            "reviews": 25,
+            "seconds": 7494
+          },
+          {
+            "day": 19937,
+            "reviews": 140,
+            "seconds": 890
+          },
+          {
+            "day": 19933,
+            "reviews": 3,
+            "seconds": 1925
+          },
+          {
+            "day": 19926,
+            "reviews": 60,
+            "seconds": 5464
+          },
+          {
+            "day": 19925,
+            "reviews": 0,
+            "seconds": 1197
+          },
+          {
+            "day": 19919,
+            "reviews": 0,
+            "seconds": 1528
+          },
+          {
+            "day": 19918,
+            "reviews": 11,
+            "seconds": 4215
+          },
+          {
+            "day": 19913,
+            "reviews": 0,
+            "seconds": 4931
+          },
+          {
+            "day": 19912,
+            "reviews": 0,
+            "seconds": 444
+          }
+        ],
+        "today": 20000
+      },
+      "output": [
+        10,
+        59.983333333333334
+      ]
+    },
+    {
+      "class": "no-today-row",
+      "input": {
+        "rollups": [
+          {
+            "day": 19999,
+            "reviews": 11,
+            "seconds": 4886
+          },
+          {
+            "day": 19998,
+            "reviews": 3,
+            "seconds": 1616
+          },
+          {
+            "day": 19996,
+            "reviews": 0,
+            "seconds": 4525
+          },
+          {
+            "day": 19989,
+            "reviews": 0,
+            "seconds": 6348
+          },
+          {
+            "day": 19987,
+            "reviews": 11,
+            "seconds": 4628
+          },
+          {
+            "day": 19986,
+            "reviews": 25,
+            "seconds": 7577
+          },
+          {
+            "day": 19983,
+            "reviews": 0,
+            "seconds": 1091
+          },
+          {
+            "day": 19982,
+            "reviews": 60,
+            "seconds": 3462
+          },
+          {
+            "day": 19979,
+            "reviews": 0,
+            "seconds": 8671
+          },
+          {
+            "day": 19977,
+            "reviews": 0,
+            "seconds": 8963
+          },
+          {
+            "day": 19975,
+            "reviews": 11,
+            "seconds": 254
+          },
+          {
+            "day": 19974,
+            "reviews": 3,
+            "seconds": 4548
+          },
+          {
+            "day": 19973,
+            "reviews": 10,
+            "seconds": 1636
+          },
+          {
+            "day": 19972,
+            "reviews": 0,
+            "seconds": 675
+          },
+          {
+            "day": 19971,
+            "reviews": 9,
+            "seconds": 3390
+          },
+          {
+            "day": 19969,
+            "reviews": 25,
+            "seconds": 1281
+          },
+          {
+            "day": 19964,
+            "reviews": 11,
+            "seconds": 4635
+          },
+          {
+            "day": 19962,
+            "reviews": 60,
+            "seconds": 817
+          },
+          {
+            "day": 19961,
+            "reviews": 3,
+            "seconds": 6159
+          },
+          {
+            "day": 19960,
+            "reviews": 140,
+            "seconds": 6509
+          },
+          {
+            "day": 19950,
+            "reviews": 25,
+            "seconds": 4167
+          },
+          {
+            "day": 19948,
+            "reviews": 0,
+            "seconds": 7518
+          },
+          {
+            "day": 19946,
+            "reviews": 0,
+            "seconds": 8061
+          },
+          {
+            "day": 19942,
+            "reviews": 11,
+            "seconds": 3771
+          },
+          {
+            "day": 19937,
+            "reviews": 9,
+            "seconds": 4799
+          },
+          {
+            "day": 19935,
+            "reviews": 60,
+            "seconds": 5515
+          },
+          {
+            "day": 19934,
+            "reviews": 25,
+            "seconds": 3384
+          },
+          {
+            "day": 19932,
+            "reviews": 0,
+            "seconds": 5704
+          },
+          {
+            "day": 19928,
+            "reviews": 3,
+            "seconds": 1494
+          },
+          {
+            "day": 19918,
+            "reviews": 11,
+            "seconds": 330
+          },
+          {
+            "day": 19917,
+            "reviews": 0,
+            "seconds": 7815
+          },
+          {
+            "day": 19914,
+            "reviews": 9,
+            "seconds": 8877
+          }
+        ],
+        "today": 20000
+      },
+      "output": [
+        11,
+        62.85
+      ]
+    },
+    {
+      "class": "zero-days",
+      "input": {
+        "rollups": [
+          {
+            "day": 20000,
+            "reviews": 20,
+            "seconds": 600
+          },
+          {
+            "day": 19999,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19998,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19997,
+            "reviews": 23,
+            "seconds": 600
+          },
+          {
+            "day": 19996,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19995,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19994,
+            "reviews": 26,
+            "seconds": 600
+          },
+          {
+            "day": 19993,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19992,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19991,
+            "reviews": 29,
+            "seconds": 600
+          },
+          {
+            "day": 19990,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19989,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19988,
+            "reviews": 32,
+            "seconds": 600
+          },
+          {
+            "day": 19987,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19986,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19985,
+            "reviews": 35,
+            "seconds": 600
+          },
+          {
+            "day": 19984,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19983,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19982,
+            "reviews": 38,
+            "seconds": 600
+          },
+          {
+            "day": 19981,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19980,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19979,
+            "reviews": 41,
+            "seconds": 600
+          },
+          {
+            "day": 19978,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19977,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19976,
+            "reviews": 44,
+            "seconds": 600
+          },
+          {
+            "day": 19975,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19974,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19973,
+            "reviews": 47,
+            "seconds": 600
+          },
+          {
+            "day": 19972,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19971,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19970,
+            "reviews": 50,
+            "seconds": 600
+          },
+          {
+            "day": 19969,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19968,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19967,
+            "reviews": 53,
+            "seconds": 600
+          },
+          {
+            "day": 19966,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19965,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19964,
+            "reviews": 56,
+            "seconds": 600
+          },
+          {
+            "day": 19963,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19962,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19961,
+            "reviews": 59,
+            "seconds": 600
+          },
+          {
+            "day": 19960,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19959,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19958,
+            "reviews": 62,
+            "seconds": 600
+          },
+          {
+            "day": 19957,
+            "reviews": 0,
+            "seconds": 600
+          },
+          {
+            "day": 19956,
+            "reviews": 0,
+            "seconds": 600
+          }
+        ],
+        "today": 20000
+      },
+      "output": [
+        36.5,
+        10.0
+      ]
+    },
+    {
+      "class": "empty",
+      "input": {
+        "rollups": [],
+        "today": 20000
+      },
+      "output": [
+        10.0,
+        5.0
+      ]
+    },
+    {
+      "class": "today-only",
+      "input": {
+        "rollups": [
+          {
+            "day": 20000,
+            "reviews": 50,
+            "seconds": 900
+          }
+        ],
+        "today": 20000
+      },
+      "output": [
+        10.0,
+        5.0
+      ]
+    },
+    {
+      "input": {
+        "rollups": [
+          {
+            "day": 20000,
+            "reviews": 25,
+            "seconds": 8624
+          },
+          {
+            "day": 19999,
+            "reviews": 60,
+            "seconds": 4050
+          },
+          {
+            "day": 19997,
+            "reviews": 25,
+            "seconds": 6359
+          },
+          {
+            "day": 19982,
+            "reviews": 140,
+            "seconds": 4761
+          },
+          {
+            "day": 19981,
+            "reviews": 140,
+            "seconds": 4857
+          },
+          {
+            "day": 19970,
+            "reviews": 0,
+            "seconds": 8083
+          },
+          {
+            "day": 19955,
+            "reviews": 10,
+            "seconds": 5775
+          },
+          {
+            "day": 19953,
+            "reviews": 3,
+            "seconds": 7620
+          },
+          {
+            "day": 19932,
+            "reviews": 9,
+            "seconds": 7937
+          },
+          {
+            "day": 19912,
+            "reviews": 3,
+            "seconds": 5792
+          }
+        ],
+        "today": 20000
+      },
+      "output": [
+        17.5,
+        96.39166666666667
+      ]
+    },
+    {
+      "input": {
+        "rollups": [
+          {
+            "day": 19995,
+            "reviews": 3,
+            "seconds": 2236
+          },
+          {
+            "day": 19984,
+            "reviews": 3,
+            "seconds": 4500
+          },
+          {
+            "day": 19981,
+            "reviews": 0,
+            "seconds": 1258
+          },
+          {
+            "day": 19975,
+            "reviews": 3,
+            "seconds": 5565
+          },
+          {
+            "day": 19972,
+            "reviews": 10,
+            "seconds": 4020
+          },
+          {
+            "day": 19965,
+            "reviews": 11,
+            "seconds": 1393
+          },
+          {
+            "day": 19960,
+            "reviews": 3,
+            "seconds": 4324
+          },
+          {
+            "day": 19952,
+            "reviews": 10,
+            "seconds": 1571
+          },
+          {
+            "day": 19949,
+            "reviews": 3,
+            "seconds": 4984
+          },
+          {
+            "day": 19939,
+            "reviews": 0,
+            "seconds": 8114
+          },
+          {
+            "day": 19935,
+            "reviews": 0,
+            "seconds": 8257
+          },
+          {
+            "day": 19932,
+            "reviews": 0,
+            "seconds": 7792
+          },
+          {
+            "day": 19931,
+            "reviews": 60,
+            "seconds": 6412
+          },
+          {
+            "day": 19930,
+            "reviews": 140,
+            "seconds": 1560
+          },
+          {
+            "day": 19928,
+            "reviews": 3,
+            "seconds": 5088
+          },
+          {
+            "day": 19919,
+            "reviews": 140,
+            "seconds": 6862
+          },
+          {
+            "day": 19918,
+            "reviews": 3,
+            "seconds": 7464
+          },
+          {
+            "day": 19917,
+            "reviews": 60,
+            "seconds": 8494
+          },
+          {
+            "day": 19912,
+            "reviews": 60,
+            "seconds": 2511
+          }
+        ],
+        "today": 20000
+      },
+      "output": [
+        10,
+        75.0
+      ]
+    },
+    {
+      "input": {
+        "rollups": [
+          {
+            "day": 20000,
+            "reviews": 9,
+            "seconds": 3382
+          },
+          {
+            "day": 19991,
+            "reviews": 10,
+            "seconds": 3392
+          },
+          {
+            "day": 19985,
+            "reviews": 140,
+            "seconds": 4733
+          },
+          {
+            "day": 19984,
+            "reviews": 25,
+            "seconds": 7755
+          },
+          {
+            "day": 19975,
+            "reviews": 0,
+            "seconds": 5964
+          },
+          {
+            "day": 19962,
+            "reviews": 140,
+            "seconds": 4010
+          },
+          {
+            "day": 19960,
+            "reviews": 3,
+            "seconds": 6096
+          },
+          {
+            "day": 19948,
+            "reviews": 10,
+            "seconds": 2471
+          },
+          {
+            "day": 19942,
+            "reviews": 0,
+            "seconds": 5492
+          },
+          {
+            "day": 19940,
+            "reviews": 25,
+            "seconds": 2409
+          },
+          {
+            "day": 19931,
+            "reviews": 10,
+            "seconds": 8386
+          },
+          {
+            "day": 19918,
+            "reviews": 3,
+            "seconds": 8361
+          }
+        ],
+        "today": 20000
+      },
+      "output": [
+        10,
+        78.88333333333334
+      ]
+    },
+    {
+      "input": {
+        "rollups": [
+          {
+            "day": 20000,
+            "reviews": 10,
+            "seconds": 6842
+          },
+          {
+            "day": 19995,
+            "reviews": 0,
+            "seconds": 8736
+          },
+          {
+            "day": 19985,
+            "reviews": 9,
+            "seconds": 7240
+          },
+          {
+            "day": 19935,
+            "reviews": 60,
+            "seconds": 6675
+          },
+          {
+            "day": 19933,
+            "reviews": 0,
+            "seconds": 2873
+          }
+        ],
+        "today": 20000
+      },
+      "output": [
+        34.5,
+        115.95833333333334
+      ]
+    },
+    {
+      "input": {
+        "rollups": [
+          {
+            "day": 19987,
+            "reviews": 0,
+            "seconds": 8779
+          },
+          {
+            "day": 19984,
+            "reviews": 60,
+            "seconds": 7072
+          },
+          {
+            "day": 19979,
+            "reviews": 11,
+            "seconds": 3894
+          },
+          {
+            "day": 19970,
+            "reviews": 140,
+            "seconds": 2742
+          },
+          {
+            "day": 19968,
+            "reviews": 140,
+            "seconds": 918
+          },
+          {
+            "day": 19964,
+            "reviews": 60,
+            "seconds": 1448
+          },
+          {
+            "day": 19961,
+            "reviews": 140,
+            "seconds": 404
+          },
+          {
+            "day": 19936,
+            "reviews": 10,
+            "seconds": 504
+          },
+          {
+            "day": 19927,
+            "reviews": 10,
+            "seconds": 5868
+          },
+          {
+            "day": 19923,
+            "reviews": 10,
+            "seconds": 5034
+          },
+          {
+            "day": 19919,
+            "reviews": 140,
+            "seconds": 6590
+          }
+        ],
+        "today": 20000
+      },
+      "output": [
+        60.0,
+        55.300000000000004
+      ]
+    },
+    {
+      "input": {
+        "rollups": [
+          {
+            "day": 19999,
+            "reviews": 9,
+            "seconds": 2956
+          },
+          {
+            "day": 19998,
+            "reviews": 9,
+            "seconds": 4796
+          },
+          {
+            "day": 19995,
+            "reviews": 0,
+            "seconds": 2033
+          },
+          {
+            "day": 19994,
+            "reviews": 0,
+            "seconds": 3674
+          },
+          {
+            "day": 19992,
+            "reviews": 25,
+            "seconds": 8300
+          },
+          {
+            "day": 19991,
+            "reviews": 25,
+            "seconds": 4527
+          },
+          {
+            "day": 19990,
+            "reviews": 11,
+            "seconds": 8904
+          },
+          {
+            "day": 19988,
+            "reviews": 3,
+            "seconds": 5218
+          },
+          {
+            "day": 19986,
+            "reviews": 0,
+            "seconds": 178
+          },
+          {
+            "day": 19984,
+            "reviews": 0,
+            "seconds": 8337
+          },
+          {
+            "day": 19980,
+            "reviews": 140,
+            "seconds": 8628
+          },
+          {
+            "day": 19979,
+            "reviews": 60,
+            "seconds": 2903
+          },
+          {
+            "day": 19977,
+            "reviews": 3,
+            "seconds": 3446
+          },
+          {
+            "day": 19976,
+            "reviews": 140,
+            "seconds": 5713
+          },
+          {
+            "day": 19975,
+            "reviews": 3,
+            "seconds": 2417
+          },
+          {
+            "day": 19972,
+            "reviews": 10,
+            "seconds": 1644
+          },
+          {
+            "day": 19970,
+            "reviews": 3,
+            "seconds": 4979
+          },
+          {
+            "day": 19963,
+            "reviews": 60,
+            "seconds": 3329
+          },
+          {
+            "day": 19962,
+            "reviews": 0,
+            "seconds": 1949
+          },
+          {
+            "day": 19957,
+            "reviews": 3,
+            "seconds": 446
+          },
+          {
+            "day": 19954,
+            "reviews": 3,
+            "seconds": 8347
+          },
+          {
+            "day": 19953,
+            "reviews": 11,
+            "seconds": 5046
+          },
+          {
+            "day": 19950,
+            "reviews": 11,
+            "seconds": 381
+          },
+          {
+            "day": 19946,
+            "reviews": 10,
+            "seconds": 432
+          },
+          {
+            "day": 19943,
+            "reviews": 60,
+            "seconds": 24
+          },
+          {
+            "day": 19942,
+            "reviews": 11,
+            "seconds": 4674
+          },
+          {
+            "day": 19940,
+            "reviews": 60,
+            "seconds": 7434
+          },
+          {
+            "day": 19932,
+            "reviews": 10,
+            "seconds": 847
+          },
+          {
+            "day": 19930,
+            "reviews": 0,
+            "seconds": 548
+          },
+          {
+            "day": 19928,
+            "reviews": 0,
+            "seconds": 331
+          },
+          {
+            "day": 19926,
+            "reviews": 140,
+            "seconds": 5050
+          },
+          {
+            "day": 19922,
+            "reviews": 25,
+            "seconds": 4590
+          },
+          {
+            "day": 19920,
+            "reviews": 60,
+            "seconds": 4600
+          },
+          {
+            "day": 19918,
+            "reviews": 0,
+            "seconds": 7038
+          },
+          {
+            "day": 19915,
+            "reviews": 0,
+            "seconds": 402
+          },
+          {
+            "day": 19913,
+            "reviews": 25,
+            "seconds": 261
+          }
+        ],
+        "today": 20000
+      },
+      "output": [
+        11,
+        75.45
+      ]
+    },
+    {
+      "input": {
+        "rollups": [
+          {
+            "day": 19999,
+            "reviews": 0,
+            "seconds": 567
+          },
+          {
+            "day": 19998,
+            "reviews": 9,
+            "seconds": 7402
+          },
+          {
+            "day": 19996,
+            "reviews": 9,
+            "seconds": 5703
+          },
+          {
+            "day": 19991,
+            "reviews": 11,
+            "seconds": 1145
+          },
+          {
+            "day": 19986,
+            "reviews": 140,
+            "seconds": 1921
+          },
+          {
+            "day": 19959,
+            "reviews": 0,
+            "seconds": 4016
+          },
+          {
+            "day": 19957,
+            "reviews": 10,
+            "seconds": 7371
+          },
+          {
+            "day": 19944,
+            "reviews": 60,
+            "seconds": 8186
+          },
+          {
+            "day": 19936,
+            "reviews": 0,
+            "seconds": 654
+          },
+          {
+            "day": 19933,
+            "reviews": 60,
+            "seconds": 1353
+          },
+          {
+            "day": 19932,
+            "reviews": 3,
+            "seconds": 2590
+          },
+          {
+            "day": 19924,
+            "reviews": 140,
+            "seconds": 3547
+          },
+          {
+            "day": 19913,
+            "reviews": 140,
+            "seconds": 4014
+          },
+          {
+            "day": 19912,
+            "reviews": 9,
+            "seconds": 3907
+          }
+        ],
+        "today": 20000
+      },
+      "output": [
+        11,
+        65.11666666666666
+      ]
+    },
+    {
+      "input": {
+        "rollups": [
+          {
+            "day": 20000,
+            "reviews": 140,
+            "seconds": 2917
+          },
+          {
+            "day": 19999,
+            "reviews": 0,
+            "seconds": 3839
+          },
+          {
+            "day": 19984,
+            "reviews": 10,
+            "seconds": 2943
+          },
+          {
+            "day": 19981,
+            "reviews": 140,
+            "seconds": 556
+          },
+          {
+            "day": 19974,
+            "reviews": 140,
+            "seconds": 177
+          },
+          {
+            "day": 19963,
+            "reviews": 0,
+            "seconds": 3076
+          },
+          {
+            "day": 19961,
+            "reviews": 0,
+            "seconds": 7798
+          },
+          {
+            "day": 19959,
+            "reviews": 60,
+            "seconds": 8460
+          },
+          {
+            "day": 19955,
+            "reviews": 10,
+            "seconds": 3718
+          },
+          {
+            "day": 19953,
+            "reviews": 0,
+            "seconds": 7133
+          },
+          {
+            "day": 19943,
+            "reviews": 9,
+            "seconds": 4659
+          },
+          {
+            "day": 19941,
+            "reviews": 11,
+            "seconds": 5083
+          },
+          {
+            "day": 19936,
+            "reviews": 9,
+            "seconds": 5711
+          },
+          {
+            "day": 19926,
+            "reviews": 60,
+            "seconds": 6997
+          },
+          {
+            "day": 19925,
+            "reviews": 0,
+            "seconds": 3353
+          },
+          {
+            "day": 19923,
+            "reviews": 9,
+            "seconds": 3558
+          },
+          {
+            "day": 19922,
+            "reviews": 60,
+            "seconds": 7667
+          }
+        ],
+        "today": 20000
+      },
+      "output": [
+        11,
+        77.65
+      ]
+    }
+  ],
+  "function": "pipeline.GamifyPipeline._baseline",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Runs the baseline on a stand-in pipeline holding only a stub store, which answers get_recent_rollups(limit) with the case's rollup rows, most recent first, cut at the limit asked for, each row's day handed over as the ISO text the store holds; returns the baseline pair; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_071.py",
+  "registry_sha256": "f1c7ec842fede7f22e07a58b4c7043d57049f0b0c78a9419b6c7d77f2cdf2402",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

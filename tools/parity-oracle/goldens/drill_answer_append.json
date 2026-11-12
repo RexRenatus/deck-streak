@@ -1,0 +1,305 @@
+{
+  "adapter": "append",
+  "cases": [
+    {
+      "class": "append",
+      "input": {
+        "notes": {
+          "bare": "no marker at all\n",
+          "crlf": "---\r\ntype: drill-irac\r\nsubject: \"Torts\"\r\nstatus: active\r\n---\r\n# A synthetic drill\r\n\r\nThe prompt of A synthetic drill.\r\n<!-- a comment\r\nover lines -->\r\n\r\n## Free Recall\r\n\r\n## Self-Check\r\n\r\n- [ ] the rule stated\r\n- [ ] **Ready for grading**\r\n",
+          "gap": "---\ntype: drill-irac\nsubject: \"Torts\"\nstatus: active\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [ ] **Ready for grading**\n\n\n\n",
+          "notitle": "---\nstatus: active\n---\n- [ ] **Ready for grading**\n",
+          "one": "---\ntype: drill-irac\nsubject: \"Torts\"\nstatus: active\n---\n# First\n\nThe prompt of First.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [ ] **Ready for grading**\n",
+          "two": "---\nsubject: \"Torts\"\nstatus: active\n---\n# Second\n\nThe prompt of Second.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [x] **Ready for grading**\n"
+        },
+        "steps": [
+          {
+            "answer": "An answer.",
+            "id": "one",
+            "when": "morning"
+          },
+          {
+            "answer": "again",
+            "id": "one",
+            "when": "evening"
+          }
+        ]
+      },
+      "output": [
+        {
+          "result": {
+            "title": "First"
+          },
+          "text": "---\ntype: drill-irac\nsubject: \"Torts\"\nstatus: active\n---\n# First\n\nThe prompt of First.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [x] **Ready for grading**\n\n## Your Answer (via Telegram morning)\n\nAn answer.\n"
+        },
+        {
+          "result": {
+            "already_answered": true
+          },
+          "text": null
+        }
+      ]
+    },
+    {
+      "class": "append",
+      "input": {
+        "notes": {
+          "bare": "no marker at all\n",
+          "crlf": "---\r\ntype: drill-irac\r\nsubject: \"Torts\"\r\nstatus: active\r\n---\r\n# A synthetic drill\r\n\r\nThe prompt of A synthetic drill.\r\n<!-- a comment\r\nover lines -->\r\n\r\n## Free Recall\r\n\r\n## Self-Check\r\n\r\n- [ ] the rule stated\r\n- [ ] **Ready for grading**\r\n",
+          "gap": "---\ntype: drill-irac\nsubject: \"Torts\"\nstatus: active\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [ ] **Ready for grading**\n\n\n\n",
+          "notitle": "---\nstatus: active\n---\n- [ ] **Ready for grading**\n",
+          "one": "---\ntype: drill-irac\nsubject: \"Torts\"\nstatus: active\n---\n# First\n\nThe prompt of First.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [ ] **Ready for grading**\n",
+          "two": "---\nsubject: \"Torts\"\nstatus: active\n---\n# Second\n\nThe prompt of Second.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [x] **Ready for grading**\n"
+        },
+        "steps": [
+          {
+            "answer": "  padded  \n",
+            "id": "one",
+            "when": "morning"
+          },
+          {
+            "answer": "again",
+            "id": "one",
+            "when": "evening"
+          }
+        ]
+      },
+      "output": [
+        {
+          "result": {
+            "title": "First"
+          },
+          "text": "---\ntype: drill-irac\nsubject: \"Torts\"\nstatus: active\n---\n# First\n\nThe prompt of First.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [x] **Ready for grading**\n\n## Your Answer (via Telegram morning)\n\npadded\n"
+        },
+        {
+          "result": {
+            "already_answered": true
+          },
+          "text": null
+        }
+      ]
+    },
+    {
+      "class": "append",
+      "input": {
+        "notes": {
+          "bare": "no marker at all\n",
+          "crlf": "---\r\ntype: drill-irac\r\nsubject: \"Torts\"\r\nstatus: active\r\n---\r\n# A synthetic drill\r\n\r\nThe prompt of A synthetic drill.\r\n<!-- a comment\r\nover lines -->\r\n\r\n## Free Recall\r\n\r\n## Self-Check\r\n\r\n- [ ] the rule stated\r\n- [ ] **Ready for grading**\r\n",
+          "gap": "---\ntype: drill-irac\nsubject: \"Torts\"\nstatus: active\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [ ] **Ready for grading**\n\n\n\n",
+          "notitle": "---\nstatus: active\n---\n- [ ] **Ready for grading**\n",
+          "one": "---\ntype: drill-irac\nsubject: \"Torts\"\nstatus: active\n---\n# First\n\nThe prompt of First.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [ ] **Ready for grading**\n",
+          "two": "---\nsubject: \"Torts\"\nstatus: active\n---\n# Second\n\nThe prompt of Second.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [x] **Ready for grading**\n"
+        },
+        "steps": [
+          {
+            "answer": "line one\nline two\n\n",
+            "id": "one",
+            "when": "morning"
+          },
+          {
+            "answer": "again",
+            "id": "one",
+            "when": "evening"
+          }
+        ]
+      },
+      "output": [
+        {
+          "result": {
+            "title": "First"
+          },
+          "text": "---\ntype: drill-irac\nsubject: \"Torts\"\nstatus: active\n---\n# First\n\nThe prompt of First.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [x] **Ready for grading**\n\n## Your Answer (via Telegram morning)\n\nline one\nline two\n"
+        },
+        {
+          "result": {
+            "already_answered": true
+          },
+          "text": null
+        }
+      ]
+    },
+    {
+      "class": "append",
+      "input": {
+        "notes": {
+          "bare": "no marker at all\n",
+          "crlf": "---\r\ntype: drill-irac\r\nsubject: \"Torts\"\r\nstatus: active\r\n---\r\n# A synthetic drill\r\n\r\nThe prompt of A synthetic drill.\r\n<!-- a comment\r\nover lines -->\r\n\r\n## Free Recall\r\n\r\n## Self-Check\r\n\r\n- [ ] the rule stated\r\n- [ ] **Ready for grading**\r\n",
+          "gap": "---\ntype: drill-irac\nsubject: \"Torts\"\nstatus: active\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [ ] **Ready for grading**\n\n\n\n",
+          "notitle": "---\nstatus: active\n---\n- [ ] **Ready for grading**\n",
+          "one": "---\ntype: drill-irac\nsubject: \"Torts\"\nstatus: active\n---\n# First\n\nThe prompt of First.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [ ] **Ready for grading**\n",
+          "two": "---\nsubject: \"Torts\"\nstatus: active\n---\n# Second\n\nThe prompt of Second.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [x] **Ready for grading**\n"
+        },
+        "steps": [
+          {
+            "answer": "unicode \u00e9\u4e2d",
+            "id": "one",
+            "when": "morning"
+          },
+          {
+            "answer": "again",
+            "id": "one",
+            "when": "evening"
+          }
+        ]
+      },
+      "output": [
+        {
+          "result": {
+            "title": "First"
+          },
+          "text": "---\ntype: drill-irac\nsubject: \"Torts\"\nstatus: active\n---\n# First\n\nThe prompt of First.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [x] **Ready for grading**\n\n## Your Answer (via Telegram morning)\n\nunicode \u00e9\u4e2d\n"
+        },
+        {
+          "result": {
+            "already_answered": true
+          },
+          "text": null
+        }
+      ]
+    },
+    {
+      "class": "append",
+      "input": {
+        "notes": {
+          "bare": "no marker at all\n",
+          "crlf": "---\r\ntype: drill-irac\r\nsubject: \"Torts\"\r\nstatus: active\r\n---\r\n# A synthetic drill\r\n\r\nThe prompt of A synthetic drill.\r\n<!-- a comment\r\nover lines -->\r\n\r\n## Free Recall\r\n\r\n## Self-Check\r\n\r\n- [ ] the rule stated\r\n- [ ] **Ready for grading**\r\n",
+          "gap": "---\ntype: drill-irac\nsubject: \"Torts\"\nstatus: active\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [ ] **Ready for grading**\n\n\n\n",
+          "notitle": "---\nstatus: active\n---\n- [ ] **Ready for grading**\n",
+          "one": "---\ntype: drill-irac\nsubject: \"Torts\"\nstatus: active\n---\n# First\n\nThe prompt of First.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [ ] **Ready for grading**\n",
+          "two": "---\nsubject: \"Torts\"\nstatus: active\n---\n# Second\n\nThe prompt of Second.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [x] **Ready for grading**\n"
+        },
+        "steps": [
+          {
+            "answer": "# a heading\n- [ ] **Ready for grading**",
+            "id": "one",
+            "when": "morning"
+          },
+          {
+            "answer": "again",
+            "id": "one",
+            "when": "evening"
+          }
+        ]
+      },
+      "output": [
+        {
+          "result": {
+            "title": "First"
+          },
+          "text": "---\ntype: drill-irac\nsubject: \"Torts\"\nstatus: active\n---\n# First\n\nThe prompt of First.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [x] **Ready for grading**\n\n## Your Answer (via Telegram morning)\n\n# a heading\n- [ ] **Ready for grading**\n"
+        },
+        {
+          "result": {
+            "already_answered": true
+          },
+          "text": null
+        }
+      ]
+    },
+    {
+      "class": "refused",
+      "input": {
+        "notes": {
+          "bare": "no marker at all\n",
+          "crlf": "---\r\ntype: drill-irac\r\nsubject: \"Torts\"\r\nstatus: active\r\n---\r\n# A synthetic drill\r\n\r\nThe prompt of A synthetic drill.\r\n<!-- a comment\r\nover lines -->\r\n\r\n## Free Recall\r\n\r\n## Self-Check\r\n\r\n- [ ] the rule stated\r\n- [ ] **Ready for grading**\r\n",
+          "gap": "---\ntype: drill-irac\nsubject: \"Torts\"\nstatus: active\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [ ] **Ready for grading**\n\n\n\n",
+          "notitle": "---\nstatus: active\n---\n- [ ] **Ready for grading**\n",
+          "one": "---\ntype: drill-irac\nsubject: \"Torts\"\nstatus: active\n---\n# First\n\nThe prompt of First.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [ ] **Ready for grading**\n",
+          "two": "---\nsubject: \"Torts\"\nstatus: active\n---\n# Second\n\nThe prompt of Second.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [x] **Ready for grading**\n"
+        },
+        "steps": [
+          {
+            "answer": "late",
+            "id": "two",
+            "when": "noon"
+          },
+          {
+            "answer": "x",
+            "id": "nope",
+            "when": "noon"
+          },
+          {
+            "answer": "x",
+            "id": "..",
+            "when": "noon"
+          },
+          {
+            "answer": "a",
+            "id": "crlf",
+            "when": "night"
+          },
+          {
+            "answer": "b",
+            "id": "bare",
+            "when": "night"
+          },
+          {
+            "answer": "c",
+            "id": "notitle",
+            "when": "night"
+          },
+          {
+            "answer": "d",
+            "id": "gap",
+            "when": "night"
+          }
+        ]
+      },
+      "output": [
+        {
+          "result": {
+            "already_answered": true
+          },
+          "text": null
+        },
+        {
+          "result": {
+            "none": true
+          },
+          "text": null
+        },
+        {
+          "result": {
+            "none": true
+          },
+          "text": null
+        },
+        {
+          "result": {
+            "title": "A synthetic drill"
+          },
+          "text": "---\ntype: drill-irac\nsubject: \"Torts\"\nstatus: active\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [x] **Ready for grading**\n\n## Your Answer (via Telegram night)\n\na\n"
+        },
+        {
+          "result": {
+            "title": "bare"
+          },
+          "text": "no marker at all\n\n## Your Answer (via Telegram night)\n\nb\n"
+        },
+        {
+          "result": {
+            "title": "notitle"
+          },
+          "text": "---\nstatus: active\n---\n- [x] **Ready for grading**\n\n## Your Answer (via Telegram night)\n\nc\n"
+        },
+        {
+          "result": {
+            "title": "A synthetic drill"
+          },
+          "text": "---\ntype: drill-irac\nsubject: \"Torts\"\nstatus: active\n---\n# A synthetic drill\n\nThe prompt of A synthetic drill.\n<!-- a comment\nover lines -->\n\n## Free Recall\n\n## Self-Check\n\n- [ ] the rule stated\n- [x] **Ready for grading**\n\n## Your Answer (via Telegram night)\n\nd\n"
+        }
+      ]
+    }
+  ],
+  "function": "vault_bridge.append_drill_answer",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Calls the append once per step, returning each result and the note's text after; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_110.py",
+  "registry_sha256": "d058393f8eb4b64bb586d0f495e756d6bb23e9dfee189e8f89def4160897befe",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

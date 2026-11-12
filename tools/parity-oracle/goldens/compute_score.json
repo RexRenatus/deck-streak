@@ -1,0 +1,530 @@
+{
+  "adapter": "with_a_breakdown",
+  "cases": [
+    {
+      "class": "tie",
+      "input": {
+        "base_minutes": 5.0,
+        "base_reviews": 10.0,
+        "metrics": {
+          "answered": 0,
+          "graduations": 3,
+          "review_count": 0,
+          "reviews": 0,
+          "seconds": 0.0,
+          "true_retention": 0.0
+        },
+        "snapshot": {
+          "backlog": 0,
+          "due_today": 0,
+          "leech_active": 5
+        },
+        "streak_days": 0
+      },
+      "output": {
+        "consistency": 0.0,
+        "grade_emoji": "\ud83e\udd76",
+        "grade_label": "COLD",
+        "mastery": 85.0,
+        "retention": 0.0,
+        "total": 8,
+        "volume": 0.0,
+        "workload": 0.0
+      }
+    },
+    {
+      "class": "historical",
+      "input": {
+        "base_minutes": 5.0,
+        "base_reviews": 10.0,
+        "metrics": {
+          "answered": 0,
+          "graduations": 3,
+          "review_count": 0,
+          "reviews": 0,
+          "seconds": 0.0,
+          "true_retention": 0.0
+        },
+        "snapshot": null,
+        "streak_days": 4
+      },
+      "output": {
+        "consistency": 4.8,
+        "grade_emoji": "\ud83e\udd76",
+        "grade_label": "COLD",
+        "mastery": 0.0,
+        "retention": 0.0,
+        "total": 2,
+        "volume": 0.0,
+        "workload": 0.0
+      }
+    },
+    {
+      "input": {
+        "base_minutes": 5.0,
+        "base_reviews": 80.0,
+        "metrics": {
+          "answered": 9,
+          "graduations": 2,
+          "review_count": 33,
+          "reviews": 75,
+          "seconds": 0.0,
+          "true_retention": 100.0
+        },
+        "snapshot": {
+          "backlog": 0,
+          "due_today": 73,
+          "leech_active": 0
+        },
+        "streak_days": 26
+      },
+      "output": {
+        "consistency": 100.0,
+        "grade_emoji": "\ud83d\udd25",
+        "grade_label": "ON FIRE",
+        "mastery": 66.66666666666666,
+        "retention": 100.0,
+        "total": 75,
+        "volume": 45.0,
+        "workload": 31.132075471698112
+      }
+    },
+    {
+      "input": {
+        "base_minutes": 7.25,
+        "base_reviews": 12,
+        "metrics": {
+          "answered": 0,
+          "graduations": 3,
+          "review_count": 0,
+          "reviews": 0,
+          "seconds": 0.0,
+          "true_retention": 0.0
+        },
+        "snapshot": {
+          "backlog": 40,
+          "due_today": 74,
+          "leech_active": 6
+        },
+        "streak_days": 13
+      },
+      "output": {
+        "consistency": 15.6,
+        "grade_emoji": "\ud83e\udd76",
+        "grade_label": "COLD",
+        "mastery": 82.0,
+        "retention": 0.0,
+        "total": 13,
+        "volume": 0.0,
+        "workload": 0.0
+      }
+    },
+    {
+      "input": {
+        "base_minutes": 30.0,
+        "base_reviews": 12,
+        "metrics": {
+          "answered": 21,
+          "graduations": 5,
+          "review_count": 42,
+          "reviews": 75,
+          "seconds": 1234.25,
+          "true_retention": 0.0
+        },
+        "snapshot": {
+          "backlog": 40,
+          "due_today": 66,
+          "leech_active": 6
+        },
+        "streak_days": 5
+      },
+      "output": {
+        "consistency": 76.0,
+        "grade_emoji": "\u26a0\ufe0f",
+        "grade_label": "SHAKY",
+        "mastery": 82.0,
+        "retention": 0.0,
+        "total": 52,
+        "volume": 100.0,
+        "workload": 30.888888888888893
+      }
+    },
+    {
+      "input": {
+        "base_minutes": 30.0,
+        "base_reviews": 12,
+        "metrics": {
+          "answered": 1,
+          "graduations": 1,
+          "review_count": 1,
+          "reviews": 1,
+          "seconds": 0.0,
+          "true_retention": 0.0
+        },
+        "snapshot": {
+          "backlog": 3,
+          "due_today": 32,
+          "leech_active": 4
+        },
+        "streak_days": 16
+      },
+      "output": {
+        "consistency": 89.2,
+        "grade_emoji": "\ud83e\udd76",
+        "grade_label": "COLD",
+        "mastery": 21.33333333333333,
+        "retention": 35.0,
+        "total": 39,
+        "volume": 4.0,
+        "workload": 2.43030303030303
+      }
+    },
+    {
+      "input": {
+        "base_minutes": 5.0,
+        "base_reviews": 10.0,
+        "metrics": {
+          "answered": 0,
+          "graduations": 5,
+          "review_count": 0,
+          "reviews": 0,
+          "seconds": 0.0,
+          "true_retention": 0.0
+        },
+        "snapshot": {
+          "backlog": 0,
+          "due_today": 29,
+          "leech_active": 9
+        },
+        "streak_days": 15
+      },
+      "output": {
+        "consistency": 18.0,
+        "grade_emoji": "\ud83e\udd76",
+        "grade_label": "COLD",
+        "mastery": 73.0,
+        "retention": 0.0,
+        "total": 13,
+        "volume": 0.0,
+        "workload": 0.0
+      }
+    },
+    {
+      "input": {
+        "base_minutes": 30.0,
+        "base_reviews": 12,
+        "metrics": {
+          "answered": 39,
+          "graduations": 5,
+          "review_count": 38,
+          "reviews": 160,
+          "seconds": 600.0,
+          "true_retention": 40.0
+        },
+        "snapshot": {
+          "backlog": 3,
+          "due_today": 82,
+          "leech_active": 9
+        },
+        "streak_days": 28
+      },
+      "output": {
+        "consistency": 100.0,
+        "grade_emoji": "\u26a0\ufe0f",
+        "grade_label": "SHAKY",
+        "mastery": 73.0,
+        "retention": 0.0,
+        "total": 59,
+        "volume": 100.0,
+        "workload": 31.066666666666663
+      }
+    },
+    {
+      "input": {
+        "base_minutes": 7.25,
+        "base_reviews": 80.0,
+        "metrics": {
+          "answered": 4,
+          "graduations": 3,
+          "review_count": 4,
+          "reviews": 4,
+          "seconds": 59.5,
+          "true_retention": 40.0
+        },
+        "snapshot": {
+          "backlog": 0,
+          "due_today": 118,
+          "leech_active": 11
+        },
+        "streak_days": 8
+      },
+      "output": {
+        "consistency": 79.6,
+        "grade_emoji": "\u26a0\ufe0f",
+        "grade_label": "SHAKY",
+        "mastery": 70.0,
+        "retention": 35.0,
+        "total": 41,
+        "volume": 6.777011494252873,
+        "workload": 3.278688524590164
+      }
+    },
+    {
+      "input": {
+        "base_minutes": 7.25,
+        "base_reviews": 10.0,
+        "metrics": {
+          "answered": 1,
+          "graduations": 1,
+          "review_count": 1,
+          "reviews": 1,
+          "seconds": 0.0,
+          "true_retention": 88.8
+        },
+        "snapshot": {
+          "backlog": 0,
+          "due_today": 55,
+          "leech_active": 2
+        },
+        "streak_days": 5
+      },
+      "output": {
+        "consistency": 76.0,
+        "grade_emoji": "\u26a0\ufe0f",
+        "grade_label": "SHAKY",
+        "mastery": 27.33333333333333,
+        "retention": 78.11111111111111,
+        "total": 46,
+        "volume": 4.8,
+        "workload": 1.7857142857142856
+      }
+    },
+    {
+      "class": "historical",
+      "input": {
+        "base_minutes": 30.0,
+        "base_reviews": 80.0,
+        "metrics": {
+          "answered": 0,
+          "graduations": 5,
+          "review_count": 0,
+          "reviews": 0,
+          "seconds": 0.0,
+          "true_retention": 0.0
+        },
+        "snapshot": null,
+        "streak_days": 25
+      },
+      "output": {
+        "consistency": 30.0,
+        "grade_emoji": "\ud83e\udd76",
+        "grade_label": "COLD",
+        "mastery": 0.0,
+        "retention": 0.0,
+        "total": 13,
+        "volume": 0.0,
+        "workload": 0.0
+      }
+    },
+    {
+      "class": "historical",
+      "input": {
+        "base_minutes": 5.0,
+        "base_reviews": 33.5,
+        "metrics": {
+          "answered": 3,
+          "graduations": 3,
+          "review_count": 85,
+          "reviews": 160,
+          "seconds": 59.5,
+          "true_retention": 0.0
+        },
+        "snapshot": null,
+        "streak_days": 35
+      },
+      "output": {
+        "consistency": 100.0,
+        "grade_emoji": "\ud83d\udd25",
+        "grade_label": "ON FIRE",
+        "mastery": 0.0,
+        "retention": 35.0,
+        "total": 77,
+        "volume": 100.0,
+        "workload": 0.0
+      }
+    },
+    {
+      "class": "historical",
+      "input": {
+        "base_minutes": 30.0,
+        "base_reviews": 33.5,
+        "metrics": {
+          "answered": 0,
+          "graduations": 0,
+          "review_count": 0,
+          "reviews": 0,
+          "seconds": 0.0,
+          "true_retention": 0.0
+        },
+        "snapshot": null,
+        "streak_days": 21
+      },
+      "output": {
+        "consistency": 25.2,
+        "grade_emoji": "\ud83e\udd76",
+        "grade_label": "COLD",
+        "mastery": 0.0,
+        "retention": 0.0,
+        "total": 11,
+        "volume": 0.0,
+        "workload": 0.0
+      }
+    },
+    {
+      "class": "historical",
+      "input": {
+        "base_minutes": 5.0,
+        "base_reviews": 12,
+        "metrics": {
+          "answered": 0,
+          "graduations": 0,
+          "review_count": 0,
+          "reviews": 0,
+          "seconds": 0.0,
+          "true_retention": 0.0
+        },
+        "snapshot": null,
+        "streak_days": 1
+      },
+      "output": {
+        "consistency": 1.2,
+        "grade_emoji": "\ud83e\udd76",
+        "grade_label": "COLD",
+        "mastery": 0.0,
+        "retention": 0.0,
+        "total": 1,
+        "volume": 0.0,
+        "workload": 0.0
+      }
+    },
+    {
+      "class": "historical",
+      "input": {
+        "base_minutes": 7.25,
+        "base_reviews": 12,
+        "metrics": {
+          "answered": 30,
+          "graduations": 0,
+          "review_count": 30,
+          "reviews": 30,
+          "seconds": 0.0,
+          "true_retention": 40.0
+        },
+        "snapshot": null,
+        "streak_days": 33
+      },
+      "output": {
+        "consistency": 100.0,
+        "grade_emoji": "\u2705",
+        "grade_label": "SOLID",
+        "mastery": 0.0,
+        "retention": 0.0,
+        "total": 64,
+        "volume": 100.0,
+        "workload": 0.0
+      }
+    },
+    {
+      "class": "historical",
+      "input": {
+        "base_minutes": 5.0,
+        "base_reviews": 12,
+        "metrics": {
+          "answered": 8,
+          "graduations": 3,
+          "review_count": 53,
+          "reviews": 160,
+          "seconds": 600.0,
+          "true_retention": 0.0
+        },
+        "snapshot": null,
+        "streak_days": 6
+      },
+      "output": {
+        "consistency": 77.2,
+        "grade_emoji": "\u26a0\ufe0f",
+        "grade_label": "SHAKY",
+        "mastery": 0.0,
+        "retention": 0.0,
+        "total": 55,
+        "volume": 100.0,
+        "workload": 0.0
+      }
+    },
+    {
+      "class": "historical",
+      "input": {
+        "base_minutes": 30.0,
+        "base_reviews": 12,
+        "metrics": {
+          "answered": 1,
+          "graduations": 4,
+          "review_count": 1,
+          "reviews": 1,
+          "seconds": 600.0,
+          "true_retention": 40.0
+        },
+        "snapshot": null,
+        "streak_days": 24
+      },
+      "output": {
+        "consistency": 98.8,
+        "grade_emoji": "\u26a0\ufe0f",
+        "grade_label": "SHAKY",
+        "mastery": 0.0,
+        "retention": 35.0,
+        "total": 58,
+        "volume": 14.666666666666666,
+        "workload": 0.0
+      }
+    },
+    {
+      "class": "historical",
+      "input": {
+        "base_minutes": 30.0,
+        "base_reviews": 12,
+        "metrics": {
+          "answered": 0,
+          "graduations": 0,
+          "review_count": 0,
+          "reviews": 0,
+          "seconds": 0.0,
+          "true_retention": 0.0
+        },
+        "snapshot": null,
+        "streak_days": 11
+      },
+      "output": {
+        "consistency": 13.2,
+        "grade_emoji": "\ud83e\udd76",
+        "grade_label": "COLD",
+        "mastery": 0.0,
+        "retention": 0.0,
+        "total": 6,
+        "volume": 0.0,
+        "workload": 0.0
+      }
+    }
+  ],
+  "function": "scoring.compute_score",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Builds a DailyMetrics holding the case's reviews, review count, seconds, answered, retention and graduations, and a CardStateSnapshot holding its due today, backlog and leeches or none, each zero elsewhere, calls the score and returns every ScoreBreakdown field; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_071.py",
+  "registry_sha256": "f1c7ec842fede7f22e07a58b4c7043d57049f0b0c78a9419b6c7d77f2cdf2402",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COUNT(*) AS \"rows!: i64\" FROM minutes_log WHERE study_day <= ?1",
+  "describe": {
+    "columns": [
+      {
+        "name": "rows!: i64",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "198eebdff3b6daf7a862a5a826a57fc8a314f12855ade8ca68f6bb86e2ecd177"
+}

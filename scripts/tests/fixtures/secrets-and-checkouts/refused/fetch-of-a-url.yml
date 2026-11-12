@@ -1,0 +1,25 @@
+name: planted
+
+# A planted workflow (SPEC-034 A10): git pointed at another repository's URL, once on one line and
+# once on a line continued with a backslash. The names are synthetic.
+# scripts/tests/test_ci_workflows.py judges it; nothing runs it.
+on:
+  pull_request:
+    branches: [dev]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@0123456789abcdef0123456789abcdef01234567
+        with:
+          persist-credentials: false
+      - name: another repository's branch, by its URL
+        run: git fetch https://github.com/example-org/other-repository.git main
+      - name: the same, on a continued line
+        run: |
+          git pull --ff-only \
+            https://github.com/example-org/other-repository.git main

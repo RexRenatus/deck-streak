@@ -8,11 +8,12 @@ decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 
 ## Context and Problem Statement
 
-The predecessor's lane health was sound as a verdict but loud as a practice: every night the owner
-did not study, a correct refusal reached Telegram as "topics failed tonight", outside the quiet-hours
-policy and on top of a health page, and its telemetry lived on a metrics endpoint the owner never
-opens. DeckStreak's readings refuse for honest reasons (a failed sync, a config fault, a pause, no new
-cards). Which of them page, through which path, how often, and where does the owner see the rest?
+The predecessor's lane health was sound as a verdict but loud as a practice: a refused topic
+produced a coalesced failure message by code path, outside the quiet-hours policy and on top of a
+health page, so an absent owner read as a failure. Its telemetry lived on a metrics endpoint the
+owner never opens. DeckStreak's readings refuse for honest reasons (a failed sync, a config fault,
+a pause, no new cards). Which of them page, through which path, how often, and where does the
+owner see the rest?
 
 ## Decision Drivers
 
@@ -24,7 +25,7 @@ cards). Which of them page, through which path, how often, and where does the ow
 ## Considered Options (the alternatives it was chosen against)
 
 - Page only `dark`, `stale`, `armed_and_refusing` and each could-not-tell class, as an `alert` occasion through the router, deduplicated per state and study day; run the check after each generation and at the hourly dead-man watch; show the last run, the states, the census and 30 days of cost on an owner-only status panel — chosen: every page is actionable, none repeats within a study day, and the facts are where the owner looks.
-- Keep the predecessor's coalesced per-run failure message — rejected because it paged an absent owner as a failure every night.
+- Keep the predecessor's coalesced per-run failure message — rejected because it reports an absent owner as a failure.
 - Page every refusing topic separately — rejected because one broken sync would send one page per topic.
 - Send pages outside the router, straight to the alert unit — rejected because they would escape the decision ledger and its dedupe, and the charter routes every message through one router.
 - Keep the telemetry on a metrics endpoint only — rejected because the owner does not read it; the panel is the owner's surface, and a metrics endpoint can be added beside it.

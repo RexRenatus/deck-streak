@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO language_progress (course, name, flag, mastery_pct, current_band, mature_cards, total_cards, current_unit, bands, updated_at, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?10) ON CONFLICT (course) DO UPDATE SET name = excluded.name, flag = excluded.flag, mastery_pct = excluded.mastery_pct, current_band = excluded.current_band, mature_cards = excluded.mature_cards, total_cards = excluded.total_cards, current_unit = excluded.current_unit, bands = excluded.bands, updated_at = excluded.updated_at",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 10
+    },
+    "nullable": []
+  },
+  "hash": "597f22e2b92969402e23a0cba2679e8de35e7e5978c144876399825d7190e444"
+}

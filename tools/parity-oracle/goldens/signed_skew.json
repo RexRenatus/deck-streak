@@ -1,0 +1,214 @@
+{
+  "cases": [
+    {
+      "class": "wrap",
+      "input": {
+        "a_min": 0,
+        "b_min": 0
+      },
+      "output": 0
+    },
+    {
+      "class": "wrap",
+      "input": {
+        "a_min": 720,
+        "b_min": 0
+      },
+      "output": -720
+    },
+    {
+      "class": "wrap",
+      "input": {
+        "a_min": 0,
+        "b_min": 720
+      },
+      "output": -720
+    },
+    {
+      "class": "wrap",
+      "input": {
+        "a_min": 719,
+        "b_min": 0
+      },
+      "output": 719
+    },
+    {
+      "class": "wrap",
+      "input": {
+        "a_min": 721,
+        "b_min": 0
+      },
+      "output": -719
+    },
+    {
+      "class": "wrap",
+      "input": {
+        "a_min": 1439,
+        "b_min": 0
+      },
+      "output": -1
+    },
+    {
+      "class": "wrap",
+      "input": {
+        "a_min": 0,
+        "b_min": 1439
+      },
+      "output": 1
+    },
+    {
+      "class": "negative",
+      "input": {
+        "a_min": -1,
+        "b_min": 0
+      },
+      "output": -1
+    },
+    {
+      "class": "negative",
+      "input": {
+        "a_min": 0,
+        "b_min": -1441
+      },
+      "output": 1
+    },
+    {
+      "class": "negative",
+      "input": {
+        "a_min": 2000,
+        "b_min": -30
+      },
+      "output": 590
+    },
+    {
+      "class": "negative",
+      "input": {
+        "a_min": -720,
+        "b_min": 720
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "a_min": 1405,
+        "b_min": 309
+      },
+      "output": -344
+    },
+    {
+      "input": {
+        "a_min": 532,
+        "b_min": 1380
+      },
+      "output": 592
+    },
+    {
+      "input": {
+        "a_min": 1301,
+        "b_min": 207
+      },
+      "output": -346
+    },
+    {
+      "input": {
+        "a_min": 670,
+        "b_min": 1173
+      },
+      "output": -503
+    },
+    {
+      "input": {
+        "a_min": 346,
+        "b_min": 55
+      },
+      "output": 291
+    },
+    {
+      "input": {
+        "a_min": 842,
+        "b_min": 833
+      },
+      "output": 9
+    },
+    {
+      "input": {
+        "a_min": 153,
+        "b_min": 211
+      },
+      "output": -58
+    },
+    {
+      "input": {
+        "a_min": 256,
+        "b_min": 653
+      },
+      "output": -397
+    },
+    {
+      "input": {
+        "a_min": 971,
+        "b_min": 1189
+      },
+      "output": -218
+    },
+    {
+      "input": {
+        "a_min": 920,
+        "b_min": 843
+      },
+      "output": 77
+    },
+    {
+      "input": {
+        "a_min": 427,
+        "b_min": 409
+      },
+      "output": 18
+    },
+    {
+      "input": {
+        "a_min": 649,
+        "b_min": 1280
+      },
+      "output": -631
+    },
+    {
+      "input": {
+        "a_min": 1395,
+        "b_min": 687
+      },
+      "output": 708
+    },
+    {
+      "input": {
+        "a_min": 673,
+        "b_min": 875
+      },
+      "output": -202
+    },
+    {
+      "input": {
+        "a_min": 189,
+        "b_min": 1285
+      },
+      "output": 344
+    },
+    {
+      "input": {
+        "a_min": 1060,
+        "b_min": 1007
+      },
+      "output": 53
+    }
+  ],
+  "function": "timebase.signed_skew_minutes",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_027.py",
+  "registry_sha256": "ac5bdf68d64e1d17d9f6b93a5f237600e878d693b9d4c61f9655dbd37d8d6540",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

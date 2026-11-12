@@ -1,0 +1,90 @@
+{
+  "_": "The inputs and the frame CSS are written by hand; cards is the engine's render, captured once and compared by crates/engine-core/tests/review_templates.rs, which never writes this file, and web/app/src/lib/study/review-templates.test.ts serves it to the review screen (SPEC-372 R1, ADR-383 D1 and D2).",
+  "notetypes": [
+    {
+      "name": "Template frame cloze",
+      "stock": "Cloze",
+      "css": ".card {\r\n  font-family: arial;\r\n  font-size: 20px;\r\n  text-align: center;\r\n}\r\n\r\n.cloze {\r\n  font-weight: bold;\r\n  color: blue;\r\n}\r.nightMode .cloze {\n  color: lightblue;\n}\n",
+      "templates": [
+        {
+          "name": "Cloze",
+          "question": "{{cloze:Text}}",
+          "answer": "{{cloze:Text}}<br>\n{{Back Extra}}"
+        }
+      ]
+    },
+    {
+      "name": "Template frame reversed",
+      "stock": "Basic (and reversed card)",
+      "css": ".card {\n  font-family: serif;\n  font-size: 18px;\n}\n\nhr#answer {\n  border-top: 1px solid gray;\n}\n",
+      "templates": [
+        {
+          "name": "Card 1",
+          "question": "{{Front}}",
+          "answer": "{{FrontSide}}\n\n<hr id=answer>\n\n{{Back}}"
+        },
+        {
+          "name": "Card 2",
+          "question": "{{Back}}",
+          "answer": "{{FrontSide}}\n\n<hr id=answer>\n\n{{Front}}"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    {
+      "name": "cloze",
+      "notetype": "Template frame cloze",
+      "fields": [
+        "The {{c1::dog}} chases the {{c2::cat}}.",
+        "an extra line"
+      ]
+    },
+    {
+      "name": "reversed",
+      "notetype": "Template frame reversed",
+      "fields": [
+        "der Hund",
+        "the dog"
+      ]
+    }
+  ],
+  "frame_css": {
+    "Template frame cloze": ".card {\n  font-family: arial;\n  font-size: 20px;\n  text-align: center;\n}\n\n.cloze {\n  font-weight: bold;\n  color: blue;\n}\n.nightMode .cloze {\n  color: lightblue;\n}\n",
+    "Template frame reversed": ".card {\n  font-family: serif;\n  font-size: 18px;\n}\n\nhr#answer {\n  border-top: 1px solid gray;\n}\n"
+  },
+  "cards": [
+    {
+      "answer": "The <span class=\"cloze\" data-ordinal=\"1\">dog</span> chases the <span class=\"cloze-inactive\" data-ordinal=\"2\">cat</span>.<br>\nan extra line",
+      "card_css": ".card {\r\n  font-family: arial;\r\n  font-size: 20px;\r\n  text-align: center;\r\n}\r\n\r\n.cloze {\r\n  font-weight: bold;\r\n  color: blue;\r\n}\r.nightMode .cloze {\n  color: lightblue;\n}\n",
+      "face_css": ".card {\r\n  font-family: arial;\r\n  font-size: 20px;\r\n  text-align: center;\r\n}\r\n\r\n.cloze {\r\n  font-weight: bold;\r\n  color: blue;\r\n}\r.nightMode .cloze {\n  color: lightblue;\n}\n",
+      "note": "cloze",
+      "ordinal": 0,
+      "question": "The <span class=\"cloze\" data-cloze=\"dog\" data-ordinal=\"1\">[...]</span> chases the <span class=\"cloze-inactive\" data-ordinal=\"2\">cat</span>."
+    },
+    {
+      "answer": "The <span class=\"cloze-inactive\" data-ordinal=\"1\">dog</span> chases the <span class=\"cloze\" data-ordinal=\"2\">cat</span>.<br>\nan extra line",
+      "card_css": ".card {\r\n  font-family: arial;\r\n  font-size: 20px;\r\n  text-align: center;\r\n}\r\n\r\n.cloze {\r\n  font-weight: bold;\r\n  color: blue;\r\n}\r.nightMode .cloze {\n  color: lightblue;\n}\n",
+      "face_css": ".card {\r\n  font-family: arial;\r\n  font-size: 20px;\r\n  text-align: center;\r\n}\r\n\r\n.cloze {\r\n  font-weight: bold;\r\n  color: blue;\r\n}\r.nightMode .cloze {\n  color: lightblue;\n}\n",
+      "note": "cloze",
+      "ordinal": 1,
+      "question": "The <span class=\"cloze-inactive\" data-ordinal=\"1\">dog</span> chases the <span class=\"cloze\" data-cloze=\"cat\" data-ordinal=\"2\">[...]</span>."
+    },
+    {
+      "answer": "der Hund\n\n<hr id=answer>\n\nthe dog",
+      "card_css": ".card {\n  font-family: serif;\n  font-size: 18px;\n}\n\nhr#answer {\n  border-top: 1px solid gray;\n}\n",
+      "face_css": ".card {\n  font-family: serif;\n  font-size: 18px;\n}\n\nhr#answer {\n  border-top: 1px solid gray;\n}\n",
+      "note": "reversed",
+      "ordinal": 0,
+      "question": "der Hund"
+    },
+    {
+      "answer": "the dog\n\n<hr id=answer>\n\nder Hund",
+      "card_css": ".card {\n  font-family: serif;\n  font-size: 18px;\n}\n\nhr#answer {\n  border-top: 1px solid gray;\n}\n",
+      "face_css": ".card {\n  font-family: serif;\n  font-size: 18px;\n}\n\nhr#answer {\n  border-top: 1px solid gray;\n}\n",
+      "note": "reversed",
+      "ordinal": 1,
+      "question": "the dog"
+    }
+  ]
+}

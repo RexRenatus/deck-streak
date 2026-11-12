@@ -1,0 +1,174 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S34001-THE-SERVER-RUNS-AS-THE-SYNC-USER",
+        "deploy/systemd/deck-streak-sync-server.service",
+        "User=deck-streak-sync\n",
+        "User=deck-streak\n",
+        "the sync server runs as the sync family's own user, never as DeckStreak's (SPEC-340 R2)",
+        "test_deploy_templates.TheSyncServerRunsAsItsOwnUnit.test_the_sync_family_runs_as_its_own_user"
+      ],
+      [
+        "S34002-THE-DATABASE-RUN-ARCHIVES-NOTHING",
+        "deploy/scripts/backup.py",
+        "    return run(args.database, args.backups, args.keep, now)\n",
+        "    archive(args.snapshots, os.environ)\n    return run(args.database, args.backups, args.keep, now)\n",
+        "the database's daily run leaves the sync server's generation to the archive unit and archives nothing itself (SPEC-340 R3)",
+        "test_backup_units.SyncWindow.test_the_sync_archive_checks_archives_copies_offsite_and_keeps_three"
+      ],
+      [
+        "S34003-THE-SYNC-DRILL-NEEDS-ITS-SNAPSHOTS",
+        "deploy/scripts/restore-drill.sh",
+        "[ -d \"$snapshots\" ] || { echo \"restore-drill: no snapshot directory\" >&2; exit 1; }",
+        "[ -d \"$snapshots\" ] || { echo \"restore-drill: no snapshot directory\" >&2; exit 0; }",
+        "the sync drill fails when there is no snapshot directory to restore from (SPEC-340 R4)",
+        "test_backup_units.SyncWindow.test_the_sync_drill_runs_as_its_own_unit"
+      ],
+      [
+        "S34004-THE-BACKUP-REACHES-NO-NETWORK",
+        "deploy/systemd/deck-streak-backup.service",
+        "RestrictAddressFamilies=AF_UNIX\n",
+        "RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6\n",
+        "the database's backup unit opens local sockets only, since the offsite copy is the archive unit's (SPEC-340 R3)",
+        "test_backup_units.SyncWindow.test_the_archive_runs_as_its_own_unit_after_the_window"
+      ],
+      [
+        "S34005-THE-SERVER-DENIES-EVERY-OTHER-PEER",
+        "deploy/systemd/deck-streak-sync-server.service",
+        "IPAddressDeny=any",
+        "IPAddressDeny=",
+        "the sync server's peers are loopback alone: every other address is denied (SPEC-340 R8)",
+        "test_deploy_templates.TheSyncServerRunsAsItsOwnUnit.test_the_sync_server_reaches_loopback_peers_only"
+      ],
+      [
+        "S34006-THE-ROUNDS-HAVE-A-FLOOR",
+        "deploy/scripts/sync-server.sh",
+        "i=[6-9][0-9]{5}",
+        "i=[1-9][0-9]{5}",
+        "the launcher admits no hash of fewer rounds than the house's shape (SPEC-340 R10)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_admits_only_the_house_hash_shape"
+      ],
+      [
+        "S34007-THE-ROUNDS-HAVE-A-CEILING",
+        "deploy/scripts/sync-server.sh",
+        "[0-9]{5}(,l=32)",
+        "[0-9]{5,6}(,l=32)",
+        "the launcher admits no hash of more rounds than the house's shape (SPEC-340 R10)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_admits_only_the_house_hash_shape"
+      ],
+      [
+        "S34008-THE-SALT-IS-SIXTEEN-BYTES",
+        "deploy/scripts/sync-server.sh",
+        "[A-Za-z0-9+/]{21}[AQgw]",
+        "[A-Za-z0-9+/]+",
+        "the launcher admits a 16-byte salt alone, the house's shape (SPEC-340 R10)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_admits_only_the_house_hash_shape"
+      ],
+      [
+        "S34009-THE-DIGEST-IS-THIRTY-TWO-BYTES",
+        "deploy/scripts/sync-server.sh",
+        "[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]",
+        "[A-Za-z0-9+/]+",
+        "the launcher admits a 32-byte digest alone, the house's shape (SPEC-340 R10)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_admits_only_the_house_hash_shape"
+      ],
+      [
+        "S34011-THE-LOG-WRITES-NO-HEADER",
+        "deploy/caddy/deck-streak.caddy",
+        "request>headers delete\n",
+        "request>headers>Cookie delete\n",
+        "the edge's log of the sync route writes no request header (SPEC-340 R6)",
+        "test_deploy_templates.TheCaddyBlock.test_the_sync_route_alone_is_logged_without_its_key"
+      ],
+      [
+        "S34012-THE-LOG-WRITES-NO-KEY",
+        "deploy/caddy/deck-streak.caddy",
+        "delete k\n",
+        "delete key\n",
+        "the edge's log of the sync route removes the `k` parameter from the path (SPEC-340 R6)",
+        "test_deploy_templates.TheCaddyBlock.test_the_sync_route_alone_is_logged_without_its_key"
+      ],
+      [
+        "S34013-THE-SERVER-GETS-NO-WEB-COOKIE",
+        "deploy/caddy/deck-streak.caddy",
+        "header_up -Cookie\n",
+        "header_up -X-Unused\n",
+        "the sync route passes no web cookie up to the sync server (SPEC-340 R9)",
+        "test_deploy_templates.TheCaddyBlock.test_the_sync_route_carries_no_web_cookie"
+      ],
+      [
+        "S34014-THE-BAN-COUNTS-A-REFUSED-LOGIN",
+        "deploy/fail2ban/filter.d/deck-streak-sync.conf",
+        "\".*\"status\":403",
+        "\".*\"status\":4[0-9][0-9]",
+        "the ban filter counts a refused login alone, never any other client error (SPEC-340 R5)",
+        "test_sync_ban.TheSyncBanJail.test_the_filter_matches_a_refused_sync_login_and_nothing_else"
+      ],
+      [
+        "S34015-THE-BAN-COUNTS-THE-LOGIN-ROUTE",
+        "deploy/fail2ban/filter.d/deck-streak-sync.conf",
+        "(?:h|%%68)(?:o|%%6[Ff])(?:s|%%73)(?:t|%%74)(?:K|%%4[Bb])(?:e|%%65)(?:y|%%79)",
+        "[A-Za-z0-9%%]+",
+        "the ban filter counts a refusal at the login route alone, never at another sync route (SPEC-340 R5)",
+        "test_sync_ban.TheSyncBanJail.test_the_filter_matches_a_refused_sync_login_and_nothing_else"
+      ],
+      [
+        "S34016-THE-AUDIT-CHECKS-ADVISORIES",
+        "scripts/audit-sync-server.sh",
+        "check advisories\n",
+        "check bans\n",
+        "the audit runs the advisory check, not another of cargo-deny's checks (SPEC-340 R7)",
+        "test_audit_sync_server.TheAuditReadsThePin.test_the_audit_checks_the_pinned_commits_advisories_under_the_forks_lockfile"
+      ],
+      [
+        "S34017-THE-AUDIT-USES-THE-FORKS-LOCKFILE",
+        "scripts/audit-sync-server.sh",
+        " --locked --config",
+        " --config",
+        "the audit resolves the graph under the fork's own lockfile (SPEC-340 R7)",
+        "test_audit_sync_server.TheAuditReadsThePin.test_the_audit_checks_the_pinned_commits_advisories_under_the_forks_lockfile"
+      ],
+      [
+        "S34018-THE-AUDIT-NEEDS-A-FULL-COMMIT",
+        "scripts/audit-sync-server.sh",
+        "'[0-9a-f]{40}'",
+        "'[0-9a-f]{7,40}'",
+        "the audit refuses a pin that is not a full commit before it fetches anything (SPEC-340 R7)",
+        "test_audit_sync_server.TheAuditReadsThePin.test_a_short_commit_is_refused_before_any_fetch"
+      ],
+      [
+        "S34019-A-SEALED-FILE-BEGINS-WITH-THE-HEADER",
+        "deploy/scripts/backup.py",
+        "SEAL_HEADER = b\"age-encryption.org/v1\\n\"",
+        "SEAL_HEADER = b\"\"",
+        "a sealed file that does not begin with the format's header is refused, and nothing is copied (SPEC-340 R12)",
+        "test_backup_units.SyncWindow.test_the_offsite_copy_is_sealed_and_never_plain"
+      ],
+      [
+        "S34020-AN-UNSET-SEAL-IS-REFUSED-FIRST",
+        "deploy/scripts/backup.py",
+        "    if not seal:\n",
+        "    if not seal and False:\n",
+        "an unset seal is refused before the generation is touched, so nothing is copied and the generation waits (SPEC-340 R12)",
+        "test_backup_units.SyncWindow.test_the_offsite_copy_is_sealed_and_never_plain"
+      ],
+      [
+        "S34021-THE-SEALED-FILES-ARE-REMOVED",
+        "deploy/scripts/backup.py",
+        "            Path(f\"{plain}.age\").unlink(missing_ok=True)\n",
+        "            Path(f\"{plain}.age\").exists()\n",
+        "the sealed files are removed after the copy, whatever it does (SPEC-340 R12)",
+        "test_backup_units.SyncWindow.test_the_offsite_copy_is_sealed_and_never_plain"
+      ],
+      [
+        "S34022-THE-LENGTH-IS-THIRTY-TWO",
+        "deploy/scripts/sync-server.sh",
+        "(,l=32)?",
+        "(,l=[0-9]+)?",
+        "the launcher admits a length of thirty-two alone, or none: the house's shape (SPEC-340 R10)",
+        "test_sync_server_launcher.TheLauncherStartsTheServerWithHashedUsers.test_the_launcher_admits_only_the_house_hash_shape"
+      ]
+    ]
+  }
+}

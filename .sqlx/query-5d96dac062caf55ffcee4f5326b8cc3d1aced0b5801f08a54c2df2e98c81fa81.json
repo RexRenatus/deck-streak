@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COALESCE(attachment, stem || '.md') AS \"name!: String\"\n           FROM inbox_captures WHERE stem = ?1",
+  "describe": {
+    "columns": [
+      {
+        "name": "name!: String",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "5d96dac062caf55ffcee4f5326b8cc3d1aced0b5801f08a54c2df2e98c81fa81"
+}

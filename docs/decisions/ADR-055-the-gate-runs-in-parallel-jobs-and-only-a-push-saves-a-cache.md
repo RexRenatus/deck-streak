@@ -1,0 +1,360 @@
+---
+status: accepted
+date: "2026-09-27"
+decision-makers: "@RexRenatus (owner, who approved the CI-speed package), the DeckStreak builder"
+---
+
+# The gate runs in four parallel jobs, and only a push to dev or main saves a cache
+
+## Context and Problem Statement
+
+CI ran the whole local gate as one job: 4m57s for a code pull request, 2m43s for a docs-only one and
+3m53s for a push to `dev`, with every Rust dependency compiled from nothing on every run (SPEC-038
+section 1). The owner approved a package to make it fast: a Rust cache saved only from `dev` and
+`main`, the gate split into parallel jobs, the pack rows run in parallel, superseded pull-request
+runs cancelled, Playwright's browser cached, and per-stage timings. The target is a warm code pull
+request in about a minute and a half.
+
+How should the gate be split so that `check.sh` stays the one source of truth, which stage belongs
+where when a stage's tools span jobs, and how are caches kept safe on a public repository whose pull
+requests can come from forks?
+
+## Decision Drivers
+
+- `check.sh` is the gate, locally and in CI (ADR-017); a job runs stages, never its own commands.
+- No stage may drop out of CI silently, and a missing tool must fail a stage by name.
+- A cache is trusted input to the next run; a pull request's code must never write one that `dev`
+  reads.
+- A push to `dev` or `main` must always be judged; only a superseded pull-request run may be
+  cancelled.
+- zizmor stays clean; every action is pinned by its full commit SHA; the token stays read-only.
+
+## Considered Options (the alternatives it was chosen against)
+
+- A split `actions/cache/restore` and `actions/cache/save` pair for the Rust cache: chosen, because the key is written in `ci.yml`, where a test pins it to the toolchain pin and the lockfile, and the save's `if:` states the owner's rule where anyone can read it.
+- `Swatinem/rust-cache` with `save-if`: rejected, because its key is composed inside the action, so no test can pin it to the toolchain pin and the lockfile, and it adds a third-party action with write access to the cache.
+- `actions/cache` as one step: rejected, because it saves in its post step on every event, pull requests included.
+- No Rust cache: rejected, because clippy, nextest and the doctests then compile every dependency on every run, 65 s before Anki's engine and many minutes after it (ADR-022).
+- A key with the commit in it, saved by every push: rejected, because each push would upload a new multi-gigabyte entry into a 10 GB repository budget, evicting the entries pull requests restore.
+- Saving `target/` whole: rejected, because 1.0 of its 1.9 GiB is the workspace's own artifacts, which a fresh checkout rebuilds anyway (Cargo judges a path package by its sources' modification times), so `cargo clean --workspace` runs first.
+- Keeping `setup-node`'s `cache: pnpm`: rejected, because it saves the pnpm store from pull-request runs; a restore and save pair under the same rule as every other cache replaces it.
+- The four jobs the owner named, `rust`, `web`, `packs` and `hygiene`, each calling `bash scripts/check.sh` once with its stages: chosen, because each job then installs only its own tools, and `check.sh` still decides what every stage does.
+- A matrix over stage groups: rejected, because each group needs different tools, so every step would carry a condition on the matrix value, and the check names would change to `gate (rust)` and so on.
+- One workflow file per job: rejected, because `needs` cannot cross workflows, so the aggregate `ci` could not need them.
+- Sharding the pack rows across several jobs: rejected, because each shard pays a checkout and a runner start-up, and a bounded pool inside one job gives the same speed.
+- Folding each stage's tool check into the stage, and dropping the `toolchain` stage: chosen, because a missing tool then fails the stage that needs it, by name and with its install hint, in whichever job or machine runs it, and every stage fits exactly one job.
+- Keeping `toolchain` and running it in every job: rejected, because it checks every tool, and no job holds them all, so it would fail in each of them.
+- A `toolchain` stage that takes the stages to check as arguments: rejected, because a second list of which tools each stage needs would drift from the stages themselves.
+- Splitting the `audit` stage into `audit-rust` and `audit-web`: chosen, because `cargo deny` belongs with the Rust toolchain and `pnpm audit` with Node's, so each half runs in the job that already has its tool.
+- Placing the whole `audit` stage in the job that has both tools: rejected, because that job would have to install the other toolchain too, which is what the split removes.
+- A bounded thread pool in `scripts/pack-rows.py`, the smaller of 8 and the CPUs available by default: chosen, because every row is already its own process, so threads only wait on them, and results are gathered in row order.
+- A process pool: rejected, because it would add a second process per row for no gain, since each row already runs in a process of its own.
+- An unbounded pool: rejected, because about 400 rows would start about 400 interpreters at once.
+- Asynchronous subprocesses: rejected, because their timeout and kill behaviour differ from `subprocess.run`'s, which the per-row timeouts rely on.
+- One concurrency group per pull request with `cancel-in-progress` for pull requests, and a group of its own for each push: chosen, because a newer push to a pull request cancels the run it supersedes, and a push to `dev` or `main` can never be cancelled or replaced while it waits.
+- One group per ref with `cancel-in-progress: false`, the old setting: rejected, because GitHub keeps one pending run per group and cancels the older pending run when a third arrives, so a push to `dev` could be cancelled.
+- `queue: max` for pushes: rejected, because it cannot be combined with `cancel-in-progress: true` in one block, and it would still hold each push behind the one before it for no benefit.
+- Caching Playwright's browser, keyed on the locked Playwright version, installed on a miss: chosen, because the owner asked for it, and the key moves exactly when the browser build does.
+- Downloading the browser on every run, as Playwright's own CI guide advises: rejected, because the owner chose the cache; the guide's reasons (a restore costs about what a download does, and the system libraries cannot be cached) are measured in SPEC-038 section 7.
+- The checksum-verified `protoc` 31.1 download #204 wrote for the gate job, carried into every job that compiles Rust, and its check carried into the stages that compile the engine: chosen, because ADR-022 pins that version and digest, the download takes about a second, and a build a guard test runs can reach the engine too.
+- `protoc` in the `rust` job only: rejected, because `hygiene`'s guard tests build Rust as well, and a job that compiles Rust without the engine's build tool fails only when a test first reaches the engine.
+- Ubuntu's `protobuf-compiler` package: rejected, because Ubuntu 24.04's is 3.21.12, not the 31.1 Anki's build pins (ADR-022).
+- A third-party action that installs `protoc`: rejected, because it adds an action with the job's token to do what a checked download already does.
+- Caching `protoc`: rejected, because its download takes about a second, less than a cache restore.
+- Stage logs under `${{ runner.temp }}/check-logs`: chosen, because `actions/upload-artifact` skips hidden paths by default, which is why `.check-logs/` never uploaded, and a directory outside the checkout is read by no stage's scan.
+- Keeping `.check-logs/` and setting `include-hidden-files: true`: rejected, because the logs would still sit inside the checkout, where `gitleaks dir` and the scrub walk the tree.
+
+## Decision Outcome
+
+Chosen options, as SPEC-038's requirements state them:
+
+- **The jobs.** `rust` (`fmt clippy test doctest audit-rust`), `web` (`web audit-web`), `packs`
+  (`packs`) and `hygiene` (`python scrub secrets`) need nothing and start together. The aggregate `ci`
+  needs them, `workflow-lint` and `base-is-dev`. The required contexts and the rulesets are
+  unchanged. `hygiene` and `packs` check out the whole history, because they read it.
+- **The stages.** Every stage checks its own tools first; `toolchain` is gone; `audit` is
+  `audit-rust` and `audit-web`. `check.sh` appends each stage's seconds, verdict and exit to
+  `timings.tsv` in its log directory.
+- **The caches.** Rust (`~/.cargo` registry and git database, and `target/`, keyed on the toolchain
+  pin and `Cargo.lock`), the pnpm store (keyed on `pnpm-lock.yaml`) and Playwright's browser (keyed on
+  the locked Playwright version) are each restored with `actions/cache/restore` and saved with
+  `actions/cache/save` only when a push to `dev` or `main` missed its exact key. A pull request
+  restores and never saves. The Rust job cleans the workspace's own artifacts before its save, and
+  sets `CARGO_INCREMENTAL=0`. `hygiene`, whose python stage builds a Rust example (SPEC-042's rails
+  test), restores the Rust cache too and never saves it.
+- **The engine's build tool.** `rust` and `hygiene` install `protoc` 31.1 before their stages,
+  checked against ADR-022's digest, and `clippy`, `test` and `doctest` check it (or `PROTOC`) by
+  name. `engine-measure.yml` is unchanged.
+- **The pool.** `pack-rows.py --jobs N`, by default the smaller of 8 and the CPUs available, with
+  the same timeouts, verdicts, exit codes and row order as the serial runner.
+- **Concurrency.** Pull-request runs group by their ref and cancel the run they supersede; each push
+  has a group of its own.
+
+### Consequences
+
+- Good, because the gate's wall time becomes its slowest job's, and a warm Rust job compiles only
+  the workspace.
+- Good, because a pull request, a fork's included, can read `dev`'s caches and write none.
+- Good, because a missing tool now names itself in the stage that needs it, and the stage logs reach
+  the run at last.
+- Bad, because four jobs pay four start-ups, checkouts and setups.
+- Bad, because the first run after a lockfile or toolchain change is cold until a push to `dev`
+  saves its cache.
+
+### Confirmation
+
+- `scripts/tests/test_ci_workflows.py`: A1 to A4, A7, A10, A11 and A13 of SPEC-038.
+- `scripts/tests/test_check_gate.py`: A5, A6 and A12.
+- `scripts/tests/test_pack_wiring.py`: A8 and A9.
+- zizmor over `.github/workflows`, in the `workflow-lint` job.
+
+## What would make this wrong
+
+- GitHub lets a pull request's run write a cache that its base branch reads. The save rule would
+  still hold, but the scope that backs it up would be gone.
+- GitHub changes how a concurrency group treats pending runs. A10's scenarios model today's rule.
+- A runner image drops a library the headless shell needs, and `--with-deps` must return.
+
+## More Information
+
+SPEC-038; issue #207; ADR-017 (hosted CI); ADR-035 (required checks from GitHub Actions); ADR-004
+(the pack runner); ADR-022 (the engine's build budget).
+
+## Note, 2026-09-28: the engine's slow tests run in a job of their own
+
+Recorded by SPEC-038's amendment (its section 8, R13 to R16, A16 to A20). This decision is
+unchanged; the note adds a fifth gate job to it.
+
+With Anki's engine in the workspace (SPEC-022), a warm code pull request's `rust` job took 4m19s and
+4m22s (runs 36368711222, attempt 2, and 36371239856), and 139 s of each was one run: SPEC-022's sync
+and budget tests, eight of them taking 20 to 81 s each. The other 116 tests of the workspace took
+under 6 s together. It was decided, under the owner's delegation, that a parallel `engine` job runs
+those tests and `rust` runs the rest, and that every test stays required, because `ci` needs both.
+
+Chosen, and what each was chosen against:
+
+- One nextest filterset, `ENGINE_TESTS` in `scripts/check.sh`, defined once: `test` runs
+  `not (<the set>)` and a new `test-engine` stage runs the set, with commands that differ in nothing
+  else. It was chosen because the partition is then complementary by construction, and one test
+  proves that both stages read the one definition (A16).
+  - A nextest profile per stage, each with its own `default-filter`: rejected, because the set
+    would be written twice, once negated, and the copies could drift apart.
+  - A test group assigned by an override, selected with `group(engine)`: rejected, because a test
+    group also caps its tests' concurrency, and `group()` cannot be judged per binary, so every
+    binary would be run to list its tests.
+  - Building `test-engine` for `deck-streak-ingest` alone (`-p`): rejected, because Cargo unifies
+    features over the packages it builds. That build resolves `tokio` and what depends on it
+    differently from the `--workspace` build the cache holds, so it would recompile them on every
+    warm run (SPEC-038 section 8).
+  - Naming the eight slow tests one by one: rejected, because a test added to those binaries would
+    land in `rust`, and a renamed one would move without a word. Whole binaries keep their tests.
+  - The whole `deck-streak-ingest` package: rejected, because its other tests take under a second
+    and gain nothing from a second runner.
+- A fifth gate job, `engine`, that starts with the other four, restores the Rust cache and never
+  saves it, and is a need of `ci`. It was chosen because a warm pull request then waits for the
+  slower of `rust` and `engine`, not for their sum.
+  - Leaving the tests in `rust`: rejected, because that is the 4m19s path.
+  - Skipping `engine` when a pull request leaves the engine alone, or moving its tests out of the
+    gate: rejected, because every test stays required, and `ci` fails on a skipped need.
+  - Letting `engine` save the cache as well: rejected, because two jobs saving one key race, and
+    `rust` builds every target, so its save already holds what `engine` restores.
+- Two slices of the engine set, one per runner, from one matrix: each leg hands `test-engine` its
+  own slice, `m/N` with N the matrix's size, and `test-engine` passes it to nextest's
+  `--partition slice:m/N`. It was chosen by measurement (SPEC-038 section 8). Measured twice each,
+  one engine job took 3m39s and 3m38s, and the slower of two slices 2m32s both times, which took the
+  gate, measured without each job's wait for a runner, from 3m41s to 2m35s and 2m36s.
+  - One engine job: rejected, because its run of the whole set, about 140 s, stayed the floor.
+  - Three or more slices: rejected, because a slice cannot finish before its slowest test, 74 to
+    82 s, and each slice costs another runner.
+  - A slice stated per job, in two job blocks: rejected, because the count would be written in two
+    places; a matrix derives it (`strategy.job-total`), and A20 holds it to 1 to N.
+
+### Consequences of the note
+
+- Good, because a warm code pull request's gate took 2m35s to 3m09s in seven runs, measured without
+  each job's wait for a runner, against 4m26s before the engine job and 3m41s with one, and every
+  test still decides `ci`.
+- Bad, because each run pays two more runners, each with its own setup, restore and test build: the
+  Rust jobs took 6m23s and 7m00s of runner time together, against 4m22s for the single `rust` job,
+  for a gate 1m51s and 1m50s shorter.
+- Bad, because the local gate runs one more cargo command, which recompiles the engine once more
+  (ADR-022's finding).
+
+## Note, 2026-09-28: the web audit judges every dependency the repository resolves
+
+Recorded by SPEC-058 (#260). This decision is unchanged; the note decides which dependencies
+`audit-web` judges, the bar it holds, and how its verdict is read.
+
+Every package of the JavaScript workspace is a development dependency, because the Mini App ships
+as a static build (ADR-005). At `dev` 16ed8e2, `pnpm audit --json` examined 428 packages and
+`pnpm audit --prod --json` examined 0. pnpm states that count only in its JSON report, as
+`metadata.totalDependencies`, and exits 0 when no advisory was found, a run that examined nothing
+included.
+
+Chosen, and what each was chosen against:
+
+- `pnpm audit` over every dependency class, with no flag that narrows them, so it audits the
+  dependencies, devDependencies and optionalDependencies alike. It was chosen because a class left
+  out is a class nobody audits, and pnpm's default already takes all three.
+  - `--prod`, as before: rejected, because this workspace declares no production dependency, so it
+    examines no package.
+  - `--dev` alone, or naming each class: rejected, because a flag that names classes audits only
+    the classes it names, and a runtime dependency added later would go unjudged.
+- The level `low`, stated on the command line and defined once in `check.sh`. It was chosen
+  because it is the bar `audit-rust` holds, where `deny.toml` makes every RustSec advisory an
+  error, and an advisory of any grade is fixed the same way, by an update or a scoped override.
+  - `moderate` or `high`: rejected, because the two audits would then hold different bars, and an
+    advisory below the chosen grade would never fail the gate.
+  - No level on the command line: rejected, because a workspace's `audit.level` then decides it.
+    Measured on a scratch copy of the workspace, `audit.level: critical` left the report with no
+    advisory and pnpm exited 0; `--audit-level low` on the command line restored every advisory.
+- A verdict read from pnpm's JSON report by `scripts/audit-web-verdict.py`, which prints the
+  examined count, reads 0 as VOID, and fails on every advisory at or above the level. It was
+  chosen because the count lives only in the report, and pnpm's exit cannot tell a run that found
+  nothing from one that examined nothing.
+  - pnpm's exit code alone: rejected, because it is 0 for a run that examined nothing.
+  - The verdict as a Node script: rejected, because the stage's tests run in the `hygiene` job,
+    whose Node is the runner image's own rather than the pinned Node 24 the stage checks for, so
+    no test could run the stage there. `python3` is on both jobs' runner images, and is the
+    language of the gate's other tools.
+  - pnpm's table output: rejected, because it prints no count.
+  - A verdict that also counts `metadata.vulnerabilities`: rejected, because that count ignores
+    `audit.ignore`, so it would refuse an exception the workspace records. None is recorded today,
+    and one would be a decision of its own.
+- `--ignore-registry-errors`: rejected, because it turns a registry failure into exit 0, a pass
+  that examined nothing. A registry failure reads VOID.
+
+### Consequences of the 2026-09-28 note
+
+- Good, because the audit covers the development dependencies too, and refuses a run that examined
+  nothing.
+- Good, because both halves of the audit hold one bar, every advisory.
+- Bad, because an advisory in a build or test tool fails every pull request until an update or an
+  override fixes it, as #259 does for #254 and #255.
+- Bad, because a registry outage fails the stage, VOID, until a re-run.
+
+## Amendment: every pull request into dev is reviewed for the dependencies it adds
+
+Recorded by SPEC-038, its section 17. This decision is unchanged; the amendment decides how the
+dependencies a pull request adds or changes are judged beside `audit-web` and `audit-rust`.
+
+Chosen, and what each was chosen against:
+
+- GitHub's dependency review action, in a workflow of its own that runs on every pull request
+  into `dev`, its one job a required check by name. It was chosen because it reads the licence and
+  the known advisories of every dependency a pull request adds or changes, npm packages and pinned
+  actions among them, which neither audit reads.
+  - A job in `ci.yml` that the aggregate `ci` needs: rejected, because open pull requests change
+    `ci.yml`, and the aggregate's `needs` line is a line they would share; a workflow of its own
+    changes no line of `ci.yml`.
+  - A licence checker over the npm lockfile alone: rejected, because it reads neither the actions
+    nor any advisory.
+- Every scope, `runtime, development, unknown`, at the action's lowest severity, `low`. It was
+  chosen because both audits already hold every advisory as an error.
+  - `runtime` alone: rejected, because every package of the JavaScript workspace is a development
+    dependency, so it would review no npm package.
+  - A severity floor above `low`: rejected, because an advisory below it would never fail the
+    review, and the two audits would hold a different bar.
+- No list of allowed advisories, no package admitted under any licence, no `warn-only` and no
+  `continue-on-error`. It was chosen because an advisory with no fix is fixed by us, by an update,
+  a replacement or a patched copy of our own, and is never ignored.
+  - A list of allowed advisories for an advisory with no fix: rejected, for that reason.
+  - `warn-only`, or `continue-on-error` on the step: rejected, because the job would then pass
+    with a finding.
+- An allow list, the `allow` list of `deny.toml`, read by the census from `deny.toml` itself. It
+  was chosen because one licence policy then holds every ecosystem, and neither list can move
+  alone.
+  - A deny list of licences known to be incompatible: rejected, because a licence nobody listed
+    would pass.
+  - A list of its own for npm and the actions: rejected, because two lists drift.
+- Rust's crates reviewed too, on the same list. It was chosen because the action reads every
+  ecosystem the dependency graph reads, and none of its inputs leaves one out.
+  - `warn-only`, with a step of our own that fails on every finding outside Cargo: rejected,
+    because the action's own verdict would then be set aside for a filter of ours.
+  - Exempting each crate by its package URL: rejected, because it is a list of exceptions, and it
+    reaches no advisory.
+
+### Consequences of the amendment
+
+- Good, because an npm package or an action that carries a known advisory, or a licence outside
+  the list, fails the pull request that adds or changes it, whatever its scope.
+- Good, because the review names each advisory's first patched version, the fix the policy asks
+  for.
+- Bad, because a crate is judged twice, by `audit-rust` over the whole graph and by the review
+  when a pull request changes it; a change of `frankenstein`, which `deny.toml` admits under its
+  own licence for that crate alone, reads red in the review until a decision of its own.
+- Bad, because a dependency whose licence is outside the list reads red when a pull request
+  updates it, until the list grows by a reviewed change to `deny.toml`.
+- Bad, because the job reads the dependency graph through the network, so an outage of the graph
+  fails the job until a re-run.
+
+### What would make this amendment wrong
+
+- The action gains an input that leaves an ecosystem out: Rust then goes back to `audit-rust`
+  alone, and this amendment is amended.
+- The review cannot compare a pull request into `dev`, whose base is not the default branch: the
+  job's run on its own pull request is the first measurement of that, and a red there reopens
+  this decision.
+
+## Note: zizmor reads the `.github` directory, so the Dependabot configuration is audited too
+
+Recorded by SPEC-428 and ADR-442 D3. This decision is unchanged. The note moves the operand of the
+`workflow-lint` job's zizmor command from `.github/workflows` to `.github`, so this ADR's
+Confirmation line, "zizmor over `.github/workflows`, in the `workflow-lint` job", now reads as
+zizmor over `.github`, which collects `.github/dependabot.yml` beside every workflow file. The
+job's name, its place among `ci`'s needs and its timeout are unchanged, and zizmor is installed at
+an exact version (ADR-442 D4).
+
+### Consequences of the note
+
+- Good, because a change to the Dependabot configuration is audited on the pull request that
+  makes it.
+- Bad, because a finding on that file fails `workflow-lint`, and so `ci`, until the file is cured.
+
+## Amendment: a scheduled run re-audits dev's dependencies
+
+Recorded by SPEC-038, its section 19. This decision is unchanged; the amendment decides how `dev`
+is audited again between pushes, since both audits read an advisory database when they run.
+
+Chosen, and what each was chosen against:
+
+- A workflow of its own, `advisory-audit.yml`, that runs `audit-rust` and `audit-web` over `dev`
+  once a day and on dispatch, and on no pull request and no push. It was chosen because a new
+  advisory then reads red on a run of its own before a push or a pull request meets it, while no
+  required check and no pull request waits on that run.
+  - A `schedule` trigger on `ci.yml`: rejected, because a scheduled `ci` run executes every job of
+    the gate, the test stages among them, to read two stages again, and open pull requests change
+    `ci.yml`.
+  - A `pull_request` or `push` trigger on the new workflow: rejected, because its jobs would then
+    report on pull requests and pushes beside `ci`'s own audits, which already judge them there.
+- A read-only token, `contents: read`, that no job widens; the run's conclusion and its uploaded
+  stage logs are its result. It was chosen because a scheduled job that writes nothing holds no
+  write token, and the stage logs already name each advisory.
+  - `issues: write`, so that each red run opens an issue for its advisories or comments on the
+    open one: rejected, because it adds a production script that writes from a scheduled job, with
+    its own tests and mutation legs, to say what the red run and its logs already say.
+  - A token of its own, so that the run opens the fix pull request with checks of its own:
+    rejected, because it needs a secret, and no workflow reads one (SPEC-034, its section 7).
+- No `continue-on-error`, no condition on an audit, no advisory ignored and no cache. It was chosen
+  because an advisory with no fix is fixed by us and never ignored, and a run that passed with a
+  finding would hide the advisory it exists to show.
+  - `continue-on-error` on the audit steps, so that the run reads green and only its logs carry
+    the finding: rejected, because the run's conclusion would then never read red.
+
+### Consequences of the amendment
+
+- Good, because a new advisory against `dev`'s lockfiles reads red on the next scheduled run,
+  before a push or a pull request meets it.
+- Good, because the change adds no required check and changes no line of `ci.yml`.
+- Bad, because a schedule runs only from the default branch's copy of a workflow, so the daily run
+  takes effect only when that copy holds the file; until then a dispatch at `dev` runs it.
+- Bad, because both jobs read the network when they run, so an outage of the advisory database or
+  the registry reds the run until a re-run.
+- Bad, because the run files nothing: its red is read only by whoever reads its runs.
+
+### What would make this amendment wrong
+
+- A red scheduled run that nobody reads before a push meets the same advisory: the run then has to
+  write where it is read, and this amendment is amended.
+- The audits gain a source they read when they run that this workflow does not set up: the
+  scheduled run would then judge less than `ci` does, and it is changed to set that source up.

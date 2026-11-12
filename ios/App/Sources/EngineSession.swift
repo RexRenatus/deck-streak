@@ -1,0 +1,393 @@
+import DeckStreakFFI
+import Foundation
+import HarnessWire
+
+/// The engine calls the app makes, by the pairs the adapter's allow-list holds (SPEC-336,
+/// SPEC-347 R1, R7, R8, SPEC-348 R1). The adapter refuses any other pair before the engine sees
+/// it. An answer is not one of them: it goes through the adapter's answer door (SPEC-365 R12).
+enum EngineCall {
+    static let openCollection: (service: UInt32, method: UInt32) = (3, 0)
+    static let deckNames: (service: UInt32, method: UInt32) = (7, 13)
+    static let setCurrentDeck: (service: UInt32, method: UInt32) = (7, 22)
+    static let queuedCards: (service: UInt32, method: UInt32) = (13, 3)
+    static let describeNextStates: (service: UInt32, method: UInt32) = (13, 24)
+    static let syncLogin: (service: UInt32, method: UInt32) = (1, 3)
+}
+
+/// Why the app could not do what it was asked, as the sentence it shows: for a refusal of the
+/// engine's, the engine's own message (R7, R8).
+struct Refusal: Error, Equatable, CustomStringConvertible {
+    let sentence: String
+
+    /// The sentence, so a refusal reads as itself wherever an error is described.
+    var description: String { sentence }
+}
+
+/// A deck as the sidebar lists it: its id, which (7,22) takes, and its name (SPEC-348 R9).
+struct Deck: Hashable, Sendable {
+    let id: Int64
+    let name: String
+}
+
+/// A face as the review screen shows it: the engine's document for the factory's view, the clips
+/// it plays and replays, the media it could not show, and the languages its speech uses, each
+/// once, for the voice picker (SPEC-348 R9, R13, R14); and whether the engine withheld the card,
+/// whose document then holds the ffi's one line in the card's place (SPEC-380 R4, R7).
+struct ReviewFace: Equatable, Sendable {
+    var document: String
+    var autoplay: [ReviewClip]
+    var replay: [ReviewClip]
+    var omitted: [String]
+    var languages: [String]
+    var withheld: Bool
+
+    /// The face before the first card and after the last: nothing to show and nothing to play.
+    static let empty = ReviewFace(
+        document: "", autoplay: [], replay: [], omitted: [], languages: [], withheld: false)
+}
+
+/// One language the current face speaks, with the installed voices the picker offers for it and
+/// the one chosen, nil for the system's default (SPEC-348 R14).
+struct VoiceLanguage: Equatable, Sendable {
+    var language: String
+    var options: [InstalledVoice]
+    var chosen: String?
+}
+
+/// One section of the card info panel as the adapter words it: its heading and its lines, which
+/// the sheet shows and VoiceOver reads as they are (SPEC-507 R13, R16).
+struct CardInfoSection: Equatable, Sendable {
+    var title: String
+    var lines: [String]
+}
+
+/// The one owner of the engine: every engine call runs here, off the main actor, one at a time
+/// (SPEC-347 R7, R8). The actor serialises the calls; the engine itself is `Sendable` because the
+/// adapter's Rust side is `Send + Sync`. The voice choices live here too, beside the collection
+/// and never inside it, because the engine's types stop at this file (SPEC-348 R6, R14).
+actor EngineSession: SyncEngine, DataEngine {
+    /// The engine's red flag, read once from the adapter, so the app holds no copy of the
+    /// core's rule (SPEC-358 R3, ADR-369 O4).
+    nonisolated let red = redFlag()
+    private var engine: Engine?
+    private var choices = VoiceChoices.open(path: "")
+    /// The collection's directory, where the full-sync choice keeps its server copy and its backup
+    /// beside the collection (SPEC-503 R4).
+    private var folder = ""
+
+    /// The adapter's voice qualities, in the order the app numbers them: 0 default, 1 enhanced,
+    /// 2 premium.
+    private static let qualities: [VoiceQuality] = [.default, .enhanced, .premium]
+
+    /// Opens the collection in its directory, beside its media folder, creating the folder when it
+    /// is not there yet (R7). The directory is the one fixed path under Application Support unless
+    /// the launch names another with `-DSCollectionDirectory`, which the adapter judges (SPEC-348
+    /// R7); its refusal reads as its name. The engine creates a collection that is not there yet,
+    /// so a fresh install opens one holding the engine's default deck alone.
+    func open(arguments: [String] = ProcessInfo.processInfo.arguments) throws {
+        let fallback = URL.applicationSupportDirectory.appending(
+            path: "DeckStreak", directoryHint: .isDirectory)
+        let path = try collectionDirectory(
+            fallback: fallback.path(percentEncoded: false), arguments: arguments)
+        let directory = URL(filePath: path, directoryHint: .isDirectory)
+        folder = directory.path(percentEncoded: false)
+        let media = directory.appending(path: "collection.media", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: media, withIntermediateDirectories: true)
+        _ = try call(
+            EngineCall.openCollection,
+            Requests.openCollection(
+                collectionPath: directory.appending(path: "collection.anki2")
+                    .path(percentEncoded: false),
+                mediaFolderPath: media.path(percentEncoded: false),
+                mediaDatabasePath: directory.appending(path: "collection.media.db")
+                    .path(percentEncoded: false)))
+        choices = VoiceChoices.open(
+            path: directory.appending(path: "voice-choices.tsv").path(percentEncoded: false))
+    }
+
+    /// The collection's decks with their ids, filtered decks included, in the engine's order (R7).
+    func decks() throws -> [Deck] {
+        try Responses.deckNames(
+            call(EngineCall.deckNames, Requests.deckNames(includeFiltered: true))
+        )
+        .map { Deck(id: $0.id, name: $0.name) }
+    }
+
+    /// Makes `deck` the current deck (7,22), so the queue is its own (SPEC-348 R9).
+    func setCurrentDeck(_ deck: Deck) throws {
+        _ = try call(EngineCall.setCurrentDeck, Requests.setCurrentDeck(deck.id))
+    }
+
+    /// The queue's head card and its three counts (13,3), fetched one card at a time (R10).
+    func queue() throws -> Queue {
+        try Responses.queue(call(EngineCall.queuedCards, Requests.queuedCards(fetchLimit: 1)))
+    }
+
+    /// The four ratings' intervals for `card`, in the ratings' order (13,24) (R11).
+    func intervals(_ card: QueuedCard) throws -> [String] {
+        try Responses.stringList(
+            call(EngineCall.describeNextStates, Requests.describeNextStates(card)))
+    }
+
+    /// Records the press of `rating` on `card` through the adapter's answer door (R10, SPEC-365
+    /// R12): the press names its card and its grade and hands over the states the card was shown
+    /// with, and the adapter picks the grade's state from them, so the app sends no next state of
+    /// its own.
+    func answer(_ card: QueuedCard, rating: Rating, millisecondsTaken: UInt32) throws {
+        let engine = try started()
+        _ = try refused {
+            try engine.answer(
+                card: card.cardID, grade: Self.grades[Int(rating.rawValue) / 2],
+                states: Data(Requests.describeNextStates(card)),
+                millisecondsTaken: millisecondsTaken)
+        }
+    }
+
+    /// Buries `card` as the user's bury of one card, through the adapter, with the states the card
+    /// was shown with, which the adapter keeps for the bury's undo (SPEC-358 R3, SPEC-515 R2).
+    func bury(_ card: QueuedCard) throws {
+        let engine = try started()
+        try refused {
+            try engine.bury(
+                cardId: card.cardID, states: Data(Requests.describeNextStates(card)))
+        }
+    }
+
+    /// Toggles red on `card` from the flag it carries, through the adapter, and answers the
+    /// card's new flag (SPEC-358 R3): the app builds no request and computes no flag.
+    func flag(_ card: QueuedCard) throws -> UInt32 {
+        let engine = try started()
+        return try refused { try engine.flag(cardId: card.cardID, flag: card.flag) }
+    }
+
+    /// What the adapter would undo now, with its dialog's words, or none and the adapter's
+    /// sentence that says why (SPEC-515 R3, R5). It writes nothing.
+    func undoOffer() throws -> (dialog: UndoDialog?, said: String) {
+        let engine = try started()
+        let offered = try refused { try engine.undoOffer() }
+        return (offered.offer.map(Self.dialog), offered.said)
+    }
+
+    /// The owner's confirmation of `dialog`, which the adapter checks and the core judges at the
+    /// write; the adapter's sentence that says why it was not undone, or empty (SPEC-515 R4, R5).
+    func undo(_ dialog: UndoDialog) throws -> String {
+        let engine = try started()
+        return try refused { try engine.undo(card: dialog.card, step: dialog.step) }.said
+    }
+
+    /// An offer in the app's own terms, field for field.
+    private static func dialog(_ offer: UndoOffer) -> UndoDialog {
+        UndoDialog(
+            card: offer.card, step: offer.step, title: offer.title, lines: offer.lines,
+            keep: offer.keep, confirm: offer.confirm)
+    }
+
+    /// The card info panel's sections for `cardID` (SPEC-507 R12, R13): the adapter reads the
+    /// card's record by the core's two fixed reads and words it, and the app takes each section
+    /// as it is. A card the engine does not hold reads as the adapter's one unreadable line.
+    func cardHealth(_ cardID: Int64) throws -> [CardInfoSection] {
+        let engine = try started()
+        let record = try refused { try engine.cardHealth(cardId: cardID) }
+        return cardHealthLines(health: record).map {
+            CardInfoSection(title: $0.title, lines: $0.lines)
+        }
+    }
+
+    /// The face of `cardID`: its question, or its answer when `answer` is set, with the clips to
+    /// play by themselves when `autoplay` is wished, each line of speech in the voice chosen for
+    /// its language when that voice is installed, else in the installed voice its tag asks for
+    /// (SPEC-348 R5, R13; SPEC-393 R9). It asks for the day face: the screen sets no night classes
+    /// in this part.
+    func face(
+        _ cardID: Int64, answer: Bool, autoplay: Bool, installed: [InstalledVoice]
+    ) throws -> ReviewFace {
+        let engine = try started()
+        let face = try refused {
+            try engine.face(cardId: cardID, answer: answer, night: false, autoplay: autoplay)
+        }
+        let voices = installed.map(Self.voice)
+        let replay = face.replay.map { clip($0, voices) }
+        return ReviewFace(
+            document: face.document,
+            autoplay: face.autoplay.map { clip($0, voices).clip },
+            replay: replay.map { $0.clip },
+            omitted: face.omitted,
+            languages: NSOrderedSet(array: replay.compactMap { $0.language }).array
+                .compactMap { $0 as? String },
+            withheld: face.withheld)
+    }
+
+    /// For each language, the installed voices offered for it and the one chosen (SPEC-348 R14).
+    func voices(_ languages: [String], installed: [InstalledVoice]) -> [VoiceLanguage] {
+        let voices = installed.map(Self.voice)
+        let byIdentifier = Dictionary(
+            installed.map { ($0.identifier, $0) }, uniquingKeysWith: { first, _ in first })
+        return languages.map { language in
+            VoiceLanguage(
+                language: language,
+                options: choices.options(language: language, installed: voices)
+                    .compactMap { byIdentifier[$0.identifier] },
+                chosen: choices.chosen(language: language, installed: voices))
+        }
+    }
+
+    /// Records `identifier` as the voice for `language`, or clears the choice given nil (R14).
+    func choose(voice identifier: String?, language: String) throws {
+        try choices.choose(language: language, identifier: identifier)
+    }
+
+    /// Signs in through the engine and returns the host key its `SyncAuth` carries (R8). The
+    /// password goes into the request and nowhere else.
+    func login(user: String, password: String, endpoint: String) throws -> String {
+        try Responses.syncAuth(
+            call(
+                EngineCall.syncLogin,
+                Requests.syncLogin(username: user, password: password, endpoint: endpoint)))
+    }
+
+    /// A normal sync with the host key the sync section read from the Keychain item, through the
+    /// adapter's sync facade, which reads the service's statement first and sends no media
+    /// (SPEC-503 R2, R3, R5). It answers what the server requires next, as the engine numbers it.
+    func sync(hostKey: String, endpoint: String) throws -> UInt32 {
+        let engine = try started()
+        return try refused { try engine.sync(hostKey: hostKey, endpoint: endpoint) }
+    }
+
+    /// What this device has not synced, read offline by the adapter (SPEC-503 R7).
+    func unsynced() throws -> Unsynced {
+        let engine = try started()
+        let read = try refused { try engine.unsynced() }
+        return Unsynced(reviews: read.reviews, changed: read.changed, schema: read.schema)
+    }
+
+    /// The full-sync choice's counts from what the normal sync required; the adapter keeps the
+    /// server copy in the collection's directory (SPEC-503 R4).
+    func countChoice(hostKey: String, endpoint: String, required: UInt32) throws -> FullSyncStep {
+        let engine = try started()
+        let folder = folder
+        return Self.step(
+            try refused {
+                try engine.fullSyncCount(
+                    hostKey: hostKey, endpoint: endpoint, required: required, folder: folder)
+            })
+    }
+
+    /// The owner's download, the adapter's direction 1, with no snapshot answer: the adapter backs
+    /// up this device's collection into its directory before the write (SPEC-503 R4).
+    func download(hostKey: String, endpoint: String) throws -> FullSyncStep {
+        let engine = try started()
+        let folder = folder
+        return Self.step(
+            try refused {
+                try engine.fullSyncConfirm(
+                    direction: 1, hostKey: hostKey, endpoint: endpoint, snapshotFound: false,
+                    folder: folder)
+            })
+    }
+
+    /// The owner's cancel: the adapter drops the choice's stage and writes nothing.
+    func cancelChoice() {
+        engine?.fullSyncCancel()
+    }
+
+    /// Backs this device's collection up now in the collection's directory, through the adapter
+    /// and the core, and answers the new backup's id; the adapter refuses while a full-sync
+    /// choice is open (SPEC-516 R5).
+    func backUpNow() throws -> String {
+        let engine = try started()
+        let folder = folder
+        return try engine.backUpNow(folder: folder)
+    }
+
+    /// The backups and server copies in the collection's directory, newest first, once the core's
+    /// retention kept three of each kind; while a full-sync choice is open, none is removed
+    /// (SPEC-516 R5).
+    func deviceBackups() throws -> [DeviceCopy] {
+        let engine = try started()
+        let folder = folder
+        return try engine.deviceBackups(folder: folder).map {
+            DeviceCopy(id: $0.id, serverCopy: $0.kind == .serverCopy, ageSeconds: $0.ageSeconds)
+        }
+    }
+
+    /// The bytes of the listed backup `id`; the adapter refuses any id it did not list
+    /// (SPEC-516 R5).
+    func backupBytes(_ id: String) throws -> Data {
+        let engine = try started()
+        let folder = folder
+        return try engine.backupBytes(folder: folder, id: id)
+    }
+
+    /// A choice step in the app's own terms, field for field.
+    private static func step(_ step: ChoiceStep) -> FullSyncStep {
+        FullSyncStep(
+            written: step.written, said: step.said,
+            counts: step.counts.map {
+                FullSyncCounts(upload: $0.upload.map(loss), download: $0.download.map(loss))
+            })
+    }
+
+    /// One direction's losses in the app's own terms.
+    private static func loss(_ loss: ChoiceLoss) -> Loss {
+        Loss(reviews: loss.reviews, cards: loss.cards, notes: loss.notes)
+    }
+
+    /// The engine, started from an empty init message by the first call that needs it.
+    private func started() throws -> Engine {
+        if let engine {
+            return engine
+        }
+        let engine = try Engine(message: Data())
+        self.engine = engine
+        return engine
+    }
+
+    /// One allowed call through the adapter: the request's bytes in, the response's out.
+    private func call(
+        _ pair: (service: UInt32, method: UInt32), _ request: [UInt8]
+    ) throws -> [UInt8] {
+        let engine = try started()
+        return try refused {
+            [UInt8](
+                try engine.run(service: pair.service, method: pair.method, input: Data(request)))
+        }
+    }
+
+    /// The engine's own refusal becomes its message, the sentence the app shows (R7, R8), whether
+    /// it refused a call or a press's answer (SPEC-365 R12).
+    private func refused<Value>(_ work: () throws -> Value) throws -> Value {
+        do {
+            return try work()
+        } catch EngineRefusal.Engine(let error), PressRefusal.Engine(let error) {
+            throw Refusal(sentence: try Responses.engineMessage([UInt8](error)).message)
+        }
+    }
+
+    /// A clip as the player plays it, and the language it speaks, if it speaks.
+    private func clip(_ clip: Clip, _ voices: [Voice]) -> (clip: ReviewClip, language: String?) {
+        switch clip {
+        case .sound(let name, let bytes):
+            return (.sound(name: name, bytes: bytes), nil)
+        case .speech(let text, let language, let rate, let requested):
+            return (
+                .speech(
+                    text: text, language: language, rate: rate,
+                    voice: choices.voiceFor(
+                        language: language, requested: requested, installed: voices)),
+                language
+            )
+        }
+    }
+
+    /// The adapter's grades for the app's two ratings, which number 0 and 2 as the engine's Again
+    /// and Good do: half a rating's number indexes this list, so a press picks its grade with no
+    /// branch of the app's own (SPEC-365 R12).
+    private static let grades: [PressedGrade] = [.again, .good]
+
+    /// An installed voice in the adapter's terms.
+    private static func voice(_ voice: InstalledVoice) -> Voice {
+        Voice(
+            identifier: voice.identifier, name: voice.name, language: voice.language,
+            quality: qualities[min(max(voice.quality, 0), 2)])
+    }
+}

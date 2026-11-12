@@ -1,0 +1,51 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S40300-THE-LAUNCH-TAKES-A-HANDSHAKE-SLOT",
+        "api",
+        "src/session_routes.rs",
+        "async fn validate_launch(\n    _state_change: StateChange,\n    _slot: HandshakeSlot,",
+        "async fn validate_launch(\n    _state_change: StateChange,",
+        "session_routes::launches_and_handshakes_share_the_handshake_bound",
+        "a launch takes a slot from the handshake's own bound, so a flood of forged launches cannot buy unbounded HMAC work, and launches and handshakes count together (SPEC-403 R8)"
+      ],
+      [
+        "S40301-THE-LAUNCH-IS-A-STATE-CHANGE",
+        "api",
+        "src/session_routes.rs",
+        "async fn validate_launch(\n    _state_change: StateChange,",
+        "async fn validate_launch(",
+        "session_routes::a_cross_site_or_non_json_launch_is_refused",
+        "a launch is a JSON request that is not cross-site, refused 403 before the route reads a byte of it (SPEC-403 R8)"
+      ],
+      [
+        "S40302-THE-LAUNCH-BODY-IS-BOUNDED",
+        "api",
+        "src/session_routes.rs",
+        "    let validate = validate_launch.layer(DefaultBodyLimit::max(HANDSHAKE_BODY_LIMIT_BYTES));",
+        "    let validate = validate_launch;",
+        "session_routes::the_launch_body_is_bounded_like_the_handshake",
+        "a launch body is read to the handshake's 16 KiB and not to the shell's 2 MiB; cargo-mutants never lists the layer call (SPEC-403 R8)"
+      ],
+      [
+        "S40303-THE-LAUNCH-PATH-IS-API-LAUNCH",
+        "api",
+        "src/session_routes.rs",
+        "pub const LAUNCH_PATH: &str = \"/api/launch\";",
+        "pub const LAUNCH_PATH: &str = \"/api/launched\";",
+        "session_routes::a_launch_the_gate_admits_is_accepted_with_204_and_opens_no_session",
+        "the launch is validated at /api/launch, the path the start hook posts to; cargo-mutants never mutates a constant (SPEC-403 R8)"
+      ],
+      [
+        "S40304-THE-ROUTER-SERVES-THE-LAUNCH",
+        "api",
+        "src/router.rs",
+        "                .merge(session_routes::launch_routes(access.clone()))\n",
+        "",
+        "session_routes::a_launch_the_gate_admits_is_accepted_with_204_and_opens_no_session",
+        "the launch route is merged into the router beside the session routes, so it is served exactly when they are (SPEC-403 R9)"
+      ]
+    ]
+  }
+}

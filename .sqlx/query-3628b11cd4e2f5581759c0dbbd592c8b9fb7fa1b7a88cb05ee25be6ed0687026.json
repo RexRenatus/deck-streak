@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT source, track, amount AS \"amount!: u32\", closed AS \"closed!: bool\"\n           FROM xp_settlement WHERE study_day = ?1 ORDER BY source, track",
+  "describe": {
+    "columns": [
+      {
+        "name": "source",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "xp_settlement",
+            "name": "source"
+          }
+        }
+      },
+      {
+        "name": "track",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "xp_settlement",
+            "name": "track"
+          }
+        }
+      },
+      {
+        "name": "amount!: u32",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "xp_settlement",
+            "name": "amount"
+          }
+        }
+      },
+      {
+        "name": "closed!: bool",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "xp_settlement",
+            "name": "closed"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "3628b11cd4e2f5581759c0dbbd592c8b9fb7fa1b7a88cb05ee25be6ed0687026"
+}

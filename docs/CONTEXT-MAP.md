@@ -3,18 +3,18 @@
 DeckStreak's bounded contexts, the edges between them, the one name each concept has, and who
 owns every table. This document is **binding** (the ddd pack, ADR-002). The crate graph IS the
 map: each Rust context is one Cargo package, so an import the map does not allow is a compile
-error, and `scripts/ddd-probe.py` holds every manifest equal to the fence below in both
+error, and the box-run ddd probe holds every manifest equal to the fence below in both
 directions. A change that needs an edge the map lacks is a design question, answered by an ADR
 that amends this file in the same change. Never add an edge to make code compile.
 
 ## The map
 
 ```context-map
-deck-streak-kernel        (shared kernel: ids, study day, track, verdict, errors, config, Db, data-rights port)  depends on: nothing
-deck-streak-ingest        (anti-corruption layer for Anki: sync, read, change gate, new-card queue, skip day)  depends on: kernel
+deck-streak-kernel        (shared kernel: ids, study day, track, verdict, errors, config, Db, data-rights port)  depends on: study-day
+deck-streak-ingest        (anti-corruption layer for Anki: sync, read, change gate, new-card queue, skip day)  depends on: kernel, collection, search, anki-format
 deck-streak-identity      (Telegram initData, the owner allow-list, sessions, linked sign-in)  depends on: kernel
 deck-streak-analytics     (daily rollup, per-language stats, five-pillar score, today snapshot)  depends on: kernel, ingest
-deck-streak-progression   (XP ledger and grant port, levels, tiers, badges, records, seasons)  depends on: kernel, ingest
+deck-streak-progression   (XP ledger and grant port, levels, tiers, badges, records, seasons)  depends on: kernel, ingest, xp
 deck-streak-streaks       (language and law streaks, freezes, governor, relight)  depends on: kernel
 deck-streak-curriculum    (Road to C2, CEFR, strands, goal, memory, Can-Do, law track, leeches)  depends on: kernel, ingest
 deck-streak-economy       (coin wallet, the only confiscable stake, loss cap, shop)  depends on: kernel
@@ -33,11 +33,124 @@ deck-streak-privacy       (export, erase and purge over every context's data-rig
 deck-streak-coordination  (use cases and scheduled jobs across contexts)  depends on: kernel, ingest, identity, analytics, progression, streaks, curriculum, economy, quests, habits, focus, discipline, markets, notifications, readings, vault, agent, insights, publishing, privacy
 deck-streak-api           (axum HTTPS adapter for the Mini App)  depends on: kernel, identity, notifications, coordination
 deck-streak-bot           (Telegram Bot API adapter)  depends on: kernel, identity, notifications, coordination
-deck-streak-daemon        (composition root: the deckstreakd binary)  depends on: kernel, ingest, identity, analytics, progression, streaks, curriculum, economy, quests, habits, focus, discipline, markets, notifications, readings, vault, agent, insights, publishing, privacy, coordination, api, bot
+deck-streak-mcp           (MCP adapter: the bearer guard, the server and its tools)  depends on: kernel, coordination
+deck-streak-engine-core   (the engine core: Anki's engine for both clients behind one per-transport table; ADR-356)  depends on: fsrs7, media
+deck-streak-ffi           (the umbrella FFI crate, the app's one Rust static library: the engine's backend behind an allow-list; ADR-345, ADR-357)  depends on: engine-core, collection, media
+deck-streak-fsrs7         (the isolated FSRS-7 scheduler: review history replayed into memory state; ADR-338)  depends on: nothing
+deck-streak-daemon        (composition root: the deckstreakd binary)  depends on: kernel, ingest, identity, analytics, progression, streaks, curriculum, economy, quests, habits, focus, discipline, markets, notifications, readings, vault, agent, insights, publishing, privacy, coordination, api, bot, mcp
 deck-streak-migration     (one-off import of v9's schema 24, planned)  depends on: kernel, analytics, progression, streaks, curriculum, economy, quests, habits, focus, discipline, markets, notifications, readings, vault
+deck-streak-web-engine    (Anki's engine on wasm32 in the web client's Worker: the study calls over OPFS)  depends on: companion, engine-core, media
+deck-streak-push          (APNs and web push senders for a native or web client: provider and VAPID tokens, RFC 8291; ADR-354)  depends on: kernel
+deck-streak-xp            (the per-review XP rule, with no I/O, for the server and both clients; ADR-371)  depends on: nothing
+deck-streak-study-day     (the study day, its instant and its date error, with no I/O, for the server and both clients; ADR-515)  depends on: nothing
+deck-streak-search        (the product's own search: one typed query, a closed grammar and its profiles, an evaluator over rows, with no I/O; ADR-532)  depends on: study-day
+deck-streak-companion     (the scheduling companion's documented interface: schema v1, its codec, the handshake, the decision that fails closed, the Absent default; ADR-519)  depends on: nothing
+deck-streak-companion-slot  (the one substitutable companion body; the public body opens Absent; ADR-519)  depends on: companion
+deck-streak-collection    (the collection store, dormant: one file per user, its one opener, schema and migrations, the append-only review log and its erase gate, the read port and the store's data-rights port; ADR-530)  depends on: media
+deck-streak-anki-format   (anti-corruption layer for Anki's file formats: the defensive opener of every foreign schema-18 file, the read-only row readers and blob views, the schema-18 statements and the wire walk; ADR-622)  depends on: nothing
+deck-streak-media         (a media file known by its SHA-256, certified and imported names, write-once bindings, the one grammar of media names, the sweep plan, with no I/O; ADR-531)  depends on: nothing
+deck-streak-render        (the card renderer: note types, templates, fields, sections and filters drawn into a card's two faces, with DeckStreak's own text for each template problem, with no I/O; ADR-624)  depends on: nothing
+deck-streak-sync          (the sync core: typed operations, one encoding, the hybrid clock, the id allocator, the key, the field merge and the pending queue, with no I/O, for the server and both clients; ADR-527)  depends on: nothing
 miniapp   web/app/src     (the SvelteKit Mini App)  depends on: nothing internal
+ios-harness  ios/  (the SwiftUI harness over deck-streak-ffi's XCFramework; ADR-335)  depends on: nothing internal
 landing   web/site/src    (the Astro landing page, planned)  depends on: nothing internal
 ```
+
+`deck-streak-engine-core` holds Anki's engine, an external crate and not a context, for both
+clients behind one table with a column per transport, and it reaches no DeckStreak table or use
+case (SPEC-345, ADR-356 D1). `deck-streak-ffi` depends on the core, and on the collection store and
+the media core for the face reader over the media store it holds switched off (SPEC-601,
+ADR-621 D6 and D7): it keeps a constant allow-list for a native client, checked first, and reaches the engine only through the core's
+dispatcher on the native transport (SPEC-336, ADR-345 D1; ADR-356 D3). `deck-streak-web-engine`
+reaches it the same way on the web transport, from its `wasm32` table only. The daemon composes
+none of the three: a native client links the adapter into its own binary. The core's edges
+inside the workspace are `deck-streak-fsrs7`, named by its `replay` module alone: the replay of a
+deck set's review history into stock-field values, which writes nothing (SPEC-386, ADR-400 D1),
+and the media core, whose one grammar rewrites a face's media references (SPEC-601, ADR-621 D6
+and D8).
+
+`deck-streak-fsrs7` is the isolated FSRS-7 scheduler (ADR-338): it replays a card's review history
+into FSRS-7 memory state, and it depends on no context and never on the engine. Its one external
+dependency is the upstream scheduler crate at a pinned git revision; the engine keeps the released
+crate, and the lockfile tells the two apart by source (SPEC-342, ADR-353 D1 and D5). Its `measure`
+module is the replay-time harness, which the crate's two examples only call (ADR-353 D6).
+
+`deck-streak-xp` holds progression's per-review XP rule and its table, read from `economy.json`
+(SPEC-360, ADR-371 D1 and D4). It depends on no context and does no I/O, and progression
+translates an ingest review into it at its edge (ADR-371 D2 and D3). The umbrella FFI crate and
+the web engine depend on it when #639 links it (ADR-357 D1).
+
+`deck-streak-study-day` holds the study day the kernel counts in: the rollover rule in a fixed
+offset and its ISO calendar, the instant it is computed from and the error a malformed date gives
+(SPEC-497, ADR-515). It depends on nothing and does no I/O, so both clients can link it without the
+kernel. The kernel depends on it alone and re-exports each item at the path it always had;
+`SystemClock`, the one reader of the system time, stays in the kernel.
+
+`deck-streak-search` is the product's own reading of a search (SPEC-514, ADR-532): one typed query,
+a closed grammar with its profiles and limits, refusals by name that never carry the search, and an
+evaluator over a collection's rows held to the engine's goldens. It depends on `study-day` alone,
+for the engine's day, and does no I/O, so it has no edge to the kernel. Ingest depends on it: the
+skip search is parsed under its skip profile and its holds are joined by structure.
+
+`deck-streak-companion` is the scheduling companion's documented interface (SPEC-501, ADR-519): the
+integer-only schema v1 that crosses between the app and a scheduler outside its public code, the
+frames and their codec, the handshake, and the one decision whose `Ok` lets a due date be written.
+It is `no_std`, depends on nothing and does no I/O, so both clients can link it.
+`deck-streak-companion-slot` is the one body a build substitutes behind that interface, and it
+depends on the interface alone; its public body opens `Absent`, which refuses every request. The
+web engine depends on the interface on every target (SPEC-511, ADR-529 D4): its `companion` module
+decides over the frames of the owner's companion module in the Worker, as the native decision does.
+The engine core and the umbrella FFI crate gain their edges to them in the changes that first use
+them (#997, #998).
+
+`deck-streak-collection` is DeckStreak's own collection store (SPEC-512, ADR-530): one SQLite file
+per user, the same schema on the server and on each device, opened only by its one opener, whose
+pragmas follow the role and which refuses another application's file by its `application_id`. Its
+review log is append-only behind one erase gate, which only its data-rights port opens, and every
+statement it runs is a registered constant its census prepares. It declares `CollectionRead`, the
+read port the server's contexts read a collection through: the store answers it, and ingest's
+schema-18 adapter answers it over Anki's file. It depends only on the media core, for the media
+store's hashes and names (SPEC-601, ADR-621 D6), and reads no clock, so both clients can link it.
+It is dormant: nothing live reads or writes the store, and ingest's live
+readers keep their drivers until the cut-over switches them to the port.
+
+`deck-streak-anki-format` is the anti-corruption layer for Anki's file formats (SPEC-602, ADR-622):
+every foreign schema-18 file, a collection or its media database, opens only through its defensive
+opener, which copies the bytes to a private file under a size bound, opens the copy read-only with
+SQLite's defensive settings and the `unicase` collation (ADR-623), and refuses a file whose digest,
+version, table set or planted objects differ from the schema snapshot before any row is read. It
+reads every row of all fourteen tables as DeckStreak's own types, each blob column as a typed view
+beside its raw bytes, and it holds the schema-18 statements and the wire walk that ingest's adapter
+imports, so ingest still translates Anki's rows into the product's. It depends on nothing and reads
+no clock, so both clients can link it. The store's foreign opener is the one left to re-point to it
+when the read port switches.
+
+`deck-streak-media` is the media core (SPEC-513, ADR-531): a file is known by the SHA-256 of its
+bytes, a certified `ds-` name carries that hash and an imported name is kept as written, a name is
+bound to one hash once, one grammar (the engine's own) finds every media name a note's text and a
+CSS write, and a sweep plan keeps every live, pinned, in-grace and imported file. It depends on the
+workspace's `sha2` alone and does no I/O, so it has no edge to the kernel. A collection implements
+its `MediaIndex` port, and the renderer reads names through its grammar; each gains its edge to it
+in the change that first uses it.
+
+`deck-streak-render` is the card renderer (SPEC-603, ADR-624): a note type's templates are
+tokenized and parsed, and a card's question and answer are drawn from its fields, its sections and
+inverted sections, the special fields, `{{FrontSide}}` and the text filters. Every template problem
+is a class with DeckStreak's own words, and a note type whose templates cannot render is refused
+before any card is drawn. It has no dependency and does no I/O, so the server and both clients link
+one rule. No crate depends on it yet: the first change that calls the renderer gains its edge.
+
+`deck-streak-sync` is the sync core (SPEC-509, ADR-527): the typed operations every device and the
+server write in, their one byte encoding, the hybrid clock and the id allocator beside it, the key
+every party folds by, the rule for concurrent edits that keeps every loser, and a device's queue of
+operations the server has not judged. It depends on nothing and does no I/O: a caller hands in the
+wall clock and the bytes. The server's log, the umbrella FFI crate and the web engine gain their
+edges to it in the changes that first use it (#15).
+
+`deck-streak-push` is an outbound adapter: it builds APNs and web push requests and reports what
+each platform answered, and it depends on the kernel's clock alone (SPEC-343, ADR-354 D3). The
+daemon does not compose it until native push carries the one router (#640), which adds its
+notifications edge and the join in `crates/daemon/src/wiring.rs`.
 
 `deck-streak-migration` and `landing` are PLANNED: they have no code yet, so the probe counts
 them and judges none of their edges until the wave that builds them (W8 and W7).
@@ -50,7 +163,10 @@ The graph has three layers, and an edge only ever points down.
    both need: identifiers, the study day and its 04:00 rollover calendar, the track (language or
    law), the `Verdict` type, the error type, typed configuration and credentials, the clock, the
    SQLite repository base, and the data-rights port every stateful context implements. Domain
-   logic placed in the kernel for convenience is a context hiding in shared code.
+   logic placed in the kernel for convenience is a context hiding in shared code. Beside the
+   kernel sits `xp`, one context's rule published for the clients, which every layer above may
+   depend on and which depends on nothing. Below the kernel sits `study-day`, the study day the
+   kernel re-exports, which the clients may link and which depends on nothing.
 2. **The domain contexts** depend on the kernel, and on `ingest` where they compute from Anki
    reviews, cards or queues. No domain context depends on another domain context. What crosses
    between them (an XP grant after a reading is marked read, a coin fine after a broken
@@ -68,7 +184,7 @@ learns it:
 
 | context | foreign model it translates | what it publishes |
 |---|---|---|
-| `ingest` | Anki's collection schema, its sync protocol, its unicase and protobuf quirks | reviews, cards, notes, decks, the day's new-card queue |
+| `ingest` | Anki's collection schema (its 19 statements held by the schema-18 adapter of the collection's read port, `CollectionRead`), its sync protocol, its unicase and protobuf quirks | reviews, cards, notes, decks, the day's new-card queue |
 | `vault` | the second brain's file contract (paths, frontmatter, rails, temp names) | staged duty runs, reading archive writes, drill and inbox records |
 | `identity` | Telegram's `initData` and user object | the caller, and whether they are the owner |
 | `agent` | the headless Claude Code runner and its output | gated duty outputs, or a fail-closed verdict |
@@ -85,7 +201,7 @@ Astro site (planned).
 ## Ubiquitous language
 
 One concept has one name in the code, the schema and the prose of the context that owns it. The
-lexicon is [LEXICON.md](LEXICON.md); `scripts/ddd-probe.py check lexicon-locks` refuses an
+lexicon is [LEXICON.md](LEXICON.md); the box-run ddd probe's `lexicon-locks` class refuses an
 identifier in a scoped context that says a replaced word.
 
 ## Ownership register
@@ -171,6 +287,96 @@ hours and celebration intensity to `notifications`, chests per day and the vault
 `quests`, tripwire and hard-mode settings to `discipline`, and so on), and each becomes visible on
 the Mini App's settings screen. `cron_fires` stays exempt from export and erase, so an erasure can
 never re-arm the catch-up double-send guard.
+
+### DeckStreak's own tables
+
+The tables DeckStreak's own migrations create, each registered by the SPEC that creates it. Every
+migration lives in the one `migrations/` directory, named `<SPEC number, four digits><sequence, two
+digits>_<owning context>_<slug>.sql` (ADR-020), and `crates/kernel/tests/schema.rs` holds the
+context each migration names equal to the owner this register gives each table it creates.
+
+| table | owning context | created by | export and erase |
+|---|---|---|---|
+| `settings_generation` | `kernel` | `migrations/002001_kernel_settings_generation.sql` (SPEC-020); the courses digest by `migrations/007102_kernel_courses_digest.sql` (SPEC-071) | reset in place: the generation back to 0 and the courses digest cleared |
+| `_sqlx_migrations` | `kernel` | sqlx, when `Db::open` applies the migrations | exempt: the schema version table, which replaces the predecessor's `schema_versions` |
+| `sync_runs` | `ingest` | `migrations/002201_ingest_sync_runs.sql` (SPEC-022) | exported and erased |
+| `ingest_state` | `ingest` | `migrations/002301_ingest_state.sql` (SPEC-023) | reset in place: the anchor, the rescore flag, the refused request (SPEC-128) and the window's base cleared |
+| `skip_days` | `ingest` | `migrations/008301_ingest_skip_days.sql` (SPEC-083) | exported and erased |
+| `skip_card_snapshot` | `ingest` | `migrations/008302_ingest_skip_card_snapshot.sql` (SPEC-083) | exported and erased |
+| `write_class_stop` | `ingest` | `migrations/008303_ingest_write_class_stop.sql` (SPEC-083) | exempt: only the owner's command clears the class's stop, and an erase that cleared it would be a second path |
+| `cron_fires` | `coordination` | `migrations/002701_coordination_cron_fires.sql` (SPEC-027) | exempt: an erase must never re-arm the catch-up double-send guard |
+| `instrument_reports` | `coordination` | `migrations/009401_coordination_instrument_reports.sql` (SPEC-094) | exported and erased |
+| `xp_ledger` | `progression` | `migrations/004001_progression_xp_ledger.sql` (SPEC-040) | exported and erased |
+| `xp_settlement` | `progression` | `migrations/007201_progression_xp_settlement.sql` (SPEC-072) | exported and erased |
+| `buffs` | `progression` | `migrations/007202_progression_buffs.sql` (SPEC-072) | exported and erased |
+| `badges_earned` | `progression` | `migrations/007301_progression_badges_earned.sql` (SPEC-073) | exported and erased |
+| `records` | `progression` | `migrations/007302_progression_records.sql` (SPEC-073) | exported and erased |
+| `streak_state` | `streaks` | `migrations/007601_streaks_state_and_governor.sql` (SPEC-076) | exported and erased: each track reads its start state again |
+| `freeze_events` | `streaks` | `migrations/007601_streaks_state_and_governor.sql` (SPEC-076) | exported and erased |
+| `habit_strength` | `streaks` | `migrations/007601_streaks_state_and_governor.sql` (SPEC-076) | exported and erased |
+| `relight_due` | `streaks` | `migrations/007602_streaks_relight_due.sql` (SPEC-076) | exported and erased |
+| `governor_state` | `streaks` | `migrations/007601_streaks_state_and_governor.sql` (SPEC-076) | reset in place: no anchor, not standby, no notice day |
+| `coin_ledger` | `economy` | `migrations/008201_economy_wallet_and_shop.sql` (SPEC-082) | exported and erased |
+| `economy_state` | `economy` | `migrations/008201_economy_wallet_and_shop.sql` (SPEC-082) | reset in place: no pass and no surcharge |
+| `language_progress` | `curriculum` | `migrations/007701_curriculum_road_to_c2_and_law.sql` (SPEC-077) | exported and erased |
+| `band_milestones` | `curriculum` | `migrations/007701_curriculum_road_to_c2_and_law.sql` (SPEC-077) | exported and erased |
+| `law_dues` | `curriculum` | `migrations/007701_curriculum_road_to_c2_and_law.sql` (SPEC-077) | exported and erased: no row reads as pending |
+| `chests` | `quests` | `migrations/008101_quests_chests_and_tokens.sql` (SPEC-081) | exported and erased |
+| `pity` | `quests` | `migrations/008101_quests_chests_and_tokens.sql` (SPEC-081) | reset in place: both counters to 0 |
+| `xp_tokens` | `quests` | `migrations/008101_quests_chests_and_tokens.sql` (SPEC-081) | exported and erased |
+| `chest_settings` | `quests` | `migrations/008101_quests_chests_and_tokens.sql` (SPEC-081) | reset in place: the defaults (3 chests a day, vaulted from hour 21) |
+| `notification_decisions` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |
+| `notification_deliveries` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |
+| `notification_queue` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |
+| `in_app_feed` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |
+| `notification_settings` | `notifications` | `migrations/004101_notifications_router.sql` (SPEC-041) | exported and erased |
+| `owner_last_message` | `notifications` | `migrations/008401_notifications_owner_last_message.sql` (SPEC-084) | reset in place: no message |
+| `reading_runs` | `readings` | `migrations/004501_readings_topic_days_and_runs.sql` (SPEC-045) | exported and erased |
+| `reading_topic_days` | `readings` | `migrations/004501_readings_topic_days_and_runs.sql` (SPEC-045) | exported and erased |
+| `agent_runs` | `agent` | `migrations/004301_agent_runs.sql` (SPEC-043) | exported and erased |
+| `daily_rollup` | `analytics` | `migrations/007101_analytics_daily_rollup.sql` (SPEC-071) | exported and erased |
+| `daily_lang_stats` | `analytics` | `migrations/007101_analytics_daily_rollup.sql` (SPEC-071) | exported and erased |
+| `drill_answers` | `vault` | `migrations/011001_vault_drills.sql` (SPEC-110) | exported and erased; an erase never deletes a note (ADR-118) |
+| `drill_grades` | `vault` | `migrations/011001_vault_drills.sql` (SPEC-110) | exported and erased; an erase never deletes a note (ADR-118) |
+| `inbox_captures` | `vault` | `migrations/011801_vault_inbox_captures.sql` (SPEC-118) | exported and erased; an erase never deletes a capture or its stub (ADR-118) |
+| `minutes_log` | `habits` | `migrations/007801_habits_minutes_log.sql` (SPEC-078) | exported and erased |
+| `writing_log` | `habits` | `migrations/007802_habits_writing_log.sql` (SPEC-078) | exported and erased |
+| `passkeys` | `identity` | `migrations/035901_identity_passkeys.sql` (SPEC-359) | exported and erased |
+| `sensitive_decks` | `ingest` | `migrations/038101_ingest_sensitive_decks.sql` (SPEC-381) | exported and erased; after an erase every deck is readable again |
+
+The quests context reaches outside the workspace for three things and no further inside it: its
+chests are rolled from the operating system's generator (`getrandom`), its stores run on the
+caller's connection (`sqlx`), and its refusals are typed (`thiserror`). Its data-rights port also
+writes its rows as JSON (`serde_json`). None of them is an edge to another context: the map's
+line for `deck-streak-quests` stays `depends on: kernel, ingest` (SPEC-081 R5, R21).
+
+The habits context reaches outside the workspace for three things and no further inside it: its
+minutes log's queries run on the caller's connection (`sqlx`), an entry's refusals are typed
+(`thiserror`), and its data-rights port writes its rows as JSON (`serde_json`). None of them is an
+edge to another context: the map's line for `deck-streak-habits` stays `depends on: kernel`
+(SPEC-078 R21).
+
+### The collection store's tables
+
+The collection store (SPEC-512) is a file of its own, one per user, apart from the service's
+database: its migrations live in `crates/collection/migrations/`, and `crates/collection` is the one
+writer of every table below. Its data-rights port is `crates/collection/src/data_rights.rs`; on the
+server an erase empties every table but the store's record, and on a device it removes the file.
+
+| table | owning context | created by | export and erase |
+|---|---|---|---|
+| `store_meta` | `collection` | `crates/collection/migrations/000001_collection_base.sql` (SPEC-512) | exported; anonymised: the import digest cleared, the role, writer id, slot and counters kept |
+| `study_rule` | `collection` | the same | exported and erased |
+| `erase_gate` | `collection` | the same | exempt: the switch an erase opens and closes, holding no personal data |
+| `notetypes`, `fields`, `templates` | `collection` | the same | exported and erased |
+| `notes`, `note_tags`, `note_field_history` | `collection` | the same | exported and erased |
+| `presets`, `decks`, `cards` | `collection` | the same | exported and erased |
+| `review_log`, `review_retraction` | `collection` | the same | exported and erased, through the open gate |
+| `review_client` | `collection` | the same | exported and erased, through the open gate; its own erase keeps every review |
+| `outbox`, `applied_ops`, `undo_journal`, `schedule`, `device_setting` | `collection` | the same | exported and erased |
+| `media_file` | `collection` | `crates/collection/migrations/000002_media_store.sql` (SPEC-601) | exported and erased |
+| `media_name` | `collection` | the same | exported and erased |
+| `media_pin` | `collection` | the same | exported and erased |
 
 ## Overloaded words, held apart
 

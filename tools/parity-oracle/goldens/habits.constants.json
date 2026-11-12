@@ -1,0 +1,93 @@
+{
+  "cases": [
+    {
+      "input": {
+        "name": "constants.READING_XP_PER_MIN"
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "name": "constants.READING_XP_DAILY_CAP_PER_LANG"
+      },
+      "output": 240
+    },
+    {
+      "input": {
+        "name": "constants.READING_MAX_ENTRY_MIN"
+      },
+      "output": 600
+    },
+    {
+      "input": {
+        "name": "constants.READING_WEEKLY_GOAL_MIN"
+      },
+      "output": 210
+    },
+    {
+      "input": {
+        "name": "constants.READING_GOAL_XP_BONUS"
+      },
+      "output": 150
+    },
+    {
+      "input": {
+        "name": "bot._READ_PRESETS"
+      },
+      "output": [
+        10,
+        15,
+        20,
+        30,
+        45,
+        60
+      ]
+    },
+    {
+      "input": {
+        "name": "constants.WRITING_XP_PER_DAY"
+      },
+      "output": 75
+    },
+    {
+      "input": {
+        "name": "constants.WRITING_XP_ALL_THREE_BONUS"
+      },
+      "output": 100
+    },
+    {
+      "input": {
+        "name": "constants.WRITING_STREAK_WEEK"
+      },
+      "output": 7
+    },
+    {
+      "input": {
+        "name": "constants.WRITING_STREAK_MONTH"
+      },
+      "output": 30
+    },
+    {
+      "input": {
+        "name": "constants.WRITING_STREAK_CENTURY"
+      },
+      "output": 100
+    },
+    {
+      "input": {
+        "name": "constants.MARATHON_READER_WEEK_MIN"
+      },
+      "output": 600
+    }
+  ],
+  "function": "habits.constants",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "constants",
+  "registry": "tools/parity-oracle/registry/spec_078.py",
+  "registry_sha256": "68cf3ad186bc9a22e82d5198cc0373af4d172d1151e9d8e9c69fe567132e2104",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

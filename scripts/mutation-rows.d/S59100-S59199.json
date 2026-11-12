@@ -1,0 +1,110 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S59100-THE-VERDICT-REQUIRES-SUCCESS",
+        ".github/workflows/xcframework.yml",
+        "            [ \"$result\" = success ] || status=1\n",
+        "            [ \"$result\" != failure ] || status=1\n",
+        "the verdict passes a cancelled or skipped job, so a body whose job never finished reads green (SPEC-591 R8, A4)",
+        "test_ci_workflows.TheHarnessWorkRunsInTwoJobsAndAVerdict.test_the_verdict_needs_every_other_job_and_fails_unless_each_reads_success"
+      ],
+      [
+        "S59101-THE-VERDICT-RUNS-ON-EVERY-OUTCOME",
+        ".github/workflows/xcframework.yml",
+        "\n    if: ${{ always() }}\n",
+        "\n    if: ${{ !cancelled() }}\n",
+        "a cancelled run skips the verdict, and a skipped verdict reads as no failure (SPEC-591 R8, A4)",
+        "test_ci_workflows.TheHarnessWorkRunsInTwoJobsAndAVerdict.test_the_verdict_needs_every_other_job_and_fails_unless_each_reads_success"
+      ],
+      [
+        "S59102-THE-VERDICT-NEEDS-THE-HARNESS",
+        ".github/workflows/xcframework.yml",
+        "    needs: [xcframework, harness-wire, card-isolation, harness, release-and-app]\n",
+        "    needs: [xcframework, harness-wire, card-isolation, release-and-app]\n",
+        "the verdict no longer waits on the harness job, so a red planted suite leaves the body green (SPEC-591 R8, A4)",
+        "test_ci_workflows.TheHarnessWorkRunsInTwoJobsAndAVerdict.test_the_verdict_needs_every_other_job_and_fails_unless_each_reads_success"
+      ],
+      [
+        "S59103-THE-VERDICT-READS-THE-HARNESS-RESULT",
+        ".github/workflows/xcframework.yml",
+        "          HARNESS: ${{ needs.harness.result }}\n",
+        "          HARNESS: ${{ needs.harness-wire.result }}\n",
+        "the verdict reads another job result for the harness job, so a red harness reads green (SPEC-591 R8, A4)",
+        "test_ci_workflows.TheHarnessWorkRunsInTwoJobsAndAVerdict.test_the_verdict_needs_every_other_job_and_fails_unless_each_reads_success"
+      ],
+      [
+        "S59104-THE-VERDICT-EXITS-ON-ITS-STATUS",
+        ".github/workflows/xcframework.yml",
+        "          exit \"$status\"\n",
+        "          exit 0\n",
+        "the verdict exits 0 whatever its needs read, so it never fails (SPEC-591 R8, A4)",
+        "test_ci_workflows.TheHarnessWorkRunsInTwoJobsAndAVerdict.test_the_verdict_needs_every_other_job_and_fails_unless_each_reads_success"
+      ],
+      [
+        "S59105-THE-SIBLING-BOUND-IS-ITS-OWN",
+        ".github/workflows/xcframework.yml",
+        "    timeout-minutes: 130\n",
+        "    timeout-minutes: 150\n",
+        "the sibling takes the bound of the harness job, so the split half may run as long as the whole job did (SPEC-591 R7, A6)",
+        "test_ci_workflows.TheHarnessWorkRunsInTwoJobsAndAVerdict.test_each_new_job_bound_sits_in_its_own_band"
+      ],
+      [
+        "S59106-THE-SIBLING-WAITS-ON-THE-FRAMEWORK",
+        ".github/workflows/xcframework.yml",
+        "  release-and-app:\n    needs: xcframework\n",
+        "  release-and-app:\n    needs: harness-wire\n",
+        "the sibling no longer waits on the framework job, so it can link a framework its own run did not build (SPEC-591 R4, A8)",
+        "test_ci_workflows.TheHarnessWorkRunsInTwoJobsAndAVerdict.test_each_job_that_downloads_the_framework_needs_its_job_and_reads_one_artifact"
+      ],
+      [
+        "S59107-THE-SIBLING-UPLOADS-UNDER-ITS-OWN-NAME",
+        ".github/workflows/xcframework.yml",
+        "          name: release-and-app\n",
+        "          name: harness\n",
+        "the sibling uploads under the harness artifact name, so one of the two uploads is refused (SPEC-591 R9, A9)",
+        "test_ci_workflows.TheHarnessWorkRunsInTwoJobsAndAVerdict.test_each_split_job_uploads_under_its_own_name_whatever_the_outcome"
+      ],
+      [
+        "S59108-THE-SIBLING-ENV-IS-THE-HARNESS-ENV",
+        ".github/workflows/xcframework.yml",
+        "    timeout-minutes: 130\n    env:\n      REPORT: ${{ github.workspace }}/harness-report\n",
+        "    timeout-minutes: 130\n    env:\n      REPORT: ${{ github.workspace }}/harness-report-release\n",
+        "the sibling env drifts from the harness env, so the copied steps read another report folder (SPEC-591 R3, A3)",
+        "test_ci_workflows.TheHarnessWorkRunsInTwoJobsAndAVerdict.test_the_sibling_repeats_the_harness_prefix_and_boot_then_runs_the_moved_steps"
+      ],
+      [
+        "S59109-THE-SIBLING-CHECKOUT-IS-THE-HARNESS-CHECKOUT",
+        ".github/workflows/xcframework.yml",
+        "    timeout-minutes: 130\n    env:\n      REPORT: ${{ github.workspace }}/harness-report\n      RESULTS: ${{ github.workspace }}/harness-results\n      DEVELOPER_DIR: /Applications/Xcode_27.app/Contents/Developer\n      # One iPhone and one iPad on Xcode 27.0's own simulator runtime, iOS 27.0, which the xcode-27 image holds.\n      IPHONE_SIM: \"iPhone 17\"\n      IPAD_SIM: \"iPad (A16)\"\n      SIM_OS: \"27.0\"\n      # The project generator, pinned by its release and the digest of its archive.\n      XCODEGEN_VERSION: \"2.46.0\"\n      XCODEGEN_DIGEST: 4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806\n    steps:\n      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          persist-credentials: false\n",
+        "    timeout-minutes: 130\n    env:\n      REPORT: ${{ github.workspace }}/harness-report\n      RESULTS: ${{ github.workspace }}/harness-results\n      DEVELOPER_DIR: /Applications/Xcode_27.app/Contents/Developer\n      # One iPhone and one iPad on Xcode 27.0's own simulator runtime, iOS 27.0, which the xcode-27 image holds.\n      IPHONE_SIM: \"iPhone 17\"\n      IPAD_SIM: \"iPad (A16)\"\n      SIM_OS: \"27.0\"\n      # The project generator, pinned by its release and the digest of its archive.\n      XCODEGEN_VERSION: \"2.46.0\"\n      XCODEGEN_DIGEST: 4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806\n    steps:\n      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          persist-credentials: true\n",
+        "the copied checkout of the sibling persists its credentials, so the copy is no longer the harness step (SPEC-591 R3, A3)",
+        "test_ci_workflows.TheHarnessWorkRunsInTwoJobsAndAVerdict.test_the_sibling_repeats_the_harness_prefix_and_boot_then_runs_the_moved_steps"
+      ],
+      [
+        "S59110-THE-SIBLING-REPORT-IS-THE-HARNESS-REPORT",
+        ".github/workflows/xcframework.yml",
+        "          PY\n      - name: the report\n        if: ${{ always() }}\n        run: |\n          python3 - <<'PY'\n          import datetime, json, os, pathlib, re, statistics, subprocess\n          report = pathlib.Path(os.environ[\"REPORT\"])\n          results = pathlib.Path(os.environ[\"RESULTS\"])\n          report.mkdir(parents=True, exist_ok=True)\n          simulators = [os.environ[\"IPHONE_SIM\"], os.environ[\"IPAD_SIM\"]]\n          # One report body in both jobs of the split (SPEC-591 R6, ADR-612): each source is\n          # measured in one job, and the other job names that job for its rows.\n          here = os.environ[\"GITHUB_JOB\"]\n",
+        "          PY\n      - name: the report\n        if: ${{ always() }}\n        run: |\n          python3 - <<'PY'\n          import datetime, json, os, pathlib, re, statistics, subprocess\n          report = pathlib.Path(os.environ[\"REPORT\"])\n          results = pathlib.Path(os.environ[\"RESULTS\"])\n          report.mkdir(parents=True, exist_ok=True)\n          simulators = [os.environ[\"IPHONE_SIM\"], os.environ[\"IPAD_SIM\"]]\n          # One report body in both jobs of the split (SPEC-591 R6, ADR-612): each source is\n          # measured in one job, and the other job names that job for its rows.\n          here = \"release-and-app\"\n",
+        "the report body of the sibling drifts from the harness body, so the two reports no longer read one text (SPEC-591 R6, A7)",
+        "test_ci_workflows.TheHarnessWorkRunsInTwoJobsAndAVerdict.test_the_two_report_bodies_are_one_text_that_names_the_other_job"
+      ],
+      [
+        "S59111-THE-HARNESS-ENDS-AT-ITS-REPORT",
+        ".github/workflows/xcframework.yml",
+        "            CODE_SIGNING_ALLOWED=NO\n      - name: the report\n",
+        "            CODE_SIGNING_ALLOWED=NO\n      - name: the harness report\n",
+        "the harness job no longer ends at its report and upload, so the report step after the planted suite is not the one the census reads (SPEC-591 R2, A2)",
+        "test_ci_workflows.TheHarnessWorkRunsInTwoJobsAndAVerdict.test_the_harness_ends_at_its_report_and_upload_after_the_planted_suite"
+      ],
+      [
+        "S59112-A-MOVED-STEP-KEEPS-ITS-NAME",
+        ".github/workflows/xcframework.yml",
+        "      - name: the measurements, Release, on the iPhone and then the iPad\n",
+        "      - name: the measurements, Release, on both simulators\n",
+        "a moved step changes its name, so a step of the harness at the split no longer runs once across the two jobs (SPEC-591 R1, A1)",
+        "test_ci_workflows.TheHarnessWorkRunsInTwoJobsAndAVerdict.test_every_step_of_the_harness_at_the_split_runs_once_in_its_order"
+      ]
+    ]
+  }
+}

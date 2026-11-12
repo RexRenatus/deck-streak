@@ -5,8 +5,10 @@ The campaign's full requirements, parity matrix and wave plan are
 
 ## Problem
 
+Amended below (the product's identity): the last sentence names a deprecated surface.
+
 The owner studies languages and law in Anki every day. Their existing gamification service works
-through a chat bot only, its charts spike the small host's memory, and its flagship idea (a short
+through a chat bot only, its charts are drawn on the server, and its flagship idea (a short
 reading before each day's new cards) has never reached them. They want the whole game, the second
 brain's daily study companions and an AI mentor per subject in one Telegram Mini App.
 
@@ -16,6 +18,8 @@ One owner per deployment: a single learner who runs their own Anki sync server a
 The repository is public so others can run their own deployment.
 
 ## Goals
+
+Amended below (the product's identity): the second and third goals name deprecated surfaces.
 
 - Full parity with the predecessor's 121 built features, proved by the parity oracle.
 - Daily pre-study readings in the Mini App, written by a named mentor per subject.
@@ -49,5 +53,26 @@ SPEC-001 lists every requirement, and the per-wave SPECs carry each one's accept
 
 ## Open questions
 
+Amended below (the product's identity): the first question names a deprecated surface.
+
 - The owned domain for the landing page and the Mini App (OWNER-SETUP).
 - The owner's decisions on the predecessor's inert features, one issue each.
+
+## Amendments
+
+Amendment (the app-surfaces ruling): the third non-goal is amended by the owner's signed ruling
+`docs/rulings/OWNER-RULING-2026-10-04-app-surfaces.md`, and ADR-338 and ADR-339 carry it, since it
+names the stock scheduler's output. The non-goal's text above is kept as it was. The ruling words
+what replaces it:
+
+> **PRD non-goal 3** reads: "Any countdown, exam date or forward-looking timeline on DeckStreak's
+> game, public or AI surfaces." The study client shows the stock scheduler's output as Anki does:
+> the next interval on the answer buttons, a card's due date, the browser's Due column and the
+> future-due forecast. Charter 12 is unchanged.
+
+Amendment (the product's identity): DeckStreak is a spaced-repetition study game for the web,
+iPhone and iPad. Its surfaces are the web app and the universal iPhone and iPad app; the Telegram
+Mini App and the bot are deprecated, as ADR-589 and the charter's amendment record. Rex,
+DeckStreak's own memory model, becomes its only scheduler before 1.0 (CHARTER item 22). The
+problem's last sentence, the second and third goals and the first open question name a deprecated
+surface, and are read with this amendment; their text above is kept as it was.

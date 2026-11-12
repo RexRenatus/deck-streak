@@ -1,0 +1,118 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S35200-THE-INTERNAL-APP-JOB-NAMES-ITS-ENVIRONMENT",
+        ".github/workflows/testflight-internal.yml",
+        "    environment: testflight-internal\n",
+        "",
+        "the internal lane's app job names its environment, whose rules hold the credential (SPEC-352 R2, A16)",
+        "test_testflight_workflows.TheTestflightLanes.test_only_the_app_job_names_an_environment_and_reads_a_credential"
+      ],
+      [
+        "S35201-NO-PULL-REQUEST-STARTS-THE-INTERNAL-LANE",
+        ".github/workflows/testflight-internal.yml",
+        "on:\n  workflow_dispatch:\n",
+        "on:\n  workflow_dispatch:\n  pull_request:\n",
+        "a dispatch alone starts the internal lane, never a pull request (SPEC-352 R1, A14)",
+        "test_testflight_workflows.TheTestflightLanes.test_each_lane_runs_on_its_one_trigger_and_nothing_a_pull_request_starts"
+      ],
+      [
+        "S35202-THE-PLAN-READS-THE-FULL-HISTORY",
+        ".github/workflows/testflight-internal.yml",
+        "          fetch-depth: '0'\n",
+        "          fetch-depth: '1'\n",
+        "the plan job checks out the full history it numbers the build from (SPEC-352 R3, A17)",
+        "test_testflight_workflows.TheTestflightLanes.test_the_lanes_are_hardened_pinned_uncached_and_queued"
+      ],
+      [
+        "S35203-CLEAN-ALWAYS-RUNS",
+        ".github/workflows/testflight-internal.yml",
+        "      - name: clean\n        if: ${{ always() }}\n",
+        "      - name: clean\n",
+        "the clean step runs whatever came before it (SPEC-352 R11, A17)",
+        "test_testflight_workflows.TheTestflightLanes.test_the_lanes_are_hardened_pinned_uncached_and_queued"
+      ],
+      [
+        "S35204-THE-TAGS-COMMIT-IS-ON-MAIN",
+        ".github/workflows/testflight-release.yml",
+        "git merge-base --is-ancestor \"$GITHUB_SHA\" origin/main; then",
+        "git merge-base --is-ancestor \"$GITHUB_SHA\" origin/dev; then",
+        "the release lane builds only a tag whose commit is on main, as the release workflow's guard says (SPEC-352 R4, A18)",
+        "test_testflight_workflows.TheTestflightLanes.test_the_two_app_jobs_differ_only_in_environment_and_lane"
+      ],
+      [
+        "S35205-NO-PERSISTED-CREDENTIALS",
+        ".github/workflows/testflight-internal.yml",
+        "        with:\n          persist-credentials: false\n",
+        "        with:\n          persist-credentials: true\n",
+        "the app job's checkout keeps no token on disk (SPEC-352 R16, A17)",
+        "test_testflight_workflows.TheTestflightLanes.test_the_lanes_are_hardened_pinned_uncached_and_queued"
+      ],
+      [
+        "S35206-NO-INHERITED-SECRETS",
+        ".github/workflows/testflight-internal.yml",
+        "    needs: plan\n    uses: $/.github/workflows/xcframework.yml\n",
+        "    needs: plan\n    uses: $/.github/workflows/xcframework.yml\n    secrets: inherit\n",
+        "the framework call passes no secret to the body it calls (SPEC-352 R6, R14, A21)",
+        "test_ci_workflows.WorkflowsAreHardened.test_the_lanes_credential_reads_are_admitted_and_no_other"
+      ],
+      [
+        "S35207-THE-LAUNCH-SCREEN",
+        "ios/Harness/Info.plist",
+        "\t<key>UILaunchScreen</key>\n\t<dict/>\n",
+        "",
+        "the app's property list keeps the launch screen an upload requires (SPEC-352 R19, A23)",
+        "test_ios_icon.WhatAnUploadNeeds.test_the_app_declares_what_an_upload_requires"
+      ],
+      [
+        "S35208-THE-INTERNAL-PUSH-IS-DEV-ONLY",
+        ".github/workflows/testflight-internal.yml",
+        "    branches: [dev]\n",
+        "    branches: [dev, main]\n",
+        "a push to dev alone starts the internal lane's push arm, never a push to another branch (SPEC-352 R22, A14)",
+        "test_testflight_workflows.TheTestflightLanes.test_each_lane_runs_on_its_one_trigger_and_nothing_a_pull_request_starts"
+      ],
+      [
+        "S35209-THE-PUSH-FILTER-WATCHES-EVERY-LINKED-CRATE",
+        ".github/workflows/testflight-internal.yml",
+        "      - \"crates/engine-core/**\"\n",
+        "",
+        "the internal lane's push filter watches every crate the XCFramework links (SPEC-352 R22, A25)",
+        "test_testflight_workflows.TheTestflightLanes.test_the_internal_push_filter_watches_every_crate_the_xcframework_links"
+      ],
+      [
+        "S35210-NO-INTERNAL-RUN-IS-CANCELLED",
+        ".github/workflows/testflight-internal.yml",
+        "  cancel-in-progress: false\n  queue: single\n",
+        "  cancel-in-progress: ${{ github.event_name == 'push' }}\n  queue: single\n",
+        "no internal run in progress is cancelled by a newer one, so no build stops mid-upload (SPEC-352 R16 as R22 amends it, A17; SPEC-190 R9)",
+        "test_testflight_workflows.TheTestflightLanes.test_the_lanes_are_hardened_pinned_uncached_and_queued"
+      ],
+      [
+        "S35211-A-DISPATCH-AND-A-PUSH-QUEUE-APART",
+        ".github/workflows/testflight-internal.yml",
+        "  group: testflight-internal-${{ github.event_name }}-${{ github.ref }}\n",
+        "  group: testflight-internal-${{ github.ref }}\n",
+        "a dispatch and a push wait in groups of their own, so a push never replaces a waiting dispatch (SPEC-352 R16 as R22 amends it, A17)",
+        "test_testflight_workflows.TheTestflightLanes.test_the_lanes_are_hardened_pinned_uncached_and_queued"
+      ],
+      [
+        "S35212-THE-INTERNAL-PLAN-REFUSES-ANY-OTHER-EVENT",
+        "scripts/ios_lane.py",
+        "        if event not in (\"workflow_dispatch\", \"push\"):\n",
+        "        if event not in (\"workflow_dispatch\", \"push\", \"schedule\"):\n",
+        "the internal plan refuses any event but a dispatch and a push by name, a schedule on dev included (SPEC-352 R3 as R22 amends it, A1)",
+        "test_ios_lane.LanePlan.test_the_internal_plan_refuses_any_event_or_ref_but_a_dispatch_on_dev"
+      ],
+      [
+        "S35213-THE-INTERNAL-PLAN-ADMITS-A-PUSH-ON-DEV",
+        "scripts/ios_lane.py",
+        "        if event not in (\"workflow_dispatch\", \"push\"):\n",
+        "        if event not in (\"workflow_dispatch\",):\n",
+        "the internal plan admits a push on dev, so a push run reaches the build (SPEC-352 R3 as R22 amends it, A1)",
+        "test_ios_lane.LanePlan.test_the_internal_plan_refuses_any_event_or_ref_but_a_dispatch_on_dev"
+      ]
+    ]
+  }
+}

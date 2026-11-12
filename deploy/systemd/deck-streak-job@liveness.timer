@@ -1,0 +1,15 @@
+# The liveness job's timer (SPEC-027, SPEC-032; ADR-027): every hour, at minute 14, the dead-man
+# watch and the drift check. The job table in crates/coordination/src/jobs.rs is the one schedule,
+# and crates/coordination/tests/job_table.rs holds this calendar equal to it. The calendar is written
+# in UTC, the neutral zone; the private rail renders the deployment's own zone (deploy/README.md).
+# With no Unit=, the timer starts the job instance of its own name.
+[Unit]
+Description=DeckStreak's hourly liveness watch, at minute 14
+X-DurableServices-Waive=calendar-not-persistent the job table makes the watch no catch-up job (ADR-027): it runs every hour, so the next check replaces one missed while the host was down
+X-DurableServices-Waive=randomized-delay-missing the job table places each job on its own minute (ADR-027), and a random delay would move each fire off its minute
+
+[Timer]
+OnCalendar=*-*-* *:14:00 UTC
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,76 @@
+{
+  "records": [
+    {
+      "file": "crates/streaks/src/freeze.rs",
+      "mutant": "replace < with <= in civil_month",
+      "anchor": "let month = if mp < 10",
+      "reason": "Sending mp = 10 to the first arm labels it 13 in place of 1, and 13 is a label no other mp receives, so the map from a day to its month label stays one to one.",
+      "evidence": "Measured by a standalone harness (scratch eq/eq.rs and eq/eq2.rs) that copies civil_month with this one operator changed and compares it with the original over every day from -135000 to 48300: it finds no two days that the original puts in one calendar month and the mutant in two, and none the other way, so drops_in_month, which reads the month only through equality of two labels, cannot answer differently; the strengthened population still kills the neighbouring variant era*400 -> era+400, which does not keep the partition.",
+      "reached_by": "population_rules::every_day_falls_in_the_calendar_month_the_cap_reads",
+      "issue": "#81"
+    },
+    {
+      "file": "crates/streaks/src/freeze.rs",
+      "mutant": "replace < with == in civil_month",
+      "anchor": "let month = if mp < 10",
+      "reason": "Sending only mp = 10 to the first arm gives it the label 13 in place of 1, and 13 is used by no other mp, so the map from the day to its month label stays one to one.",
+      "evidence": "Measured by a standalone harness (scratch eq/eq.rs and eq/eq2.rs) that copies civil_month with this one operator changed and compares it with the original over every day from -135000 to 48300: it finds no two days that the original puts in one calendar month and the mutant in two, and none the other way, so drops_in_month, which reads the month only through equality of two labels, cannot answer differently; the strengthened population still kills the neighbouring variant era*400 -> era+400, which does not keep the partition.",
+      "reached_by": "population_rules::every_day_falls_in_the_calendar_month_the_cap_reads",
+      "issue": "#81"
+    },
+    {
+      "file": "crates/streaks/src/freeze.rs",
+      "mutant": "replace < with > in civil_month",
+      "anchor": "let month = if mp < 10",
+      "reason": "Swapping the arms gives mp 0..9 the labels mp - 9 and mp 10..11 the labels mp + 3, a relabelling of the twelve months that is still one to one, so two days share a label exactly when they share a month.",
+      "evidence": "Measured by a standalone harness (scratch eq/eq.rs and eq/eq2.rs) that copies civil_month with this one operator changed and compares it with the original over every day from -135000 to 48300: it finds no two days that the original puts in one calendar month and the mutant in two, and none the other way, so drops_in_month, which reads the month only through equality of two labels, cannot answer differently; the strengthened population still kills the neighbouring variant era*400 -> era+400, which does not keep the partition.",
+      "reached_by": "population_rules::every_day_falls_in_the_calendar_month_the_cap_reads",
+      "issue": "#81"
+    },
+    {
+      "file": "crates/streaks/src/freeze.rs",
+      "mutant": "replace + with * in civil_month",
+      "anchor": "mp + 3 } else",
+      "reason": "With * the first arm labels mp as mp * 3, which is 0, 3 ... 27 and clashes with no label the second arm makes for the other mp, so the twelve labels stay distinct.",
+      "evidence": "Measured by a standalone harness (scratch eq/eq.rs and eq/eq2.rs) that copies civil_month with this one operator changed and compares it with the original over every day from -135000 to 48300: it finds no two days that the original puts in one calendar month and the mutant in two, and none the other way, so drops_in_month, which reads the month only through equality of two labels, cannot answer differently; the strengthened population still kills the neighbouring variant era*400 -> era+400, which does not keep the partition.",
+      "reached_by": "population_rules::every_day_falls_in_the_calendar_month_the_cap_reads",
+      "issue": "#81"
+    },
+    {
+      "file": "crates/streaks/src/freeze.rs",
+      "mutant": "replace - with + in civil_month",
+      "anchor": "else { mp - 9 }",
+      "reason": "With + the second arm labels mp 10 and 11 as 19 and 20, which the first arm never makes, so the labelling stays one to one.",
+      "evidence": "Measured by a standalone harness (scratch eq/eq.rs and eq/eq2.rs) that copies civil_month with this one operator changed and compares it with the original over every day from -135000 to 48300: it finds no two days that the original puts in one calendar month and the mutant in two, and none the other way, so drops_in_month, which reads the month only through equality of two labels, cannot answer differently; the strengthened population still kills the neighbouring variant era*400 -> era+400, which does not keep the partition.",
+      "reached_by": "population_rules::every_day_falls_in_the_calendar_month_the_cap_reads",
+      "issue": "#81"
+    },
+    {
+      "file": "crates/streaks/src/freeze.rs",
+      "mutant": "replace + with - in civil_month",
+      "anchor": "yoe + era",
+      "reason": "The year part becomes yoe - era * 400 + flag, which is still fixed by the day's era and year-of-era, and two days share the pair (year, month) exactly when they shared it before, within the measured range.",
+      "evidence": "Measured by a standalone harness (scratch eq/eq.rs and eq/eq2.rs) that copies civil_month with this one operator changed and compares it with the original over every day from -135000 to 48300: it finds no two days that the original puts in one calendar month and the mutant in two, and none the other way, so drops_in_month, which reads the month only through equality of two labels, cannot answer differently; the strengthened population still kills the neighbouring variant era*400 -> era+400, which does not keep the partition.",
+      "reached_by": "population_rules::every_day_falls_in_the_calendar_month_the_cap_reads",
+      "issue": "#81"
+    },
+    {
+      "file": "crates/streaks/src/freeze.rs",
+      "mutant": "replace + with - in civil_month",
+      "anchor": "400 + i64",
+      "reason": "The month flag is subtracted instead of added, moving the year of January and February one way instead of the other, a relabelling that keeps two days of one month together and two days of different months apart.",
+      "evidence": "Measured by a standalone harness (scratch eq/eq.rs and eq/eq2.rs) that copies civil_month with this one operator changed and compares it with the original over every day from -135000 to 48300: it finds no two days that the original puts in one calendar month and the mutant in two, and none the other way, so drops_in_month, which reads the month only through equality of two labels, cannot answer differently; the strengthened population still kills the neighbouring variant era*400 -> era+400, which does not keep the partition.",
+      "reached_by": "population_rules::every_day_falls_in_the_calendar_month_the_cap_reads",
+      "issue": "#81"
+    },
+    {
+      "file": "crates/streaks/src/freeze.rs",
+      "mutant": "replace <= with > in civil_month",
+      "anchor": "month <= 2",
+      "reason": "The flag i64::from(month <= 2) is inverted, so the year is shifted for March to December instead of January and February, which moves whole calendar months together and keeps the partition.",
+      "evidence": "Measured by a standalone harness (scratch eq/eq.rs and eq/eq2.rs) that copies civil_month with this one operator changed and compares it with the original over every day from -135000 to 48300: it finds no two days that the original puts in one calendar month and the mutant in two, and none the other way, so drops_in_month, which reads the month only through equality of two labels, cannot answer differently; the strengthened population still kills the neighbouring variant era*400 -> era+400, which does not keep the partition.",
+      "reached_by": "population_rules::every_day_falls_in_the_calendar_month_the_cap_reads",
+      "issue": "#81"
+    }
+  ]
+}

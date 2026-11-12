@@ -1,0 +1,557 @@
+{
+  "cases": [
+    {
+      "class": "wrap",
+      "input": {
+        "end_min": 450,
+        "local_minutes": 0,
+        "start_min": 1380
+      },
+      "output": true
+    },
+    {
+      "class": "wrap",
+      "input": {
+        "end_min": 450,
+        "local_minutes": 449,
+        "start_min": 1380
+      },
+      "output": true
+    },
+    {
+      "class": "wrap",
+      "input": {
+        "end_min": 450,
+        "local_minutes": 450,
+        "start_min": 1380
+      },
+      "output": false
+    },
+    {
+      "class": "wrap",
+      "input": {
+        "end_min": 450,
+        "local_minutes": 451,
+        "start_min": 1380
+      },
+      "output": false
+    },
+    {
+      "class": "wrap",
+      "input": {
+        "end_min": 450,
+        "local_minutes": 1379,
+        "start_min": 1380
+      },
+      "output": false
+    },
+    {
+      "class": "wrap",
+      "input": {
+        "end_min": 450,
+        "local_minutes": 1380,
+        "start_min": 1380
+      },
+      "output": true
+    },
+    {
+      "class": "wrap",
+      "input": {
+        "end_min": 450,
+        "local_minutes": 1381,
+        "start_min": 1380
+      },
+      "output": true
+    },
+    {
+      "class": "wrap",
+      "input": {
+        "end_min": 450,
+        "local_minutes": 1439,
+        "start_min": 1380
+      },
+      "output": true
+    },
+    {
+      "class": "wrap",
+      "input": {
+        "end_min": 450,
+        "local_minutes": 720,
+        "start_min": 1380
+      },
+      "output": false
+    },
+    {
+      "class": "normalized",
+      "input": {
+        "end_min": 450,
+        "local_minutes": -1,
+        "start_min": 1380
+      },
+      "output": true
+    },
+    {
+      "class": "normalized",
+      "input": {
+        "end_min": 450,
+        "local_minutes": -60,
+        "start_min": 1380
+      },
+      "output": true
+    },
+    {
+      "class": "normalized",
+      "input": {
+        "end_min": 450,
+        "local_minutes": 1440,
+        "start_min": 1380
+      },
+      "output": true
+    },
+    {
+      "class": "normalized",
+      "input": {
+        "end_min": 450,
+        "local_minutes": 1889,
+        "start_min": 1380
+      },
+      "output": true
+    },
+    {
+      "class": "normalized",
+      "input": {
+        "end_min": 450,
+        "local_minutes": 4260,
+        "start_min": 1380
+      },
+      "output": true
+    },
+    {
+      "class": "normalized",
+      "input": {
+        "end_min": 450,
+        "local_minutes": -61,
+        "start_min": 1380
+      },
+      "output": false
+    },
+    {
+      "class": "wrap",
+      "input": {
+        "end_min": 360,
+        "local_minutes": 0,
+        "start_min": 1320
+      },
+      "output": true
+    },
+    {
+      "class": "wrap",
+      "input": {
+        "end_min": 360,
+        "local_minutes": 359,
+        "start_min": 1320
+      },
+      "output": true
+    },
+    {
+      "class": "wrap",
+      "input": {
+        "end_min": 360,
+        "local_minutes": 360,
+        "start_min": 1320
+      },
+      "output": false
+    },
+    {
+      "class": "wrap",
+      "input": {
+        "end_min": 360,
+        "local_minutes": 361,
+        "start_min": 1320
+      },
+      "output": false
+    },
+    {
+      "class": "wrap",
+      "input": {
+        "end_min": 360,
+        "local_minutes": 1319,
+        "start_min": 1320
+      },
+      "output": false
+    },
+    {
+      "class": "wrap",
+      "input": {
+        "end_min": 360,
+        "local_minutes": 1320,
+        "start_min": 1320
+      },
+      "output": true
+    },
+    {
+      "class": "wrap",
+      "input": {
+        "end_min": 360,
+        "local_minutes": 1321,
+        "start_min": 1320
+      },
+      "output": true
+    },
+    {
+      "class": "wrap",
+      "input": {
+        "end_min": 360,
+        "local_minutes": 1439,
+        "start_min": 1320
+      },
+      "output": true
+    },
+    {
+      "class": "same-day",
+      "input": {
+        "end_min": 300,
+        "local_minutes": 0,
+        "start_min": 60
+      },
+      "output": false
+    },
+    {
+      "class": "same-day",
+      "input": {
+        "end_min": 300,
+        "local_minutes": 59,
+        "start_min": 60
+      },
+      "output": false
+    },
+    {
+      "class": "same-day",
+      "input": {
+        "end_min": 300,
+        "local_minutes": 60,
+        "start_min": 60
+      },
+      "output": true
+    },
+    {
+      "class": "same-day",
+      "input": {
+        "end_min": 300,
+        "local_minutes": 61,
+        "start_min": 60
+      },
+      "output": true
+    },
+    {
+      "class": "same-day",
+      "input": {
+        "end_min": 300,
+        "local_minutes": 299,
+        "start_min": 60
+      },
+      "output": true
+    },
+    {
+      "class": "same-day",
+      "input": {
+        "end_min": 300,
+        "local_minutes": 300,
+        "start_min": 60
+      },
+      "output": false
+    },
+    {
+      "class": "same-day",
+      "input": {
+        "end_min": 300,
+        "local_minutes": 301,
+        "start_min": 60
+      },
+      "output": false
+    },
+    {
+      "class": "same-day",
+      "input": {
+        "end_min": 300,
+        "local_minutes": 1439,
+        "start_min": 60
+      },
+      "output": false
+    },
+    {
+      "class": "disabled",
+      "input": {
+        "end_min": 600,
+        "local_minutes": 599,
+        "start_min": 600
+      },
+      "output": false
+    },
+    {
+      "class": "disabled",
+      "input": {
+        "end_min": 600,
+        "local_minutes": 600,
+        "start_min": 600
+      },
+      "output": false
+    },
+    {
+      "class": "disabled",
+      "input": {
+        "end_min": 600,
+        "local_minutes": 601,
+        "start_min": 600
+      },
+      "output": false
+    },
+    {
+      "class": "disabled",
+      "input": {
+        "end_min": 600,
+        "local_minutes": 1439,
+        "start_min": 600
+      },
+      "output": false
+    },
+    {
+      "class": "disabled",
+      "input": {
+        "end_min": 0,
+        "local_minutes": -1,
+        "start_min": 0
+      },
+      "output": false
+    },
+    {
+      "class": "disabled",
+      "input": {
+        "end_min": 0,
+        "local_minutes": 0,
+        "start_min": 0
+      },
+      "output": false
+    },
+    {
+      "class": "disabled",
+      "input": {
+        "end_min": 0,
+        "local_minutes": 1,
+        "start_min": 0
+      },
+      "output": false
+    },
+    {
+      "class": "disabled",
+      "input": {
+        "end_min": 0,
+        "local_minutes": 1439,
+        "start_min": 0
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "end_min": 309,
+        "local_minutes": 688,
+        "start_min": 1405
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "end_min": 1301,
+        "local_minutes": -609,
+        "start_min": 1380
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "end_min": 1173,
+        "local_minutes": -53,
+        "start_min": 670
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "end_min": 842,
+        "local_minutes": 1892,
+        "start_min": 55
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "end_min": 211,
+        "local_minutes": -416,
+        "start_min": 153
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "end_min": 971,
+        "local_minutes": 3316,
+        "start_min": 653
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "end_min": 843,
+        "local_minutes": 269,
+        "start_min": 920
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "end_min": 649,
+        "local_minutes": 3683,
+        "start_min": 409
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "end_min": 687,
+        "local_minutes": 1253,
+        "start_min": 1395
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "end_min": 189,
+        "local_minutes": 3701,
+        "start_min": 875
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "end_min": 1007,
+        "local_minutes": 1877,
+        "start_min": 1060
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "end_min": 422,
+        "local_minutes": 3255,
+        "start_min": 166
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "end_min": 71,
+        "local_minutes": 213,
+        "start_min": 496
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "end_min": 171,
+        "local_minutes": 119,
+        "start_min": 193
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "end_min": 1420,
+        "local_minutes": 882,
+        "start_min": 519
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "end_min": 1413,
+        "local_minutes": 663,
+        "start_min": 624
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "end_min": 1277,
+        "local_minutes": -476,
+        "start_min": 334
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "end_min": 547,
+        "local_minutes": 476,
+        "start_min": 47
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "end_min": 1175,
+        "local_minutes": 506,
+        "start_min": 449
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "end_min": 26,
+        "local_minutes": 3842,
+        "start_min": 114
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "end_min": 615,
+        "local_minutes": 848,
+        "start_min": 1264
+      },
+      "output": false
+    },
+    {
+      "input": {
+        "end_min": 1422,
+        "local_minutes": 3859,
+        "start_min": 280
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "end_min": 1228,
+        "local_minutes": 2225,
+        "start_min": 687
+      },
+      "output": true
+    },
+    {
+      "input": {
+        "end_min": 1307,
+        "local_minutes": 802,
+        "start_min": 313
+      },
+      "output": true
+    }
+  ],
+  "function": "quiet_hours.in_quiet_hours",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_041.py",
+  "registry_sha256": "3d162500bd87de5e89e3c2e43f0b41fad943c32f1baea026f95d49b2b788df98",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

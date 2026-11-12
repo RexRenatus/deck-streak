@@ -1,0 +1,170 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id AS \"id!\", anchor_newest_review_id, anchor_card_count,\n                          anchor_card_fingerprint, anchor_study_day, anchor_recomputed_at,\n                          anchor_settings_generation, rescore_pending, window_floor, window_count,\n                          refused_at, refused_reason, created_at\n                   FROM ingest_state ORDER BY id",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "ingest_state",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "anchor_newest_review_id",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "ingest_state",
+            "name": "anchor_newest_review_id"
+          }
+        }
+      },
+      {
+        "name": "anchor_card_count",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "ingest_state",
+            "name": "anchor_card_count"
+          }
+        }
+      },
+      {
+        "name": "anchor_card_fingerprint",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "ingest_state",
+            "name": "anchor_card_fingerprint"
+          }
+        }
+      },
+      {
+        "name": "anchor_study_day",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "ingest_state",
+            "name": "anchor_study_day"
+          }
+        }
+      },
+      {
+        "name": "anchor_recomputed_at",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "ingest_state",
+            "name": "anchor_recomputed_at"
+          }
+        }
+      },
+      {
+        "name": "anchor_settings_generation",
+        "ordinal": 6,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "ingest_state",
+            "name": "anchor_settings_generation"
+          }
+        }
+      },
+      {
+        "name": "rescore_pending",
+        "ordinal": 7,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "ingest_state",
+            "name": "rescore_pending"
+          }
+        }
+      },
+      {
+        "name": "window_floor",
+        "ordinal": 8,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "ingest_state",
+            "name": "window_floor"
+          }
+        }
+      },
+      {
+        "name": "window_count",
+        "ordinal": 9,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "ingest_state",
+            "name": "window_count"
+          }
+        }
+      },
+      {
+        "name": "refused_at",
+        "ordinal": 10,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "ingest_state",
+            "name": "refused_at"
+          }
+        }
+      },
+      {
+        "name": "refused_reason",
+        "ordinal": 11,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ingest_state",
+            "name": "refused_reason"
+          }
+        }
+      },
+      {
+        "name": "created_at",
+        "ordinal": 12,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "ingest_state",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "ee2ddfa8682565ddf5081f8799c41a6f14b2ca9762f2a420e4aab40328c30451"
+}

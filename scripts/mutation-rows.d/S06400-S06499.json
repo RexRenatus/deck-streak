@@ -1,0 +1,70 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S06401-A-FAILED-INTEGRITY-CHECK-STILL-SUCCEEDS",
+        "deploy/scripts/backup.py",
+        "        if not integrity_ok(scratch):\n",
+        "        if False and not integrity_ok(scratch):\n",
+        "a copy that fails its integrity check fails the backup instead of being kept (SPEC-064 R4)",
+        "test_backup_units.BackupUnits.test_a_failed_integrity_check_fails_the_backup_and_keeps_the_old_copies"
+      ],
+      [
+        "S06402-A-BACKUP-KEEPS-EVERY-COPY",
+        "deploy/scripts/backup.py",
+        "    for name in names[: max(len(names) - keep, 0)]:\n",
+        "    for name in names[: max(len(names) - keep, 0) * 0]:\n",
+        "the backup prunes to the newest KEEP copies (SPEC-064 R4, R9)",
+        "test_backup_units.BackupUnits.test_the_backup_copies_checks_and_keeps_three"
+      ],
+      [
+        "S06403-KEEP-IS-FIVE",
+        "deploy/scripts/backup.py",
+        "KEEP = 3\n",
+        "KEEP = 5\n",
+        "three daily copies stay on the host, inside the declared window (SPEC-064 R9)",
+        "test_backup_units.BackupUnits.test_the_backup_copies_checks_and_keeps_three"
+      ],
+      [
+        "S06404-A-DRILL-ACCEPTS-A-COPY-AHEAD-OF-THE-LIVE-DATABASE",
+        "deploy/scripts/restore-drill.sh",
+        "if copy is None or live is None or copy > live:\n",
+        "if copy is None or live is None or copy > live + 1000:\n",
+        "a daily copy ahead of the live database fails the drill (SPEC-064 R5)",
+        "test_backup_units.BackupUnits.test_the_drill_restores_checks_and_removes_both_copies"
+      ],
+      [
+        "S06405-A-DRILL-ACCEPTS-A-STALE-REPLICA",
+        "deploy/scripts/restore-drill.sh",
+        "if replica != live:\n",
+        "if replica is None and live is not None:\n",
+        "a replica that is not at the live database's version fails the drill (SPEC-064 R5)",
+        "test_backup_units.BackupUnits.test_the_drill_restores_checks_and_removes_both_copies"
+      ],
+      [
+        "S06406-THE-DRILL-KEEPS-ITS-WORK-DIRECTORY",
+        "deploy/scripts/restore-drill.sh",
+        "trap 'rm -rf -- \"$work\"' EXIT\n",
+        "trap ':' EXIT\n",
+        "the drill removes the restored copy and the daily copy whatever the outcome (SPEC-064 R5)",
+        "test_backup_units.BackupUnits.test_the_drill_restores_checks_and_removes_both_copies"
+      ],
+      [
+        "S06407-THE-REPLICA-URL-IS-NOT-OFFSITE",
+        "deploy/litestream.yml",
+        "      url: gs://${DECKSTREAK_REPLICA_BUCKET}\n",
+        "      url: file://${DECKSTREAK_REPLICA_BUCKET}\n",
+        "the replica lives off the host, at a gs:// URL whose bucket is an environment reference (SPEC-064 R2)",
+        "test_backup_units.BackupUnits.test_the_units_keep_three_copies_one_replica_and_a_drill"
+      ],
+      [
+        "S06408-THE-BACKUP-SLOT-SHARES-A-MINUTE",
+        "deploy/systemd/deck-streak-backup.timer",
+        "OnCalendar=*-*-* 03:24:00 UTC\n",
+        "OnCalendar=*-*-* 03:32:00 UTC\n",
+        "the backup's minute of the hour is off every other slot (SPEC-064 R6)",
+        "test_backup_units.BackupUnits.test_the_backup_and_drill_slots_are_off_every_other_slot"
+      ]
+    ]
+  }
+}

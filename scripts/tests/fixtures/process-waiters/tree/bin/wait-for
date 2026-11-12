@@ -1,0 +1,4 @@
+#!/bin/sh
+# A pid file read names the process the service wrote; an own argument is in the command line.
+pgrep -F "${1}"
+pgrep -f "${2}"

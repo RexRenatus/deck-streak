@@ -11,15 +11,15 @@
 - **The predecessor.** A private single-user service with 131 features (93 product, 9 platform, 18
   ops, 11 with no production caller), a database of 64 tables at schema version 24, 64 bot
   commands, 29 inline-button families, 12 scheduled jobs and 35 MCP tools. Its only surface is a
-  Telegram bot; its charts are drawn on a small host whose memory they spike. Source: the
-  predecessor's feature inventory (private), counted by feature record.
-- **The flagship never shipped.** The predecessor's nightly pre-study readings fired every night and
-  produced nothing: every run refused on a stale-snapshot gate, and the folder the readings were to
-  be written to never existed. Source: the second-brain inventory (private), from the run ledger.
+  Telegram bot; its charts are drawn on the server. Source: the predecessor's feature inventory
+  (private), counted by feature record.
+- **The flagship is new work, not a port (ADR-019).** The predecessor's pre-study readings lane
+  gated each reading on the collection file's age, so it refused whenever the owner had not
+  studied, even after a successful sync, and the folder it wrote to had to exist beforehand.
+  Source: the second-brain inventory (private).
 - **The second brain.** 22 user-facing features around an Obsidian vault (the readings, drills, the
-  daily note, the journal, the weekly synthesis, dashboards, the inbox), whose nightly AI pass has
-  been failing; the owner directed that a Claude Code agent through the owner's subscription proxy
-  take over its duties.
+  daily note, the journal, the weekly synthesis, dashboards, the inbox); the owner directed that a
+  Claude Code agent through the owner's subscription proxy take over its duties.
 - **What this campaign delivers.** Every predecessor feature built or excluded with a reason
   (121 built, 10 excluded as inert, each with an owner decision issue); every
   second-brain user-facing feature placed; the daily pre-study readings as the Mini App's first-class
@@ -86,7 +86,7 @@ A5: python3 -m unittest discover -s scripts/tests -p test_parity_matrix.py -k ev
 
 - **A feature's parity is claimed, not proved.** Detected by the parity oracle's goldens and by
   closing each issue only with an evidence comment (the criterion, the command, its output).
-- **The host's memory or disk runs out beside the predecessor.** Detected by the memory watch and
+- **DeckStreak outgrows its memory or disk budget on the host.** Detected by the memory watch and
   the host budget (ADR-010); a resize is an owner decision.
 - **The agent's path to the proxy fails often.** Detected by the readings' lane health and the
   digest's degraded-coaching line; the deterministic fallbacks keep the owner informed.
@@ -98,14 +98,13 @@ A5: python3 -m unittest discover -s scripts/tests -p test_parity_matrix.py -k ev
 
 Waves run in order, with W2's owner-gated deploy running beside W3. A wave's SPECs are written by
 the wave's architect turn before its builders are dispatched; W0 and W1 are specified now
-(`docs/specs/planned/`). Builders at once are bounded by the build machine (about six compiling
-builders).
+(`docs/specs/planned/`). Each wave's builders run in parallel, as many at once as the table plans.
 
 | wave | goal | DeckStreak units | v9 rows with their own issue | builders at once |
 |---|---|---|---|---|
 | W0 | Foundation: kernel, config and secrets, database base, identity (Telegram initData), API and bot shells, Anki ingest, scheduler and cron ledger, data-rights framework, Mini App shell, parity-oracle harness | 15 | 0 | 1, then 6 |
 | W1 | Flagship: the daily pre-study readings, with the AI agent core, the vault adapter core, the XP grant port and the notification router core | 14 | 0 | 5, then 6 |
-| W2 | First deploy: readings live on the VM side by side with v9 (host scrub, units, HTTPS, the proxy tunnel, backups), behind owner gates | 6 | 0 | 2 (owner-gated) |
+| W2 | First deploy: DeckStreak's readings live on its host (host preparation, units, HTTPS, the agent's path, backups), behind owner gates | 6 | 0 | 2 (owner-gated) |
 | W3 | Game core parity: analytics and score, XP and levels, streaks, economy, quests and chests, focus, habits, skip day | 0 | 38 | 6 |
 | W4 | Curriculum and insight parity: Road to C2, law track, leeches, research instruments, client-side charts | 0 | 25 | 6 |
 | W5 | Engagement parity: the full celebration ladder, digests, nudges, comeback, discipline devices, prediction markets | 0 | 22 | 6 |
@@ -171,6 +170,7 @@ D) that covers it.
 | `season-node-track` | Season node track (10 coin checkpoints per month) | product | progression | W3 | build | #78 |
 | `leaderboard-personal` | Personal leaderboard read | product | progression | W3 | build | #79 |
 | `xp-exchange-rates` | XP exchange-rate readout (XP per graduation by source) | product | progression | W3 | build | #80 |
+Amended (§14): the per-source re-pricing, inert in the predecessor, is revived as #281 (W7, #267).
 | `language-streak-freezes` | Language study streak with freezes, heat tiers and lapse decay | product | streaks | W3 | build | #81 |
 | `law-streak` | Independent law-track streak | product | streaks | W3 | build | #82 |
 | `habit-strength-governor` | Habit strength and the anti-abandonment governor | product | streaks | W3 | build | #83 |
@@ -195,10 +195,12 @@ D) that covers it.
 | `session-chests` | Session chests (variable-ratio loot with pity) and the overnight vault | product | quests | W3 | build | #102 |
 | `double-xp-tokens` | Double-XP tokens | product | quests | W3 | build | #103 |
 | `smoke-bombs-perfect-week` | Perfect Week smoke bombs | product | quests | W3 | build | #104 |
+Amended (§14): the smoke-bomb spend, inert in the predecessor, is revived as #279 (W5, #268).
 | `instant-loop-free-spin` | Instant loop: AnkiMobile-open acknowledgement and free spin | product | discipline | W5 | build | #105 |
 | `coin-wallet` | Coin wallet and economy rules | product | economy | W3 | build | #106 |
 | `coin-shop` | Coin shop (/shop) | product | economy | W3 | build | #107 |
-| `skip-day` | Skip / cheat day (the one Anki write path) | product | ingest | W3 | build | #108 |
+| `skip-day` | Skip / cheat day (recorded by DeckStreak, never written to Anki: ADR-037) | product | ingest | W3 | build | #108 |
+Amended (§14): the skip day's reschedule is written to Anki under ADR-089 (SPEC-083, #266), and its switch and monthly bridge cap are enforced by #280 (W5, #269).
 | `committed-windows` | Committed study windows | product | discipline | W5 | build | #109 |
 | `doomscroll-tripwire` | Doomscroll tripwire rail (sensor, verdicts, sprints, rung ladder, canary) | product | discipline | W5 | build | #110 |
 | `confess` | Honor-system confession (/confess) | product | discipline | W5 | build | #111 |
@@ -244,6 +246,7 @@ D) that covers it.
 | `sabbatical-clock` | Sabbatical Decay Clock (/park <lang>) | product | insights | W4 | build | #150 |
 | `other-hand-census` | The Other Hand (/otherhand) due-date provenance census | product | insights | W4 | build | #151 |
 | `charts-and-resources` | Charts (/chart) and MCP chart resources | product | insights | W3 | build | #152 |
+Amended (§14): the collection atlas returns as a data series the agent reads, never an image (ADR-085), as #282 (W6, #270).
 | `vault-stats-bridge` | Vault stats bridge (nightly stats JSON into the second-brain vault) | product | vault | W8 | build | #153 |
 | `inbox-capture` | Telegram media capture to the vault inbox | product | vault | W6 | build | #154 |
 | `vaultops-trigger` | On-demand vault-ops run (/vaultops) | product | agent | W6 | build | #155 |
@@ -261,6 +264,7 @@ D) that covers it.
 | `inert-peak-day` | Peak Day taper (law retrievability at an exam date) - library only | inert | - | - | exclude: inert in v9; it also needs an exam date, which the owner's no-dates rule forbids | #182 |
 | `inert-reading-rollover-signal` | Per-topic reading rollover lapse signal - no surface | inert | readings | W1 | build | #35 |
 | `mcp-server` | MCP server (FastMCP, Streamable HTTP) | platform | agent | W6 | build | #157 |
+Amended (§14): the server serves neither the predecessor's data-export tool nor its erase-everything tool, and a client's grant is read or write; export and erase stay on the bot and the host (`data-export-erase`, #14) (SPEC-369, #720).
 | `mcp-bearer-auth` | Fail-closed bearer auth for the law/drill MCP tools | platform | agent | W6 | build | #158 |
 | `http-health-metrics-dashboard` | Health, readiness, Prometheus metrics and HTML dashboard | ops | daemon | W0 | build | #18 |
 | `data-export-erase` | Data export and erasure (data rights) with a privacy completeness gate | platform | privacy | W0 | build | #14 |
@@ -273,7 +277,7 @@ D) that covers it.
 | `db-maintenance` | Daily DB maintenance | ops | coordination | W0 | build | #20 |
 | `sd-notify-watchdog` | systemd notify watchdog (liveness only) | ops | daemon | W0 | build | #18 |
 | `offload-rails` | Offload rails and latency budget (keep blocking work off the event loop) | ops | kernel | W0 | build | #12 |
-| `secrets-resolution` | Secret resolution (GCP Secret Manager via ADC, env fallback) and degraded-secret tracking | ops | kernel | W0 | build | #12 |
+| `secrets-resolution` | Secret resolution and degraded-secret tracking | ops | kernel | W0 | build | #12 |
 | `logging-redaction` | Secret-redacting structured logging (journald JSON with syslog priorities) | ops | kernel | W0 | build | #12 |
 | `nightly-backup-offsite` | Nightly backup with offsite copy, dedup, Litestream age check and temp sweep | ops | deploy | W2 | build | #44 |
 | `litestream-replication` | Litestream continuous WAL replication | ops | deploy | W2 | build | #44 |
@@ -357,7 +361,7 @@ D) that covers it.
 | `DS-W1-12` | Mini App: Today's readings, the reader and the history | miniapp | W1 | SPEC-051 | #37 |
 | `DS-W1-13` | Bot: the readings command and the morning readings line | bot | W1 | SPEC-052 | #38 |
 | `DS-W1-14` | Coordination: the readings jobs | coordination | W1 | SPEC-053 | #39 |
-| `DS-W2-01` | Host: inventory, backup and the scrub list for the owner | deploy | W2 | per-wave | #40 |
+| `DS-W2-01` | Host: inventory, backup and the scrub list for the owner | deploy | W2 | per-wave | #239 |
 | `DS-W2-02` | The private deploy rail: credentials, configuration and the guards | deploy | W2 | per-wave | #41 |
 | `DS-W2-03` | First deploy: units, the Caddy block and HTTPS | deploy | W2 | per-wave | #42 |
 | `DS-W2-04` | The agent's path: the reverse tunnel and its device key | deploy | W2 | per-wave | #43 |
@@ -383,3 +387,47 @@ D) that covers it.
 | `DS-W8-03` | Cutover and the predecessor's retirement | deploy | W8 | per-wave | #63 |
 | `DS-W8-04` | Release v1.0.0 | repo | W8 | per-wave | #64 |
 | `DS-W9-01` | The vault to Anki flashcard bridge | vault | W9 | per-wave | #65 |
+
+## 14. Amendments
+
+Recorded when a later accepted decision changed what this campaign plan says. The earlier sections
+keep their original text where only these notes apply.
+
+- **Gate 6 (2026-09-27, ADR-037, ADR-038, ADR-054).**
+  - The agent's path through the subscription proxy (R4, section 8) is ONE adapter of an optional AI
+    route. No-AI mode is the default and a first-class path; the first deploy (W2) needs no device
+    key, no tunnel and no proxy. The agent's path (#43) and the first live reading (#45) wait for
+    gate 3 (#162), or for the owner's choice of an API key.
+  - DeckStreak syncs once per study day plus the owner's explicit `/sync`, and never uploads or
+    writes a local change (ADR-037). The skip day (#108) is therefore recorded in DeckStreak's own
+    database and never written to the collection.
+  - Credentials reach each unit from the secret manager at its start, through a root-only socket,
+    and never rest on the host (ADR-038). This supersedes ADR-010's encrypted storage.
+- **Security redaction (2026-09-28, ADR-059).** Three passages that described the host and the
+  predecessor as a running service, in a risk (section 6), the wave plan and the parity matrix,
+  were redacted under the public-prose rule. A tracking issue's number changed: `DS-W2-01` is #239
+  (Appendix D).
+
+Amendment (2026-09-28): passages describing another service's operations or a build machine's
+capacity were restated as product rules and as the wave plan, or removed, under the public-text
+rule (ADR-059).
+
+- **The owner's W3 decisions (2026-09-28, ADR-089).**
+  - Gate 6 is amended for the skip-day path only: the skip day's reschedule of the study day's due
+    review cards, and its exact inverse on an undo, are written to the collection under ADR-089's
+    guardrails, each proven against the recording fake sync server (SPEC-083, #266). Every other
+    path keeps gate 6's no-upload condition (ADR-037), and CHARTER constraint 4 stands as written.
+  - Four features the predecessor left inert are revived, each as a feature issue in its wave:
+    - #279 (W5): spending a smoke bomb cancels that night's pending coin fines, with its
+      idempotency guard (#268).
+    - #280 (W5): the skip-day switch and the cap of 3 bridges a month are enforced, and a 4th skip
+      counts as a missed day (#269).
+    - #281 (W7): the per-source XP re-pricing, a multiplier from 0.1 to 5.0 applied to future
+      grants only (#267).
+    - #282 (W6): the collection atlas, as a data series the agent reads, never an image; ADR-085
+      stands (#270).
+- **The MCP server's roster and grants (ADR-380).** The server's roster carries neither
+  `export_data` nor `erase_all_data`: export and erase stay on the bot's `/export` and `/delete`
+  and the host's `deckstreakd data` commands (`data-export-erase`, #14). The core credential's
+  grant is read; an optional write credential grants write, and every tool that changes data
+  needs it (SPEC-369, SPEC-119 section 17, #720, parent #157).

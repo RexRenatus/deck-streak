@@ -1,0 +1,118 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S29800-THE-ELEVATION-FALLBACK-TREATS-AN-EMPTY-SETTING-AS-UNSET",
+        "deploy/deploy.sh",
+        "${DECKSTREAK_DEPLOY_ELEVATE-sudo}",
+        "${DECKSTREAK_DEPLOY_ELEVATE:-sudo}",
+        "an empty elevation setting falls back to a privilege command, which the host stand-in refuses by name (SPEC-298 A4)",
+        "test_deploy_standin.TheFallbackIsNeverReachedByTheTests.test_an_empty_elevation_setting_runs_the_host_step_with_no_privilege_command"
+      ],
+      [
+        "S29801-THE-HOST-STAND-IN-RUNS-ANY-COMMAND",
+        "scripts/tests/test_deploy_scripts.py",
+        "if [ -z \"$ok\" ]; then",
+        "if false; then",
+        "the stand-in runs an argv[0] that is not listed, as it did when it ran its arguments unconditionally (SPEC-298 A2)",
+        "test_deploy_standin.TheStandInRefusesWhatItDoesNotKnow.test_a_command_outside_the_list_is_refused_by_name_and_run_by_nothing"
+      ],
+      [
+        "S29802-THE-HOST-STAND-IN-REFUSES-WITH-STATUS-ZERO",
+        "scripts/tests/test_deploy_scripts.py",
+        "  exit 97\n",
+        "  exit 0\n",
+        "the stand-in's refusal of an unlisted command exits 0 (SPEC-298 A2)",
+        "test_deploy_standin.TheStandInRefusesWhatItDoesNotKnow.test_a_command_outside_the_list_is_refused_by_name_and_run_by_nothing"
+      ],
+      [
+        "S29803-THE-HOST-STAND-IN-REFUSES-WITHOUT-NAMING-THE-COMMAND",
+        "scripts/tests/test_deploy_scripts.py",
+        "refusing %s: not a command the deploy tests use\\n' \"${1-}\" >&2",
+        "refusing: not a command the deploy tests use\\n' >&2",
+        "the stand-in's refusal line does not name the command it refused (SPEC-298 A2)",
+        "test_deploy_standin.TheStandInRefusesWhatItDoesNotKnow.test_a_command_outside_the_list_is_refused_by_name_and_run_by_nothing"
+      ],
+      [
+        "S29804-THE-HOST-STAND-IN-LISTS-NO-SHAPE",
+        "scripts/tests/test_deploy_scripts.py",
+        "HOST_ALLOWED = (\"bash\",)",
+        "HOST_ALLOWED = ()",
+        "the list of shapes the stand-in runs loses the one the tests use (SPEC-298 A1)",
+        "test_deploy_standin.TheAllowedShapes.test_the_list_lives_in_one_place_and_equals_the_shapes_the_calls_make"
+      ],
+      [
+        "S29805-THE-STAND-IN-LOGS-NO-ARGV0",
+        "scripts/tests/test_deploy_scripts.py",
+        "printf '%s\\n' \"${1-}\" >> \"$STUB_LOG/host-argv0.log\"\n",
+        "",
+        "the stand-in stops logging the argv[0] it receives, so the set the tests make is no longer measured (SPEC-298 A1)",
+        "test_deploy_standin.TheAllowedShapes.test_the_list_lives_in_one_place_and_equals_the_shapes_the_calls_make"
+      ],
+      [
+        "S29806-THE-SHARED-ENVIRONMENT-LEAVES-THE-SETTING-UNNAMED",
+        "scripts/tests/test_deploy_scripts.py",
+        "            \"DECKSTREAK_DEPLOY_ELEVATE\": \"\",\n",
+        "",
+        "the shared test environment stops naming the elevation setting (SPEC-298 A6)",
+        "test_deploy_standin.EveryEnvironmentNamesTheSetting.test_the_shared_environment_names_the_setting"
+      ],
+      [
+        "S29807-THE-HELPER-ADMITS-AN-UNNAMED-ENVIRONMENT",
+        "scripts/tests/test_deploy_scripts.py",
+        "if wanted not in setting_names(seen, sourced):",
+        "if False:",
+        "the helper that starts a deploy script stops refusing an environment that does not name the setting (SPEC-298 A5)",
+        "test_deploy_standin.EveryEnvironmentNamesTheSetting.test_a_call_whose_environment_leaves_the_setting_unset_is_refused_by_name"
+      ],
+      [
+        "S29808-A-CALL-SITE-STARTS-A-DEPLOY-SCRIPT-DIRECTLY",
+        "scripts/tests/test_deploy_scripts.py",
+        "return launch([\"bash\", str(script), *args], merged, cwd=self.tmp, env=merged, text=True)",
+        "return subprocess.run([\"bash\", str(script), *args], cwd=self.tmp, env=merged, text=True, capture_output=True, check=False)",
+        "a call site starts a deploy script without the helper (SPEC-298 A7)",
+        "test_deploy_standin.NoOtherCallSiteStartsAProgram.test_only_the_helper_the_git_wrapper_and_the_scrub_call_start_a_program"
+      ],
+      [
+        "S29809-THE-HOST-LINE-READER-ADMITS-AN-UNREVIEWED-LINE",
+        "scripts/tests/_standin_checks.py",
+        "        elif not any(shape.fullmatch(text) for shape in REVIEWED_HOST_LINES):",
+        "        elif False:",
+        "the derivation stops refusing a line of the deploy script that uses the host in a shape it has not read (SPEC-298 A11)",
+        "test_deploy_standin.TheDerivationReadsEveryHostCallAndEveryValue.test_every_host_call_and_every_elevation_value_adds_to_the_set_or_is_refused"
+      ],
+      [
+        "S29810-THE-STUB-SCAN-IGNORES-A-DOLLAR-BEFORE-AN-UNREADABLE-PIECE",
+        "scripts/tests/_standin_checks.py",
+        "    r\"|\\$\\x00|\\$\\{\\x00\"\n",
+        "    r\"\"\n",
+        "the stub scan stops counting a dollar sign before a piece of text it cannot read as an argument expansion (SPEC-298 A10)",
+        "test_deploy_standin.TheStubScanFindsEveryRoute.test_every_route_by_which_a_stub_runs_its_arguments_is_refused"
+      ],
+      [
+        "S29811-THE-CENSUS-COMPARES-NO-START-SITES",
+        "scripts/tests/_standin_checks.py",
+        "        assert found == want, (",
+        "        assert True, (",
+        "the census stops comparing the start sites it counts with the reviewed ones, so a start planted in a module it reads is not refused (SPEC-298 A12)",
+        "test_deploy_standin.TheCensusFindsEveryStart.test_every_start_spelling_is_found_or_refused"
+      ],
+      [
+        "S29812-THE-HELPER-TRUSTS-AN-ENVIRONMENT-OF-NONE",
+        "scripts/tests/test_deploy_scripts.py",
+        "    if env is None:\n",
+        "    if False:\n",
+        "the helper stops refusing an environment of None, which the started program would inherit (SPEC-298 A13)",
+        "test_deploy_standin.TheLaunchRefusalJudgesWhatTheProgramSees.test_an_environment_the_program_will_see_unset_is_refused"
+      ],
+      [
+        "S29813-THE-HELPER-READS-A-SOURCED-FILE-BY-ITS-FIRST-MATCH",
+        "scripts/tests/test_deploy_scripts.py",
+        "        if match is None:\n",
+        "        if False:\n",
+        "the helper stops refusing a sourced file whose lines are not plain settings, so a branch or an unset can hide the name (SPEC-298 A13)",
+        "test_deploy_standin.TheLaunchRefusalJudgesWhatTheProgramSees.test_an_environment_the_program_will_see_unset_is_refused"
+      ]
+    ]
+  }
+}

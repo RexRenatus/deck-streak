@@ -1,0 +1,78 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S37301-THE-RELEASE-HAS-A-SECOND-PATH",
+        ".github/workflows/release.yml",
+        "  workflow_dispatch:\n",
+        "\n",
+        "release.yml declares a manual dispatch beside the tag push, so a tag whose push started no run can still be released (SPEC-373 R1)",
+        "test_release_workflow.TheReleaseHasASecondPath.test_the_release_runs_on_a_tag_push_or_an_input_free_dispatch_and_nothing_skips_either"
+      ],
+      [
+        "S37302-THE-SECOND-PATH-TAKES-NO-INPUT",
+        ".github/workflows/release.yml",
+        "  workflow_dispatch:\n",
+        "  workflow_dispatch:\n    inputs:\n      tag:\n        type: string\n        required: true\n",
+        "the dispatch declares no input, so the tag a run releases is the ref it was dispatched at (SPEC-373 R2)",
+        "test_release_workflow.TheReleaseHasASecondPath.test_the_release_runs_on_a_tag_push_or_an_input_free_dispatch_and_nothing_skips_either"
+      ],
+      [
+        "S37303-THE-GUARD-REFUSES-A-REF-THAT-IS-NOT-THE-TAG",
+        ".github/workflows/release.yml",
+        "          if [ \"$GITHUB_REF\" != \"refs/tags/$tag\" ]; then\n",
+        "          if false; then\n",
+        "the guard refuses a run whose ref is not refs/tags/ and the tag it read, a branch named like the tag included (SPEC-373 R4)",
+        "test_release_workflow.TheSecondPathRunsTheTagGuard.test_the_guard_refuses_a_ref_that_is_not_the_tag_it_names"
+      ],
+      [
+        "S37304-THE-GUARD-STEP-RUNS-ON-EVERY-PATH",
+        ".github/workflows/release.yml",
+        "      - name: the tag is SemVer, annotated, and its commit is on main\n",
+        "      - name: the tag is SemVer, annotated, and its commit is on main\n        if: github.event_name == 'push'\n",
+        "no if lets a path step around the guard (SPEC-373 R3)",
+        "test_release_workflow.TheReleaseHasASecondPath.test_the_release_runs_on_a_tag_push_or_an_input_free_dispatch_and_nothing_skips_either"
+      ],
+      [
+        "S37305-THE-RELEASE-JOB-RUNS-ON-EVERY-PATH",
+        ".github/workflows/release.yml",
+        "  release:\n    needs: [audit-sync-server]\n",
+        "  release:\n    if: github.event_name == 'push'\n    needs: [audit-sync-server]\n",
+        "no if skips the release job on either path, so a refused run never reads as a success (SPEC-373 R3)",
+        "test_release_workflow.TheReleaseHasASecondPath.test_the_release_runs_on_a_tag_push_or_an_input_free_dispatch_and_nothing_skips_either"
+      ],
+      [
+        "S37306-THE-AUDIT-JOB-RUNS-ON-EVERY-PATH",
+        ".github/workflows/release.yml",
+        "  audit-sync-server:\n",
+        "  audit-sync-server:\n    if: github.event_name == 'push'\n",
+        "no if skips the audit job on either path, which would skip the release that needs it (SPEC-373 R3)",
+        "test_release_workflow.TheReleaseHasASecondPath.test_the_release_runs_on_a_tag_push_or_an_input_free_dispatch_and_nothing_skips_either"
+      ],
+      [
+        "S37307-A-PUSH-AND-A-DISPATCH-OF-ONE-TAG-SHARE-ONE-GROUP",
+        ".github/workflows/release.yml",
+        "  group: release-${{ github.ref }}\n",
+        "  group: release-${{ github.event_name }}-${{ github.ref }}\n",
+        "a pushed and a dispatched run of one tag render one group name, so they take turns (SPEC-373 R6)",
+        "test_release_workflow.TheReleaseHasASecondPath.test_a_push_and_a_dispatch_of_one_tag_render_one_group"
+      ],
+      [
+        "S37308-THE-GUARD-HOLDS-NO-PATH-OF-ITS-OWN",
+        ".github/workflows/release.yml",
+        "          tag=\"$GITHUB_REF_NAME\"\n          if ! [[ \"$tag\" =~",
+        "          tag=\"$GITHUB_REF_NAME\"\n          if [ \"${GITHUB_EVENT_NAME:-}\" = workflow_dispatch ]; then exit 0; fi\n          if ! [[ \"$tag\" =~",
+        "the guard refuses a lightweight tag and a tag off main on both paths, never on the push alone (SPEC-373 R5)",
+        "test_release_workflow.TheSecondPathRunsTheTagGuard.test_both_paths_refuse_a_lightweight_tag_and_a_tag_off_main"
+      ],
+      [
+        "S37309-THE-RUNBOOK-RECOVERS-A-TAG-BY-A-DISPATCH",
+        "RELEASING.md",
+        "gh workflow run release.yml --ref vX.Y.Z\n",
+        "git push origin vX.Y.Z\n",
+        "the runbook recovers a tag with no run by a dispatch at its ref, never by pushing the tag again (SPEC-373 R7)",
+        "test_rulesets.TheReleaseRunbookRecoversATagWithNoRun.test_the_runbook_releases_a_tag_with_no_run_by_a_dispatch_at_its_own_ref"
+      ]
+    ]
+  }
+}

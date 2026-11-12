@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT deck_id AS \"deck_id!\" FROM sensitive_decks ORDER BY deck_id",
+  "describe": {
+    "columns": [
+      {
+        "name": "deck_id!",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "sensitive_decks",
+            "name": "deck_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "c7e854159064d2206e3df8eb4d99662e770957589666db1285a84d6b374d45cf"
+}

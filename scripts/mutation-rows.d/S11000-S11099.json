@@ -1,0 +1,449 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S11001-READY-MARKER",
+        "vault",
+        "src/drills.rs",
+        "    ready_marker(raw).is_some_and(|(_, ticked)| ticked)",
+        "    ready_marker(raw).is_some_and(|(_, ticked)| !ticked)",
+        "drill_answer::each_answer_outcome_is_returned_for_its_case",
+        "a ticked ready marker reads as answered and an unticked one does not (SPEC-110 R5, A1)"
+      ],
+      [
+        "S11002-ALREADY-ANSWERED",
+        "vault",
+        "src/drills.rs",
+        "    if answered(raw) {\n        return Appended::AlreadyAnswered;",
+        "    if false {\n        return Appended::AlreadyAnswered;",
+        "drill_answer::each_answer_outcome_is_returned_for_its_case",
+        "a note whose marker is ticked is refused, never appended to (SPEC-110 R5, A2)"
+      ],
+      [
+        "S11004-CLAMP-MIN",
+        "vault",
+        "src/drills.rs",
+        "pub const XP_MIN: i64 = 10;",
+        "pub const XP_MIN: i64 = 9;",
+        "drill_goldens::the_graded_parse_matches_the_predecessors_golden",
+        "the pay's floor is 10, and the golden names 9 and 10 (SPEC-110 R8, A4)"
+      ],
+      [
+        "S11005-CLAMP-MAX",
+        "vault",
+        "src/drills.rs",
+        "pub const XP_MAX: i64 = 25;",
+        "pub const XP_MAX: i64 = 26;",
+        "drill_goldens::the_graded_parse_matches_the_predecessors_golden",
+        "the pay's ceiling is 25, and the golden names 25 and 26 (SPEC-110 R8, A4)"
+      ],
+      [
+        "S11006-DEFAULT-FIFTEEN",
+        "vault",
+        "src/drills.rs",
+        "pub const POSTBACK_XP: i64 = 15;",
+        "pub const POSTBACK_XP: i64 = 16;",
+        "drill_goldens::the_drill_constants_equal_the_predecessors",
+        "the pay when no override parses is the predecessor's 15; cargo-mutants never mutates a constant (SPEC-110 R8, A4)"
+      ],
+      [
+        "S11007-GRADED-ONLY",
+        "vault",
+        "src/drills.rs",
+        "    if frontmatter.is_empty() || frontmatter.get(\"status\").map(String::as_str) != Some(\"graded\") {",
+        "    if frontmatter.is_empty() {",
+        "drill_goldens::the_graded_parse_matches_the_predecessors_golden",
+        "only a note whose status is graded is a graded drill and pays (SPEC-110 R8, A4)"
+      ],
+      [
+        "S11008-ONCE-SCOPE",
+        "coordination",
+        "src/drills.rs",
+        "                scope: GrantScope::Once,",
+        "                scope: GrantScope::PerDay,",
+        "drill_postback::a_graded_drill_pays_once_on_the_study_day",
+        "the post-back's grant scope is once, so a drill pays once across every day (SPEC-110 R7, A9)"
+      ],
+      [
+        "S11009-TRACK-LAW",
+        "coordination",
+        "src/drills.rs",
+        "                track: Track::Law,",
+        "                track: Track::Language,",
+        "drill_postback::a_graded_drill_pays_once_on_the_study_day",
+        "the post-back's grant is on the law track (SPEC-110 R7, A9)"
+      ],
+      [
+        "S11010-STUDY-DAY",
+        "coordination",
+        "src/drills.rs",
+        "                study_day: fire.study_day,\n                source:",
+        "                study_day: deck_streak_kernel::StudyDay::from_epoch_day(fire.study_day.epoch_day() + 1),\n                source:",
+        "drill_postback::a_poll_before_the_rollover_pays_the_previous_study_day",
+        "the pay's day is the poll's study day, not the calendar date (SPEC-110 R7, A10)"
+      ],
+      [
+        "S11011-DEFER-CUT",
+        "vault",
+        "src/drills.rs",
+        "pub const DEFER_REASON_MAX_LEN: usize = 120;",
+        "pub const DEFER_REASON_MAX_LEN: usize = 121;",
+        "drill_goldens::the_defer_reason_matches_the_predecessors_golden",
+        "the deferral reason is cut at 120 characters, and the golden names 120 and 121 (SPEC-110 R2, A3)"
+      ],
+      [
+        "S11012-CALLBACK-64",
+        "bot",
+        "src/drill_commands.rs",
+        "pub const MAX_CALLBACK_DATA: usize = 64;",
+        "pub const MAX_CALLBACK_DATA: usize = 63;",
+        "drill_commands::the_drill_token_matches_the_predecessors_golden",
+        "a token of the limit's length is kept whole, and the golden names 64 and 65 (SPEC-110 R11, A16)"
+      ],
+      [
+        "S11013-HASH-20",
+        "bot",
+        "src/drill_commands.rs",
+        "pub const TOKEN_HASH_LEN: usize = 20;",
+        "pub const TOKEN_HASH_LEN: usize = 19;",
+        "drill_commands::the_drill_token_matches_the_predecessors_golden",
+        "a hashed token keeps the first 20 hex characters of the digest (SPEC-110 R11, A16)"
+      ],
+      [
+        "S11014-KEYBOARD-12",
+        "bot",
+        "src/drill_commands.rs",
+        "pub const KEYBOARD_LIMIT: usize = 12;",
+        "pub const KEYBOARD_LIMIT: usize = 13;",
+        "drill_commands::drills_lists_twelve_and_takes_the_next_message",
+        "the drill list's keyboard shows twelve drills (SPEC-110 R11, A17)"
+      ],
+      [
+        "S11015-SAFE-STEM",
+        "vault",
+        "src/drills.rs",
+        " && !stem.contains(\"..\")",
+        "",
+        "drill_goldens::the_drill_views_match_the_predecessors_golden",
+        "a stem holding two dots is refused before any read (SPEC-110 R2, A3)"
+      ],
+      [
+        "S11016-UNKEYABLE-ID",
+        "vault",
+        "src/drills.rs",
+        "    if fits && !id.starts_with(\"h.\") {",
+        "    if fits {",
+        "drill_goldens::an_unkeyable_drill_id_is_keyed_by_its_hash",
+        "an id that begins h. is hashed so a kept key never equals a hashed one (SPEC-110 R10, A5)"
+      ],
+      [
+        "S11017-EMPTY-ANSWER",
+        "vault",
+        "src/drill_notes.rs",
+        "        if drills::py_strip(answer).is_empty() {",
+        "        if false {",
+        "drill_answer::each_answer_outcome_is_returned_for_its_case",
+        "an all-space answer writes nothing and reads nothing (SPEC-110 R5, A1)"
+      ],
+      [
+        "S11019-UNICODE-FIRST",
+        "vault",
+        "src/unicode_other.rs",
+        "            if code < first {",
+        "            if code <= first {",
+        "lib::unicode_other::tests::the_table_holds_each_boundary_and_nothing_beside_it",
+        "the table's lower comparison keeps each range's first code point inside it (SPEC-110 R2, ADR-110)"
+      ],
+      [
+        "S11020-UNICODE-LAST",
+        "vault",
+        "src/unicode_other.rs",
+        "            } else if code > last {",
+        "            } else if code >= last {",
+        "lib::unicode_other::tests::the_table_holds_each_boundary_and_nothing_beside_it",
+        "the table's upper comparison keeps each range's last code point inside it (SPEC-110 R2, ADR-110)"
+      ],
+      [
+        "S11021-KEY-BODY-MAX",
+        "vault",
+        "src/drills.rs",
+        "pub const KEY_ID_MAX: usize = GRANT_SOURCE_MAX - KEY_PREFIX.len();",
+        "pub const KEY_ID_MAX: usize = GRANT_SOURCE_MAX - KEY_PREFIX.len() + 1;",
+        "drill_goldens::an_unkeyable_drill_id_is_keyed_by_its_hash",
+        "the kept-id bound is the grammar's limit less the prefix, so an id of 123 is hashed and 122 is kept (SPEC-110 R10, A5)"
+      ],
+      [
+        "S11022-KEY-HASH-HEX",
+        "vault",
+        "src/drills.rs",
+        "const KEY_HASH_HEX: usize = 32;",
+        "const KEY_HASH_HEX: usize = 31;",
+        "drill_goldens::an_unkeyable_drill_id_is_keyed_by_its_hash",
+        "a hashed key keeps the first 32 hex characters of the digest (SPEC-110 R10, A5)"
+      ],
+      [
+        "S11023-READY-UNTICKED",
+        "vault",
+        "src/drills.rs",
+        "pub const READY_UNTICKED: &str = \"- [ ] **Ready for grading**\";",
+        "pub const READY_UNTICKED: &str = \"- [ ] **Ready for grade**\";",
+        "drill_goldens::the_drill_constants_equal_the_predecessors",
+        "the unticked marker is the predecessor's exact line (SPEC-110 R5)"
+      ],
+      [
+        "S11024-READY-TICKED",
+        "vault",
+        "src/drills.rs",
+        "pub const READY_TICKED: &str = \"- [x] **Ready for grading**\";",
+        "pub const READY_TICKED: &str = \"- [X] **Ready for grading**\";",
+        "drill_goldens::the_drill_constants_equal_the_predecessors",
+        "the ticked marker is the predecessor's exact line (SPEC-110 R5)"
+      ],
+      [
+        "S11025-VIEW-PREFIX",
+        "bot",
+        "src/drill_commands.rs",
+        "pub const VIEW_PREFIX: &str = \"dv:\";",
+        "pub const VIEW_PREFIX: &str = \"dw:\";",
+        "drill_commands::the_drill_token_matches_the_predecessors_golden",
+        "a view button's data begins dv: (SPEC-110 R11, A16)"
+      ],
+      [
+        "S11026-ANSWER-PREFIX",
+        "bot",
+        "src/drill_commands.rs",
+        "pub const ANSWER_PREFIX: &str = \"da:\";",
+        "pub const ANSWER_PREFIX: &str = \"db:\";",
+        "drill_commands::the_drill_token_matches_the_predecessors_golden",
+        "an answer button's data begins da: (SPEC-110 R11, A16)"
+      ],
+      [
+        "S11027-DRILL-GRADES-LIMIT",
+        "daemon",
+        "src/wiring.rs",
+        "pub const DRILL_GRADES_LIMIT: i64 = 10;",
+        "pub const DRILL_GRADES_LIMIT: i64 = 11;",
+        "drill_memory::the_drill_grades_port_gives_types_and_xp_only",
+        "the coach's memory reads the ten newest grades (SPEC-110 R12, A15)"
+      ],
+      [
+        "S11028-PAID-COUNT",
+        "coordination",
+        "src/drills.rs",
+        "paid += 1;",
+        "paid -= 1;",
+        "drill_paid_count::a_poll_reports_how_many_it_graded_and_how_many_it_paid",
+        "a poll counts each grade it paid, once (SPEC-110 R11, A21)"
+      ],
+      [
+        "S11029-RECENT-XP",
+        "vault",
+        "src/drill_store.rs",
+        "xp: row.xp,",
+        "xp: 0,",
+        "drill_kills::recent_grades_are_the_newest_of_the_subject_with_every_column",
+        "a recent grade carries the xp its row paid (SPEC-110 R12, A15)"
+      ],
+      [
+        "S11030-GRADED-FOLDER",
+        "vault",
+        "src/drill_notes.rs",
+        "let folder = self.folder.join(GRADED);",
+        "let folder = self.folder.join(ACTIVE);",
+        "drill_kills::the_graded_folder_is_read_and_the_active_folder_is_not",
+        "the graded read lists the graded folder and not the active one (SPEC-110 R6, A22)"
+      ],
+      [
+        "S11031-OPEN-MISSING-ROOT",
+        "vault",
+        "src/drill_notes.rs",
+        "Err(error) if error.kind() == io::ErrorKind::NotFound => {\n                return Err(StartRefusal",
+        "Err(error) if error.kind() != io::ErrorKind::NotFound => {\n                return Err(StartRefusal",
+        "drill_kills::a_missing_root_refuses_to_start_and_any_other_failure_is_an_io_error",
+        "only a missing vault root refuses to start; any other failure is an io error (SPEC-110 R13)"
+      ],
+      [
+        "S11032-DAEMON-OPEN",
+        "daemon",
+        "src/drill_vault.rs",
+        "Ok(notes) => Some(Arc::new(notes)),",
+        "Ok(_notes) => None,",
+        "drill_vault::a_configured_vault_opens_over_its_active_drills",
+        "a configured vault opens over its drills (SPEC-110 R13)"
+      ],
+      [
+        "S11033-LABEL-LIMIT",
+        "bot",
+        "src/drill_commands.rs",
+        "const LABEL_LIMIT: usize = 40;",
+        "const LABEL_LIMIT: usize = 41;",
+        "drill_replies::a_button_shows_forty_characters_of_the_title",
+        "a button shows forty characters of the title (SPEC-110 R11)"
+      ],
+      [
+        "S11034-PROMPT-LIMIT",
+        "bot",
+        "src/drill_commands.rs",
+        "const PROMPT_LIMIT: usize = 3_000;",
+        "const PROMPT_LIMIT: usize = 3_001;",
+        "drill_replies::a_view_cuts_the_prompt_at_three_thousand_characters",
+        "a view cuts the prompt at three thousand characters (SPEC-110 R11)"
+      ],
+      [
+        "S11035-LIST-PATH",
+        "api",
+        "src/drill_routes.rs",
+        "pub const LIST_PATH: &str = \"/api/drills\";",
+        "pub const LIST_PATH: &str = \"/api/drillz\";",
+        "drill_routes::the_list_counts_what_awaits_grading_and_what_is_deferred",
+        "the drill list answers on /api/drills (SPEC-110 R14)"
+      ],
+      [
+        "S11036-ACTIVE-FOLDER",
+        "vault",
+        "src/drills.rs",
+        "pub const ACTIVE: &str = \"Active\";",
+        "pub const ACTIVE: &str = \"Activf\";",
+        "drill_kills::the_graded_folder_is_read_and_the_active_folder_is_not",
+        "the active drills sit in Active (SPEC-110 R13)"
+      ],
+      [
+        "S11037-GRADED-NAME",
+        "vault",
+        "src/drills.rs",
+        "pub const GRADED: &str = \"Graded\";",
+        "pub const GRADED: &str = \"Gradee\";",
+        "drill_kills::the_graded_folder_is_read_and_the_active_folder_is_not",
+        "the graded drills sit in Graded (SPEC-110 R6)"
+      ],
+      [
+        "S11038-ANSWER-HEADING",
+        "vault",
+        "src/drills.rs",
+        "\"## Court & Year\",",
+        "\"## Court & Yeas\",",
+        "drill_kills::a_prompt_ends_at_each_answer_heading",
+        "a prompt ends at the Court & Year heading (SPEC-110 R3)"
+      ],
+      [
+        "S11039-SELF-CHECK",
+        "vault",
+        "src/drills.rs",
+        "const SELF_CHECK: &str = \"Self-Check\";",
+        "const SELF_CHECK: &str = \"Self-Chick\";",
+        "drill_kills::the_ready_label_and_the_self_check_heading_are_read_as_written",
+        "the checklist heading is Self-Check (SPEC-110 R3)"
+      ],
+      [
+        "S11040-READY-LABEL",
+        "vault",
+        "src/drills.rs",
+        "const READY_LABEL: &str = \"**Ready for grading**\";",
+        "const READY_LABEL: &str = \"**Ready for gradinf**\";",
+        "drill_kills::the_ready_label_and_the_self_check_heading_are_read_as_written",
+        "the ready marker reads Ready for grading (SPEC-110 R3)"
+      ],
+      [
+        "S11041-DRILL-POSTBACK-MINUTE",
+        "coordination",
+        "src/jobs.rs",
+        "schedule: Schedule::Hourly { minute: 19 },",
+        "schedule: Schedule::Hourly { minute: 20 },",
+        "job_table::the_job_table_holds_the_drill_postback",
+        "the drill post-back runs hourly at minute 19 (SPEC-110 R9)"
+      ],
+      [
+        "S11042-GRANT-SOURCE-MAX",
+        "vault",
+        "src/drills.rs",
+        "pub const GRANT_SOURCE_MAX: usize = 128;",
+        "pub const GRANT_SOURCE_MAX: usize = 129;",
+        "drill_goldens::an_unkeyable_drill_id_is_keyed_by_its_hash",
+        "the grammar's limit the kept-id bound derives from is 128, so a kept key never exceeds it (SPEC-110 R10)"
+      ],
+      [
+        "S11043-CONFINED-ALWAYS-OK",
+        "vault",
+        "src/drill_notes.rs",
+        "            Ok(_) => Err(VaultError::NotAFolder),\n            Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),",
+        "            Ok(_) => Ok(true),\n            Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),",
+        "drill_kills::no_link_in_any_placement_is_read_listed_paid_from_or_written_through",
+        "a folder that resolves elsewhere is refused, never confined (SPEC-110 R1)"
+      ],
+      [
+        "S11044-REGULAR-FILE-KIND",
+        "vault",
+        "src/drill_notes.rs",
+        "            == Some(EntryKind::File))",
+        "            != Some(EntryKind::Dir))",
+        "drill_kills::no_link_in_any_placement_is_read_listed_paid_from_or_written_through",
+        "a note that is a link is not a regular file and is never read through (SPEC-110 R1)"
+      ],
+      [
+        "S11045-ANSWER-GATE",
+        "vault",
+        "src/drill_notes.rs",
+        "!drills::safe_stem(id) || !self.regular_note(&self.active(), &path)?",
+        "!drills::safe_stem(id)",
+        "drill_kills::no_link_in_any_placement_is_read_listed_paid_from_or_written_through",
+        "an answer passes the one gate before the note is read or written (SPEC-110 R1)"
+      ],
+      [
+        "S11046-NOTES-GATE",
+        "vault",
+        "src/drill_notes.rs",
+        "        self.confined(folder)?;\n        let entries = match self.fs.list(folder) {",
+        "        let entries = match self.fs.list(folder) {",
+        "drill_kills::no_link_in_any_placement_is_read_listed_paid_from_or_written_through",
+        "a linked Active or Graded folder is refused before it is listed, never listed through (SPEC-110 R1)"
+      ],
+      [
+        "S11047-NOTE-GATE-FOLDER",
+        "vault",
+        "src/drill_notes.rs",
+        "        if !self.confined(folder)? {\n            return Ok(false);\n        }\n        Ok(self",
+        "        let _ = folder;\n        Ok(self",
+        "drill_kills::no_link_in_any_placement_is_read_listed_paid_from_or_written_through",
+        "a note is read only behind a confined folder, so a note under a linked folder is never read (SPEC-110 R1)"
+      ],
+      [
+        "S11048-READ-GATE",
+        "vault",
+        "src/drill_notes.rs",
+        "        let outcome = match self.regular_note(folder, &path) {",
+        "        let outcome = match Ok::<bool, VaultError>(true) {",
+        "drill_kills::no_link_in_any_placement_is_read_listed_paid_from_or_written_through",
+        "a listed or viewed note passes the one gate before it is read (SPEC-110 R1)"
+      ],
+      [
+        "S11049-ANSWER-UNRESOLVED",
+        "vault",
+        "src/drill_notes.rs",
+        "!self.regular_note(&self.active(), &path)?",
+        "!self.regular_note(&self.active(), &path).or_else(|error| match error { VaultError::Io { .. } => Ok(false), other => Err(other) })?",
+        "drill_kills::no_link_in_any_placement_is_read_listed_paid_from_or_written_through",
+        "an answer through a folder whose resolve fails is the gate's I/O error, never NotActive (SPEC-110 R1)"
+      ]
+    ],
+    "CARGO_KILLED_SCRIPT_MUTATIONS": [
+      [
+        "S11003-ANSWER-ROW-GUARD",
+        "migrations/011001_vault_drills.sql",
+        "CREATE TABLE drill_answers (\n    drill_id TEXT NOT NULL PRIMARY KEY CHECK",
+        "CREATE TABLE drill_answers (\n    drill_id TEXT NOT NULL CHECK",
+        "vault",
+        "drill_answer::an_answer_row_refuses_an_unticked_note",
+        "the drill's id is the answer table's primary key, so a second answer meets the first row (SPEC-110 R6, A22)"
+      ],
+      [
+        "S11018-XP-CHECK",
+        "migrations/011001_vault_drills.sql",
+        "    xp INTEGER NOT NULL CHECK (xp BETWEEN 10 AND 25),",
+        "    xp INTEGER NOT NULL,",
+        "vault",
+        "drill_store::the_grade_row_refuses_xp_outside_its_band",
+        "the grade row holds the pay inside its band of 10 to 25 (SPEC-110 R11, A23)"
+      ]
+    ]
+  }
+}

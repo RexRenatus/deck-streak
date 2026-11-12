@@ -1,0 +1,17 @@
+error[E0308]: mismatched types
+ --> tests/ui/signed_amount.rs:7:33
+  |
+7 |     let _amount = XpAmount::new(debit);
+  |                   ------------- ^^^^^ expected `u32`, found `i64`
+  |                   |
+  |                   arguments to this function are incorrect
+  |
+note: associated function defined here
+ --> src/xp.rs
+  |
+  |     pub const fn new(amount: u32) -> Self {
+  |                  ^^^
+help: you can convert an `i64` to a `u32` and panic if the converted value doesn't fit
+  |
+7 |     let _amount = XpAmount::new(debit.try_into().unwrap());
+  |                                      ++++++++++++++++++++

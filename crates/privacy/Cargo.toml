@@ -11,5 +11,19 @@ publish.workspace = true
 [lints]
 workspace = true
 
+# The privacy context depends on the kernel alone (docs/CONTEXT-MAP.md): the port it drives and the
+# database it drives it over. Its external crates are the ones ADR-003 and ADR-029 admit.
 [dependencies]
 deck-streak-kernel.workspace = true
+# ADR-029: an export is one JSON document, and a port's rows are JSON values (SPEC-021 R2).
+serde_json.workspace = true
+# ADR-003: the engine's own statements (secure_delete, VACUUM, the checkpoint) run through the
+# kernel's Db, which hands out sqlx types (SPEC-021 R3).
+sqlx.workspace = true
+# ADR-003: a library returns its own thiserror type (CLAUDE.md).
+thiserror.workspace = true
+
+[dev-dependencies]
+# ADR-020's temporary database, and the tests on tokio's runtime (SPEC-021 section 3).
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "rt"] }

@@ -1,0 +1,12 @@
+{
+  "duty": "bot-commands",
+  "schema": "phx.duty.message.v1",
+  "send": {
+    "link_preview_options": {
+      "is_disabled": true
+    },
+    "parse_mode": "HTML",
+    "text": "Send <code>/read &lt;course&gt; &lt;minutes&gt; [note]</code> to log your reading, <code>/read &lt;minutes&gt;</code> for your most-used course, or /read alone to pick a course and the minutes."
+  },
+  "x-message": "read-usage"
+}

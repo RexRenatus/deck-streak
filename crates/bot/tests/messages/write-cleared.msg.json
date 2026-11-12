@@ -1,0 +1,22 @@
+{
+  "duty": "bot-commands",
+  "schema": "phx.duty.message.v1",
+  "send": {
+    "link_preview_options": {
+      "is_disabled": true
+    },
+    "parse_mode": "HTML",
+    "reply_markup": {
+      "inline_keyboard": [
+        [
+          {
+            "callback_data": "hb:w:qab:20102",
+            "text": "⬜ Course Qab"
+          }
+        ]
+      ]
+    },
+    "text": "Today's writing confirmation is cleared.\n\n✍️ <b>Today's writing</b>\n⬜ F Course Qab — 0🔥\n🔥 Writing streak: <b>0</b> days\n<i>Tap a course to toggle it.</i>"
+  },
+  "x-message": "write-cleared"
+}

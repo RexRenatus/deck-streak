@@ -1,0 +1,196 @@
+{
+  "adapter": "graded",
+  "cases": [
+    {
+      "input": {
+        "notes": {
+          " ": "---\nstatus: graded\ntype: drill-irac\n---\n# graded\n",
+          "a-folder": null,
+          "bare-rule-later": "---\nstatus: graded\n---\nxp: 30\n",
+          "colons": "---\nstatus: graded\nnote: a: b: c\n---\n",
+          "crlf": "---\r\nstatus: graded\r\nxp: 19\r\n---\r\n",
+          "dash-key": "---\nstatus: graded\n- xp: 30\n---\n",
+          "dup-key": "---\nstatus: graded\ntype: drill-irac\nxp: 11\nxp: 22\n---\n# graded\n",
+          "empty-frontmatter": "---\n---\nbody\n",
+          "indent-key": "---\nstatus: graded\n xp: 30\n---\n",
+          "no-frontmatter": "# just a heading\n",
+          "other-status": "---\nstatus: active\ntype: drill-irac\n---\n# graded\n",
+          "plain": "---\nstatus: graded\ntype: drill-irac\n---\n# graded\n",
+          "random-0": "---\nstatus: graded\ntype: drill-irac\nxp: -12\n---\n# graded\n",
+          "random-1": "---\nstatus: graded\ntype: drill-irac\nxp: 16\n---\n# graded\n",
+          "random-2": "---\nstatus: graded\ntype: drill-irac\nxp: -25\n---\n# graded\n",
+          "random-3": "---\nstatus: graded\ntype: drill-irac\nxp: 33\n---\n# graded\n",
+          "status-case": "---\nstatus: Graded\ntype: drill-irac\n---\n# graded\n",
+          "unclosed": "---\nstatus: graded\nxp: 12\n",
+          "xp-10": "---\nstatus: graded\ntype: drill-irac\nxp: 10\n---\n# graded\n",
+          "xp-24": "---\nstatus: graded\ntype: drill-irac\nxp: 24\n---\n# graded\n",
+          "xp-25": "---\nstatus: graded\ntype: drill-irac\nxp: 25\n---\n# graded\n",
+          "xp-26": "---\nstatus: graded\ntype: drill-irac\nxp: 26\n---\n# graded\n",
+          "xp-9": "---\nstatus: graded\ntype: drill-irac\nxp: 9\n---\n# graded\n",
+          "xp-decimal": "---\nstatus: graded\ntype: drill-irac\nxp: 12.5\n---\n# graded\n",
+          "xp-double-underscore": "---\nstatus: graded\ntype: drill-irac\nxp: 1__2\n---\n# graded\n",
+          "xp-empty": "---\nstatus: graded\ntype: drill-irac\nxp: \n---\n# graded\n",
+          "xp-hex": "---\nstatus: graded\ntype: drill-irac\nxp: 0x10\n---\n# graded\n",
+          "xp-huge": "---\nstatus: graded\ntype: drill-irac\nxp: 9999999999999999999999999999999999999999\n---\n# graded\n",
+          "xp-lead-underscore": "---\nstatus: graded\ntype: drill-irac\nxp: _12\n---\n# graded\n",
+          "xp-minus-plus": "---\nstatus: graded\ntype: drill-irac\nxp: -+3\n---\n# graded\n",
+          "xp-neg": "---\nstatus: graded\ntype: drill-irac\nxp: -4\n---\n# graded\n",
+          "xp-plus": "---\nstatus: graded\ntype: drill-irac\nxp: +20\n---\n# graded\n",
+          "xp-space": "---\nstatus: graded\ntype: drill-irac\nxp:   17  \n---\n# graded\n",
+          "xp-tab": "---\nstatus: graded\ntype: drill-irac\nxp: \t18\t\n---\n# graded\n",
+          "xp-trail-underscore": "---\nstatus: graded\ntype: drill-irac\nxp: 12_\n---\n# graded\n",
+          "xp-underscore": "---\nstatus: graded\ntype: drill-irac\nxp: 1_2\n---\n# graded\n",
+          "xp-word": "---\nstatus: graded\ntype: drill-irac\nxp: high\n---\n# graded\n",
+          "xp-zero": "---\nstatus: graded\ntype: drill-irac\nxp: 0\n---\n# graded\n"
+        }
+      },
+      "output": {
+        " ": null,
+        "a-folder": null,
+        "bare-rule-later": [
+          "bare-rule-later",
+          15
+        ],
+        "colons": [
+          "colons",
+          15
+        ],
+        "crlf": [
+          "crlf",
+          19
+        ],
+        "dash-key": [
+          "dash-key",
+          15
+        ],
+        "dup-key": [
+          "dup-key",
+          22
+        ],
+        "empty-frontmatter": null,
+        "indent-key": [
+          "indent-key",
+          15
+        ],
+        "no-frontmatter": null,
+        "other-status": null,
+        "plain": [
+          "plain",
+          15
+        ],
+        "random-0": [
+          "random-0",
+          10
+        ],
+        "random-1": [
+          "random-1",
+          16
+        ],
+        "random-2": [
+          "random-2",
+          10
+        ],
+        "random-3": [
+          "random-3",
+          25
+        ],
+        "status-case": null,
+        "unclosed": [
+          "unclosed",
+          12
+        ],
+        "xp-10": [
+          "xp-10",
+          10
+        ],
+        "xp-24": [
+          "xp-24",
+          24
+        ],
+        "xp-25": [
+          "xp-25",
+          25
+        ],
+        "xp-26": [
+          "xp-26",
+          25
+        ],
+        "xp-9": [
+          "xp-9",
+          10
+        ],
+        "xp-decimal": [
+          "xp-decimal",
+          15
+        ],
+        "xp-double-underscore": [
+          "xp-double-underscore",
+          15
+        ],
+        "xp-empty": [
+          "xp-empty",
+          15
+        ],
+        "xp-hex": [
+          "xp-hex",
+          15
+        ],
+        "xp-huge": [
+          "xp-huge",
+          25
+        ],
+        "xp-lead-underscore": [
+          "xp-lead-underscore",
+          15
+        ],
+        "xp-minus-plus": [
+          "xp-minus-plus",
+          15
+        ],
+        "xp-neg": [
+          "xp-neg",
+          10
+        ],
+        "xp-plus": [
+          "xp-plus",
+          20
+        ],
+        "xp-space": [
+          "xp-space",
+          17
+        ],
+        "xp-tab": [
+          "xp-tab",
+          18
+        ],
+        "xp-trail-underscore": [
+          "xp-trail-underscore",
+          15
+        ],
+        "xp-underscore": [
+          "xp-underscore",
+          12
+        ],
+        "xp-word": [
+          "xp-word",
+          15
+        ],
+        "xp-zero": [
+          "xp-zero",
+          10
+        ]
+      }
+    }
+  ],
+  "function": "vault_bridge._parse_graded_drill",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Calls the parse on each note of the Graded folder; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_110.py",
+  "registry_sha256": "d058393f8eb4b64bb586d0f495e756d6bb23e9dfee189e8f89def4160897befe",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

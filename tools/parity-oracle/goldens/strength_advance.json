@@ -1,0 +1,252 @@
+{
+  "cases": [
+    {
+      "input": {
+        "prev": -0.5,
+        "studied": false
+      },
+      "output": 0.0
+    },
+    {
+      "input": {
+        "prev": -0.5,
+        "studied": true
+      },
+      "output": 0.05192248566082858
+    },
+    {
+      "input": {
+        "prev": 0.0,
+        "studied": false
+      },
+      "output": 0.0
+    },
+    {
+      "input": {
+        "prev": 0.0,
+        "studied": true
+      },
+      "output": 0.05192248566082858
+    },
+    {
+      "input": {
+        "prev": 0.3,
+        "studied": false
+      },
+      "output": 0.2844232543017514
+    },
+    {
+      "input": {
+        "prev": 0.3,
+        "studied": true
+      },
+      "output": 0.33634573996258
+    },
+    {
+      "input": {
+        "prev": 0.6,
+        "studied": false
+      },
+      "output": 0.5688465086035028
+    },
+    {
+      "input": {
+        "prev": 0.6,
+        "studied": true
+      },
+      "output": 0.6207689942643314
+    },
+    {
+      "input": {
+        "prev": 0.999,
+        "studied": false
+      },
+      "output": 0.9471294368248323
+    },
+    {
+      "input": {
+        "prev": 0.999,
+        "studied": true
+      },
+      "output": 0.9990519224856609
+    },
+    {
+      "input": {
+        "prev": 1.0,
+        "studied": false
+      },
+      "output": 0.9480775143391714
+    },
+    {
+      "input": {
+        "prev": 1.0,
+        "studied": true
+      },
+      "output": 1.0
+    },
+    {
+      "input": {
+        "prev": 1.5,
+        "studied": false
+      },
+      "output": 0.9480775143391714
+    },
+    {
+      "input": {
+        "prev": 1.5,
+        "studied": true
+      },
+      "output": 1.0
+    },
+    {
+      "input": {
+        "prev": 0.9056396761745207,
+        "studied": false
+      },
+      "output": 0.8586166130744717
+    },
+    {
+      "input": {
+        "prev": 0.2598274474889769,
+        "studied": false
+      },
+      "output": 0.2463365605724408
+    },
+    {
+      "input": {
+        "prev": 0.8721303740697106,
+        "studied": false
+      },
+      "output": 0.826847197227703
+    },
+    {
+      "input": {
+        "prev": 0.026980045523666285,
+        "studied": true
+      },
+      "output": 0.0775016601576638
+    },
+    {
+      "input": {
+        "prev": 0.9938380127773296,
+        "studied": false
+      },
+      "output": 0.9422354728097124
+    },
+    {
+      "input": {
+        "prev": 0.1250771754915948,
+        "studied": true
+      },
+      "output": 0.1705053433014641
+    },
+    {
+      "input": {
+        "prev": 0.9500391079535002,
+        "studied": true
+      },
+      "output": 0.9526332016543868
+    },
+    {
+      "input": {
+        "prev": 0.41198182261476346,
+        "studied": false
+      },
+      "output": 0.3905907023375264
+    },
+    {
+      "input": {
+        "prev": 0.316903983245593,
+        "studied": true
+      },
+      "output": 0.3523720263804928
+    },
+    {
+      "input": {
+        "prev": 0.3287411811006947,
+        "studied": false
+      },
+      "output": 0.31167212183887005
+    },
+    {
+      "input": {
+        "prev": 0.6276838370997428,
+        "studied": true
+      },
+      "output": 0.6470154177292262
+    },
+    {
+      "input": {
+        "prev": 0.40493299127717297,
+        "studied": false
+      },
+      "output": 0.3839078638439875
+    },
+    {
+      "input": {
+        "prev": 0.5732099431950031,
+        "studied": false
+      },
+      "output": 0.5434474581388161
+    },
+    {
+      "input": {
+        "prev": 0.20181614230964307,
+        "studied": false
+      },
+      "output": 0.1913373465544469
+    },
+    {
+      "input": {
+        "prev": 0.19033754060732488,
+        "studied": true
+      },
+      "output": 0.23237722804525227
+    },
+    {
+      "input": {
+        "prev": 0.30506345398910195,
+        "studied": true
+      },
+      "output": 0.34114628683453857
+    },
+    {
+      "input": {
+        "prev": 0.1633494468328136,
+        "studied": false
+      },
+      "output": 0.15486793752193256
+    },
+    {
+      "input": {
+        "prev": 0.9056877495597655,
+        "studied": true
+      },
+      "output": 0.910584676030889
+    },
+    {
+      "input": {
+        "prev": 0.7057837116268251,
+        "studied": false
+      },
+      "output": 0.6691376669802349
+    },
+    {
+      "input": {
+        "prev": 0.5739310997543436,
+        "studied": false
+      },
+      "output": 0.5441311704570452
+    }
+  ],
+  "function": "gamification.strength.advance",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_076.py",
+  "registry_sha256": "e854e46aac5a5887cc38b12c7cfafd31275845828f9c77a4d12fb1e38248b20c",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

@@ -1,0 +1,233 @@
+{
+  "adapter": "with_days_as_dates",
+  "cases": [
+    {
+      "class": "today-studied",
+      "input": {
+        "days": [
+          19998,
+          19999,
+          20000
+        ],
+        "today": 20000
+      },
+      "output": 3
+    },
+    {
+      "class": "today-unfinished",
+      "input": {
+        "days": [
+          19997,
+          19998,
+          19999
+        ],
+        "today": 20000
+      },
+      "output": 3
+    },
+    {
+      "class": "gap",
+      "input": {
+        "days": [
+          19995,
+          19996,
+          19998,
+          19999,
+          20000
+        ],
+        "today": 20000
+      },
+      "output": 3
+    },
+    {
+      "class": "gap",
+      "input": {
+        "days": [
+          19997,
+          19998
+        ],
+        "today": 20000
+      },
+      "output": 0
+    },
+    {
+      "class": "empty",
+      "input": {
+        "days": [],
+        "today": 20000
+      },
+      "output": 0
+    },
+    {
+      "class": "future",
+      "input": {
+        "days": [
+          20001,
+          20002
+        ],
+        "today": 20000
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "days": [
+          19964,
+          19974,
+          19980,
+          19984,
+          19990,
+          19994,
+          19996,
+          19999
+        ],
+        "today": 20000
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "days": [
+          19963,
+          19970,
+          19972,
+          19974,
+          19980,
+          19992
+        ],
+        "today": 20000
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "days": [
+          19964,
+          19967,
+          19969,
+          19973,
+          19975,
+          19979,
+          19980,
+          19985,
+          19987,
+          19988,
+          19995
+        ],
+        "today": 20000
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "days": [
+          19988,
+          19994
+        ],
+        "today": 20000
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "days": [
+          19981,
+          19982,
+          19984,
+          19988
+        ],
+        "today": 20000
+      },
+      "output": 0
+    },
+    {
+      "input": {
+        "days": [
+          19961,
+          19964,
+          19983,
+          19985,
+          19986,
+          19993,
+          19997,
+          19999,
+          20000
+        ],
+        "today": 20000
+      },
+      "output": 2
+    },
+    {
+      "input": {
+        "days": [
+          19962,
+          19963,
+          19965,
+          19967,
+          19971,
+          19972,
+          19973,
+          19975,
+          19978,
+          19979,
+          19980,
+          19981,
+          19982,
+          19983,
+          19986,
+          19988,
+          19989,
+          19990,
+          19991,
+          19992,
+          19993,
+          19995,
+          19997,
+          20000
+        ],
+        "today": 20000
+      },
+      "output": 1
+    },
+    {
+      "input": {
+        "days": [
+          19964,
+          19967,
+          19968,
+          19974,
+          19976,
+          19979,
+          19981,
+          19983,
+          19984,
+          19985,
+          19986,
+          19987,
+          19988,
+          19990,
+          19992,
+          19994,
+          19995,
+          19996,
+          19998,
+          19999,
+          20000
+        ],
+        "today": 20000
+      },
+      "output": 3
+    }
+  ],
+  "function": "analytics.raw_streak",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Turns the case's day numbers and today into dates and calls the raw streak; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_071.py",
+  "registry_sha256": "f1c7ec842fede7f22e07a58b4c7043d57049f0b0c78a9419b6c7d77f2cdf2402",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

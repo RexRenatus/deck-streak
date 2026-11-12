@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO drill_grades (drill_id, drill_type, subject, xp, study_day, created_at)\n         VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT (drill_id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "dd0d7e887575a1070f43ee86a5fa1ede488dd675d836d4f7d951ddd033ae20a6"
+}

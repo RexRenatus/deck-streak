@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT status, reason FROM sync_runs WHERE trigger = 'owner' AND status IN ('ok', 'error') AND started_at >= ?1 ORDER BY id DESC LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "status",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "sync_runs",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "name": "reason",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "sync_runs",
+            "name": "reason"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "1d1e4cd6306518410d35f5e8e882d71f9aa311f6e8c650913696ac3b281e8c64"
+}

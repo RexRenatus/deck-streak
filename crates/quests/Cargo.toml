@@ -14,3 +14,21 @@ workspace = true
 [dependencies]
 deck-streak-kernel.workspace = true
 deck-streak-ingest.workspace = true
+# SPEC-081 R5 (ADR-081, ADR-024): each chest's two draws come from the operating system's
+# generator.
+getrandom.workspace = true
+# SPEC-081 R5: the chest store runs on the caller's connection, its queries checked into .sqlx/.
+sqlx.workspace = true
+# SPEC-081 R5: a failed draw or store read is a typed error the caller matches on.
+thiserror.workspace = true
+# SPEC-081 R21: the data-rights port's exported rows and reset rows are JSON values.
+serde_json.workspace = true
+
+[dev-dependencies]
+# ADR-029: the parity oracle's golden reader, compiled into the goldens tests by path.
+serde.workspace = true
+# The goldens' floats are compared bit for bit, so the reader parses them exactly (SPEC-071 section 7).
+serde_json = { workspace = true, features = ["float_roundtrip"] }
+# The grant's tests: a file-backed database per case through the kernel's repository base.
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "rt"] }

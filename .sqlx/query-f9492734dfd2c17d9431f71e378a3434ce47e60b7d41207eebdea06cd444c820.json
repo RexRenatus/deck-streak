@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE chest_settings SET per_day_max = ?1, vault_hour = ?2 WHERE id = 1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "f9492734dfd2c17d9431f71e378a3434ce47e60b7d41207eebdea06cd444c820"
+}

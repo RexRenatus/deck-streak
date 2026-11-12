@@ -1,0 +1,422 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT study_day AS \"study_day!\", reviews, learn_count, review_count, relearn_count,\n                  filtered_count, seconds, answered, passed, true_retention, graduations,\n                  decks_studied, avg_answer_seconds, young_answered, young_passed, mature_answered,\n                  mature_passed, mature_count, young_count, leech_active, backlog, due_today,\n                  card_state_src, score, consistency, retention, workload, volume, mastery,\n                  score_at_close, settled_at, fingerprint, created_at, updated_at\n           FROM daily_rollup WHERE study_day = ?1",
+  "describe": {
+    "columns": [
+      {
+        "name": "study_day!",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "reviews",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "reviews"
+          }
+        }
+      },
+      {
+        "name": "learn_count",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "learn_count"
+          }
+        }
+      },
+      {
+        "name": "review_count",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "review_count"
+          }
+        }
+      },
+      {
+        "name": "relearn_count",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "relearn_count"
+          }
+        }
+      },
+      {
+        "name": "filtered_count",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "filtered_count"
+          }
+        }
+      },
+      {
+        "name": "seconds",
+        "ordinal": 6,
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "seconds"
+          }
+        }
+      },
+      {
+        "name": "answered",
+        "ordinal": 7,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "answered"
+          }
+        }
+      },
+      {
+        "name": "passed",
+        "ordinal": 8,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "passed"
+          }
+        }
+      },
+      {
+        "name": "true_retention",
+        "ordinal": 9,
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "true_retention"
+          }
+        }
+      },
+      {
+        "name": "graduations",
+        "ordinal": 10,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "graduations"
+          }
+        }
+      },
+      {
+        "name": "decks_studied",
+        "ordinal": 11,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "decks_studied"
+          }
+        }
+      },
+      {
+        "name": "avg_answer_seconds",
+        "ordinal": 12,
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "avg_answer_seconds"
+          }
+        }
+      },
+      {
+        "name": "young_answered",
+        "ordinal": 13,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "young_answered"
+          }
+        }
+      },
+      {
+        "name": "young_passed",
+        "ordinal": 14,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "young_passed"
+          }
+        }
+      },
+      {
+        "name": "mature_answered",
+        "ordinal": 15,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "mature_answered"
+          }
+        }
+      },
+      {
+        "name": "mature_passed",
+        "ordinal": 16,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "mature_passed"
+          }
+        }
+      },
+      {
+        "name": "mature_count",
+        "ordinal": 17,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "mature_count"
+          }
+        }
+      },
+      {
+        "name": "young_count",
+        "ordinal": 18,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "young_count"
+          }
+        }
+      },
+      {
+        "name": "leech_active",
+        "ordinal": 19,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "leech_active"
+          }
+        }
+      },
+      {
+        "name": "backlog",
+        "ordinal": 20,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "backlog"
+          }
+        }
+      },
+      {
+        "name": "due_today",
+        "ordinal": 21,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "due_today"
+          }
+        }
+      },
+      {
+        "name": "card_state_src",
+        "ordinal": 22,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "card_state_src"
+          }
+        }
+      },
+      {
+        "name": "score",
+        "ordinal": 23,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "score"
+          }
+        }
+      },
+      {
+        "name": "consistency",
+        "ordinal": 24,
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "consistency"
+          }
+        }
+      },
+      {
+        "name": "retention",
+        "ordinal": 25,
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "retention"
+          }
+        }
+      },
+      {
+        "name": "workload",
+        "ordinal": 26,
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "workload"
+          }
+        }
+      },
+      {
+        "name": "volume",
+        "ordinal": 27,
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "volume"
+          }
+        }
+      },
+      {
+        "name": "mastery",
+        "ordinal": 28,
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "mastery"
+          }
+        }
+      },
+      {
+        "name": "score_at_close",
+        "ordinal": 29,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "score_at_close"
+          }
+        }
+      },
+      {
+        "name": "settled_at",
+        "ordinal": 30,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "settled_at"
+          }
+        }
+      },
+      {
+        "name": "fingerprint",
+        "ordinal": 31,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "fingerprint"
+          }
+        }
+      },
+      {
+        "name": "created_at",
+        "ordinal": 32,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "name": "updated_at",
+        "ordinal": 33,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "daily_rollup",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "eeda3de6b1a7010f1389954110ef0783156be41d93ee4c1e8ce901ae4d9df981"
+}

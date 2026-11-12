@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE daily_rollup SET settled_at = ?2 WHERE study_day = ?1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "33e6a34e9337ba250af570a5f23897febd562b144b9b515507ae5c2baba2cd4b"
+}

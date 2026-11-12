@@ -1,0 +1,315 @@
+{
+  "adapter": "with_stub_syncer",
+  "cases": [
+    {
+      "class": "attempts",
+      "input": {
+        "failures": 0,
+        "jitter_draws": [
+          0.9056396761745207,
+          0.6862541570267026
+        ],
+        "kind": "error"
+      },
+      "output": {
+        "attempts": 1,
+        "error": null,
+        "ok": true,
+        "waits_seconds": []
+      }
+    },
+    {
+      "class": "attempts",
+      "input": {
+        "failures": 1,
+        "jitter_draws": [
+          0.7665092563626442,
+          0.9046162378132736
+        ],
+        "kind": "error"
+      },
+      "output": {
+        "attempts": 2,
+        "error": null,
+        "ok": true,
+        "waits_seconds": [
+          2.383254628181322
+        ]
+      }
+    },
+    {
+      "class": "attempts",
+      "input": {
+        "failures": 2,
+        "jitter_draws": [
+          0.2598274474889769,
+          0.6357258696059892
+        ],
+        "kind": "error"
+      },
+      "output": {
+        "attempts": 3,
+        "error": null,
+        "ok": true,
+        "waits_seconds": [
+          2.1299137237444885,
+          4.635725869605989
+        ]
+      }
+    },
+    {
+      "class": "attempts",
+      "input": {
+        "failures": 3,
+        "jitter_draws": [
+          0.9049456946664788,
+          0.8721303740697106
+        ],
+        "kind": "error"
+      },
+      "output": {
+        "attempts": 3,
+        "error": "server_error",
+        "ok": false,
+        "waits_seconds": [
+          2.4524728473332393,
+          4.872130374069711
+        ]
+      }
+    },
+    {
+      "class": "attempts",
+      "input": {
+        "failures": 0,
+        "jitter_draws": [
+          0.5729406692492218,
+          0.1693780871255699
+        ],
+        "kind": "timeout"
+      },
+      "output": {
+        "attempts": 1,
+        "error": null,
+        "ok": true,
+        "waits_seconds": []
+      }
+    },
+    {
+      "class": "attempts",
+      "input": {
+        "failures": 1,
+        "jitter_draws": [
+          0.4115230620409567,
+          0.9938380127773296
+        ],
+        "kind": "timeout"
+      },
+      "output": {
+        "attempts": 2,
+        "error": null,
+        "ok": true,
+        "waits_seconds": [
+          2.205761531020478
+        ]
+      }
+    },
+    {
+      "class": "attempts",
+      "input": {
+        "failures": 2,
+        "jitter_draws": [
+          0.10324779991117994,
+          0.31913914884928973
+        ],
+        "kind": "timeout"
+      },
+      "output": {
+        "attempts": 3,
+        "error": null,
+        "ok": true,
+        "waits_seconds": [
+          2.05162389995559,
+          4.31913914884929
+        ]
+      }
+    },
+    {
+      "class": "attempts",
+      "input": {
+        "failures": 3,
+        "jitter_draws": [
+          0.9500391079535002,
+          0.4494007558523254
+        ],
+        "kind": "timeout"
+      },
+      "output": {
+        "attempts": 3,
+        "error": "sync_timeout",
+        "ok": false,
+        "waits_seconds": [
+          2.4750195539767503,
+          4.449400755852325
+        ]
+      }
+    },
+    {
+      "class": "jitter",
+      "input": {
+        "failures": 3,
+        "jitter_draws": [
+          0.0,
+          0.0
+        ],
+        "kind": "error"
+      },
+      "output": {
+        "attempts": 3,
+        "error": "server_error",
+        "ok": false,
+        "waits_seconds": [
+          2.0,
+          4.0
+        ]
+      }
+    },
+    {
+      "class": "jitter",
+      "input": {
+        "failures": 3,
+        "jitter_draws": [
+          0.9999999999999999,
+          0.9999999999999999
+        ],
+        "kind": "error"
+      },
+      "output": {
+        "attempts": 3,
+        "error": "server_error",
+        "ok": false,
+        "waits_seconds": [
+          2.5,
+          5.0
+        ]
+      }
+    },
+    {
+      "input": {
+        "failures": 1,
+        "jitter_draws": [
+          0.316903983245593,
+          0.9086358448961127
+        ],
+        "kind": "error"
+      },
+      "output": {
+        "attempts": 2,
+        "error": null,
+        "ok": true,
+        "waits_seconds": [
+          2.1584519916227967
+        ]
+      }
+    },
+    {
+      "input": {
+        "failures": 2,
+        "jitter_draws": [
+          0.4273717931861004,
+          0.6276838370997428
+        ],
+        "kind": "timeout"
+      },
+      "output": {
+        "attempts": 3,
+        "error": null,
+        "ok": true,
+        "waits_seconds": [
+          2.2136858965930504,
+          4.627683837099743
+        ]
+      }
+    },
+    {
+      "input": {
+        "failures": 3,
+        "jitter_draws": [
+          0.08146598343806932,
+          0.5732099431950031
+        ],
+        "kind": "timeout"
+      },
+      "output": {
+        "attempts": 3,
+        "error": "sync_timeout",
+        "ok": false,
+        "waits_seconds": [
+          2.0407329917190347,
+          4.573209943195003
+        ]
+      }
+    },
+    {
+      "input": {
+        "failures": 0,
+        "jitter_draws": [
+          0.094524972764786,
+          0.19033754060732488
+        ],
+        "kind": "error"
+      },
+      "output": {
+        "attempts": 1,
+        "error": null,
+        "ok": true,
+        "waits_seconds": []
+      }
+    },
+    {
+      "input": {
+        "failures": 2,
+        "jitter_draws": [
+          0.6902498100458299,
+          0.1633494468328136
+        ],
+        "kind": "timeout"
+      },
+      "output": {
+        "attempts": 3,
+        "error": null,
+        "ok": true,
+        "waits_seconds": [
+          2.345124905022915,
+          4.163349446832814
+        ]
+      }
+    },
+    {
+      "input": {
+        "failures": 0,
+        "jitter_draws": [
+          0.26755334962743305,
+          0.23395965143377062
+        ],
+        "kind": "error"
+      },
+      "output": {
+        "attempts": 1,
+        "error": null,
+        "ok": true,
+        "waits_seconds": []
+      }
+    }
+  ],
+  "function": "pipeline.GamifyPipeline._sync_attempts",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Runs the loop on a stand-in pipeline holding only a stub syncer that fails the case's number of attempts by the case's kind; records each wait instead of sleeping, and draws the jitter from the case's fixed values; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_022.py",
+  "registry_sha256": "19f5ba6d2411cfe49f888f77a2874703d0c6680999bb97e0532ef2f27f1aa73f",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

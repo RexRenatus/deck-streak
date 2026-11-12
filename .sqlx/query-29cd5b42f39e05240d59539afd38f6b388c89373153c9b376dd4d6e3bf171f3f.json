@@ -1,0 +1,74 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT course AS \"course!: String\", band, study_day, baseline, celebrated_at\n               FROM band_milestones WHERE baseline = 0 AND celebrated_at IS NULL\n               ORDER BY created_at, study_day, course, band",
+  "describe": {
+    "columns": [
+      {
+        "name": "course!: String",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "band_milestones",
+            "name": "course"
+          }
+        }
+      },
+      {
+        "name": "band",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "band_milestones",
+            "name": "band"
+          }
+        }
+      },
+      {
+        "name": "study_day",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "band_milestones",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "baseline",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "band_milestones",
+            "name": "baseline"
+          }
+        }
+      },
+      {
+        "name": "celebrated_at",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "band_milestones",
+            "name": "celebrated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "29cd5b42f39e05240d59539afd38f6b388c89373153c9b376dd4d6e3bf171f3f"
+}

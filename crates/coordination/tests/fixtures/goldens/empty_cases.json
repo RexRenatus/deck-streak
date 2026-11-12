@@ -1,0 +1,13 @@
+{
+  "cases": [],
+  "function": "planted.no_case",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_000.py",
+  "registry_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "0000000000000000000000000000000000000000"
+}

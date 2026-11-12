@@ -5,7 +5,14 @@ no script may perform. Concrete names (secret names, host names, ids) are the ow
 the owner's private notes, never in this repository. Every value that is a secret is stored from
 standard input, never typed on a command line.
 
-## 1. The Telegram bot
+DeckStreak is a spaced-repetition study game for the web, iPhone and iPad. Sections 1, 2 and 6
+set up the Telegram bot, the owner's Telegram identity and the Mini App, which are deprecated
+(ADR-589): they stay until the delivery that removes them, and gain no feature.
+
+## 1. The Telegram bot (not part of the install)
+
+The install carries no Telegram bot, and no unit reads its token (SPEC-582): skip this
+section. The bot's code stays in the tree, deprecated, until its removal delivery.
 
 1. In Telegram, open `@BotFather` and send `/newbot`. Choose the display name `DeckStreak - XP and
    streaks for Anki` and the first free username of: `DeckStreakBot`, `deck_streak_bot`,
@@ -26,20 +33,31 @@ standard input, never typed on a command line.
 
 ## 2. The owner's identity
 
+The install loads no Telegram user id (SPEC-582): with none held, the API starts with Telegram
+off, and the owner signs in through the apps' own owner sign-in once it lands. The paragraph
+below is kept for the deprecated bot's code.
+
 DeckStreak answers one Telegram user. Store your numeric Telegram user id as a secret the same
 way (the bot's first `/start` from you logs a hint to look it up; it is never written to a file).
 
 ## 3. The Anki sync server
 
-DeckStreak reads your own Anki sync server; it never logs in to AnkiWeb. Store the sync server's
-URL, username and password as secrets. Serve the sync server over HTTPS if you can: a plain-HTTP
-sync server sends its credentials in the clear.
+DeckStreak reads your own Anki sync server; it never logs in to AnkiWeb, and it never uploads to
+your server (ADR-037). Set the server's URL as the setting `DECKSTREAK_SYNC_ENDPOINT` in the host's
+private configuration, never in this repository. Store the account's username and password as the
+secrets `anki-sync-username` and `anki-sync-password`; they reach the service as credentials at
+start (ADR-038).
 
-## 4. The AI agent's device key
+The transport is your decision. Serve the sync server over HTTPS if you can: with a plain `http:`
+URL the credentials cross the network in the clear, and the service says so once at start, in a
+WARN line that names the setting and never its value.
 
-The agent reaches your subscription proxy with its own device key. Create the key, add it to the
-proxy's device roster (which restarts the proxy), and store it as a secret. The agent reads it into
-its process environment at launch and never writes it to disk.
+## 4. The AI agent's device key (optional; only when you enable the AI route)
+
+DeckStreak runs whole without an AI route: the readings say they are not enabled, and nothing alerts
+(ADR-054). To enable the subscription route, create the agent's own device key, add it to the proxy's
+device roster (which restarts the proxy), and store it as a secret. It reaches the agent's unit
+through the credential socket at start and is never written to disk (ADR-038).
 
 ## 5. Hosting and HTTPS
 
@@ -51,7 +69,9 @@ its process environment at launch and never writes it to disk.
    filled in from your private configuration. Approve that change before it is made: Caddy may be
    shared with other services on the host.
 
-## 6. The Mini App
+## 6. The Mini App (not part of the install)
+
+The Mini App is deprecated, and the edge admits no framing origin (SPEC-582): skip this section.
 
 1. Once HTTPS works, send `@BotFather` the command `/newapp`, choose your bot, set the title
    `DeckStreak` and the short name `deckstreak`, and give the Mini App's HTTPS URL.
@@ -74,10 +94,27 @@ bash scripts/github-setup.sh
 ```
 
 It sets the default branch, applies the rulesets for `main`, `dev` and release tags, and turns on
-secret scanning, push protection, Dependabot alerts and security updates, and private
-vulnerability reporting.
+secret scanning, push protection, Dependabot alerts and private vulnerability reporting.
+Dependabot's automated security fixes stay off, because they would open against `main` (ADR-036);
+each alert is triaged, and a fixable one becomes a pull request into `dev`.
 
 ## 9. Each deploy
 
 Deploys run from your machine, from a tag on `main`: `bash deploy/deploy.sh vX.Y.Z` (RELEASING.md).
 The first deploy, and any change to a unit, Caddy, the firewall or a bucket, waits for your go.
+
+## 10. CodSpeed (the bench uploads, not part of the install)
+
+The `ci` workflow uploads bench results to CodSpeed by OIDC (SPEC-618, ADR-640). Set it up once:
+
+1. Sign in at codspeed.io with the GitHub account that owns this repository.
+2. Import the repository: in GitHub's install step choose "Only select repositories" and select
+   this repository alone.
+3. Choose the manual setup and decline the setup wizard: the wizard opens a pull request of its own,
+   and the bench jobs are already in `.github/workflows/ci.yml`.
+4. After the first upload, set "default branch for analysis" to `dev` in the repository's CodSpeed
+   settings.
+
+Create no CodSpeed token and no repository secret: the upload jobs authenticate by OIDC, and the
+CodSpeed action takes no `token` input. The CodSpeed check is not a required check. A pull request
+that keeps a slower change carries a regression record, as `perf/regressions.d/README.md` says.

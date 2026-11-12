@@ -1,0 +1,19 @@
+// A planted decide that composes and runs before it asks the deck gate (SPEC-381 R6).
+impl DutyEngine<'_> {
+    async fn decide(&self, duty: &DutySpec, input: &DutyInput<'_>) -> (Verdict, Option<Telemetry>) {
+        if !self.route.is_configured() {
+            return (Verdict::AiRouteAbsent, None);
+        }
+        let Ok(prompt) = compose(&input.parts) else {
+            return (self.unavailable(duty, Cause::RefusedShape), None);
+        };
+        let reply = match self.runner.run(&prompt, &duty.caps).await {
+            Ok(reply) => reply,
+            Err(cause) => return (self.unavailable(duty, cause), None),
+        };
+        if let DeckVerdict::KeptAway { .. } = self.deck_gate.judge(&input.scope).await {
+            return (self.withhold(duty, String::from("deck-sensitive"), Vec::new()), None);
+        }
+        (Verdict::Delivered(reply.into()), None)
+    }
+}

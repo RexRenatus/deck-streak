@@ -1,0 +1,848 @@
+{
+  "cases": [
+    {
+      "class": "floor",
+      "input": {
+        "rollups": []
+      },
+      "output": [
+        10.0,
+        5.0
+      ]
+    },
+    {
+      "class": "floor",
+      "input": {
+        "rollups": [
+          {
+            "reviews": 0,
+            "seconds": 0
+          },
+          {
+            "reviews": 0,
+            "seconds": 90
+          }
+        ]
+      },
+      "output": [
+        10.0,
+        5.0
+      ]
+    },
+    {
+      "class": "floor",
+      "input": {
+        "rollups": [
+          {
+            "reviews": 3,
+            "seconds": 60
+          },
+          {
+            "reviews": 9,
+            "seconds": 120
+          }
+        ]
+      },
+      "output": [
+        10.0,
+        5.0
+      ]
+    },
+    {
+      "class": "even",
+      "input": {
+        "rollups": [
+          {
+            "reviews": 11,
+            "seconds": 700
+          },
+          {
+            "reviews": 40,
+            "seconds": 900
+          }
+        ]
+      },
+      "output": [
+        25.5,
+        13.333333333333332
+      ]
+    },
+    {
+      "class": "odd",
+      "input": {
+        "rollups": [
+          {
+            "reviews": 30,
+            "seconds": 1000
+          },
+          {
+            "reviews": 12,
+            "seconds": 2000
+          },
+          {
+            "reviews": 90,
+            "seconds": 3001
+          }
+        ]
+      },
+      "output": [
+        30,
+        33.333333333333336
+      ]
+    },
+    {
+      "input": {
+        "rollups": [
+          {
+            "reviews": 3,
+            "seconds": 4257
+          },
+          {
+            "reviews": 0,
+            "seconds": 5364
+          },
+          {
+            "reviews": 3,
+            "seconds": 442
+          },
+          {
+            "reviews": 25,
+            "seconds": 6664
+          },
+          {
+            "reviews": 0,
+            "seconds": 1691
+          },
+          {
+            "reviews": 3,
+            "seconds": 5228
+          },
+          {
+            "reviews": 60,
+            "seconds": 7362
+          },
+          {
+            "reviews": 25,
+            "seconds": 3418
+          },
+          {
+            "reviews": 9,
+            "seconds": 5192
+          },
+          {
+            "reviews": 11,
+            "seconds": 5386
+          },
+          {
+            "reviews": 25,
+            "seconds": 1519
+          },
+          {
+            "reviews": 140,
+            "seconds": 8062
+          },
+          {
+            "reviews": 25,
+            "seconds": 1334
+          },
+          {
+            "reviews": 9,
+            "seconds": 3975
+          },
+          {
+            "reviews": 0,
+            "seconds": 3306
+          },
+          {
+            "reviews": 0,
+            "seconds": 1372
+          },
+          {
+            "reviews": 9,
+            "seconds": 4152
+          },
+          {
+            "reviews": 10,
+            "seconds": 4998
+          },
+          {
+            "reviews": 10,
+            "seconds": 2676
+          },
+          {
+            "reviews": 0,
+            "seconds": 382
+          },
+          {
+            "reviews": 10,
+            "seconds": 3833
+          },
+          {
+            "reviews": 9,
+            "seconds": 3892
+          },
+          {
+            "reviews": 0,
+            "seconds": 212
+          },
+          {
+            "reviews": 10,
+            "seconds": 4577
+          },
+          {
+            "reviews": 3,
+            "seconds": 5502
+          },
+          {
+            "reviews": 60,
+            "seconds": 2506
+          },
+          {
+            "reviews": 10,
+            "seconds": 7092
+          },
+          {
+            "reviews": 3,
+            "seconds": 2697
+          },
+          {
+            "reviews": 25,
+            "seconds": 1983
+          },
+          {
+            "reviews": 3,
+            "seconds": 7021
+          },
+          {
+            "reviews": 11,
+            "seconds": 3670
+          },
+          {
+            "reviews": 0,
+            "seconds": 849
+          },
+          {
+            "reviews": 140,
+            "seconds": 3168
+          },
+          {
+            "reviews": 25,
+            "seconds": 2823
+          },
+          {
+            "reviews": 3,
+            "seconds": 1327
+          },
+          {
+            "reviews": 0,
+            "seconds": 4808
+          },
+          {
+            "reviews": 0,
+            "seconds": 5166
+          },
+          {
+            "reviews": 25,
+            "seconds": 7494
+          },
+          {
+            "reviews": 140,
+            "seconds": 890
+          },
+          {
+            "reviews": 3,
+            "seconds": 1925
+          },
+          {
+            "reviews": 60,
+            "seconds": 5464
+          },
+          {
+            "reviews": 0,
+            "seconds": 1197
+          },
+          {
+            "reviews": 0,
+            "seconds": 1528
+          }
+        ]
+      },
+      "output": [
+        10.0,
+        65.55833333333334
+      ]
+    },
+    {
+      "input": {
+        "rollups": [
+          {
+            "reviews": 10,
+            "seconds": 1407
+          },
+          {
+            "reviews": 10,
+            "seconds": 726
+          },
+          {
+            "reviews": 0,
+            "seconds": 3185
+          },
+          {
+            "reviews": 9,
+            "seconds": 8407
+          },
+          {
+            "reviews": 140,
+            "seconds": 199
+          },
+          {
+            "reviews": 3,
+            "seconds": 389
+          },
+          {
+            "reviews": 140,
+            "seconds": 2213
+          },
+          {
+            "reviews": 10,
+            "seconds": 2064
+          },
+          {
+            "reviews": 25,
+            "seconds": 4506
+          },
+          {
+            "reviews": 0,
+            "seconds": 6357
+          },
+          {
+            "reviews": 0,
+            "seconds": 3571
+          },
+          {
+            "reviews": 9,
+            "seconds": 3236
+          },
+          {
+            "reviews": 9,
+            "seconds": 1592
+          },
+          {
+            "reviews": 10,
+            "seconds": 2054
+          },
+          {
+            "reviews": 140,
+            "seconds": 6385
+          },
+          {
+            "reviews": 3,
+            "seconds": 1355
+          },
+          {
+            "reviews": 60,
+            "seconds": 7985
+          },
+          {
+            "reviews": 0,
+            "seconds": 2928
+          },
+          {
+            "reviews": 9,
+            "seconds": 5100
+          },
+          {
+            "reviews": 25,
+            "seconds": 1556
+          },
+          {
+            "reviews": 10,
+            "seconds": 3391
+          }
+        ]
+      },
+      "output": [
+        10,
+        34.4
+      ]
+    },
+    {
+      "input": {
+        "rollups": [
+          {
+            "reviews": 10,
+            "seconds": 2356
+          },
+          {
+            "reviews": 0,
+            "seconds": 79
+          },
+          {
+            "reviews": 10,
+            "seconds": 1012
+          },
+          {
+            "reviews": 25,
+            "seconds": 6115
+          },
+          {
+            "reviews": 10,
+            "seconds": 6486
+          },
+          {
+            "reviews": 60,
+            "seconds": 1628
+          },
+          {
+            "reviews": 0,
+            "seconds": 7688
+          },
+          {
+            "reviews": 9,
+            "seconds": 164
+          },
+          {
+            "reviews": 140,
+            "seconds": 1146
+          },
+          {
+            "reviews": 140,
+            "seconds": 5583
+          },
+          {
+            "reviews": 0,
+            "seconds": 2932
+          },
+          {
+            "reviews": 10,
+            "seconds": 4817
+          },
+          {
+            "reviews": 0,
+            "seconds": 39
+          },
+          {
+            "reviews": 0,
+            "seconds": 3462
+          },
+          {
+            "reviews": 9,
+            "seconds": 6653
+          },
+          {
+            "reviews": 0,
+            "seconds": 5893
+          },
+          {
+            "reviews": 10,
+            "seconds": 7254
+          },
+          {
+            "reviews": 0,
+            "seconds": 2256
+          },
+          {
+            "reviews": 25,
+            "seconds": 6509
+          },
+          {
+            "reviews": 25,
+            "seconds": 4167
+          },
+          {
+            "reviews": 0,
+            "seconds": 7518
+          },
+          {
+            "reviews": 0,
+            "seconds": 8061
+          },
+          {
+            "reviews": 11,
+            "seconds": 3771
+          }
+        ]
+      },
+      "output": [
+        10.5,
+        74.86666666666667
+      ]
+    },
+    {
+      "input": {
+        "rollups": [
+          {
+            "reviews": 10,
+            "seconds": 7382
+          },
+          {
+            "reviews": 11,
+            "seconds": 6228
+          },
+          {
+            "reviews": 9,
+            "seconds": 858
+          },
+          {
+            "reviews": 11,
+            "seconds": 2210
+          },
+          {
+            "reviews": 0,
+            "seconds": 6018
+          },
+          {
+            "reviews": 0,
+            "seconds": 1932
+          },
+          {
+            "reviews": 60,
+            "seconds": 3924
+          },
+          {
+            "reviews": 140,
+            "seconds": 2321
+          },
+          {
+            "reviews": 10,
+            "seconds": 109
+          },
+          {
+            "reviews": 3,
+            "seconds": 5954
+          },
+          {
+            "reviews": 11,
+            "seconds": 8689
+          },
+          {
+            "reviews": 3,
+            "seconds": 309
+          }
+        ]
+      },
+      "output": [
+        10.5,
+        52.04166666666667
+      ]
+    },
+    {
+      "input": {
+        "rollups": [
+          {
+            "reviews": 25,
+            "seconds": 8624
+          },
+          {
+            "reviews": 60,
+            "seconds": 4050
+          },
+          {
+            "reviews": 25,
+            "seconds": 6359
+          },
+          {
+            "reviews": 140,
+            "seconds": 4761
+          },
+          {
+            "reviews": 140,
+            "seconds": 4857
+          },
+          {
+            "reviews": 0,
+            "seconds": 8083
+          },
+          {
+            "reviews": 10,
+            "seconds": 5775
+          },
+          {
+            "reviews": 3,
+            "seconds": 7620
+          },
+          {
+            "reviews": 9,
+            "seconds": 7937
+          },
+          {
+            "reviews": 3,
+            "seconds": 5792
+          },
+          {
+            "reviews": 11,
+            "seconds": 2316
+          },
+          {
+            "reviews": 140,
+            "seconds": 2019
+          },
+          {
+            "reviews": 10,
+            "seconds": 638
+          },
+          {
+            "reviews": 140,
+            "seconds": 3104
+          }
+        ]
+      },
+      "output": [
+        25,
+        80.95
+      ]
+    },
+    {
+      "input": {
+        "rollups": [
+          {
+            "reviews": 25,
+            "seconds": 3504
+          },
+          {
+            "reviews": 140,
+            "seconds": 8317
+          },
+          {
+            "reviews": 10,
+            "seconds": 7715
+          },
+          {
+            "reviews": 3,
+            "seconds": 2236
+          },
+          {
+            "reviews": 3,
+            "seconds": 4500
+          },
+          {
+            "reviews": 0,
+            "seconds": 1258
+          },
+          {
+            "reviews": 3,
+            "seconds": 5565
+          },
+          {
+            "reviews": 10,
+            "seconds": 4020
+          },
+          {
+            "reviews": 11,
+            "seconds": 1393
+          },
+          {
+            "reviews": 3,
+            "seconds": 4324
+          },
+          {
+            "reviews": 10,
+            "seconds": 1571
+          },
+          {
+            "reviews": 3,
+            "seconds": 4984
+          },
+          {
+            "reviews": 0,
+            "seconds": 8114
+          },
+          {
+            "reviews": 0,
+            "seconds": 8257
+          },
+          {
+            "reviews": 0,
+            "seconds": 7792
+          },
+          {
+            "reviews": 60,
+            "seconds": 6412
+          },
+          {
+            "reviews": 140,
+            "seconds": 1560
+          },
+          {
+            "reviews": 3,
+            "seconds": 5088
+          },
+          {
+            "reviews": 140,
+            "seconds": 6862
+          },
+          {
+            "reviews": 3,
+            "seconds": 7464
+          },
+          {
+            "reviews": 60,
+            "seconds": 8494
+          },
+          {
+            "reviews": 60,
+            "seconds": 2511
+          },
+          {
+            "reviews": 3,
+            "seconds": 3111
+          }
+        ]
+      },
+      "output": [
+        10,
+        75.0
+      ]
+    },
+    {
+      "input": {
+        "rollups": [
+          {
+            "reviews": 10,
+            "seconds": 1928
+          },
+          {
+            "reviews": 9,
+            "seconds": 7307
+          },
+          {
+            "reviews": 25,
+            "seconds": 7664
+          },
+          {
+            "reviews": 0,
+            "seconds": 5022
+          },
+          {
+            "reviews": 140,
+            "seconds": 1876
+          },
+          {
+            "reviews": 9,
+            "seconds": 3382
+          },
+          {
+            "reviews": 10,
+            "seconds": 3392
+          },
+          {
+            "reviews": 140,
+            "seconds": 4733
+          },
+          {
+            "reviews": 25,
+            "seconds": 7755
+          },
+          {
+            "reviews": 0,
+            "seconds": 5964
+          },
+          {
+            "reviews": 140,
+            "seconds": 4010
+          },
+          {
+            "reviews": 3,
+            "seconds": 6096
+          }
+        ]
+      },
+      "output": [
+        17.5,
+        72.85833333333333
+      ]
+    },
+    {
+      "input": {
+        "rollups": [
+          {
+            "reviews": 3,
+            "seconds": 176
+          },
+          {
+            "reviews": 11,
+            "seconds": 6188
+          },
+          {
+            "reviews": 3,
+            "seconds": 4671
+          },
+          {
+            "reviews": 140,
+            "seconds": 2108
+          },
+          {
+            "reviews": 140,
+            "seconds": 1087
+          },
+          {
+            "reviews": 3,
+            "seconds": 8260
+          },
+          {
+            "reviews": 140,
+            "seconds": 602
+          },
+          {
+            "reviews": 0,
+            "seconds": 4587
+          },
+          {
+            "reviews": 25,
+            "seconds": 1468
+          },
+          {
+            "reviews": 140,
+            "seconds": 3146
+          },
+          {
+            "reviews": 60,
+            "seconds": 7281
+          },
+          {
+            "reviews": 25,
+            "seconds": 711
+          },
+          {
+            "reviews": 3,
+            "seconds": 2842
+          },
+          {
+            "reviews": 0,
+            "seconds": 8133
+          },
+          {
+            "reviews": 10,
+            "seconds": 2592
+          },
+          {
+            "reviews": 9,
+            "seconds": 4509
+          },
+          {
+            "reviews": 9,
+            "seconds": 1921
+          },
+          {
+            "reviews": 0,
+            "seconds": 8779
+          }
+        ]
+      },
+      "output": [
+        11,
+        43.2
+      ]
+    }
+  ],
+  "function": "analytics.volume_baseline",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_071.py",
+  "registry_sha256": "f1c7ec842fede7f22e07a58b4c7043d57049f0b0c78a9419b6c7d77f2cdf2402",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO streak_state\n             (track, current_days, longest_days, freezes, last_study_day, comeback_armed, created_at)\n         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)\n         ON CONFLICT (track) DO UPDATE SET\n             current_days = excluded.current_days,\n             longest_days = excluded.longest_days,\n             freezes = excluded.freezes,\n             last_study_day = excluded.last_study_day,\n             comeback_armed = excluded.comeback_armed",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": []
+  },
+  "hash": "013a6b105b0334023c49856058ad9431f34b31ceb1d8256e8e69e78f26bfadee"
+}

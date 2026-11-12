@@ -1,0 +1,120 @@
+{
+  "cases": [
+    {
+      "class": "literal",
+      "input": {
+        "source": "reviews"
+      },
+      "output": "reviews"
+    },
+    {
+      "class": "literal",
+      "input": {
+        "source": "reviews_law"
+      },
+      "output": "reviews_law"
+    },
+    {
+      "class": "prefixed",
+      "input": {
+        "source": "quest:2"
+      },
+      "output": "quest:"
+    },
+    {
+      "class": "prefixed",
+      "input": {
+        "source": "chest:"
+      },
+      "output": "chest:"
+    },
+    {
+      "class": "several-colons",
+      "input": {
+        "source": "focusgoal:law:x"
+      },
+      "output": "focusgoal:"
+    },
+    {
+      "class": "several-colons",
+      "input": {
+        "source": "a:b:c:d:e"
+      },
+      "output": "a:"
+    },
+    {
+      "class": "empty-prefix",
+      "input": {
+        "source": ":foo"
+      },
+      "output": ":"
+    },
+    {
+      "class": "lone-colon",
+      "input": {
+        "source": ":"
+      },
+      "output": ":"
+    },
+    {
+      "class": "empty",
+      "input": {
+        "source": ""
+      },
+      "output": ""
+    },
+    {
+      "class": "case-kept",
+      "input": {
+        "source": "UPPER:Case"
+      },
+      "output": "UPPER:"
+    },
+    {
+      "input": {
+        "source": "2x:reviews"
+      },
+      "output": "2x:"
+    },
+    {
+      "input": {
+        "source": "read:es"
+      },
+      "output": "read:"
+    },
+    {
+      "input": {
+        "source": ":bare"
+      },
+      "output": ":"
+    },
+    {
+      "input": {
+        "source": ":bare"
+      },
+      "output": ":"
+    },
+    {
+      "input": {
+        "source": "consistency"
+      },
+      "output": "consistency"
+    },
+    {
+      "input": {
+        "source": "streak"
+      },
+      "output": "streak"
+    }
+  ],
+  "function": "exchange.normalize_source",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_075.py",
+  "registry_sha256": "647cd71a23f67d493c65619d7640845186beeb2f58afe24a6dfe70b09bcd0091",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

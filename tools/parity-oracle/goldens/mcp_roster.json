@@ -1,0 +1,645 @@
+{
+  "adapter": "at_defaults",
+  "cases": [
+    {
+      "input": {},
+      "output": {
+        "tools": [
+          {
+            "annotations": {
+              "idempotentHint": true,
+              "openWorldHint": false,
+              "readOnlyHint": true
+            },
+            "input_schema": {
+              "properties": {},
+              "title": "get_statsArguments",
+              "type": "object"
+            },
+            "name": "get_stats",
+            "output_fields": []
+          },
+          {
+            "annotations": {
+              "idempotentHint": true,
+              "openWorldHint": false,
+              "readOnlyHint": true
+            },
+            "input_schema": {
+              "properties": {},
+              "title": "get_scoreArguments",
+              "type": "object"
+            },
+            "name": "get_score",
+            "output_fields": [
+              "score",
+              "grade_label",
+              "grade_emoji",
+              "reviews_today",
+              "true_retention"
+            ]
+          },
+          {
+            "annotations": {
+              "idempotentHint": true,
+              "openWorldHint": false,
+              "readOnlyHint": true
+            },
+            "input_schema": {
+              "properties": {},
+              "title": "get_streakArguments",
+              "type": "object"
+            },
+            "name": "get_streak",
+            "output_fields": [
+              "current",
+              "longest",
+              "freezes",
+              "heat"
+            ]
+          },
+          {
+            "annotations": {
+              "idempotentHint": true,
+              "openWorldHint": false,
+              "readOnlyHint": true
+            },
+            "input_schema": {
+              "properties": {},
+              "title": "get_levelArguments",
+              "type": "object"
+            },
+            "name": "get_level",
+            "output_fields": [
+              "level",
+              "title",
+              "emoji",
+              "total_xp",
+              "xp_into_level",
+              "xp_for_next"
+            ]
+          },
+          {
+            "annotations": {
+              "idempotentHint": true,
+              "openWorldHint": false,
+              "readOnlyHint": true
+            },
+            "input_schema": {
+              "properties": {
+                "limit": {
+                  "default": 50,
+                  "title": "Limit",
+                  "type": "integer"
+                }
+              },
+              "title": "get_badgesArguments",
+              "type": "object"
+            },
+            "name": "get_badges",
+            "output_fields": [
+              "result"
+            ]
+          },
+          {
+            "annotations": {
+              "idempotentHint": true,
+              "openWorldHint": false,
+              "readOnlyHint": true
+            },
+            "input_schema": {
+              "properties": {
+                "days": {
+                  "default": 7,
+                  "title": "Days",
+                  "type": "integer"
+                }
+              },
+              "title": "get_weekly_reportArguments",
+              "type": "object"
+            },
+            "name": "get_weekly_report",
+            "output_fields": [
+              "result"
+            ]
+          },
+          {
+            "annotations": {
+              "idempotentHint": true,
+              "openWorldHint": false,
+              "readOnlyHint": true
+            },
+            "input_schema": {
+              "properties": {},
+              "title": "get_leaderboardArguments",
+              "type": "object"
+            },
+            "name": "get_leaderboard",
+            "output_fields": [
+              "result"
+            ]
+          },
+          {
+            "annotations": {
+              "idempotentHint": true,
+              "openWorldHint": false,
+              "readOnlyHint": true
+            },
+            "input_schema": {
+              "properties": {},
+              "title": "get_progressArguments",
+              "type": "object"
+            },
+            "name": "get_progress",
+            "output_fields": [
+              "result"
+            ]
+          },
+          {
+            "annotations": {
+              "idempotentHint": true,
+              "openWorldHint": false,
+              "readOnlyHint": true
+            },
+            "input_schema": {
+              "properties": {
+                "days": {
+                  "default": 0,
+                  "title": "Days",
+                  "type": "integer"
+                }
+              },
+              "title": "get_xp_exchange_ratesArguments",
+              "type": "object"
+            },
+            "name": "get_xp_exchange_rates",
+            "output_fields": [
+              "result"
+            ]
+          },
+          {
+            "annotations": {
+              "idempotentHint": true,
+              "openWorldHint": false,
+              "readOnlyHint": true
+            },
+            "input_schema": {
+              "properties": {},
+              "title": "get_forecastArguments",
+              "type": "object"
+            },
+            "name": "get_forecast",
+            "output_fields": []
+          },
+          {
+            "annotations": {
+              "idempotentHint": true,
+              "openWorldHint": false,
+              "readOnlyHint": true
+            },
+            "input_schema": {
+              "properties": {},
+              "title": "get_weakspotsArguments",
+              "type": "object"
+            },
+            "name": "get_weakspots",
+            "output_fields": []
+          },
+          {
+            "annotations": {
+              "idempotentHint": true,
+              "openWorldHint": false,
+              "readOnlyHint": true
+            },
+            "input_schema": {
+              "properties": {},
+              "title": "get_goalArguments",
+              "type": "object"
+            },
+            "name": "get_goal",
+            "output_fields": []
+          },
+          {
+            "annotations": {
+              "idempotentHint": true,
+              "openWorldHint": false,
+              "readOnlyHint": true
+            },
+            "input_schema": {
+              "properties": {},
+              "title": "get_questsArguments",
+              "type": "object"
+            },
+            "name": "get_quests",
+            "output_fields": []
+          },
+          {
+            "annotations": {
+              "idempotentHint": true,
+              "openWorldHint": false,
+              "readOnlyHint": true
+            },
+            "input_schema": {
+              "properties": {},
+              "title": "get_balanceArguments",
+              "type": "object"
+            },
+            "name": "get_balance",
+            "output_fields": []
+          },
+          {
+            "annotations": {
+              "idempotentHint": true,
+              "openWorldHint": false,
+              "readOnlyHint": true
+            },
+            "input_schema": {
+              "properties": {},
+              "title": "get_strandsArguments",
+              "type": "object"
+            },
+            "name": "get_strands",
+            "output_fields": []
+          },
+          {
+            "annotations": {
+              "idempotentHint": true,
+              "openWorldHint": false,
+              "readOnlyHint": true
+            },
+            "input_schema": {
+              "properties": {},
+              "title": "get_memoryArguments",
+              "type": "object"
+            },
+            "name": "get_memory",
+            "output_fields": []
+          },
+          {
+            "annotations": {
+              "idempotentHint": true,
+              "openWorldHint": false,
+              "readOnlyHint": true
+            },
+            "input_schema": {
+              "properties": {},
+              "title": "get_habitsArguments",
+              "type": "object"
+            },
+            "name": "get_habits",
+            "output_fields": []
+          },
+          {
+            "annotations": {
+              "idempotentHint": true,
+              "openWorldHint": false,
+              "readOnlyHint": true
+            },
+            "input_schema": {
+              "properties": {
+                "window_days": {
+                  "default": 28,
+                  "title": "Window Days",
+                  "type": "integer"
+                }
+              },
+              "title": "get_reading_analyticsArguments",
+              "type": "object"
+            },
+            "name": "get_reading_analytics",
+            "output_fields": []
+          },
+          {
+            "annotations": {
+              "idempotentHint": true,
+              "openWorldHint": false,
+              "readOnlyHint": true
+            },
+            "input_schema": {
+              "properties": {
+                "weeks": {
+                  "default": 12,
+                  "title": "Weeks",
+                  "type": "integer"
+                }
+              },
+              "title": "get_reading_retention_correlationArguments",
+              "type": "object"
+            },
+            "name": "get_reading_retention_correlation",
+            "output_fields": [
+              "result"
+            ]
+          },
+          {
+            "annotations": {
+              "destructiveHint": false,
+              "idempotentHint": false,
+              "readOnlyHint": false
+            },
+            "input_schema": {
+              "properties": {
+                "language": {
+                  "title": "Language",
+                  "type": "string"
+                },
+                "minutes": {
+                  "title": "Minutes",
+                  "type": "integer"
+                },
+                "note": {
+                  "default": "",
+                  "title": "Note",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "language",
+                "minutes"
+              ],
+              "title": "log_readingArguments",
+              "type": "object"
+            },
+            "name": "log_reading",
+            "output_fields": []
+          },
+          {
+            "annotations": {
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "readOnlyHint": false
+            },
+            "input_schema": {
+              "properties": {
+                "done": {
+                  "default": true,
+                  "title": "Done",
+                  "type": "boolean"
+                },
+                "language": {
+                  "title": "Language",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "language"
+              ],
+              "title": "log_writingArguments",
+              "type": "object"
+            },
+            "name": "log_writing",
+            "output_fields": []
+          },
+          {
+            "annotations": {
+              "idempotentHint": true,
+              "openWorldHint": false,
+              "readOnlyHint": true
+            },
+            "input_schema": {
+              "properties": {},
+              "title": "get_focusArguments",
+              "type": "object"
+            },
+            "name": "get_focus",
+            "output_fields": []
+          },
+          {
+            "annotations": {
+              "idempotentHint": true,
+              "openWorldHint": false,
+              "readOnlyHint": true
+            },
+            "input_schema": {
+              "properties": {},
+              "title": "get_focus_analyticsArguments",
+              "type": "object"
+            },
+            "name": "get_focus_analytics",
+            "output_fields": []
+          },
+          {
+            "annotations": {
+              "destructiveHint": false,
+              "idempotentHint": false,
+              "readOnlyHint": false
+            },
+            "input_schema": {
+              "properties": {
+                "abandoned": {
+                  "default": false,
+                  "title": "Abandoned",
+                  "type": "boolean"
+                },
+                "minutes": {
+                  "default": 25,
+                  "title": "Minutes",
+                  "type": "integer"
+                },
+                "subject": {
+                  "default": "general",
+                  "title": "Subject",
+                  "type": "string"
+                }
+              },
+              "title": "log_focusArguments",
+              "type": "object"
+            },
+            "name": "log_focus",
+            "output_fields": []
+          },
+          {
+            "annotations": {
+              "idempotentHint": true,
+              "openWorldHint": false,
+              "readOnlyHint": true
+            },
+            "input_schema": {
+              "properties": {},
+              "title": "get_leechesArguments",
+              "type": "object"
+            },
+            "name": "get_leeches",
+            "output_fields": []
+          },
+          {
+            "annotations": {
+              "destructiveHint": false,
+              "idempotentHint": true,
+              "readOnlyHint": false
+            },
+            "input_schema": {
+              "properties": {
+                "action": {
+                  "default": "fixed",
+                  "title": "Action",
+                  "type": "string"
+                },
+                "card_id": {
+                  "title": "Card Id",
+                  "type": "integer"
+                },
+                "note": {
+                  "default": "",
+                  "title": "Note",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "card_id"
+              ],
+              "title": "remediate_leechArguments",
+              "type": "object"
+            },
+            "name": "remediate_leech",
+            "output_fields": []
+          },
+          {
+            "annotations": {
+              "idempotentHint": true,
+              "openWorldHint": false,
+              "readOnlyHint": true
+            },
+            "input_schema": {
+              "properties": {},
+              "title": "get_skip_historyArguments",
+              "type": "object"
+            },
+            "name": "get_skip_history",
+            "output_fields": [
+              "this_month",
+              "all_time",
+              "last_day",
+              "cards_moved_all_time",
+              "active_today"
+            ]
+          },
+          {
+            "annotations": {
+              "destructiveHint": false,
+              "idempotentHint": false,
+              "readOnlyHint": false
+            },
+            "input_schema": {
+              "properties": {},
+              "title": "take_skip_dayArguments",
+              "type": "object"
+            },
+            "name": "take_skip_day",
+            "output_fields": []
+          },
+          {
+            "annotations": {
+              "destructiveHint": false,
+              "idempotentHint": false,
+              "readOnlyHint": false
+            },
+            "input_schema": {
+              "properties": {},
+              "title": "undo_skip_dayArguments",
+              "type": "object"
+            },
+            "name": "undo_skip_day",
+            "output_fields": []
+          },
+          {
+            "annotations": {
+              "idempotentHint": true,
+              "openWorldHint": false,
+              "readOnlyHint": true
+            },
+            "input_schema": {
+              "properties": {},
+              "title": "export_dataArguments",
+              "type": "object"
+            },
+            "name": "export_data",
+            "output_fields": []
+          },
+          {
+            "annotations": {
+              "destructiveHint": true,
+              "idempotentHint": true,
+              "readOnlyHint": false
+            },
+            "input_schema": {
+              "properties": {
+                "confirm": {
+                  "default": "",
+                  "title": "Confirm",
+                  "type": "string"
+                }
+              },
+              "title": "erase_all_dataArguments",
+              "type": "object"
+            },
+            "name": "erase_all_data",
+            "output_fields": []
+          },
+          {
+            "annotations": {
+              "destructiveHint": false,
+              "idempotentHint": false,
+              "readOnlyHint": false
+            },
+            "input_schema": {
+              "properties": {},
+              "title": "force_syncArguments",
+              "type": "object"
+            },
+            "name": "force_sync",
+            "output_fields": [
+              "sync_ok",
+              "sync_error",
+              "new_reviews",
+              "days_recomputed",
+              "new_badges",
+              "leveled_up",
+              "level",
+              "recompute"
+            ]
+          },
+          {
+            "annotations": {
+              "idempotentHint": true,
+              "openWorldHint": false,
+              "readOnlyHint": true
+            },
+            "input_schema": {
+              "properties": {
+                "token": {
+                  "default": "",
+                  "title": "Token",
+                  "type": "string"
+                }
+              },
+              "title": "get_law_trackArguments",
+              "type": "object"
+            },
+            "name": "get_law_track",
+            "output_fields": [
+              "streak",
+              "xp_today",
+              "total_xp",
+              "level",
+              "dues",
+              "leech_total",
+              "mastery"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "function": "server.create_server",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Builds the settings with none of the predecessor's own variables in the environment, so each is its default, and the server over a pipeline that is never called and a guard over no grants; lists the tools in the server's order and returns each one's name, its annotations without unset ones, its input schema with every description key removed, and its output fields in its output schema's order; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_119.py",
+  "registry_sha256": "82b4a364c53f3f61860b98664b533a6fccb5994de4509c041f1a06d18190682f",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

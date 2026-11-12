@@ -1,0 +1,86 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT course, band, study_day, baseline, celebrated_at, created_at FROM band_milestones ORDER BY course, band",
+  "describe": {
+    "columns": [
+      {
+        "name": "course",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "band_milestones",
+            "name": "course"
+          }
+        }
+      },
+      {
+        "name": "band",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "band_milestones",
+            "name": "band"
+          }
+        }
+      },
+      {
+        "name": "study_day",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "band_milestones",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "baseline",
+        "ordinal": 3,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "band_milestones",
+            "name": "baseline"
+          }
+        }
+      },
+      {
+        "name": "celebrated_at",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "band_milestones",
+            "name": "celebrated_at"
+          }
+        }
+      },
+      {
+        "name": "created_at",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "band_milestones",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "5bce1c225e553da5104b73dc2f324bca618635ca38fbd2a4edd7e22891b96407"
+}

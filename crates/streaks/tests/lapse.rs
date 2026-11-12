@@ -1,0 +1,585 @@
+//! The open lapse (SPEC-049 A11 to A13; R12 to R14; ADR-088): three silent study days that are not
+//! skip days open a lapse, a skip day neither counts nor ends the run, the id is the run's first
+//! unskipped silent day, and a study day closes it. The golden's cases are the predecessor's own
+//! answers over synthetic days.
+
+// An integration test is test code: its helpers panic on a malformed golden.
+#![allow(clippy::expect_used, clippy::print_stdout)]
+
+#[path = "../../../tools/parity-oracle/golden.rs"]
+mod golden;
+
+use std::collections::{BTreeMap, BTreeSet};
+
+use deck_streak_kernel::StudyDay;
+use deck_streak_streaks::lapse::{LAPSE_AFTER_SILENT_DAYS, open_lapse};
+use serde_json::Value;
+
+/// The economy file, as the repository holds it.
+const ECONOMY: &str = include_str!("../../../economy.json");
+/// A study day near the present.
+const T: i64 = 20_000;
+
+fn day(number: i64) -> StudyDay {
+    StudyDay::from_epoch_day(number)
+}
+
+fn integer(value: &Value) -> i64 {
+    value
+        .as_i64()
+        .unwrap_or_else(|| panic!("an integer: {value}"))
+}
+
+/// One review on each of `studied` days and a zero row on each of `zeros`.
+fn counts(studied: &[i64], zeros: &[i64]) -> BTreeMap<StudyDay, u32> {
+    let mut rows: BTreeMap<StudyDay, u32> = zeros.iter().map(|&number| (day(number), 0)).collect();
+    for &number in studied {
+        rows.insert(day(number), 1);
+    }
+    rows
+}
+
+fn skips(numbers: &[i64]) -> BTreeSet<StudyDay> {
+    numbers.iter().map(|&number| day(number)).collect()
+}
+
+fn open(today: i64, counts: &BTreeMap<StudyDay, u32>, skipped: &[i64]) -> Option<i64> {
+    open_lapse(day(today), counts, &skips(skipped), LAPSE_AFTER_SILENT_DAYS)
+        .map(StudyDay::epoch_day)
+}
+
+#[test]
+fn the_open_lapse_matches_the_parity_golden() {
+    let examined = golden::each_case("lapse_episode", |case| {
+        let rows: BTreeMap<StudyDay, u32> = case.input["review_counts"]
+            .as_array()
+            .expect("the review counts")
+            .iter()
+            .map(|row| {
+                let count = u32::try_from(integer(&row["count"])).expect("a count");
+                (day(integer(&row["day"])), count)
+            })
+            .collect();
+        let skipped: BTreeSet<StudyDay> = case.input["skip_days"]
+            .as_array()
+            .expect("the skip days")
+            .iter()
+            .map(|value| day(integer(value)))
+            .collect();
+        let got = open_lapse(
+            day(integer(&case.input["today"])),
+            &rows,
+            &skipped,
+            LAPSE_AFTER_SILENT_DAYS,
+        )
+        .map(StudyDay::epoch_day);
+        assert_eq!(
+            got,
+            case.output.as_i64(),
+            "class {:?}, input {}: the predecessor's lapse differs",
+            case.class,
+            case.input
+        );
+    });
+    println!("{examined}");
+}
+
+#[test]
+fn a_skip_day_neither_counts_nor_ends_a_silent_run() {
+    // Two silent days do not open a lapse; three do, and the id is the first of them.
+    assert_eq!(open(T, &counts(&[T - 30, T - 2], &[]), &[]), None);
+    assert_eq!(
+        open(T, &counts(&[T - 30, T - 3], &[]), &[]),
+        Some(T - 2),
+        "three silent days"
+    );
+    // A skip day inside the run does not count: three silent days, one skipped, are two.
+    assert_eq!(open(T, &counts(&[T - 30, T - 3], &[]), &[T - 1]), None);
+    // It does not end the run either: the run reaches back past the skip day to its first
+    // unskipped day, and the skip day is not the id.
+    assert_eq!(
+        open(T, &counts(&[T - 30, T - 5], &[]), &[T - 3]),
+        Some(T - 4)
+    );
+    // A skip day at the run's first day passes the id to the next unskipped day.
+    assert_eq!(
+        open(T, &counts(&[T - 30, T - 4], &[]), &[T - 3]),
+        Some(T - 2)
+    );
+    // A skip day at the run's last day (today) does not count either.
+    assert_eq!(open(T, &counts(&[T - 30, T - 3], &[]), &[T]), None);
+    assert_eq!(open(T, &counts(&[T - 30, T - 4], &[]), &[T]), Some(T - 3));
+}
+
+#[test]
+fn one_episode_keeps_one_lapse_id_until_a_study_day_closes_it() {
+    // Studied on T-9 and T-5; the silent run starts on T-4.
+    let history = counts(&[T - 9, T - 5], &[]);
+    assert_eq!(open(T - 4, &history, &[]), None, "one silent day");
+    assert_eq!(open(T - 3, &history, &[]), None, "two silent days");
+    let ids: Vec<Option<i64>> = (T - 2..=T + 6)
+        .map(|today| open(today, &history, &[]))
+        .collect();
+    assert_eq!(ids[0], Some(T - 4), "the third silent day");
+    assert!(
+        ids.iter().all(|id| *id == Some(T - 4)),
+        "one episode reports one id: {ids:?}"
+    );
+    // A study day with a review closes the episode, and a row of no reviews does not.
+    let closed = counts(&[T - 9, T - 5, T + 1], &[]);
+    assert_eq!(open(T + 1, &closed, &[]), None, "the study day closes it");
+    assert_eq!(open(T, &closed, &[]), Some(T - 4), "the day before it");
+    let unstudied = counts(&[T - 9, T - 5], &[T + 1]);
+    assert_eq!(
+        open(T + 1, &unstudied, &[]),
+        Some(T - 4),
+        "a row of no reviews closes nothing"
+    );
+    // A study day that is also a skip day still closes the run.
+    assert_eq!(open(T + 1, &closed, &[T + 1]), None);
+    // The next silence is a new episode with its own id.
+    assert_eq!(open(T + 4, &closed, &[]), Some(T + 2));
+    assert_eq!(open(T + 5, &closed, &[]), Some(T + 2));
+}
+
+#[test]
+fn an_empty_window_holds_no_lapse() {
+    assert_eq!(open(T, &BTreeMap::new(), &[]), None);
+    // The same day over a window that begins nine days back holds the run that follows it.
+    assert_eq!(open(T, &counts(&[T - 9], &[]), &[]), Some(T - 8));
+}
+
+#[test]
+fn the_threshold_is_the_economy_files() {
+    let economy: Value = serde_json::from_str(ECONOMY).expect("the economy file parses");
+    let named = economy["governor"]["lapse_after_silent_days"]
+        .as_u64()
+        .expect("a whole number of days");
+    assert_eq!(u64::from(LAPSE_AFTER_SILENT_DAYS), named);
+}
+
+#[test]
+fn the_days_that_open_a_lapse_follow_the_file() {
+    // The same run of four silent days, judged by a copy of the file that names 5 and by the
+    // constant, which equals the file as it stands.
+    let altered = ECONOMY.replace(
+        "\"lapse_after_silent_days\": 3",
+        "\"lapse_after_silent_days\": 5",
+    );
+    assert_ne!(altered, ECONOMY, "the copy must differ from the file");
+    let economy: Value = serde_json::from_str(&altered).expect("the copy parses");
+    let named = u32::try_from(
+        economy["governor"]["lapse_after_silent_days"]
+            .as_u64()
+            .expect("a whole number of days"),
+    )
+    .expect("a small number");
+    let history = counts(&[T - 30, T - 4], &[]);
+    let judged = |threshold| open_lapse(day(T), &history, &BTreeSet::new(), threshold);
+    assert_eq!(judged(named), None, "four silent days are short of five");
+    assert_eq!(judged(LAPSE_AFTER_SILENT_DAYS), Some(day(T - 3)));
+}
+
+/// SPEC-049 R13, in its own words and by a different route from the walk: the window is the days
+/// from the earliest one the caller read up to `today`; the silent run is every day of it after
+/// the latest day that holds a qualifying review (or the whole window when none does); the run's
+/// days that are not skip days are its silent days; and a lapse is open when there are at least
+/// `threshold` of them, with the id the earliest of them. A `today` before the window reads no
+/// day. It never calls `open_lapse`.
+fn r13_oracle(
+    today: i64,
+    rows: &BTreeMap<i64, u32>,
+    skipped: &BTreeSet<i64>,
+    threshold: u32,
+) -> Option<i64> {
+    let first = *rows.keys().next()?;
+    if today < first {
+        return None;
+    }
+    let latest_study = rows
+        .range(first..=today)
+        .filter(|(_, count)| **count > 0)
+        .map(|(number, _)| *number)
+        .max();
+    let run_start = latest_study.map_or(first, |number| number + 1);
+    let silent: Vec<i64> = (run_start..=today)
+        .filter(|number| !skipped.contains(number))
+        .collect();
+    let long_enough = u32::try_from(silent.len()).is_ok_and(|held| held >= threshold);
+    if long_enough {
+        silent.first().copied()
+    } else {
+        None
+    }
+}
+
+/// Judge one member: the walk equals the oracle. Returns the oracle's answer.
+fn judge_window(
+    today: i64,
+    rows: &BTreeMap<i64, u32>,
+    skipped: &BTreeSet<i64>,
+    threshold: u32,
+) -> Option<i64> {
+    let counts: BTreeMap<StudyDay, u32> = rows.iter().map(|(&n, &c)| (day(n), c)).collect();
+    let skips: BTreeSet<StudyDay> = skipped.iter().map(|&n| day(n)).collect();
+    let want = r13_oracle(today, rows, skipped, threshold);
+    let got = open_lapse(day(today), &counts, &skips, threshold).map(StudyDay::epoch_day);
+    assert_eq!(
+        got, want,
+        "today {today}, rows {rows:?}, skipped {skipped:?}, threshold {threshold}: the walk differs from R13"
+    );
+    want
+}
+
+#[test]
+fn a_silent_run_on_the_windows_first_day_is_read() {
+    // The window's only silent run starts on its first day, a row of no reviews.
+    assert_eq!(open(T, &counts(&[], &[T - 3]), &[]), Some(T - 3));
+    assert_eq!(open(T, &counts(&[], &[T - 1]), &[]), None);
+    // One study review at the window's first day is the day the run starts after.
+    assert_eq!(open(T, &counts(&[T - 3], &[]), &[]), Some(T - 2));
+}
+
+/// A window member: `today`, the rows, the skip days and the threshold.
+type Member = (i64, BTreeMap<i64, u32>, BTreeSet<i64>, u32);
+
+/// The distinct members of the window population. 336 of the 2252 members repeat an earlier one:
+/// 224 because `before` of 1 or 2 makes the second and third fills coincide, and 112 because with
+/// `before` of 0 there is no closing day to skip, so that pass repeats the one before it.
+const DISTINCT_WINDOW_MEMBERS: usize = 1916;
+
+/// How many members sit at each boundary the walk compares, read by R13's reading of the arguments
+/// the judge is handed. The walk reads no day when `today` is before the window's first day, and
+/// ends at that first day when no day from it to `today` holds a review; it passes a skip day
+/// without counting it; it stops at a day whose count is more than none, so a closing day of one
+/// review is that boundary; and it opens a lapse when its silent days reach the threshold, so a run
+/// of exactly the threshold and one a day short are the two sides of that. A fold that keeps every
+/// member distinct can still move every member off one side, and these counts show it.
+const WALK_BOUNDARY_MEMBERS: [(&str, usize); 7] = [
+    ("empty windows", 0),
+    ("todays before the window", 2),
+    ("walks that end at the window's first day", 229),
+    ("walks that pass a skip day", 2000),
+    ("closing days of one review", 1349),
+    ("runs of silent days at the threshold", 403),
+    ("runs of silent days one short of it", 800),
+];
+
+/// The tally of members at each boundary, every boundary at zero.
+fn zero_tally() -> BTreeMap<&'static str, usize> {
+    WALK_BOUNDARY_MEMBERS.iter().map(|&(k, _)| (k, 0)).collect()
+}
+
+/// Adds one member's sides, from [`walk_sides`], to the tally.
+fn tally(sides: &mut BTreeMap<&'static str, usize>, member: [bool; 7]) {
+    for (&(name, _), side) in WALK_BOUNDARY_MEMBERS.iter().zip(member) {
+        *sides.entry(name).or_default() += usize::from(side);
+    }
+}
+
+/// The tally equals [`WALK_BOUNDARY_MEMBERS`], and the members each edit of [`WALK_EDITS`]
+/// decides equal its count there.
+fn assert_walk_sides(sides: &BTreeMap<&str, usize>, members: &BTreeSet<Member>) {
+    assert_eq!(
+        *sides,
+        BTreeMap::from(WALK_BOUNDARY_MEMBERS),
+        "the boundaries' members: {sides:?}"
+    );
+    let decided = decided_by_each_edit(members);
+    println!("members each edit decides: {decided:?}");
+    let pinned: BTreeMap<&str, usize> = WALK_EDITS.iter().map(|&(k, _, n)| (k, n)).collect();
+    assert!(
+        pinned.values().all(|&n| n > 0),
+        "every edit decides a member: {pinned:?}"
+    );
+    assert_eq!(
+        decided, pinned,
+        "the members each edit decides: {decided:?}"
+    );
+}
+
+/// One edit of one line of the walk: a boundary it compares moved one way, or a line it runs
+/// replaced. Each is the walk with that line changed and no other, so on every member the walk
+/// with the edit made answers what [`walk_edited`] answers with it.
+#[derive(Clone, Copy, Debug)]
+enum WalkEdit {
+    /// No edit: the walk as it stands.
+    Held,
+    /// The window's first day read `n` days later.
+    Reach(i64),
+    /// The window's first day taken from its latest key.
+    LatestKey,
+    /// The walk begun `n` days after today.
+    Start(i64),
+    /// A day closing the run only when its count is more than `n`.
+    ClosesAbove(i64),
+    /// Every day read as silent (`true`) or as a skip day (`false`), whatever the skip days are.
+    Skips(bool),
+    /// The threshold `n` days more.
+    Threshold(i64),
+    /// The walk passing `n` days a step.
+    Stride(i64),
+    /// The id the first silent day the walk meets, not the last.
+    FirstMet,
+}
+
+/// Each edit of the walk and how many distinct members of the window population it decides: the
+/// members whose answer the walk with that edit made differs from the walk's. A boundary the walk
+/// compares is moved one step each way; the other lines are replaced as their rows replace them.
+/// A count of members at a boundary cannot tell a member whose side decides its answer from one
+/// parked there; a member counted here is one on which the edited walk and the walk disagree.
+const WALK_EDITS: [(&str, WalkEdit, usize); 14] = [
+    ("the window begun a day later", WalkEdit::Reach(1), 23),
+    ("the window begun a day earlier", WalkEdit::Reach(-1), 67),
+    (
+        "the window begun at its latest day",
+        WalkEdit::LatestKey,
+        210,
+    ),
+    (
+        "the walk begun a day before today",
+        WalkEdit::Start(-1),
+        275,
+    ),
+    ("the walk begun a day after today", WalkEdit::Start(1), 544),
+    (
+        "a day closing the run at two reviews",
+        WalkEdit::ClosesAbove(1),
+        1001,
+    ),
+    ("every day closing the run", WalkEdit::ClosesAbove(-1), 414),
+    (
+        "a day closing the run at 101 reviews",
+        WalkEdit::ClosesAbove(100),
+        1557,
+    ),
+    ("every skip day read as silent", WalkEdit::Skips(true), 1292),
+    (
+        "every silent day read as a skip day",
+        WalkEdit::Skips(false),
+        414,
+    ),
+    ("one more silent day to open", WalkEdit::Threshold(1), 343),
+    ("one fewer silent day to open", WalkEdit::Threshold(-1), 680),
+    ("the walk passing two days a step", WalkEdit::Stride(2), 559),
+    ("the id the first silent day met", WalkEdit::FirstMet, 411),
+];
+
+/// `open_lapse` line for line over day numbers, with the one edit `edit` makes.
+fn walk_edited(
+    today: i64,
+    rows: &BTreeMap<i64, u32>,
+    skipped: &BTreeSet<i64>,
+    threshold: u32,
+    edit: WalkEdit,
+) -> Option<i64> {
+    let mut window_start = match edit {
+        WalkEdit::LatestKey => *rows.keys().next_back()?,
+        _ => *rows.keys().next()?,
+    };
+    let (mut silent, mut first_silent) = (0_i64, None);
+    let mut number = today;
+    match edit {
+        WalkEdit::Reach(n) => window_start += n,
+        WalkEdit::Start(n) => number += n,
+        _ => {}
+    }
+    let (closes_above, stride, more) = match edit {
+        WalkEdit::ClosesAbove(n) => (n, 1, 0),
+        WalkEdit::Stride(n) => (0, n, 0),
+        WalkEdit::Threshold(n) => (0, 1, n),
+        _ => (0, 1, 0),
+    };
+    while number >= window_start {
+        if i64::from(rows.get(&number).copied().unwrap_or(0)) > closes_above {
+            break;
+        }
+        let counted = match edit {
+            WalkEdit::Skips(read_as_silent) => read_as_silent,
+            _ => !skipped.contains(&number),
+        };
+        if counted {
+            silent += 1;
+            first_silent = match edit {
+                WalkEdit::FirstMet => first_silent.or(Some(number)),
+                _ => Some(number),
+            };
+        }
+        number -= stride;
+    }
+    if silent >= i64::from(threshold) + more {
+        first_silent
+    } else {
+        None
+    }
+}
+
+/// The distinct members each edit of [`WALK_EDITS`] decides. On every member the copy with no edit
+/// is first asserted to answer what the walk answers, so a member the copy counts for an edit is
+/// one the walk with that edit made answers differently.
+fn decided_by_each_edit(members: &BTreeSet<Member>) -> BTreeMap<&'static str, usize> {
+    let mut decided: BTreeMap<&'static str, usize> =
+        WALK_EDITS.iter().map(|&(k, _, _)| (k, 0)).collect();
+    for (today, rows, skipped, threshold) in members {
+        let counts: BTreeMap<StudyDay, u32> = rows.iter().map(|(&n, &c)| (day(n), c)).collect();
+        let skips: BTreeSet<StudyDay> = skipped.iter().map(|&n| day(n)).collect();
+        let walked = open_lapse(day(*today), &counts, &skips, *threshold).map(StudyDay::epoch_day);
+        let held = walk_edited(*today, rows, skipped, *threshold, WalkEdit::Held);
+        assert_eq!(
+            walked, held,
+            "today {today}, rows {rows:?}, skipped {skipped:?}: the walk's copy differs from the walk"
+        );
+        for &(name, edit, _) in &WALK_EDITS {
+            let turned = walk_edited(*today, rows, skipped, *threshold, edit) != held;
+            *decided.entry(name).or_default() += usize::from(turned);
+        }
+    }
+    decided
+}
+
+/// Where one window member sits against each boundary of [`WALK_BOUNDARY_MEMBERS`], by R13.
+fn walk_sides(
+    today: i64,
+    rows: &BTreeMap<i64, u32>,
+    skipped: &BTreeSet<i64>,
+    threshold: u32,
+) -> [bool; 7] {
+    let Some(&first) = rows.keys().next() else {
+        return [true, false, false, false, false, false, false];
+    };
+    if today < first {
+        return [false, true, false, false, false, false, false];
+    }
+    let latest_study = rows
+        .range(first..=today)
+        .filter(|(_, count)| **count > 0)
+        .map(|(number, _)| *number)
+        .max();
+    let run_start = latest_study.map_or(first, |number| number + 1);
+    let passes_a_skip = (run_start..=today).any(|number| skipped.contains(&number));
+    let silent = (run_start..=today)
+        .filter(|number| !skipped.contains(number))
+        .count();
+    let threshold = usize::try_from(threshold).unwrap_or(usize::MAX);
+    [
+        false,
+        false,
+        latest_study.is_none(),
+        passes_a_skip,
+        latest_study.is_some_and(|number| rows.get(&number) == Some(&1)),
+        silent == threshold,
+        silent + 1 == threshold,
+    ]
+}
+
+#[test]
+fn the_walk_reads_every_day_of_its_window_and_none_outside_it() {
+    let mut examined: u64 = 0;
+    let (mut opened, mut closed) = (0_u64, 0_u64);
+    let threshold = LAPSE_AFTER_SILENT_DAYS;
+    let k = i64::from(threshold);
+    // A member is every input the judge reads: `today`, the rows, the skip days and the threshold.
+    let mut distinct: BTreeSet<Member> = BTreeSet::new();
+    let mut sides = zero_tally();
+    let mut record = |today: i64, rows: &BTreeMap<i64, u32>, skipped: &BTreeSet<i64>, at: u32| {
+        let answer = judge_window(today, rows, skipped, at);
+        tally(&mut sides, walk_sides(today, rows, skipped, at));
+        distinct.insert((today, rows.clone(), skipped.clone(), at));
+        examined += 1;
+        if answer.is_some() {
+            opened += 1;
+        } else {
+            closed += 1;
+        }
+    };
+    // Silent runs of one short of the threshold, the threshold and one more, ending on `today`
+    // and starting at every position of a window whose earlier days number 0 to 6.
+    for run_len in [k - 1, k, k + 1] {
+        for before in 0..=6_i64 {
+            let today = T + run_len;
+            let run_start = today - run_len + 1;
+            let first = run_start - before;
+            let run: Vec<i64> = (run_start..=today).collect();
+            // The days before the run, three ways: all studied; only the day right before the run
+            // studied and the rest rows of no reviews; only that day studied and the rest absent
+            // but the window's first day, a row of no reviews.
+            let mut fills: Vec<BTreeMap<i64, u32>> = Vec::new();
+            if before == 0 {
+                // The window's first day is in the run: a row of no reviews there.
+                fills.push(BTreeMap::from([(first, 0)]));
+                fills.push(run.iter().map(|&n| (n, 0)).collect());
+            } else {
+                fills.push((first..run_start).map(|n| (n, 2)).collect());
+                let mut zeros: BTreeMap<i64, u32> = (first..run_start).map(|n| (n, 0)).collect();
+                zeros.insert(run_start - 1, 1);
+                fills.push(zeros);
+                fills.push(BTreeMap::from([(first, 0), (run_start - 1, 1)]));
+            }
+            // Every subset of the run's days as skip days: at its edges, inside it, and all of it.
+            for mask in 0_u32..(1 << run.len()) {
+                let mut skipped: BTreeSet<i64> = run
+                    .iter()
+                    .enumerate()
+                    .filter(|(place, _)| (mask >> place) & 1 == 1)
+                    .map(|(_, &n)| n)
+                    .collect();
+                for skip_the_closing_day in [false, true] {
+                    if skip_the_closing_day && before > 0 {
+                        skipped.insert(run_start - 1);
+                    }
+                    for future_study in [false, true] {
+                        for fill in &fills {
+                            let mut rows = fill.clone();
+                            if future_study {
+                                // A day after `today` is outside the walk.
+                                rows.insert(today + 1, 3);
+                            }
+                            record(today, &rows, &skipped, threshold);
+                        }
+                    }
+                    skipped.remove(&(run_start - 1));
+                }
+            }
+        }
+    }
+    // A `today` before the window, and one long past its only row.
+    for (today, row, count) in [(T, T + 2, 0), (T, T + 2, 1), (T + 40, T, 0), (T + 40, T, 1)] {
+        record(
+            today,
+            &BTreeMap::from([(row, count)]),
+            &BTreeSet::new(),
+            threshold,
+        );
+    }
+    // A threshold of one and of five over the same windows.
+    for other in [1_u32, 5] {
+        for before in 0..=3_i64 {
+            let rows: BTreeMap<i64, u32> = (T - before..T)
+                .map(|n| (n, 1))
+                .chain([(T - before, 0)])
+                .collect();
+            record(T, &rows, &BTreeSet::new(), other);
+        }
+    }
+    // `record` borrows the set until its last use above.
+    println!(
+        "examined {examined} window member(s), {} distinct",
+        distinct.len()
+    );
+    println!("boundary members: {sides:?}");
+    assert_eq!(
+        examined, 2252,
+        "the population is generated, not listed: {examined}"
+    );
+    assert_eq!(
+        distinct.len(),
+        DISTINCT_WINDOW_MEMBERS,
+        "the population's spread: {} distinct of {examined}",
+        distinct.len()
+    );
+    assert!(
+        opened > 0 && closed > 0,
+        "both answers occur: {opened} open, {closed} none"
+    );
+    assert_walk_sides(&sides, &distinct);
+}

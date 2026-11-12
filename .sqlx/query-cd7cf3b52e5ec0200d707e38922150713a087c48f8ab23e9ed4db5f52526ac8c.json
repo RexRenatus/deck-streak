@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO xp_ledger (study_day, source, track, amount, scope, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "cd7cf3b52e5ec0200d707e38922150713a087c48f8ab23e9ed4db5f52526ac8c"
+}

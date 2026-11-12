@@ -1,7 +1,7 @@
 import { render } from 'svelte/server';
 import { describe, expect, it } from 'vitest';
-import { m } from '$lib/paraglide/messages.js';
-import { baseLocale, locales } from '$lib/paraglide/runtime.js';
+import { m } from '#lib/paraglide/messages.js';
+import { baseLocale, locales } from '#lib/paraglide/runtime.js';
 import Page from '../routes/+page.svelte';
 
 describe('the Mini App shell', () => {
@@ -16,9 +16,9 @@ describe('the Mini App shell', () => {
     expect(locales).toEqual(['en', 'zh-Hans', 'zh-Hant', 'ja', 'ko', 'fr', 'es']);
   });
 
-  it('has a tagline in every locale that names Anki', () => {
+  it('has a tagline in every locale that names no Anki and no Telegram', () => {
     for (const locale of locales) {
-      expect(m.tagline({}, { locale })).toContain('Anki');
+      expect(m.tagline({}, { locale })).toMatch(/^(?![\s\S]*(?:Anki|Telegram))[\s\S]+$/);
     }
   });
 });

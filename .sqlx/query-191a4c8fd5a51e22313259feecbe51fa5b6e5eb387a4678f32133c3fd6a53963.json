@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COUNT(*) AS \"count!: i64\" FROM notification_decisions\n           WHERE arm = 'send' AND kind = ? AND study_day >= ? AND tier_rendered >= ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "count!: i64",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "191a4c8fd5a51e22313259feecbe51fa5b6e5eb387a4678f32133c3fd6a53963"
+}

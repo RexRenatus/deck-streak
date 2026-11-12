@@ -1,0 +1,562 @@
+{
+  "adapter": "memory_state_fields",
+  "cases": [
+    {
+      "class": "missing",
+      "input": {
+        "data": null
+      },
+      "output": null
+    },
+    {
+      "class": "missing",
+      "input": {
+        "data": ""
+      },
+      "output": null
+    },
+    {
+      "class": "unparsable",
+      "input": {
+        "data": "not json"
+      },
+      "output": null
+    },
+    {
+      "class": "unparsable",
+      "input": {
+        "data": "{\"s\": 4.5"
+      },
+      "output": null
+    },
+    {
+      "class": "non_object",
+      "input": {
+        "data": "[1, 2]"
+      },
+      "output": null
+    },
+    {
+      "class": "non_object",
+      "input": {
+        "data": "7"
+      },
+      "output": null
+    },
+    {
+      "class": "non_object",
+      "input": {
+        "data": "\"s\""
+      },
+      "output": null
+    },
+    {
+      "class": "non_object",
+      "input": {
+        "data": "null"
+      },
+      "output": null
+    },
+    {
+      "class": "no_stability",
+      "input": {
+        "data": "{}"
+      },
+      "output": null
+    },
+    {
+      "class": "no_stability",
+      "input": {
+        "data": "{\"d\": 5.0}"
+      },
+      "output": null
+    },
+    {
+      "class": "stability_not_a_number",
+      "input": {
+        "data": "{\"s\": \"4.5\"}"
+      },
+      "output": null
+    },
+    {
+      "class": "stability_not_a_number",
+      "input": {
+        "data": "{\"s\": null}"
+      },
+      "output": null
+    },
+    {
+      "class": "stability_not_positive",
+      "input": {
+        "data": "{\"s\": 0}"
+      },
+      "output": null
+    },
+    {
+      "class": "stability_not_positive",
+      "input": {
+        "data": "{\"s\": -3.5}"
+      },
+      "output": null
+    },
+    {
+      "class": "non_finite",
+      "input": {
+        "data": "{\"s\": NaN}"
+      },
+      "output": null
+    },
+    {
+      "class": "non_finite",
+      "input": {
+        "data": "{\"s\": Infinity}"
+      },
+      "output": null
+    },
+    {
+      "class": "non_finite",
+      "input": {
+        "data": "{\"s\": -Infinity}"
+      },
+      "output": null
+    },
+    {
+      "class": "non_finite",
+      "input": {
+        "data": "{\"s\": 1e400}"
+      },
+      "output": null
+    },
+    {
+      "class": "non_finite",
+      "input": {
+        "data": "{\"s\": 9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999}"
+      },
+      "output": null
+    },
+    {
+      "class": "non_finite_field",
+      "input": {
+        "data": "{\"s\": 4.5, \"d\": NaN, \"decay\": Infinity, \"lrt\": -Infinity}"
+      },
+      "output": {
+        "decay": 0.2,
+        "desired_retention": null,
+        "difficulty": 0.0,
+        "last_review_sec": null,
+        "stability": 4.5
+      }
+    },
+    {
+      "class": "non_finite_field",
+      "input": {
+        "data": "{\"s\": 4.5, \"d\": 1e400, \"dr\": 1e999, \"lrt\": 1e400}"
+      },
+      "output": {
+        "decay": 0.2,
+        "desired_retention": null,
+        "difficulty": 0.0,
+        "last_review_sec": null,
+        "stability": 4.5
+      }
+    },
+    {
+      "class": "a_boolean_is_a_number",
+      "input": {
+        "data": "{\"s\": true}"
+      },
+      "output": {
+        "decay": 0.2,
+        "desired_retention": null,
+        "difficulty": 0.0,
+        "last_review_sec": null,
+        "stability": 1.0
+      }
+    },
+    {
+      "class": "a_boolean_is_a_number",
+      "input": {
+        "data": "{\"s\": 4.5, \"d\": true, \"dr\": false}"
+      },
+      "output": {
+        "decay": 0.2,
+        "desired_retention": 0.0,
+        "difficulty": 1.0,
+        "last_review_sec": null,
+        "stability": 4.5
+      }
+    },
+    {
+      "class": "decay_default",
+      "input": {
+        "data": "{\"s\": 4.5}"
+      },
+      "output": {
+        "decay": 0.2,
+        "desired_retention": null,
+        "difficulty": 0.0,
+        "last_review_sec": null,
+        "stability": 4.5
+      }
+    },
+    {
+      "class": "decay_default",
+      "input": {
+        "data": "{\"s\": 4.5, \"decay\": 0}"
+      },
+      "output": {
+        "decay": 0.2,
+        "desired_retention": null,
+        "difficulty": 0.0,
+        "last_review_sec": null,
+        "stability": 4.5
+      }
+    },
+    {
+      "class": "decay_default",
+      "input": {
+        "data": "{\"s\": 4.5, \"decay\": -0.3}"
+      },
+      "output": {
+        "decay": 0.2,
+        "desired_retention": null,
+        "difficulty": 0.0,
+        "last_review_sec": null,
+        "stability": 4.5
+      }
+    },
+    {
+      "class": "decay_default",
+      "input": {
+        "data": "{\"s\": 4.5, \"decay\": null}"
+      },
+      "output": {
+        "decay": 0.2,
+        "desired_retention": null,
+        "difficulty": 0.0,
+        "last_review_sec": null,
+        "stability": 4.5
+      }
+    },
+    {
+      "class": "decay_default",
+      "input": {
+        "data": "{\"s\": 4.5, \"decay\": \"0.3\"}"
+      },
+      "output": {
+        "decay": 0.2,
+        "desired_retention": null,
+        "difficulty": 0.0,
+        "last_review_sec": null,
+        "stability": 4.5
+      }
+    },
+    {
+      "class": "decay_kept",
+      "input": {
+        "data": "{\"s\": 4.5, \"decay\": 0.126}"
+      },
+      "output": {
+        "decay": 0.126,
+        "desired_retention": null,
+        "difficulty": 0.0,
+        "last_review_sec": null,
+        "stability": 4.5
+      }
+    },
+    {
+      "class": "decay_kept",
+      "input": {
+        "data": "{\"s\": 4.5, \"decay\": 1e-9}"
+      },
+      "output": {
+        "decay": 1e-09,
+        "desired_retention": null,
+        "difficulty": 0.0,
+        "last_review_sec": null,
+        "stability": 4.5
+      }
+    },
+    {
+      "class": "full",
+      "input": {
+        "data": "{\"s\": 12.25, \"d\": 6.5, \"dr\": 0.9, \"decay\": 0.2, \"lrt\": 1700000000}"
+      },
+      "output": {
+        "decay": 0.2,
+        "desired_retention": 0.9,
+        "difficulty": 6.5,
+        "last_review_sec": 1700000000,
+        "stability": 12.25
+      }
+    },
+    {
+      "class": "last_review_truncates",
+      "input": {
+        "data": "{\"s\": 2, \"lrt\": 1700000000.9}"
+      },
+      "output": {
+        "decay": 0.2,
+        "desired_retention": null,
+        "difficulty": 0.0,
+        "last_review_sec": 1700000000,
+        "stability": 2.0
+      }
+    },
+    {
+      "class": "last_review_truncates",
+      "input": {
+        "data": "{\"s\": 2, \"lrt\": -5.9}"
+      },
+      "output": {
+        "decay": 0.2,
+        "desired_retention": null,
+        "difficulty": 0.0,
+        "last_review_sec": -5,
+        "stability": 2.0
+      }
+    },
+    {
+      "class": "last_review_zero",
+      "input": {
+        "data": "{\"s\": 2, \"lrt\": 0}"
+      },
+      "output": {
+        "decay": 0.2,
+        "desired_retention": null,
+        "difficulty": 0.0,
+        "last_review_sec": 0,
+        "stability": 2.0
+      }
+    },
+    {
+      "class": "last_review_missing",
+      "input": {
+        "data": "{\"s\": 2, \"dr\": 0.85}"
+      },
+      "output": {
+        "decay": 0.2,
+        "desired_retention": 0.85,
+        "difficulty": 0.0,
+        "last_review_sec": null,
+        "stability": 2.0
+      }
+    },
+    {
+      "class": "integer_stability",
+      "input": {
+        "data": "{\"s\": 30}"
+      },
+      "output": {
+        "decay": 0.2,
+        "desired_retention": null,
+        "difficulty": 0.0,
+        "last_review_sec": null,
+        "stability": 30.0
+      }
+    },
+    {
+      "class": "a_string_with_a_quote",
+      "input": {
+        "data": "{\"note\": \"NaN \\\" Infinity\", \"s\": 3.5}"
+      },
+      "output": {
+        "decay": 0.2,
+        "desired_retention": null,
+        "difficulty": 0.0,
+        "last_review_sec": null,
+        "stability": 3.5
+      }
+    },
+    {
+      "class": "a_name_is_not_a_number",
+      "input": {
+        "data": "{\"NaN\": 1, \"s\": 3.5}"
+      },
+      "output": {
+        "decay": 0.2,
+        "desired_retention": null,
+        "difficulty": 0.0,
+        "last_review_sec": null,
+        "stability": 3.5
+      }
+    },
+    {
+      "class": "repeated_key",
+      "input": {
+        "data": "{\"s\": 3.5, \"s\": 7.5}"
+      },
+      "output": {
+        "decay": 0.2,
+        "desired_retention": null,
+        "difficulty": 0.0,
+        "last_review_sec": null,
+        "stability": 7.5
+      }
+    },
+    {
+      "class": "tiny_stability",
+      "input": {
+        "data": "{\"s\": 1e-300}"
+      },
+      "output": {
+        "decay": 0.2,
+        "desired_retention": null,
+        "difficulty": 0.0,
+        "last_review_sec": null,
+        "stability": 1e-300
+      }
+    },
+    {
+      "class": "surrounding_space",
+      "input": {
+        "data": " \n{\"s\": 5.5}\t"
+      },
+      "output": {
+        "decay": 0.2,
+        "desired_retention": null,
+        "difficulty": 0.0,
+        "last_review_sec": null,
+        "stability": 5.5
+      }
+    },
+    {
+      "class": "trailing_text",
+      "input": {
+        "data": "{\"s\": 5.5} x"
+      },
+      "output": null
+    },
+    {
+      "input": {
+        "data": "{\"s\": 362.261, \"d\": 3.34, \"dr\": 0.95, \"decay\": 0.15, \"lrt\": 436010084}"
+      },
+      "output": {
+        "decay": 0.15,
+        "desired_retention": 0.95,
+        "difficulty": 3.34,
+        "last_review_sec": 436010084,
+        "stability": 362.261
+      }
+    },
+    {
+      "input": {
+        "data": "{\"s\": 348.859, \"d\": 9.15, \"dr\": 0.8, \"decay\": 2.5, \"lrt\": 1767478100}"
+      },
+      "output": {
+        "decay": 2.5,
+        "desired_retention": 0.8,
+        "difficulty": 9.15,
+        "last_review_sec": 1767478100,
+        "stability": 348.859
+      }
+    },
+    {
+      "input": {
+        "data": "{\"s\": 162.726, \"d\": 1.93, \"dr\": 0.9, \"decay\": 0.1, \"lrt\": 2037556077}"
+      },
+      "output": {
+        "decay": 0.1,
+        "desired_retention": 0.9,
+        "difficulty": 1.93,
+        "last_review_sec": 2037556077,
+        "stability": 162.726
+      }
+    },
+    {
+      "input": {
+        "data": "{\"s\": 380.018, \"d\": 4.71, \"dr\": 0.8, \"decay\": 0.9, \"lrt\": 1361092239}"
+      },
+      "output": {
+        "decay": 0.9,
+        "desired_retention": 0.8,
+        "difficulty": 4.71,
+        "last_review_sec": 1361092239,
+        "stability": 380.018
+      }
+    },
+    {
+      "input": {
+        "data": "{\"s\": 250.168, \"d\": 3.96, \"dr\": 0.8, \"decay\": 0.2, \"lrt\": 2695881558}"
+      },
+      "output": {
+        "decay": 0.2,
+        "desired_retention": 0.8,
+        "difficulty": 3.96,
+        "last_review_sec": 2695881558,
+        "stability": 250.168
+      }
+    },
+    {
+      "input": {
+        "data": "{\"s\": 207.164, \"d\": 4.64, \"dr\": 0.8, \"decay\": 0.9, \"lrt\": 2461917980}"
+      },
+      "output": {
+        "decay": 0.9,
+        "desired_retention": 0.8,
+        "difficulty": 4.64,
+        "last_review_sec": 2461917980,
+        "stability": 207.164
+      }
+    },
+    {
+      "input": {
+        "data": "{\"s\": 97.095, \"d\": 1.85, \"dr\": 0.8, \"decay\": 0.15, \"lrt\": 1088443033}"
+      },
+      "output": {
+        "decay": 0.15,
+        "desired_retention": 0.8,
+        "difficulty": 1.85,
+        "last_review_sec": 1088443033,
+        "stability": 97.095
+      }
+    },
+    {
+      "input": {
+        "data": "{\"s\": 277.391, \"d\": 3.75, \"dr\": 0.9, \"decay\": 0.2, \"lrt\": 701580516}"
+      },
+      "output": {
+        "decay": 0.2,
+        "desired_retention": 0.9,
+        "difficulty": 3.75,
+        "last_review_sec": 701580516,
+        "stability": 277.391
+      }
+    },
+    {
+      "input": {
+        "data": "{\"s\": 249.602, \"d\": 3.41, \"dr\": 0.8, \"decay\": 0.1, \"lrt\": 943456635}"
+      },
+      "output": {
+        "decay": 0.1,
+        "desired_retention": 0.8,
+        "difficulty": 3.41,
+        "last_review_sec": 943456635,
+        "stability": 249.602
+      }
+    },
+    {
+      "input": {
+        "data": "{\"s\": 229.594, \"d\": 1.12, \"dr\": 0.95, \"decay\": 0.1, \"lrt\": 2652884038}"
+      },
+      "output": {
+        "decay": 0.1,
+        "desired_retention": 0.95,
+        "difficulty": 1.12,
+        "last_review_sec": 2652884038,
+        "stability": 229.594
+      }
+    }
+  ],
+  "function": "fsrs.parse_fsrs",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "adapter",
+  "note": "Calls parse_fsrs with the case's text and returns the state's five fields, or none; the cases hold valid, missing, unparsable, non-object, non-finite and non-positive values, a boolean read as a number, and a name that spells a non-finite literal; cases drawn under CPython 3.12.12.",
+  "registry": "tools/parity-oracle/registry/spec_077.py",
+  "registry_sha256": "a4df214341b4c7fb76da5699faf932c96faac65eef67d5945590c876aaf92946",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

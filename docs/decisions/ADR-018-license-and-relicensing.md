@@ -49,3 +49,15 @@ greenfield's license rows on the box (`license-matches-manifest`, `license-spdx-
 ## More Information
 
 LICENSE; REUSE.toml; README's License and Source code sections.
+
+## Amendment: the brand files keep their own licence (ADR-598)
+
+The decision above, `AGPL-3.0-or-later` for every file, is amended by ADR-598 for exactly the
+files `scripts/brand-files.json` lists, which come from the DeckStreak brand source; its text above
+is kept as it was. Those files keep the brand source's own licence, recorded by one `REUSE.toml`
+annotation with `precedence = "override"` that names each listed path, and by its licence text in
+`LICENSES/LicenseRef-DeckStreak-Brand.txt`. Every other file stays under
+`AGPL-3.0-or-later`, and the code that reads or serves the brand files is the project's own.
+
+- Chosen: the logo keeps its own licence beside the AGPL code, because a project's mark is its identity, not part of the program others may change and redistribute under the AGPL
+- Licensing the logo under the AGPL with every other file: rejected because the brand source records the files under its own licence, and the files keep it

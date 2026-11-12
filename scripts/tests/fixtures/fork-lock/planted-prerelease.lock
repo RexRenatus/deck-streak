@@ -1,0 +1,20 @@
+# planted: the green lock with block-buffer at the release candidate 0.12.1-rc.0, which sorts below
+# 0.12.1
+version = 4
+
+[[package]]
+name = "block-buffer"
+version = "0.12.1-rc.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "hybrid-array",
+]
+
+[[package]]
+name = "digest"
+version = "0.11.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "block-buffer",
+ "const-oid",
+]

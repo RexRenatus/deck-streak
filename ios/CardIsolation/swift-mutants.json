@@ -1,0 +1,349 @@
+{
+  "population": "the card view's gate, rule list and fail-closed factory (SPEC-349 R3 and R4, ADR-360 D3 and D4); proved by the card-isolation job, joined to no shared population (#650)",
+  "mutants": [
+    {
+      "id": "SW34900",
+      "file": "Sources/CardIsolation/NavigationGate.swift",
+      "find": "state = .sealed",
+      "replace": "",
+      "killer": "CardIsolationTests.NavigationGateTests/test_only_the_first_main_frame_load_is_allowed",
+      "why": "the first main-frame load seals the gate, and nothing returns it to awaiting its first load"
+    },
+    {
+      "id": "SW34901",
+      "file": "Sources/CardIsolation/NavigationGate.swift",
+      "find": "request.isMainFrame",
+      "replace": "true",
+      "killer": "CardIsolationTests.NavigationGateTests/test_only_the_first_main_frame_load_is_allowed",
+      "why": "a subframe action before the first main-frame load is cancelled, not taken for the first load"
+    },
+    {
+      "id": "SW34902",
+      "file": "Sources/CardIsolation/NavigationGate.swift",
+      "find": "let first = state == .awaitingFirstLoad",
+      "replace": "let first = true",
+      "killer": "CardIsolationTests.NavigationGateTests/test_only_the_first_main_frame_load_is_allowed",
+      "why": "only the first main-frame load is allowed; every later one is cancelled"
+    },
+    {
+      "id": "SW34903",
+      "file": "Sources/CardIsolation/RuleList.swift",
+      "find": "{\"url-filter\":\".*\"}",
+      "replace": "{\"url-filter\":\"^https\"}",
+      "killer": "CardIsolationTests.RuleListTests/test_the_rule_list_blocks_every_load_of_every_type",
+      "why": "the one rule matches every URL, not only those of one scheme"
+    },
+    {
+      "id": "SW34904",
+      "file": "Sources/CardIsolation/RuleList.swift",
+      "find": "{\"type\":\"block\"}",
+      "replace": "{\"type\":\"ignore-previous-rules\"}",
+      "killer": "CardIsolationTests.RuleListTests/test_the_rule_list_blocks_every_load_of_every_type",
+      "why": "the one rule blocks what it matches"
+    },
+    {
+      "id": "SW34905",
+      "file": "Sources/CardIsolation/CardWebViewFactory.swift",
+      "find": "throw CardViewRefusal.ruleListDidNotCompile",
+      "replace": "return make(layers: Set(CardLayer.allCases), ruleList: nil)",
+      "killer": "CardIsolationTests.RuleListTests/test_a_rule_list_that_did_not_compile_builds_no_view",
+      "why": "a rule list that did not compile builds no view: the factory fails closed"
+    },
+    {
+      "id": "SW35500",
+      "file": "Sources/CardIsolation/CardScripts.swift",
+      "find": "missing.isEmpty",
+      "replace": "true",
+      "killer": "CardIsolationTests.CardScriptsTests/test_scripts_run_only_when_switched_on_with_every_control_present",
+      "why": "scripts run only when every required control is present, never on the switch alone"
+    },
+    {
+      "id": "SW35501",
+      "file": "Sources/CardIsolation/CardScripts.swift",
+      "find": "switchedOn && ",
+      "replace": "",
+      "killer": "CardIsolationTests.CardScriptsTests/test_scripts_run_only_when_switched_on_with_every_control_present",
+      "why": "scripts run only when the switch is on, never on the controls alone"
+    },
+    {
+      "id": "SW35502",
+      "file": "Sources/CardIsolation/CardScripts.swift",
+      "find": ".L1,",
+      "replace": "",
+      "killer": "CardIsolationTests.CardScriptsTests/test_scripts_run_only_when_switched_on_with_every_control_present",
+      "why": "L1 is a required control: a view without it keeps its scripts off"
+    },
+    {
+      "id": "SW35503",
+      "file": "Sources/CardIsolation/CardScripts.swift",
+      "find": ".L3,",
+      "replace": "",
+      "killer": "CardIsolationTests.CardScriptsTests/test_scripts_run_only_when_switched_on_with_every_control_present",
+      "why": "L3 is a required control: a view without it keeps its scripts off"
+    },
+    {
+      "id": "SW35504",
+      "file": "Sources/CardIsolation/CardScripts.swift",
+      "find": ".L4,",
+      "replace": "",
+      "killer": "CardIsolationTests.CardScriptsTests/test_scripts_run_only_when_switched_on_with_every_control_present",
+      "why": "L4 is a required control: a view without it keeps its scripts off"
+    },
+    {
+      "id": "SW35505",
+      "file": "Sources/CardIsolation/CardScripts.swift",
+      "find": ".L5,",
+      "replace": "",
+      "killer": "CardIsolationTests.CardScriptsTests/test_scripts_run_only_when_switched_on_with_every_control_present",
+      "why": "L5 is a required control: a view without it keeps its scripts off"
+    },
+    {
+      "id": "SW35506",
+      "file": "Sources/CardIsolation/CardScripts.swift",
+      "find": ".L6,",
+      "replace": "",
+      "killer": "CardIsolationTests.CardScriptsTests/test_scripts_run_only_when_switched_on_with_every_control_present",
+      "why": "L6 is a required control: a view without it keeps its scripts off"
+    },
+    {
+      "id": "SW35507",
+      "file": "Sources/CardIsolation/CardScripts.swift",
+      "find": ".L7,",
+      "replace": "",
+      "killer": "CardIsolationTests.CardScriptsTests/test_scripts_run_only_when_switched_on_with_every_control_present",
+      "why": "L7 is a required control: a view without it keeps its scripts off"
+    },
+    {
+      "id": "SW35508",
+      "file": "Sources/CardIsolation/CardScripts.swift",
+      "find": ".L8,",
+      "replace": "",
+      "killer": "CardIsolationTests.CardScriptsTests/test_scripts_run_only_when_switched_on_with_every_control_present",
+      "why": "L8 is a required control: a view without it keeps its scripts off"
+    },
+    {
+      "id": "SW35510",
+      "file": "Sources/CardIsolation/PeerConnectionRemoval.swift",
+      "find": "\"^(webkit)?RTC\"",
+      "replace": "\"^RTC\"",
+      "killer": "CardIsolationTests.PeerConnectionRemovalTests/test_the_removal_deletes_every_peer_connection_name_and_nothing_else",
+      "why": "the removal deletes the webkit-prefixed peer-connection names as well"
+    },
+    {
+      "id": "SW35511",
+      "file": "Sources/CardIsolation/PeerConnectionRemoval.swift",
+      "find": "[\"WebTransport\"]",
+      "replace": "[]",
+      "killer": "CardIsolationTests.PeerConnectionRemovalTests/test_the_removal_deletes_every_peer_connection_name_and_nothing_else",
+      "why": "the removal deletes WebTransport, a datagram transport outside the load path"
+    },
+    {
+      "id": "SW36100",
+      "file": "Sources/CardIsolation/CardScripts.swift",
+      "find": ".L10,",
+      "replace": "",
+      "killer": "CardIsolationTests.CardScriptsTests/test_scripts_run_only_when_switched_on_with_every_control_present",
+      "why": "L10 is a required control: a view without it keeps its scripts off"
+    },
+    {
+      "id": "SW36101",
+      "file": "Sources/CardIsolation/CardScripts.swift",
+      "find": ".L11,",
+      "replace": "",
+      "killer": "CardIsolationTests.CardScriptsTests/test_scripts_run_only_when_switched_on_with_every_control_present",
+      "why": "L11 is a required control: a view without it keeps its scripts off"
+    },
+    {
+      "id": "SW36102",
+      "file": "Sources/CardIsolation/CardScripts.swift",
+      "find": ".L12,",
+      "replace": "",
+      "killer": "CardIsolationTests.CardScriptsTests/test_scripts_run_only_when_switched_on_with_every_control_present",
+      "why": "L12 is a required control: a view without it keeps its scripts off"
+    },
+    {
+      "id": "SW36103",
+      "file": "Sources/CardIsolation/CardScripts.swift",
+      "find": ".L13,",
+      "replace": "",
+      "killer": "CardIsolationTests.CardScriptsTests/test_scripts_run_only_when_switched_on_with_every_control_present",
+      "why": "L13 is a required control: a view without it keeps its scripts off"
+    },
+    {
+      "id": "SW36104",
+      "file": "Sources/CardIsolation/LinkActivationRefusal.swift",
+      "find": "event.preventDefault();",
+      "replace": "",
+      "killer": "CardIsolationTests.LinkActivationRefusalTests/test_the_refusal_cancels_every_link_activation_and_nothing_else",
+      "why": "the refusal cancels a link's activation, never only observes it"
+    },
+    {
+      "id": "SW36105",
+      "file": "Sources/CardIsolation/LinkActivationRefusal.swift",
+      "find": "'click', 'auxclick'",
+      "replace": "'click'",
+      "killer": "CardIsolationTests.LinkActivationRefusalTests/test_the_refusal_cancels_every_link_activation_and_nothing_else",
+      "why": "the refusal cancels a middle click's activation as well as a click's"
+    },
+    {
+      "id": "SW36106",
+      "file": "Sources/CardIsolation/LinkActivationRefusal.swift",
+      "find": "capture: true",
+      "replace": "capture: false",
+      "killer": "CardIsolationTests.LinkActivationRefusalTests/test_the_refusal_cancels_every_link_activation_and_nothing_else",
+      "why": "the refusal listens in the capture phase, ahead of a card's own listeners on the target"
+    },
+    {
+      "id": "SW36107",
+      "file": "Sources/CardIsolation/LinkActivationRefusal.swift",
+      "find": "'a', 'area'",
+      "replace": "'a'",
+      "killer": "CardIsolationTests.LinkActivationRefusalTests/test_the_refusal_cancels_every_link_activation_and_nothing_else",
+      "why": "the refusal cancels an area element's activation as well as a link's"
+    },
+    {
+      "id": "SW36108",
+      "file": "Sources/CardIsolation/LinkActivationRefusal.swift",
+      "find": "node.localName.includes('-')",
+      "replace": "false",
+      "killer": "CardIsolationTests.LinkActivationRefusalTests/test_the_refusal_cancels_every_link_activation_and_nothing_else",
+      "why": "the refusal cancels a click on a custom element, which can host a closed shadow root"
+    },
+    {
+      "id": "SW36109",
+      "file": "Sources/CardIsolation/LinkActivationRefusal.swift",
+      "find": "'section', 'span'",
+      "replace": "'section'",
+      "killer": "CardIsolationTests.LinkActivationRefusalTests/test_the_refusal_cancels_every_link_activation_and_nothing_else",
+      "why": "the refusal cancels a click on a span, which can host a shadow root"
+    },
+    {
+      "id": "SW36110",
+      "file": "Sources/CardIsolation/PageGuard.swift",
+      "find": "apply(connected, target, []) === false",
+      "replace": "false",
+      "killer": "CardIsolationTests.PageGuardTests/test_the_guard_refuses_detached_activation_and_every_document_rewrite",
+      "why": "the guard refuses a detached node's activation"
+    },
+    {
+      "id": "SW36111",
+      "file": "Sources/CardIsolation/PageGuard.swift",
+      "find": "['open', 'write', 'writeln']",
+      "replace": "['write', 'writeln']",
+      "killer": "CardIsolationTests.PageGuardTests/test_the_guard_refuses_detached_activation_and_every_document_rewrite",
+      "why": "the guard refuses a document's open"
+    },
+    {
+      "id": "SW36112",
+      "file": "Sources/CardIsolation/PageGuard.swift",
+      "find": "'write', 'writeln'",
+      "replace": "'writeln'",
+      "killer": "CardIsolationTests.PageGuardTests/test_the_guard_refuses_detached_activation_and_every_document_rewrite",
+      "why": "the guard refuses a document's write"
+    },
+    {
+      "id": "SW36113",
+      "file": "Sources/CardIsolation/PageGuard.swift",
+      "find": "configurable: false",
+      "replace": "configurable: true",
+      "killer": "CardIsolationTests.PageGuardTests/test_the_guard_refuses_detached_activation_and_every_document_rewrite",
+      "why": "a card can neither redefine nor delete a wrapper the guard installed"
+    },
+    {
+      "id": "SW36114",
+      "file": "Sources/CardIsolation/PageGuard.swift",
+      "find": "          install(EventTarget.prototype, 'dispatchEvent', guarded(EventTarget.prototype.dispatchEvent, 'dispatchEvent'));\n",
+      "replace": "",
+      "killer": "CardIsolationTests.PageGuardTests/test_the_guard_refuses_detached_activation_and_every_document_rewrite",
+      "why": "the guard refuses a detached node's dispatchEvent"
+    },
+    {
+      "id": "SW36115",
+      "file": "Sources/CardIsolation/DocumentPolicy.swift",
+      "find": "default-src 'none'",
+      "replace": "default-src *",
+      "killer": "CardIsolationTests.DocumentPolicyTests/test_the_policy_admits_only_data_media_and_inline_style_and_script",
+      "why": "the policy's default admits no source"
+    },
+    {
+      "id": "SW36116",
+      "file": "Sources/CardIsolation/DocumentPolicy.swift",
+      "find": "form-action 'none'; ",
+      "replace": "",
+      "killer": "CardIsolationTests.DocumentPolicyTests/test_the_policy_admits_only_data_media_and_inline_style_and_script",
+      "why": "the policy admits no form target"
+    },
+    {
+      "id": "SW36117",
+      "file": "Sources/CardIsolation/DocumentPolicy.swift",
+      "find": "base-uri 'none'",
+      "replace": "",
+      "killer": "CardIsolationTests.DocumentPolicyTests/test_the_policy_admits_only_data_media_and_inline_style_and_script",
+      "why": "the policy admits no base URL"
+    },
+    {
+      "id": "SW36118",
+      "file": "Sources/CardIsolation/DocumentPolicy.swift",
+      "find": "object-src 'none'; ",
+      "replace": "",
+      "killer": "CardIsolationTests.DocumentPolicyTests/test_the_policy_admits_only_data_media_and_inline_style_and_script",
+      "why": "the policy admits no plugin"
+    },
+    {
+      "id": "SW36119",
+      "file": "Sources/CardIsolation/DocumentPolicy.swift",
+      "find": "img-src data:",
+      "replace": "img-src data: *",
+      "killer": "CardIsolationTests.DocumentPolicyTests/test_the_policy_admits_only_data_media_and_inline_style_and_script",
+      "why": "the policy admits images only as data: URLs"
+    },
+    {
+      "id": "SW36120",
+      "file": "Sources/CardIsolation/DocumentPolicy.swift",
+      "find": "named.append(\"\\(directive.name) dropped\")",
+      "replace": "",
+      "killer": "CardIsolationTests.DocumentPolicyTests/test_the_policy_admits_only_data_media_and_inline_style_and_script",
+      "why": "weaker names a directive the candidate drops"
+    },
+    {
+      "id": "SW39200",
+      "file": "Sources/CardIsolation/LinkStrip.swift",
+      "find": "(0x41...0x5A).contains(byte) ? byte | 0x20 : byte",
+      "replace": "byte",
+      "killer": "CardIsolationTests.LinkStripTests/test_every_link_opener_is_renamed_to_a_wbr_opener_in_any_ascii_case",
+      "why": "the strip folds ASCII capitals"
+    },
+    {
+      "id": "SW39201",
+      "file": "Sources/CardIsolation/LinkStrip.swift",
+      "find": "out.append(contentsOf: renamed)",
+      "replace": "out.append(contentsOf: bytes[index..<(index + opener.count)])",
+      "killer": "CardIsolationTests.LinkStripTests/test_every_link_opener_is_renamed_to_a_wbr_opener_in_any_ascii_case",
+      "why": "the strip writes the renamed opener, not the one it found"
+    },
+    {
+      "id": "SW39202",
+      "file": "Sources/CardIsolation/LinkStrip.swift",
+      "find": "guard index + opener.count <= bytes.count else {",
+      "replace": "guard index + opener.count < bytes.count else {",
+      "killer": "CardIsolationTests.LinkStripTests/test_an_opener_at_either_end_of_the_card_is_renamed",
+      "why": "an opener that ends the card is renamed"
+    },
+    {
+      "id": "SW39203",
+      "file": "Sources/CardIsolation/LinkStrip.swift",
+      "find": "static let renamed = Array(\"<wbr\".utf8)",
+      "replace": "static let renamed = Array(\"<meta\".utf8)",
+      "killer": "CardIsolationTests.LinkStripTests/test_every_link_opener_is_renamed_to_a_wbr_opener_in_any_ascii_case",
+      "why": "the target is wbr, the void element with no attribute of its own"
+    },
+    {
+      "id": "SW39204",
+      "file": "Sources/CardIsolation/LinkStrip.swift",
+      "find": "for offset in 0..<opener.count where",
+      "replace": "for offset in 1..<opener.count where",
+      "killer": "CardIsolationTests.LinkStripTests/test_markup_holding_no_link_opener_is_returned_byte_for_byte",
+      "why": "the opener's < is matched, so text without one is left"
+    }
+  ]
+}

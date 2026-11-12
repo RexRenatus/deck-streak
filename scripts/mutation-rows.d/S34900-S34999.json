@@ -1,0 +1,46 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S34900-THE-FACTORY-KEEPS-NO-STORE",
+        "ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift",
+        "WKWebsiteDataStore.nonPersistent()",
+        "WKWebsiteDataStore.default()",
+        "the card view keeps a persistent data store, so storage outlives the view (SPEC-349 R2, L1)",
+        "test_card_web_view_layers.OneFactoryBuildsTheCardWebView.test_one_file_builds_the_card_web_view_and_it_carries_every_layer"
+      ],
+      [
+        "S34901-THE-FACTORY-TURNS-PAGE-SCRIPT-OFF",
+        "ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift",
+        "allowsContentJavaScript = false",
+        "allowsContentJavaScript = true",
+        "the card view runs the card's own script (SPEC-349 R2, L2)",
+        "test_card_web_view_layers.OneFactoryBuildsTheCardWebView.test_one_file_builds_the_card_web_view_and_it_carries_every_layer"
+      ],
+      [
+        "S34902-THE-FACTORY-ADDS-THE-RULE-LIST",
+        "ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift",
+        "            configuration.userContentController.add(ruleList)\n",
+        "",
+        "the card view is built without the rule list that blocks every load (SPEC-349 R2 and R4, L3)",
+        "test_card_web_view_layers.OneFactoryBuildsTheCardWebView.test_one_file_builds_the_card_web_view_and_it_carries_every_layer"
+      ],
+      [
+        "S34903-THE-FACTORY-SETS-THE-WINDOW-REFUSAL",
+        "ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift",
+        "            view.uiDelegate = refusal\n",
+        "",
+        "the card view has no UI delegate, so no window request is refused (SPEC-349 R2, L6)",
+        "test_card_web_view_layers.OneFactoryBuildsTheCardWebView.test_one_file_builds_the_card_web_view_and_it_carries_every_layer"
+      ],
+      [
+        "S34904-THE-FACTORY-LOADS-WITH-NO-BASE-URL",
+        "ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift",
+        "loadHTMLString(html, baseURL: nil)",
+        "loadHTMLString(html, baseURL: Bundle.main.bundleURL)",
+        "the card is handed over with the app bundle as its base, an origin that can read files (SPEC-349 R2, L7)",
+        "test_card_web_view_layers.OneFactoryBuildsTheCardWebView.test_one_file_builds_the_card_web_view_and_it_carries_every_layer"
+      ]
+    ]
+  }
+}

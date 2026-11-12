@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT max(finished_at) AS \"finished: i64\" FROM sync_runs WHERE status = 'ok'",
+  "describe": {
+    "columns": [
+      {
+        "name": "finished: i64",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "92af66714fca13a42f4906f3c21b8a228d7b8e19a48d9327c231b6ceaf71ae88"
+}

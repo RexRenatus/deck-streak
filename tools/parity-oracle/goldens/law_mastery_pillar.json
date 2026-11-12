@@ -1,0 +1,81 @@
+{
+  "cases": [
+    {
+      "class": "zero",
+      "input": {
+        "law_leech_active": 0
+      },
+      "output": 100.0
+    },
+    {
+      "class": "one",
+      "input": {
+        "law_leech_active": 1
+      },
+      "output": 97.0
+    },
+    {
+      "input": {
+        "law_leech_active": 2
+      },
+      "output": 94.0
+    },
+    {
+      "input": {
+        "law_leech_active": 5
+      },
+      "output": 85.0
+    },
+    {
+      "input": {
+        "law_leech_active": 9
+      },
+      "output": 73.0
+    },
+    {
+      "class": "cap",
+      "input": {
+        "law_leech_active": 10
+      },
+      "output": 70.0
+    },
+    {
+      "class": "cap",
+      "input": {
+        "law_leech_active": 11
+      },
+      "output": 70.0
+    },
+    {
+      "class": "cap",
+      "input": {
+        "law_leech_active": 25
+      },
+      "output": 70.0
+    },
+    {
+      "class": "cap",
+      "input": {
+        "law_leech_active": 10000
+      },
+      "output": 70.0
+    },
+    {
+      "class": "negative",
+      "input": {
+        "law_leech_active": -1
+      },
+      "output": 100.0
+    }
+  ],
+  "function": "scoring.law_mastery_pillar",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_077.py",
+  "registry_sha256": "a4df214341b4c7fb76da5699faf932c96faac65eef67d5945590c876aaf92946",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}

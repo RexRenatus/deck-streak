@@ -1,0 +1,58 @@
+{
+  "records": [
+    {
+      "file": "crates/anki-format/src/opener.rs",
+      "mutant": "replace | with ^ in defensive_connection",
+      "anchor": "OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,",
+      "reason": "READ_ONLY and NO_MUTEX hold no bit in common, so their exclusive or is their union and the copy opens with the same flags.",
+      "evidence": "rusqlite 0.39.0's OpenFlags (src/lib.rs) takes SQLITE_OPEN_READ_ONLY and SQLITE_OPEN_NO_MUTEX from the sqlite3.h of libsqlite3-sys 0.37.0, where they are 0x00000001 and 0x00008000, so 0x1 ^ 0x8000 and 0x1 | 0x8000 are both 0x8001: the bits sqlite3_open_v2 receives are equal. The store's two read-only openers carry the same record in deck-streak-collection.json.",
+      "reached_by": "opener::the_opener_sets_every_defensive_setting_on_the_copy",
+      "issue": "#1134"
+    },
+    {
+      "file": "crates/anki-format/src/opener.rs",
+      "mutant": "replace <impl Write for Hashing>::flush -> io::Result<()> with Ok(())",
+      "anchor": "    fn flush(&mut self) -> io::Result<()> {\n        self.file.flush()\n    }",
+      "reason": "Hashing holds a std::fs::File, whose flush does nothing and returns Ok(()) on every target this crate runs its tests on, so the mutant returns what the original returns and nothing else changes; the copy reaches the disk by the sync_all that follows.",
+      "evidence": "The pinned toolchain's std (1.99.1, library/std/src/sys/fs/unix.rs) defines File::flush as Ok(()), and impl Write for File calls it: std::fs::File keeps no buffer of its own, so every byte Hashing::write passes on is already handed to the kernel. copy_bounded calls flush and then File::sync_all, and sync_all is unchanged by the mutant.",
+      "reached_by": "opener::the_source_keeps_its_bytes_and_modification_time",
+      "issue": "#1134"
+    },
+    {
+      "file": "crates/anki-format/src/opener.rs",
+      "mutant": "replace make_dir -> io::Result<()> with Ok(())",
+      "anchor": "#[cfg(target_family = \"wasm\")]\nfn make_dir(dir: &Path) -> io::Result<()> {\n    fs::DirBuilder::new().create(dir)\n}",
+      "reason": "The mutated make_dir is the wasm one, which #[cfg(target_family = \"wasm\")] removes from every native build, so the mutant compiles to the very program the original does.",
+      "evidence": "opener.rs gates this make_dir on target_family = \"wasm\" and its native twin, which makes the folder with mode 0o700, on the opposite, so cargo mutants lists the mutant at the wasm body's line and builds it natively as the unchanged crate. The native twin is reached by every open, and the two-readers test holds two of its folders at once.",
+      "reached_by": "opener::two_readers_held_at_once_each_hold_their_own_private_copy",
+      "issue": "#1134"
+    },
+    {
+      "file": "crates/anki-format/src/opener.rs",
+      "mutant": "replace create_private -> io::Result<File> with Ok(Default::default())",
+      "anchor": "#[cfg(target_family = \"wasm\")]\nfn create_private(path: &Path) -> io::Result<File> {\n    OpenOptions::new().write(true).create_new(true).open(path)\n}",
+      "reason": "The mutated create_private is the wasm one, which #[cfg(target_family = \"wasm\")] removes from every native build, so the mutant compiles to the very program the original does, and on wasm it does not compile.",
+      "evidence": "opener.rs gates this create_private on target_family = \"wasm\" and its native twin, which creates the copy with mode 0o600, on the opposite, so cargo mutants lists the mutant at the wasm body's line and builds it natively as the unchanged crate. On wasm the replacement cannot build: std::fs::File does not implement Default. The native twin is reached by every open.",
+      "reached_by": "opener::the_source_keeps_its_bytes_and_modification_time",
+      "issue": "#1134"
+    },
+    {
+      "file": "crates/anki-format/src/blob.rs",
+      "mutant": "replace | with ^ in put_key",
+      "anchor": "put_varint(out, (number << 3) | u128::from(wire_type));",
+      "reason": "number << 3 holds no bit below 8 and every wire type put_key is given is below 8, so their exclusive or is their union and the key is the same.",
+      "evidence": "put_key's callers pass the wire types 0 and 2 (present_varint, length_field) and WireValue::wire_type, which answers 0, 1, 2 or 5; a left shift by 3 leaves the low three bits 0, so for every such call (number << 3) ^ t and (number << 3) | t are equal. The sibling mutant to & is caught by the blob goldens.",
+      "reached_by": "blobs::each_blob_golden_case_encodes_and_decodes_both_ways",
+      "issue": "#1134"
+    },
+    {
+      "file": "crates/anki-format/src/blob.rs",
+      "mutant": "replace | with ^ in put_varint",
+      "anchor": "out.push(if more { low | 0x80 } else { low });",
+      "reason": "low is rest & 0x7f, which holds no bit at 0x80, so low ^ 0x80 and low | 0x80 are the same byte.",
+      "evidence": "put_varint computes low = u8::try_from(rest & 0x7f), a value from 0 to 0x7f, before the push, so the high bit of low is always 0 and setting it by or and by exclusive or gives one byte. The goldens hold varints of more than one group, so the continuation byte is written on the tested path, and the config id test writes ten groups.",
+      "reached_by": "blobs::a_deck_config_id_other_than_one_is_written_and_read_as_its_own_value",
+      "issue": "#1134"
+    }
+  ]
+}

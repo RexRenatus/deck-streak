@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, telegram_user_id FROM passkeys WHERE credential_id = ?1",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "passkeys",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "telegram_user_id",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "passkeys",
+            "name": "telegram_user_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "533cc0dcff41dc48482905441e480cfebb734f8ffa63ab3b71a2b23a21018d80"
+}

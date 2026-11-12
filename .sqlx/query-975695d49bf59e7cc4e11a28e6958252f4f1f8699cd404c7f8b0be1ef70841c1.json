@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT study_day, backlog, due_today FROM law_dues WHERE id = 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "study_day",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "law_dues",
+            "name": "study_day"
+          }
+        }
+      },
+      {
+        "name": "backlog",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "law_dues",
+            "name": "backlog"
+          }
+        }
+      },
+      {
+        "name": "due_today",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "law_dues",
+            "name": "due_today"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "975695d49bf59e7cc4e11a28e6958252f4f1f8699cd404c7f8b0be1ef70841c1"
+}

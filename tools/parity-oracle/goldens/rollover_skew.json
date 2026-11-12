@@ -1,0 +1,268 @@
+{
+  "cases": [
+    {
+      "class": "offset",
+      "input": {
+        "collection_rollover_hour": 4,
+        "collection_utc_offset_min": 0,
+        "cron_hour": 4,
+        "scheduler_utc_offset_min": 0
+      },
+      "output": 0
+    },
+    {
+      "class": "offset",
+      "input": {
+        "collection_rollover_hour": 4,
+        "collection_utc_offset_min": 60,
+        "cron_hour": 4,
+        "scheduler_utc_offset_min": 0
+      },
+      "output": 60
+    },
+    {
+      "class": "offset",
+      "input": {
+        "collection_rollover_hour": 4,
+        "collection_utc_offset_min": 0,
+        "cron_hour": 4,
+        "scheduler_utc_offset_min": 60
+      },
+      "output": -60
+    },
+    {
+      "class": "offset",
+      "input": {
+        "collection_rollover_hour": 4,
+        "collection_utc_offset_min": 840,
+        "cron_hour": 4,
+        "scheduler_utc_offset_min": -720
+      },
+      "output": 120
+    },
+    {
+      "class": "offset",
+      "input": {
+        "collection_rollover_hour": 4,
+        "collection_utc_offset_min": -720,
+        "cron_hour": 4,
+        "scheduler_utc_offset_min": 840
+      },
+      "output": -120
+    },
+    {
+      "class": "offset",
+      "input": {
+        "collection_rollover_hour": 4,
+        "collection_utc_offset_min": 0,
+        "cron_hour": 4,
+        "scheduler_utc_offset_min": 330
+      },
+      "output": -330
+    },
+    {
+      "class": "offset",
+      "input": {
+        "collection_rollover_hour": 4,
+        "collection_utc_offset_min": -240,
+        "cron_hour": 4,
+        "scheduler_utc_offset_min": -300
+      },
+      "output": 60
+    },
+    {
+      "class": "wrap",
+      "input": {
+        "collection_rollover_hour": 23,
+        "collection_utc_offset_min": 0,
+        "cron_hour": 0,
+        "scheduler_utc_offset_min": 0
+      },
+      "output": 60
+    },
+    {
+      "class": "wrap",
+      "input": {
+        "collection_rollover_hour": 0,
+        "collection_utc_offset_min": 0,
+        "cron_hour": 23,
+        "scheduler_utc_offset_min": 0
+      },
+      "output": -60
+    },
+    {
+      "class": "wrap",
+      "input": {
+        "collection_rollover_hour": 0,
+        "collection_utc_offset_min": 0,
+        "cron_hour": 12,
+        "scheduler_utc_offset_min": 0
+      },
+      "output": -720
+    },
+    {
+      "class": "wrap",
+      "input": {
+        "collection_rollover_hour": 12,
+        "collection_utc_offset_min": 0,
+        "cron_hour": 0,
+        "scheduler_utc_offset_min": 0
+      },
+      "output": -720
+    },
+    {
+      "input": {
+        "collection_rollover_hour": 4,
+        "collection_utc_offset_min": -225,
+        "cron_hour": 23,
+        "scheduler_utc_offset_min": 585
+      },
+      "output": 330
+    },
+    {
+      "input": {
+        "collection_rollover_hour": 3,
+        "collection_utc_offset_min": -105,
+        "cron_hour": 21,
+        "scheduler_utc_offset_min": 495
+      },
+      "output": 480
+    },
+    {
+      "input": {
+        "collection_rollover_hour": 0,
+        "collection_utc_offset_min": 60,
+        "cron_hour": 18,
+        "scheduler_utc_offset_min": -405
+      },
+      "output": 105
+    },
+    {
+      "input": {
+        "collection_rollover_hour": 3,
+        "collection_utc_offset_min": -480,
+        "cron_hour": 13,
+        "scheduler_utc_offset_min": -585
+      },
+      "output": 705
+    },
+    {
+      "input": {
+        "collection_rollover_hour": 18,
+        "collection_utc_offset_min": 135,
+        "cron_hour": 10,
+        "scheduler_utc_offset_min": 180
+      },
+      "output": -525
+    },
+    {
+      "input": {
+        "collection_rollover_hour": 6,
+        "collection_utc_offset_min": -120,
+        "cron_hour": 13,
+        "scheduler_utc_offset_min": -330
+      },
+      "output": 630
+    },
+    {
+      "input": {
+        "collection_rollover_hour": 10,
+        "collection_utc_offset_min": -90,
+        "cron_hour": 20,
+        "scheduler_utc_offset_min": 585
+      },
+      "output": -75
+    },
+    {
+      "input": {
+        "collection_rollover_hour": 20,
+        "collection_utc_offset_min": 270,
+        "cron_hour": 13,
+        "scheduler_utc_offset_min": -555
+      },
+      "output": 405
+    },
+    {
+      "input": {
+        "collection_rollover_hour": 2,
+        "collection_utc_offset_min": -330,
+        "cron_hour": 15,
+        "scheduler_utc_offset_min": 45
+      },
+      "output": 405
+    },
+    {
+      "input": {
+        "collection_rollover_hour": 1,
+        "collection_utc_offset_min": -345,
+        "cron_hour": 18,
+        "scheduler_utc_offset_min": -255
+      },
+      "output": -510
+    },
+    {
+      "input": {
+        "collection_rollover_hour": 6,
+        "collection_utc_offset_min": -240,
+        "cron_hour": 3,
+        "scheduler_utc_offset_min": -570
+      },
+      "output": 150
+    },
+    {
+      "input": {
+        "collection_rollover_hour": 9,
+        "collection_utc_offset_min": -135,
+        "cron_hour": 22,
+        "scheduler_utc_offset_min": 735
+      },
+      "output": -90
+    },
+    {
+      "input": {
+        "collection_rollover_hour": 5,
+        "collection_utc_offset_min": 465,
+        "cron_hour": 22,
+        "scheduler_utc_offset_min": -240
+      },
+      "output": 285
+    },
+    {
+      "input": {
+        "collection_rollover_hour": 8,
+        "collection_utc_offset_min": 630,
+        "cron_hour": 3,
+        "scheduler_utc_offset_min": -690
+      },
+      "output": -420
+    },
+    {
+      "input": {
+        "collection_rollover_hour": 18,
+        "collection_utc_offset_min": -270,
+        "cron_hour": 7,
+        "scheduler_utc_offset_min": -300
+      },
+      "output": -630
+    },
+    {
+      "input": {
+        "collection_rollover_hour": 20,
+        "collection_utc_offset_min": 465,
+        "cron_hour": 1,
+        "scheduler_utc_offset_min": -705
+      },
+      "output": 30
+    }
+  ],
+  "function": "timebase.rollover_skew_minutes",
+  "generator": "tools/parity-oracle/generate.py",
+  "generator_sha256": "a5a5cda58385d41de67ba5304efee170571696a93cc20b152ab8c6a36be0bbc1",
+  "inputs": "synthetic",
+  "kind": "function",
+  "registry": "tools/parity-oracle/registry/spec_027.py",
+  "registry_sha256": "ac5bdf68d64e1d17d9f6b93a5f237600e878d693b9d4c61f9655dbd37d8d6540",
+  "schema": "phx.parity-golden.v1",
+  "seed": 20,
+  "source_commit": "27ee2bc2772879d49a83b0459e5b1764afc4c0fb"
+}
