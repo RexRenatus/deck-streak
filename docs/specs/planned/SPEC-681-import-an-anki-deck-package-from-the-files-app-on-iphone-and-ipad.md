@@ -60,7 +60,9 @@ for an Anki deck package (`.apkg`), which `ios/App/Info.plist` declares as an im
 
 R2. The picked package is copied into the app's temporary folder while its security-scoped access
 is held, and its notes and cards enter the open collection through one engine call,
-`ImportExportService.ImportAnkiPackage`, with their scheduling kept.
+`ImportExportService.ImportAnkiPackage`, with four options: their scheduling kept
+(`with_scheduling` true), no note type the collection holds merged or changed (`merge_notetypes`
+false), and the two update conditions, for notes and for note types, at the engine's defaults.
 
 R3. The native allow-list and the Native column of the core's table both admit that call as one
 ordinary pair (ADR-356 D3), the parity test holds the two equal, and each list that pins the
