@@ -47,7 +47,7 @@ final class ReviewModel {
     private let player = ClipPlayer()
 
     init(
-        deck: Deck, session: ReviewSession,
+        deck: Deck, session: ReviewSession, settle: Duration = .zero,
         voiceOverRunning: @escaping @MainActor () -> Bool = { UIAccessibility.isVoiceOverRunning },
         installed: @escaping @MainActor () -> [InstalledVoice] = InstalledVoices.all
     ) {

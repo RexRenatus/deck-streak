@@ -195,6 +195,27 @@ final class ReviewModelTests: XCTestCase {
             "A14: a flag keeps the withheld card, and a bury moves on to the designed end")
     }
 
+    /// SPEC-680 R4: a grade pressed as its answer shows, inside the settle interval, is not sent,
+    /// and the answer stays shown; the control, with no interval, sends the same press.
+    @MainActor
+    func test_a_rating_pressed_as_the_answer_shows_is_not_sent() async throws {
+        let (engine, review) = try await openedFixture(freshFixture())
+        let model = ReviewModel(
+            deck: review, session: ReviewSession(engine: engine), settle: .seconds(3600),
+            voiceOverRunning: { true }, installed: { [] })
+        await model.start()
+        await model.perform(.showAnswer)
+        await model.perform(.rate(.good))
+        XCTAssertEqual(model.answered, 0, "a grade pressed as the answer shows is not sent")
+        XCTAssertEqual(model.phase, .answer, "the answer stays shown")
+
+        // the control: with no settle interval the same press is sent
+        let (open, _) = try await started(voiceOver: true, installed: [])
+        await open.perform(.showAnswer)
+        await open.perform(.rate(.good))
+        XCTAssertEqual(open.answered, 1, "with no settle interval the grade is sent")
+    }
+
     // MARK: - Steps
 
     /// A model over a fresh copy of the fixture, started on its deck `Review`, and that copy.
