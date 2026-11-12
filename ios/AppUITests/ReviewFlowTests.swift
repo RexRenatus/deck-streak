@@ -118,6 +118,20 @@ final class ReviewFlowTests: XCTestCase {
                 + "(installed: \(installed))")
     }
 
+    /// The queue's three counts read as one element, labelled in the order shown (SPEC-680 R8).
+    @MainActor
+    func test_the_review_counts_read_as_one_element() throws {
+        let app = try launchedOnTheFixture()
+        tapWhenShown(app.staticTexts["deck-row-Review"].firstMatch)
+        let counts = app.descendants(matching: .any).matching(identifier: "counts").firstMatch
+        XCTAssertEqual(
+            reading(until: "4 new, 0 learning, 0 to review") { label(of: counts) },
+            "4 new, 0 learning, 0 to review",
+            "the queue's three counts read as one element, labelled in the order shown")
+        XCTAssertFalse(
+            app.staticTexts["count-new"].exists, "no count reads as an element of its own")
+    }
+
     // MARK: - Steps
 
     /// The app, launched on a fresh copy of the review fixture.
