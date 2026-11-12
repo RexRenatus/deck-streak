@@ -1,0 +1,19 @@
+// Planted: read as text, never compiled. A child run its parent names is admitted; a bare
+// ignore with no entry and no reason is a site.
+
+#[test]
+fn parent_runs_the_child() {
+    let _args = ["--exact", "child", "--ignored"];
+}
+
+#[test]
+#[ignore = "a child process: parent_runs_the_child runs it"]
+fn child() {}
+
+#[test]
+#[ignore]
+fn bare() {}
+
+#[test]
+#[ignore = "a child process: no_such_parent runs it"]
+fn orphan() {}
