@@ -16,7 +16,7 @@ import re
 import subprocess
 import unittest
 
-from _support import REPO
+from _support import REPO, examined
 
 FIXTURES = REPO / "scripts" / "tests" / "fixtures" / "commit-messages"
 # R14: the census starts at warn; moving it to fail is its own delivery, under ADR-450 D6's rule.
@@ -84,7 +84,11 @@ def is_bot(author):
 def parse_log(text):
     """The commits a `git log --format=FORMAT` answer holds, each (id, parents, bot, message): the
     parents are counted, and the message keeps its lines with its trailing newlines dropped (R2)."""
-    return []
+    commits = []
+    for record in text.split("\x1e")[1:]:
+        ident, parents, author, message = record.split("\x1f", 3)
+        commits.append((ident, len(parents.split()), is_bot(author), message.rstrip("\n")))
+    return commits
 
 
 def planted(name):
@@ -109,6 +113,10 @@ def planted(name):
 def range_void(shallow, first_parent):
     """Why a run's range cannot be read, or None (R3): a shallow checkout can cut the range, and a
     head with no first parent has no base to read it from."""
+    if shallow.strip() != "false":
+        return f"VOID the checkout's shallow flag reads {shallow.strip()!r}, so its range is cut"
+    if first_parent != 0:
+        return "VOID HEAD has no first parent, so the range has no base"
     return None
 
 
@@ -142,19 +150,76 @@ def trailer_keys(lines):
     every line is a trailer, or when a line opens with a prefix git writes by itself and at least a
     quarter of its lines are trailers. A line that opens with a space or a tab, after a trailer,
     continues that trailer."""
+    cut = [at for at, line in enumerate(lines) if line == "---" or line.startswith("--- ")]
+    kept = lines[: cut[0]] if cut else lines
+    filled = [at for at, line in enumerate(kept) if line.strip()]
+    kept = kept[: filled[-1] + 1] if filled else []
+    gaps = [at for at, line in enumerate(kept) if not line.strip()]
+    if not gaps:
+        return []
+    trailers, others, written, folding, keys = 0, 0, False, False, []
+    for line in kept[gaps[-1] + 1 :]:
+        if line[:1] in (" ", "\t") and folding:
+            continue
+        found = TRAILER.match(line)
+        generated = line.lower().startswith(GIT_WRITTEN)
+        written = written or generated
+        if found:
+            keys.append(found.group("key"))
+        if found or generated:
+            trailers += 1
+            folding = True
+        else:
+            others += 1
+            folding = False
+    if trailers and (others == 0 or (written and 4 * trailers >= trailers + others)):
+        return keys
     return []
 
 
 def classify(commit):
     """One commit's kind, its sites and the trailer keys it counts (R4 to R10). The kind is `merge`
     or `revert` for a subject a tool wrote, else `judged`; each site is (form, key)."""
-    return "judged", [], []
+    _ident, parents, _bot, message = commit
+    lines = message.split("\n")
+    subject = lines[0]
+    sites, counted = [], []
+    if parents >= 2 and any(form.fullmatch(subject) for form in TOOL_MERGES):
+        kind = "merge"
+    elif REVERT.fullmatch(subject) and REVERTS.search(message):
+        kind = "revert"
+    else:
+        kind = "judged"
+        found = SUBJECT.match(subject)
+        if not found:
+            sites.append(("no-type", "-"))
+        elif found.group("type").lower() not in TYPES:
+            sites.append(("other-type", found.group("type").lower()))
+        if len(subject) > LIMIT:
+            sites.append(("long-subject", str(len(subject))))
+    for key in trailer_keys(lines):
+        if key.lower() in ATTRIBUTION:
+            sites.append(("attribution-trailer", key.lower()))
+        else:
+            counted.append(key)
+    return kind, sites, counted
 
 
 def summary(population):
     """The population by kind on one `read` line, then each trailer key counted and not refused on
     its own INFO line (R2, R10)."""
-    return []
+    kinds = {"judged": 0, "merge": 0, "revert": 0}
+    bots, info = 0, []
+    for commit in population:
+        kind, _sites, counted = classify(commit)
+        kinds[kind] += 1
+        bots += commit[2]
+        info.extend(f"INFO commit-message {commit[0][:12]} trailer {key}" for key in counted)
+    head = (
+        f"read {len(population)} commit(s): {kinds['judged']} judged, {kinds['merge']} merge(s) "
+        f"and {kinds['revert']} revert(s) a tool wrote, {bots} by a bot"
+    )
+    return [head, *info]
 
 
 def judge(population, lookups, listed, level):
@@ -163,7 +228,28 @@ def judge(population, lookups, listed, level):
     `WARN commit-message <id> <form> <key>` and is refused only at fail; a listed entry that no site
     of the population or of the listed commits matches prints `STALE commit-message <id> <form>
     <key>` and is refused at both levels. An empty population is VOID."""
-    return [], []
+    if level not in ("warn", "fail"):
+        raise AssertionError(f"the level is warn or fail, not {level}")
+    population = examined("commit(s)", population)
+    found, known = [], set()
+    for commit in population:
+        found.extend((commit[0][:12], form, key) for form, key in classify(commit)[1])
+    for commit in [*population, *lookups]:
+        known |= {(commit[0][:12], form, key) for form, key in classify(commit)[1]}
+    names = {(ident, form, key) for ident, form, key, _reason in listed}
+    lines, refused = [], []
+    for site in found:
+        if site not in names:
+            line = "WARN commit-message " + " ".join(site)
+            lines.append(line)
+            if level == "fail":
+                refused.append(line)
+    for ident, form, key, _reason in listed:
+        if (ident, form, key) not in known:
+            stale = f"STALE commit-message {ident} {form} {key}"
+            lines.append(stale)
+            refused.append(stale)
+    return lines, refused
 
 
 def sites_of(name):
