@@ -524,8 +524,8 @@ STRONG_DIGESTS = {
 
 def hashlib_calls(source):
     """Every call `source` makes into `hashlib`, by the module's name, an alias of it or a name
-    imported from it, as (line, digest): `hashlib.new`'s first argument when it is a literal, else
-    the constructor's name, lower-cased with `_` and `-` dropped; '' for a name it cannot read."""
+    imported from it, as (line, digest): the first argument of `new` or `pbkdf2_hmac` when it is a
+    literal, else the constructor's name, lower-cased with `_` and `-` dropped; '' for a name it cannot read."""
     tree = ast.parse(source)
     modules, members = set(), {}
     for node in ast.walk(tree):
@@ -546,7 +546,7 @@ def hashlib_calls(source):
             name = members[node.func.id]
         else:
             continue
-        if name == "new":
+        if name in ("new", "pbkdf2_hmac"):
             first = node.args[0] if node.args else None
             literal = isinstance(first, ast.Constant) and isinstance(first.value, str)
             name = first.value if literal else ""
@@ -576,6 +576,7 @@ class LaneDigests(unittest.TestCase):
             "from hashlib import sha1 as s\ns(b'')\n",
             "import hashlib\nhashlib.new('SHA-1', b'')\n",
             "import hashlib\nhashlib.new(NAME, b'')\n",
+            "import hashlib\nhashlib.pbkdf2_hmac('sha1', b'', b'', 1)\n",
         )
         for plant in examined("planted weak digests", plants):
             with self.subTest(plant=plant):
