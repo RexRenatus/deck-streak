@@ -54,7 +54,8 @@ not a delivery.
 ## The gate
 
 ```sh
-bash scripts/check.sh      # fmt · clippy -D warnings · nextest · doctests · web · oracle · scrub · secrets
+bash scripts/check.sh      # fmt · clippy -D warnings · test · doctest · audit-rust · test-engine ·
+                           # test-release · web · audit-web · python · scrub · secrets
 ```
 
 All stages, no exceptions, and never `--no-verify`. The same script runs in CI. The packs, and the

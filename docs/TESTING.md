@@ -72,7 +72,6 @@ on GitHub-hosted runners, in five jobs that start together (ADR-055):
 | `engine` | `test-engine`, in two slices of the engine set, one per runner |
 | `release` | `test-release`, the workspace's tests in the release profile the daemon ships from |
 | `web` | `web audit-web` |
-| `packs` | `packs` |
 | `hygiene` | `python scrub secrets` |
 | `web-engine` | none: `scripts/web-engine-build.sh`, `scripts/web-engine-size.py`, then `test:engine` |
 
@@ -120,7 +119,8 @@ request cancels the run it supersedes; a push to `dev` or `main` is never cancel
 ## Coverage and mutation
 
 The repository's Python guard scripts are mutated by `scripts/mutation_python.py`, one CI job
-`mutation-python` per shard (ADR-073); a survivor fails the verdict unless it is recorded in
+`mutation-python` per shard, and `mutation-python-release` for the legs a release run deals past
+that matrix (ADR-073); a survivor fails the verdict unless it is recorded in
 `scripts/mutation-equivalent.d/python.json`.
 
 A test proves something only if it fails on a wrong program. Mutation rows (the mutation-rows
