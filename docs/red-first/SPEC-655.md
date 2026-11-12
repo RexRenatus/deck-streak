@@ -18,25 +18,25 @@ A6: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k tes
 ```
 
 Four reds were read locally over planted trees (A1 to A4), each on an assertion of its criterion.
-A5 and A6 read the tree and the workflow, so their reds were read in CI: the hygiene job JOB-NEW
-failed the six tests of A1 to A6 and no other. GREEN-SHA replaced the four stubs with the census
-bodies and restored the two imports only those bodies use; no test line changed between RED-SHA
-and GREEN-SHA. The entries of `LISTED` were written from the saved output of the hygiene job
-LIST-JOB, the run of the second push at GREEN-SHA. The coverage workflow's Python job also runs
+A5 and A6 read the tree and the workflow, so their reds were read in CI: the hygiene job 130525614159
+failed the six tests of A1 to A6 and no other. 5e37402b replaced the four stubs with the census
+bodies and restored the two imports only those bodies use; no test line changed between 689cb5a7
+and 5e37402b. The entries of `LISTED` were written from the saved output of the hygiene job
+130609594872, the run of the second push at 5e37402b. The coverage workflow's Python job also runs
 this module outside the hygiene job, where A5 reads VOID; that job prints a failing suite and does
 not fail on it, so the VOID there changes no verdict.
 
 ```red-first
-A1: red at RED-SHA: AssertionError: Lists differ: [] != ['clean.sh', 'direct-tool', 'fake-tool']
-A1: green at GREEN-SHA
-A2: red at RED-SHA: AssertionError: Tuples differ: ([], []) != (['WARN finding.sh SC2086 found 1, listed 0, at line(s) 3'], [])
-A2: green at GREEN-SHA
-A3: red at RED-SHA: AssertionError: Tuples differ: ([], []) != ([], ['STALE finding.sh SC2086 found 0, listed 1'])
-A3: green at GREEN-SHA
-A4: red at RED-SHA: AssertionError: AssertionError not raised
-A4: green at GREEN-SHA
-A5: red at RED-SHA: AssertionError: 'scripts/check.sh' not found in []
-A5: green at GREEN-SHA
-A6: red at RED-SHA: AssertionError: 0 != 1 : hygiene runs ShellCheck in no single step
-A6: green at GREEN-SHA
+A1: red at 689cb5a7: AssertionError: Lists differ: [] != ['clean.sh', 'direct-tool', 'fake-tool']
+A1: green at 5e37402b
+A2: red at 689cb5a7: AssertionError: Tuples differ: ([], []) != (['WARN finding.sh SC2086 found 1, listed 0, at line(s) 3'], [])
+A2: green at 5e37402b
+A3: red at 689cb5a7: AssertionError: Tuples differ: ([], []) != ([], ['STALE finding.sh SC2086 found 0, listed 1'])
+A3: green at 5e37402b
+A4: red at 689cb5a7: AssertionError: AssertionError not raised
+A4: green at 5e37402b
+A5: red at 689cb5a7: AssertionError: 'scripts/check.sh' not found in []
+A5: green at 5e37402b
+A6: red at 689cb5a7: AssertionError: 0 != 1 : hygiene runs ShellCheck in no single step
+A6: green at 5e37402b
 ```
