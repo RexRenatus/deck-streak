@@ -115,6 +115,7 @@ R9. Signing: the certificate's password reaches `openssl pkcs12` on its standard
     `Harness` target alone. No tracked file changes, and `ios/Config/Harness.xcconfig`'s opening
     comment says so.
     Amended: section 8, the first certificate read retries once under -legacy.
+    Amended: section 8, the step prints the openssl version and calls it by its path.
 R10. Upload: only the upload step writes the key, as a mode `0600` file in a fresh mode `0700`
     directory under the runner's temporary directory, and removes that directory when the step
     ends, pass or fail. The step exports and uploads with `xcodebuild -exportArchive` and export
@@ -135,6 +136,7 @@ R13. The log publishes no private value. The identity's name, the profile's name
     uploaded; a step prints only that output's error and warning lines, with each private value
     replaced. No step traces its commands, and the lane uploads no artifact.
     Amended: section 8, the first certificate read retries once under -legacy.
+    Amended: section 8, the step prints the openssl version and calls it by its path.
 R14. Only the `app` job of the two lane files reads a secret, and only in its preflight, signing and
     upload steps, each reading exactly the parts it uses, in that step's own `env` under a neutral
     role-word variable name, never at the workflow's or the job's level and never in a `run` text.
@@ -223,6 +225,7 @@ R22. Ruling 461: the internal lane also starts on a push to `dev`, filtered to t
 | A26 | with recording shims on `PATH`, a failed first certificate read is followed by exactly one more read, whose arguments are the first read's with `-legacy` right after `pkcs12`, with the same standard input and a credential-free environment; when it succeeds, the step goes on to the re-wrap and the keychain import as before | `test_ios_lane.py`, `test_a_failed_certificate_read_is_read_once_more_under_legacy` |
 | A27 | each failed read prints exactly one line naming one class of the closed set, `wrong-password`, `legacy-algorithm`, `option-refused` or `unrecognised`, chosen in section 8's order (one case per class); a marker the shim plants in its standard error reaches neither the step's output nor its refusal | `test_ios_lane.py`, `test_each_failed_certificate_read_prints_one_class_and_nothing_of_openssl` |
 | A28 | when the `-legacy` read also fails, the step refuses naming both classes, and the shims record no third `pkcs12` read and no `security` call | `test_ios_lane.py`, `test_a_failed_legacy_read_refuses_naming_both_classes_and_runs_no_further_tool` |
+| A29 | with recording shims on `PATH`, the step prints the shim's version line exactly once, written out before the certificate read runs, with no credential part in the version call's arguments, standard input or environment; the read, the read under `-legacy` and the re-wrap run the binary the step found when it started, even when another `openssl` appears earlier on `PATH` after the version line; a failed version call refuses naming the tool and not its path; with no `openssl` on `PATH` the step refuses before any read with one fixed line | `test_ios_lane.py`, `test_the_openssl_version_is_printed_before_the_read_and_every_call_names_its_path` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_the_internal_plan_refuses_any_event_or_ref_but_a_dispatch_on_dev
@@ -253,6 +256,7 @@ A25: python3 -m unittest discover -s scripts/tests -p test_testflight_workflows.
 A26: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_a_failed_certificate_read_is_read_once_more_under_legacy
 A27: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_each_failed_certificate_read_prints_one_class_and_nothing_of_openssl
 A28: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_a_failed_legacy_read_refuses_naming_both_classes_and_runs_no_further_tool
+A29: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_the_openssl_version_is_printed_before_the_read_and_every_call_names_its_path
 ```
 
 Every criterion runs on Linux in the hygiene job's `python` stage, with no credential, no macOS
@@ -428,5 +432,38 @@ logged, written to a file or put in a refusal, whole or in part.
 | `scripts/mutation-rows.d/S35200-S35299.json` | mutation | changed: rows for the new arms, appended |
 | `changelog.d/testflight-sign-legacy-352.md` | docs | added |
 | `docs/specs/SPEC-352-testflight-lane.md`, `docs/decisions/ADR-363-testflight-lane.md`, `docs/schematics/testflight-lane.md`, `docs/red-first/SPEC-352.md` | docs | changed: insert-only amendments |
+
+The amendment changes no workflow, no other tool call and no repository or environment setting.
+
+### The step prints the openssl version and calls it by its path
+
+A lane run's signing step refused at its first certificate read, and its log could not say which
+openssl refused it: the step printed no version, and each openssl call ran whatever `openssl` the
+runner's `PATH` gave that call. R9 now finds `openssl` on `PATH` once, when the step starts, and
+names that binary by its absolute path in the certificate read, the read under `-legacy` and the
+re-wrap; R13 now prints that binary's version line before the certificate read.
+
+After the profile checks the step runs `<path> version`, with no credential part in its arguments,
+its standard input or its environment, as every tool call, and prints exactly what it writes to
+its standard output, adding no text of its own, before the certificate read runs. A failed version
+call refuses as every tool call does, with `openssl version failed with exit <n>`, and a failed
+re-wrap still refuses with `openssl pkcs12 failed with exit <n>`: a refusal names the tool, never
+its path. When `PATH` gives no `openssl`, the step refuses before any read with
+`no openssl is on the PATH`. The reads, their classes and their refusals are otherwise unchanged.
+
+- A29 (R9 and R13 as amended) is new: with recording shims on `PATH`, the step prints the shim's
+  version line exactly once, written out before the certificate read runs, and the version call
+  carries no credential part in its arguments, its standard input or its environment; the read,
+  the read under `-legacy` and the re-wrap run the binary the step found when it started, even
+  when another `openssl` appears earlier on `PATH` after the version line; a failed version call
+  refuses naming the tool and not its path; and with no `openssl` on `PATH` the step refuses
+  before any read with one fixed line.
+
+| file | context | change |
+|---|---|---|
+| `scripts/ios_lane.py` | scripts | changed: the step finds openssl once, prints its version line before the certificate read and names it by its path in every openssl call (R9 and R13 as amended) |
+| `scripts/tests/test_ios_lane.py` | tests | changed: A29 added, with the shim's answer to the version call |
+| `docs/specs/SPEC-352-testflight-lane.md` | docs | changed: insert-only amendment |
+| `docs/red-first/SPEC-352.md` | docs | changed: A29's red and green lines and one bullet appended, and the previous bullet's closing sentence re-worded |
 
 The amendment changes no workflow, no other tool call and no repository or environment setting.
