@@ -318,3 +318,11 @@ red by assertion, selecting one test (`24 was admitted as an hour`: left `Some(H
 `None`), while A1's golden test and A6's malformed-setting test both passed. The file was then
 restored byte for byte, its sha256
 `3668d29d0cf56a289719a20a89df5d0b27f113f6549de1355d027dbd3d246854` before and after.
+
+Amendment (SPEC-427): R17's one-place sentence and R12's redactor now have a static guard in the
+tree. `scripts/tests/test_rust_house_rules.py`, run by the python stage, refuses a SQLite connect
+option, pool or connection opened in any shipped source but `crates/kernel/src/db.rs`, and a
+secret-named name passed to a `tracing` or `log` macro, with two more rules, a `format!` reaching
+a query and randomness drawn other than through `getrandom` (ADR-441 D1 to D4). Each rule prints
+what it examined and refuses zero. The redactor stays the run-time half: the guard reads names,
+and the redactor scrubs registered values.
