@@ -1,0 +1,150 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S65501-A-SH-NAME-IS-A-SCRIPT",
+        "scripts/tests/test_shell_script_census.py",
+        "EXTENSIONS = (\".sh\", \".bash\", \".dash\", \".ksh\")",
+        "EXTENSIONS = (\".bash\", \".dash\", \".ksh\")",
+        "`.sh` is a script extension; without it a planted `clean.sh` is not counted (SPEC-655 R1, A1)",
+        "test_shell_script_census.PlantedTreesAreJudged.test_a_script_is_counted_by_its_extension_or_its_shell_shebang_and_nothing_else"
+      ],
+      [
+        "S65502-SH-IS-A-SHELL",
+        "scripts/tests/test_shell_script_census.py",
+        "SHELLS = (\"sh\", \"bash\", \"dash\", \"ksh\")",
+        "SHELLS = (\"bash\", \"dash\", \"ksh\")",
+        "`sh` is a shell the shebang may name; without it a planted `#!/bin/sh` file with no extension is not counted (SPEC-655 R1, A1)",
+        "test_shell_script_census.PlantedTreesAreJudged.test_a_script_is_counted_by_its_extension_or_its_shell_shebang_and_nothing_else"
+      ],
+      [
+        "S65503-THE-SHEBANG-MAY-NAME-ITS-SHELL-THROUGH-ENV",
+        "scripts/tests/test_shell_script_census.py",
+        "ENV = r\"(?:env\\s+(?:-S\\s+)?)?\"",
+        "ENV = r\"\"",
+        "the shebang may name its shell through `env`; without it a planted `#!/usr/bin/env bash` file is not counted (SPEC-655 R1, A1)",
+        "test_shell_script_census.PlantedTreesAreJudged.test_a_script_is_counted_by_its_extension_or_its_shell_shebang_and_nothing_else"
+      ],
+      [
+        "S65504-A-LINK-IS-NO-SCRIPT",
+        "scripts/tests/test_shell_script_census.py",
+        "        if full.is_symlink() or not full.is_file():",
+        "        if not full.is_file():",
+        "a link is no script; without it a planted link to a script is counted (SPEC-655 R1, A1)",
+        "test_shell_script_census.PlantedTreesAreJudged.test_a_script_is_counted_by_its_extension_or_its_shell_shebang_and_nothing_else"
+      ],
+      [
+        "S65505-A-NAME-WITH-NO-DOT-IS-JUDGED-BY-ITS-FIRST-LINE",
+        "scripts/tests/test_shell_script_census.py",
+        "        elif \".\" not in name and shell_of(full):",
+        "        elif \".\" not in name and False:",
+        "a name with no dot is judged by its first line; without it no planted extensionless script is counted (SPEC-655 R1, A1)",
+        "test_shell_script_census.PlantedTreesAreJudged.test_a_script_is_counted_by_its_extension_or_its_shell_shebang_and_nothing_else"
+      ],
+      [
+        "S65506-A-DOTTED-NAME-IS-JUDGED-BY-ITS-EXTENSION-ONLY",
+        "scripts/tests/test_shell_script_census.py",
+        "        elif \".\" not in name and shell_of(full):",
+        "        elif shell_of(full):",
+        "a dotted name is judged by its extension only; without it a planted `notes.txt` with a shell shebang is counted (SPEC-655 R1, A1)",
+        "test_shell_script_census.PlantedTreesAreJudged.test_a_script_is_counted_by_its_extension_or_its_shell_shebang_and_nothing_else"
+      ],
+      [
+        "S65507-THE-LEVEL-IS-WARN",
+        "scripts/tests/test_shell_script_census.py",
+        "LEVEL = \"warn\"",
+        "LEVEL = \"fail\"",
+        "the census starts at warn; without it every unlisted finding fails the stage (SPEC-655 R8, A2)",
+        "test_shell_script_census.PlantedTreesAreJudged.test_an_unlisted_finding_prints_a_warn_line_at_warn_and_fails_at_fail"
+      ],
+      [
+        "S65508-AN-UNLISTED-FINDING-FAILS-AT-FAIL",
+        "scripts/tests/test_shell_script_census.py",
+        "            (problems if level == \"fail\" else warned).append(said)",
+        "            warned.append(said)",
+        "an unlisted finding is a problem at fail; without it fail passes an unlisted finding (SPEC-655 R5, A2)",
+        "test_shell_script_census.PlantedTreesAreJudged.test_an_unlisted_finding_prints_a_warn_line_at_warn_and_fails_at_fail"
+      ],
+      [
+        "S65509-AN-UNLISTED-FINDING-PRINTS-AT-WARN",
+        "scripts/tests/test_shell_script_census.py",
+        "            (problems if level == \"fail\" else warned).append(said)",
+        "            (problems if level == \"fail\" else []).append(said)",
+        "an unlisted finding is returned to print at warn; without it warn says nothing of it (SPEC-655 R5, A2)",
+        "test_shell_script_census.PlantedTreesAreJudged.test_an_unlisted_finding_prints_a_warn_line_at_warn_and_fails_at_fail"
+      ],
+      [
+        "S65510-A-FINDING-WARNS-ONLY-ABOVE-ITS-LISTED-COUNT",
+        "scripts/tests/test_shell_script_census.py",
+        "        if count > allowed:",
+        "        if count >= allowed:",
+        "a finding warns only when found more often than listed; without it a listed finding warns (SPEC-655 R5, A3)",
+        "test_shell_script_census.PlantedTreesAreJudged.test_a_listed_finding_passes_and_one_no_longer_found_is_stale_at_both_levels"
+      ],
+      [
+        "S65511-A-LISTED-ENTRY-FOUND-LESS-OFTEN-IS-STALE",
+        "scripts/tests/test_shell_script_census.py",
+        "        if found.get(key, 0) < listed[key][0]:",
+        "        if False:",
+        "a listed entry found fewer times than listed is stale; without it a fixed finding stays listed (SPEC-655 R5, A3)",
+        "test_shell_script_census.PlantedTreesAreJudged.test_a_listed_finding_passes_and_one_no_longer_found_is_stale_at_both_levels"
+      ],
+      [
+        "S65512-AN-EMPTY-POPULATION-IS-VOID",
+        "scripts/tests/test_shell_script_census.py",
+        "    scripts = examined(\"shell script(s)\", population(root, paths))",
+        "    scripts = population(root, paths)",
+        "the census counts its population and refuses zero; without it an empty population passes (SPEC-655 R2, A4)",
+        "test_shell_script_census.PlantedTreesAreJudged.test_an_empty_population_and_a_saved_output_off_its_pin_or_its_list_are_refused"
+      ],
+      [
+        "S65513-A-MISSING-SAVED-FILE-IS-VOID",
+        "scripts/tests/test_shell_script_census.py",
+        "    if missing:",
+        "    if False:",
+        "a missing saved file is VOID; without it a missing output is not refused as VOID (SPEC-655 R4, A4)",
+        "test_shell_script_census.PlantedTreesAreJudged.test_an_empty_population_and_a_saved_output_off_its_pin_or_its_list_are_refused"
+      ],
+      [
+        "S65514-AN-OUTPUT-OFF-THE-PIN-IS-VOID",
+        "scripts/tests/test_shell_script_census.py",
+        "    if f\"version: {VERSION}\" not in version:",
+        "    if False:",
+        "the saved version must be the pin's; without it another release's output is judged (SPEC-655 R4, A4)",
+        "test_shell_script_census.PlantedTreesAreJudged.test_an_empty_population_and_a_saved_output_off_its_pin_or_its_list_are_refused"
+      ],
+      [
+        "S65515-ONLY-EXIT-STATUS-0-OR-1-IS-JUDGED",
+        "scripts/tests/test_shell_script_census.py",
+        "    if status not in (\"0\", \"1\"):",
+        "    if status not in (\"0\", \"1\", \"2\"):",
+        "exit status 2 means a script was not judged whole; without it that output is judged (SPEC-655 R4, A4)",
+        "test_shell_script_census.PlantedTreesAreJudged.test_an_empty_population_and_a_saved_output_off_its_pin_or_its_list_are_refused"
+      ],
+      [
+        "S65516-THE-EXIT-STATUS-AGREES-WITH-THE-FINDINGS",
+        "scripts/tests/test_shell_script_census.py",
+        "    if (status == \"1\") != bool(comments):",
+        "    if False:",
+        "the exit status must agree with the findings; without it a status 0 output with a finding is judged (SPEC-655 R4, A4)",
+        "test_shell_script_census.PlantedTreesAreJudged.test_an_empty_population_and_a_saved_output_off_its_pin_or_its_list_are_refused"
+      ],
+      [
+        "S65517-THE-SAVED-LIST-IS-THE-POPULATION",
+        "scripts/tests/test_shell_script_census.py",
+        "    if sorted(files) != scripts:",
+        "    if False:",
+        "the step's saved list must be the census's population by name; without it a step that checks fewer scripts passes (SPEC-655 R4, A4)",
+        "test_shell_script_census.PlantedTreesAreJudged.test_an_empty_population_and_a_saved_output_off_its_pin_or_its_list_are_refused"
+      ],
+      [
+        "S65518-A-LISTED-ENTRY-NEEDS-ITS-REASON",
+        "scripts/tests/test_shell_script_census.py",
+        "        if not listed[key][1].strip():",
+        "        if False:",
+        "a listed entry needs its reason; without it an entry with an empty reason passes (SPEC-655 R6, A3)",
+        "test_shell_script_census.PlantedTreesAreJudged.test_a_listed_finding_passes_and_one_no_longer_found_is_stale_at_both_levels"
+      ]
+    ]
+  }
+}

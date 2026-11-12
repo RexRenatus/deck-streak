@@ -1,0 +1,9 @@
+"""Planted: an expected failure with no entry and no reason; read as text, never run."""
+
+import unittest
+
+
+class Planted(unittest.TestCase):
+    @unittest.expectedFailure
+    def test_marked(self):
+        self.fail()

@@ -1,6 +1,0 @@
-### Changed
-
-- The Tide token census now plants a colour set that is not there and an entry that is not whole sRGB
-  with alpha 1.000, and reads each raw-colour plant in the compile by its exact finding; the SPEC-578
-  red-first record now compares each green, over the paths its criteria read, with a head the pull
-  request's CI ran, and says where a test changed after a green.

@@ -1,0 +1,78 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S67702-THE-RUNS-DISAGREE",
+        "scripts/tests/test_quarantine_census.py",
+        "verdicts != {\"success\", \"failure\"}",
+        "verdicts == set()",
+        "R4: the runs must hold a success and a failure (SPEC-677)",
+        "test_quarantine_census.FlakyTestsAreQuarantinedWithARecord.test_an_entry_with_no_record_is_refused"
+      ],
+      [
+        "S67703-A-GONE-TEST-IS-REFUSED",
+        "scripts/tests/test_quarantine_census.py",
+        "re.escape(fn)",
+        "re.escape(\"test_sometimes\")",
+        "R3: an entry whose test is not in the census is refused (SPEC-677)",
+        "test_quarantine_census.FlakyTestsAreQuarantinedWithARecord.test_an_entry_whose_test_is_gone_is_refused"
+      ],
+      [
+        "S67704-AN-UNLISTED-SITE-IS-REPORTED",
+        "scripts/tests/test_quarantine_census.py",
+        "if have > want:",
+        "if have > want + 1:",
+        "R6: an unlisted marker is a site (SPEC-677)",
+        "test_quarantine_census.FlakyTestsAreQuarantinedWithARecord.test_a_marker_with_no_entry_and_no_reason_is_a_site"
+      ],
+      [
+        "S67705-A-STALE-ENTRY-FAILS",
+        "scripts/tests/test_quarantine_census.py",
+        "elif have < want:",
+        "elif have < 0:",
+        "R7: an entry that names no current site fails (SPEC-677)",
+        "test_quarantine_census.FlakyTestsAreQuarantinedWithARecord.test_the_level_decides_whether_an_unlisted_site_fails_and_a_stale_entry_always_does"
+      ],
+      [
+        "S67706-FAIL-FAILS-AN-UNLISTED-SITE",
+        "scripts/tests/test_quarantine_census.py",
+        "level == \"warn\" or not unlisted",
+        "level == \"warn\" or True",
+        "R7: at fail an unlisted site fails (SPEC-677)",
+        "test_quarantine_census.FlakyTestsAreQuarantinedWithARecord.test_the_level_decides_whether_an_unlisted_site_fails_and_a_stale_entry_always_does"
+      ],
+      [
+        "S67707-A-PLATFORM-IS-ADMITTED",
+        "scripts/tests/test_quarantine_census.py",
+        "PLATFORM.search(cond.split(\",\")[0]) is not None",
+        "False",
+        "R5: a platform condition is admitted (SPEC-677)",
+        "test_quarantine_census.FlakyTestsAreQuarantinedWithARecord.test_a_marker_whose_condition_names_a_platform_is_clean"
+      ],
+      [
+        "S67708-A-CHILD-RUN-NEEDS-ITS-PARENT",
+        "scripts/tests/test_quarantine_census.py",
+        "f\"fn {named}(\" in text",
+        "True",
+        "R5: a child run is admitted only when its parent is in the file (SPEC-677)",
+        "test_quarantine_census.FlakyTestsAreQuarantinedWithARecord.test_a_marker_whose_condition_names_a_platform_is_clean"
+      ],
+      [
+        "S67709-A-TEST-FILE-UNDER-SRC-IS-READ",
+        "scripts/tests/test_quarantine_census.py",
+        "re.search(r\"\\.(?:test|spec)\\.\", base)",
+        "None",
+        "R1: a test or spec file under any folder is in the census (SPEC-677)",
+        "test_quarantine_census.FlakyTestsAreQuarantinedWithARecord.test_a_vitest_file_under_web_app_src_is_read_and_its_skip_is_a_site"
+      ],
+      [
+        "S67710-A-ROOT-HOLDING-SRC-IS-STILL-READ",
+        "scripts/tests/test_quarantine_census.py",
+        "if member(rel, path):",
+        "if member(rel, path) and \"/src/\" not in path.as_posix():",
+        "R1: a root whose own path holds src is still read (SPEC-677)",
+        "test_quarantine_census.FlakyTestsAreQuarantinedWithARecord.test_a_root_whose_own_path_holds_src_is_still_read"
+      ]
+    ]
+  }
+}

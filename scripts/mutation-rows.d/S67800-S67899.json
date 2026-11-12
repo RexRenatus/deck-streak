@@ -1,0 +1,46 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S67800-THE-PIN-ARM-READS-FORTY-HEX-DIGITS",
+        "scripts/tests/test_mutation_rows.py",
+        "ACTION_PIN = re.compile(r\"@[0-9a-f]{40}\")",
+        "ACTION_PIN = re.compile(r\"@[0-9a-f]{41}\")",
+        "the pin arm reads a commit of forty hex digits after the at sign; at forty-one it reads none, so the planted pin row goes unnamed (SPEC-678 R1, R5)",
+        "test_mutation_rows.NoRowAnchorsOnAnActionPin.test_the_pin_check_names_each_planted_form_and_no_clean_find"
+      ],
+      [
+        "S67801-THE-COMMENT-ARM-READS-THE-SPACE-AFTER-THE-HASH",
+        "scripts/tests/test_mutation_rows.py",
+        "VERSION_COMMENT = re.compile(r\"# v\\d+\\.\\d+\")",
+        "VERSION_COMMENT = re.compile(r\"#v\\d+\\.\\d+\")",
+        "the version comment arm reads a hash, a space and a v; without the space the planted comment row goes unnamed (SPEC-678 R1, R5)",
+        "test_mutation_rows.NoRowAnchorsOnAnActionPin.test_the_pin_check_names_each_planted_form_and_no_clean_find"
+      ],
+      [
+        "S67802-THE-COMMENT-ARM-NAMES-ONLY-A-VERSION",
+        "scripts/tests/test_mutation_rows.py",
+        "VERSION_COMMENT = re.compile(r\"# v\\d+\\.\\d+\")",
+        "VERSION_COMMENT = re.compile(r\"# \")",
+        "the version comment arm names a version only; widened to any comment it names the planted note row, a clean find (SPEC-678 R5)",
+        "test_mutation_rows.NoRowAnchorsOnAnActionPin.test_the_pin_check_names_each_planted_form_and_no_clean_find"
+      ],
+      [
+        "S67803-EITHER-ARM-ALONE-NAMES-A-ROW",
+        "scripts/tests/test_mutation_rows.py",
+        ".search(row.find) or VERSION_COMMENT.search(row.find)",
+        ".search(row.find) and VERSION_COMMENT.search(row.find)",
+        "a pin alone or a version comment alone names a row; with both required the planted pin row and comment row go unnamed (SPEC-678 R1, R5)",
+        "test_mutation_rows.NoRowAnchorsOnAnActionPin.test_the_pin_check_names_each_planted_form_and_no_clean_find"
+      ],
+      [
+        "S67804-THE-PIN-ARM-NAMES-ONLY-A-FULL-COMMIT",
+        "scripts/tests/test_mutation_rows.py",
+        "ACTION_PIN = re.compile(r\"@[0-9a-f]{40}\")",
+        "ACTION_PIN = re.compile(r\"@[0-9a-f]{7}\")",
+        "the pin arm names a full commit only; widened to seven digits it names the planted short ref row, a clean find (SPEC-678 R5)",
+        "test_mutation_rows.NoRowAnchorsOnAnActionPin.test_the_pin_check_names_each_planted_form_and_no_clean_find"
+      ]
+    ]
+  }
+}
