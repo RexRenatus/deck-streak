@@ -1,0 +1,3 @@
+# Planted for test_lock_duplicates.py, read as text and never run: a lock with no package entry,
+# so the census examines nothing and is VOID.
+version = 4

@@ -1,0 +1,286 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S65700-THE-FULL-FLAG-READS-THE-COMMAND-LINE",
+        "scripts/tests/test_process_waiter_census.py",
+        "full or flag == \"f\"",
+        "full or flag == \"?\"",
+        "`-f` no longer reads the whole command line, so a waiter inside a `bash -c` that holds its own pattern would pass (SPEC-657 R5)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_a_planted_lookup_that_can_match_its_own_command_line_is_a_site"
+      ],
+      [
+        "S65701-THE-EXACT-FLAG-IS-READ",
+        "scripts/tests/test_process_waiter_census.py",
+        "exact or flag == \"x\"",
+        "exact or flag == \"?\"",
+        "`-x` is dropped, so a lookup by exact process name would read as a lookup by name (SPEC-657 R5)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_a_planted_lookup_that_cannot_match_itself_is_clean"
+      ],
+      [
+        "S65702-THE-PIDFILE-FLAG-IS-READ",
+        "scripts/tests/test_process_waiter_census.py",
+        "pidfile = pidfile or flag == \"F\"",
+        "pidfile = pidfile or flag == \"?\"",
+        "`-F` is dropped, so a pid file read would not be told from a bare lookup (SPEC-657 R5)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_a_planted_lookup_that_cannot_match_itself_is_clean"
+      ],
+      [
+        "S65703-A-PATTERN-THE-ENGINE-REFUSES-IS-FIXED-TEXT",
+        "scripts/tests/test_process_waiter_census.py",
+        "return text == pattern if whole else pattern in text",
+        "return True",
+        "a pattern the regular expression engine refuses would always match, so a clean lookup would read as a site (SPEC-657 R6)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_the_planted_python_lookups_are_read_by_their_argument_list_and_command_text"
+      ],
+      [
+        "S65704-EXACT-MATCHES-THE-WHOLE-COMMAND-LINE",
+        "scripts/tests/test_process_waiter_census.py",
+        "compiled.fullmatch(text) if whole else compiled.search(text)",
+        "compiled.search(text)",
+        "`-fx` would match part of the command line, so an exact pattern that cannot match its own shell would read as a site (SPEC-657 R6)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_a_planted_lookup_that_can_match_its_own_command_line_is_a_site"
+      ],
+      [
+        "S65705-THE-GREP-OWN-COMMAND-LINE-IS-READ",
+        "scripts/tests/test_process_waiter_census.py",
+        "can_match(pattern, held) or can_match(pattern, context)",
+        "can_match(pattern, context)",
+        "the grep's own command line is not read, so a `ps` piped to a grep that matches itself would pass (SPEC-657 R6)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_a_planted_lookup_that_can_match_its_own_command_line_is_a_site"
+      ],
+      [
+        "S65706-A-DROPPING-GREP-SELECTS-NO-LINE",
+        "scripts/tests/test_process_waiter_census.py",
+        "name != \"grep\" or \"-v\" in command",
+        "name != \"grep\"",
+        "a `grep -v` would be read as selecting its pattern, so the bracket form after it would read as a site (SPEC-657 R6, R7)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_a_planted_lookup_that_cannot_match_itself_is_clean"
+      ],
+      [
+        "S65707-AN-OWN-ARGUMENT-PATTERN-IS-A-SITE",
+        "scripts/tests/test_process_waiter_census.py",
+        "return f\"{name}-f\", own_args",
+        "return f\"{name}-f\", False",
+        "a pattern taken from the script's own arguments would pass, though those arguments are in its command line (SPEC-657 R6)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_a_planted_lookup_that_can_match_its_own_command_line_is_a_site"
+      ],
+      [
+        "S65708-A-SHELL-SCRIPT-IS-READ-AGAINST-ITS-SHELL",
+        "scripts/tests/test_process_waiter_census.py",
+        "found += shell_lookups(script, \" \".join(words), True, at)",
+        "found += shell_lookups(script, \"\", True, at)",
+        "a `-c` script would be read against no command line, so a waiter that holds its own pattern there would pass (SPEC-657 R2, R3)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_a_planted_lookup_that_can_match_its_own_command_line_is_a_site"
+      ],
+      [
+        "S65709-A-SH-OR-BASH-SHEBANG-IS-A-SHELL-SCRIPT",
+        "scripts/tests/test_process_waiter_census.py",
+        "(?:sh|bash)\\b",
+        "(?:zsh)\\b",
+        "a file with no extension and a `sh` shebang would leave the population (SPEC-657 R1)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_a_planted_tree_counts_each_script_step_and_python_file"
+      ],
+      [
+        "S65710-AN-EMPTY-POPULATION-IS-REFUSED",
+        "scripts/tests/test_process_waiter_census.py",
+        "examined(\"file(s)\", population(root, paths))",
+        "population(root, paths)",
+        "an empty population would pass instead of failing as VOID (SPEC-657 R1)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_a_planted_empty_population_is_void"
+      ],
+      [
+        "S65711-AN-UNLISTED-SITE-FAILS-AT-FAIL",
+        "scripts/tests/test_process_waiter_census.py",
+        "(level == \"fail\" and bool(lines))",
+        "(level == \"never\" and bool(lines))",
+        "an unlisted site would pass at fail, so promotion would change nothing (SPEC-657 R10)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_the_planted_level_warns_on_an_unlisted_site_and_fails_on_a_stale_entry"
+      ],
+      [
+        "S65712-A-STALE-ENTRY-FAILS-AT-BOTH-LEVELS",
+        "scripts/tests/test_process_waiter_census.py",
+        "failed = bool(stale) or (",
+        "failed = False or (",
+        "a listed entry no site matches would pass at warn (SPEC-657 R10)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_the_planted_level_warns_on_an_unlisted_site_and_fails_on_a_stale_entry"
+      ],
+      [
+        "S65713-ONLY-THE-PSUTIL-RECEIVER-LISTS",
+        "scripts/tests/test_process_waiter_census.py",
+        "if name in LISTINGS and ast.unparse(node.func) == f\"psutil.{name}\":",
+        "if name in LISTINGS:",
+        "any `pids()` call would be read as a process listing (SPEC-657 R4)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_the_planted_python_lookups_are_read_by_their_argument_list_and_command_text"
+      ],
+      [
+        "S65714-EACH-WORKFLOW-RUN-TEXT-IS-READ",
+        "scripts/tests/test_process_waiter_census.py",
+        "enumerate(run_texts(text), 1)",
+        "enumerate([], 1)",
+        "no workflow `run:` text would be read, so a step that holds its own pattern would pass (SPEC-657 R2)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_a_planted_lookup_that_can_match_its_own_command_line_is_a_site"
+      ],
+      [
+        "S65715-A-SUBSTITUTION-IS-READ-AS-A-COMMAND",
+        "scripts/tests/test_process_waiter_census.py",
+        "for inner in SUBSTITUTION.findall(word):",
+        "for inner in []:",
+        "a lookup inside a command substitution would not be read (SPEC-657 R2)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_a_planted_lookup_that_cannot_match_itself_is_clean"
+      ],
+      [
+        "S65716-AN-UNREADABLE-MEMBER-IS-AN-UNREAD-SITE",
+        "scripts/tests/test_process_waiter_census.py",
+        "return [(\"whole file\", \"-\", \"unread\", True)]",
+        "return []",
+        "a member the census cannot read would pass silently (SPEC-657 R8)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_a_planted_member_the_census_cannot_read_is_an_unread_site"
+      ],
+      [
+        "S65717-AN-UNREAD-KEY-NAMES-NO-COMMAND-LINE",
+        "scripts/tests/test_process_waiter_census.py",
+        "suffix = \"\" if form == \"unread\" else \"-own-command-line\"",
+        "suffix = \"-own-command-line\"",
+        "an unread member's key would claim a command-line match (SPEC-657 R9)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_a_planted_member_the_census_cannot_read_is_an_unread_site"
+      ],
+      [
+        "S65718-A-PYTHON-ARGUMENT-LIST-IS-READ",
+        "scripts/tests/test_process_waiter_census.py",
+        "if PurePosixPath(words[0]).name in LOOKUPS:",
+        "if False:",
+        "a lookup handed to a process call as an argument list would not be read (SPEC-657 R4)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_the_planted_python_lookups_are_read_by_their_argument_list_and_command_text"
+      ],
+      [
+        "S65719-A-PYTHON-COMMAND-STRING-IS-READ-AGAINST-ITS-SHELL",
+        "scripts/tests/test_process_waiter_census.py",
+        "shell_lookups(first.value, f\"sh -c {first.value}\", True)",
+        "shell_lookups(first.value, \"\", True)",
+        "a command string would be read against no command line, so one that holds its own pattern would pass (SPEC-657 R3, R4)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_the_planted_python_lookups_are_read_by_their_argument_list_and_command_text"
+      ],
+      [
+        "S65720-PIDOF-IS-NEVER-A-SITE",
+        "scripts/tests/test_process_waiter_census.py",
+        "return \"pidof\", False",
+        "return \"pidof\", True",
+        "a lookup by process name through `pidof` would read as a site (SPEC-657 R7)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_a_planted_lookup_that_cannot_match_itself_is_clean"
+      ],
+      [
+        "S65721-A-NAME-LOOKUP-IS-NEVER-A-SITE",
+        "scripts/tests/test_process_waiter_census.py",
+        "return (f\"{name}-x\" if exact else f\"{name}-name\"), False",
+        "return (f\"{name}-x\" if exact else f\"{name}-name\"), True",
+        "a lookup without `-f` would read as a site though it never reads a command line (SPEC-657 R7)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_a_planted_lookup_that_cannot_match_itself_is_clean"
+      ],
+      [
+        "S65722-AN-EXPANDED-PATTERN-IS-NOT-JUDGED",
+        "scripts/tests/test_process_waiter_census.py",
+        "return f\"{name}-f\", \"$\" not in pattern and can_match(pattern, context, exact)",
+        "return f\"{name}-f\", can_match(pattern, context, exact)",
+        "a pattern the shell or program expands would be judged by its unexpanded text (SPEC-657 R7)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_the_planted_python_lookups_are_read_by_their_argument_list_and_command_text"
+      ],
+      [
+        "S65723-THE-COMMENT-OF-A-LINE-IS-DROPPED",
+        "scripts/tests/test_process_waiter_census.py",
+        "elif c == \"#\" and (not out or out[-1] in \" \\t;|&(\"):",
+        "elif False:",
+        "a lookup spelt in a comment would be read as a command (SPEC-657 R2)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_a_planted_lookup_that_cannot_match_itself_is_clean"
+      ],
+      [
+        "S65724-A-LONG-OPTION-SKIPS-ITS-VALUE",
+        "scripts/tests/test_process_waiter_census.py",
+        "k += name in LONG_VALUED and \"=\" not in word",
+        "k += 0",
+        "a long option's value would be read as the pattern (SPEC-657 R5)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_a_planted_lookup_that_cannot_match_itself_is_clean"
+      ],
+      [
+        "S65725-A-PIPE-JOINS-A-PIPELINE",
+        "scripts/tests/test_process_waiter_census.py",
+        "elif token in (\"|\", \"|&\"):",
+        "elif token in (\"|&\",):",
+        "a `|` would end the pipeline, so the grep after a `ps` would not be read (SPEC-657 R2)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_a_planted_lookup_that_can_match_its_own_command_line_is_a_site"
+      ],
+      [
+        "S65726-THE-SITE-ORDINAL-COUNTS",
+        "scripts/tests/test_process_waiter_census.py",
+        "counted[path, form] += 1",
+        "counted[path, form] += 0",
+        "every site's key would carry the ordinal 0, so two sites of one form in one file would share a key (SPEC-657 R9)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_a_planted_lookup_that_can_match_its_own_command_line_is_a_site"
+      ],
+      [
+        "S65727-AN-UNLISTED-SITE-PRINTS-WARN",
+        "scripts/tests/test_process_waiter_census.py",
+        " for key in keys if key not in listed]",
+        " for key in keys if key in listed]",
+        "an unlisted site would print no WARN line (SPEC-657 R10)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_the_planted_level_warns_on_an_unlisted_site_and_fails_on_a_stale_entry"
+      ],
+      [
+        "S65728-A-LISTED-ENTRY-NO-SITE-MATCHES-IS-STALE",
+        "scripts/tests/test_process_waiter_census.py",
+        " for key in listed if key not in keys]",
+        " for key in listed if key in keys]",
+        "a listed entry no site matches would print no STALE line (SPEC-657 R10)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_the_planted_level_warns_on_an_unlisted_site_and_fails_on_a_stale_entry"
+      ],
+      [
+        "S65729-THE-CENSUS-STARTS-AT-WARN",
+        "scripts/tests/test_process_waiter_census.py",
+        "LEVEL = \"warn\"",
+        "LEVEL = \"fail\"",
+        "the census would start at fail, against its own decision (SPEC-657 R10)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_the_planted_level_warns_on_an_unlisted_site_and_fails_on_a_stale_entry"
+      ],
+      [
+        "S65730-A-SHELL-SCRIPT-IS-A-MEMBER-BY-ITS-EXTENSION",
+        "scripts/tests/test_process_waiter_census.py",
+        "if name.suffix == \".sh\":",
+        "if name.suffix == \".bash\":",
+        "a `.sh` file would leave the population (SPEC-657 R1)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_a_planted_tree_counts_each_script_step_and_python_file"
+      ],
+      [
+        "S65731-A-PYTHON-FILE-IS-A-MEMBER",
+        "scripts/tests/test_process_waiter_census.py",
+        "elif name.suffix == \".py\":",
+        "elif name.suffix == \".pyi\":",
+        "a Python file would leave the population (SPEC-657 R1)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_a_planted_tree_counts_each_script_step_and_python_file"
+      ],
+      [
+        "S65732-ONLY-A-WORKFLOW-DIRECTORY-FILE-IS-A-WORKFLOW",
+        "scripts/tests/test_process_waiter_census.py",
+        "str(name.parent) == WORKFLOWS",
+        "str(name.parent) != WORKFLOWS",
+        "a workflow file would leave the population (SPEC-657 R1)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_a_planted_tree_counts_each_script_step_and_python_file"
+      ],
+      [
+        "S65733-A-SCRIPT-OWN-ARGUMENTS-ARE-ITS-COMMAND-LINE",
+        "scripts/tests/test_process_waiter_census.py",
+        "shell_lookups(text, f\"bash {path}\", True)",
+        "shell_lookups(text, f\"bash {path}\", False)",
+        "a script's own arguments would not count as its command line (SPEC-657 R3)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_a_planted_lookup_that_can_match_its_own_command_line_is_a_site"
+      ],
+      [
+        "S65734-THE-UNREADABLE-SET-HOLDS-BYTES-ERRORS",
+        "scripts/tests/test_process_waiter_census.py",
+        "UNREADABLE = (Refused, SyntaxError, ValueError)",
+        "UNREADABLE = (Refused, SyntaxError)",
+        "a file that is not UTF-8 would stop the census instead of reading as unread (SPEC-657 R8)",
+        "test_process_waiter_census.ProcessWaiterCensus.test_a_planted_member_the_census_cannot_read_is_an_unread_site"
+      ]
+    ]
+  }
+}

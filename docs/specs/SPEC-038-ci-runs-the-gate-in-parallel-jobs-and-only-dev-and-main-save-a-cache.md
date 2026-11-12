@@ -830,6 +830,84 @@ release-profile artifacts alone in `target/`. It restores only that key, falling
 entry of the same toolchain pin. In `ci.yml` the `rust` job stays the only job that saves the debug
 key, and no other job restores the release key. R2 is unchanged.
 
+## 19. Amendment: a scheduled run re-audits dev's dependencies
+
+Insert-only: every earlier byte is kept in order. It appends this section and the next, and
+nothing else.
+
+- **The problem, measured.** Both audit stages read a database when they run, not only the tree.
+  `audit-rust` runs `cargo deny --locked check advisories bans licenses sources`
+  (`scripts/check.sh` line 136), and cargo-deny fetches the RustSec advisory database before it
+  checks unless fetching is turned off; `deny.toml` names no database of its own and ignores no
+  advisory (its `[advisories]` table, lines 7 to 11). `audit-web` runs
+  `pnpm audit --json --audit-level "$AUDIT_WEB_LEVEL"` (line 173), and pnpm's report is the
+  registry's answer for every package the lockfile resolves. So a tree that read green can read red
+  with no new commit. `ci.yml` runs the two stages only on a pull request and on a push (its `on`
+  block, lines 14 to 19), and of the three scheduled workflows at `dev` b9a08e6,
+  `mutation-weekly.yml`, `rust-cache.yml` and `testflight-rerelease-check.yml`, none calls
+  `scripts/check.sh`. At b9a08e6 the push run's `rust` job read `audit-rust` red, with
+  `advisories FAILED, bans ok, licenses ok, sources ok` and two RustSec advisories in its stage
+  log (job 129090178681).
+- **What a schedule runs.** A scheduled run executes the default branch's copy of a workflow
+  (`rust-cache.yml` lines 3 to 7), so R21's schedule takes effect when that copy holds the file;
+  a dispatch runs the file at `dev` before then.
+
+R21. A workflow of its own, `.github/workflows/advisory-audit.yml`, runs on `schedule`, with one
+    cron a day at a fixed minute that no other workflow's cron uses, and on `workflow_dispatch`,
+    and on no other event: no `pull_request` and no `push`. No run of it reports under a required
+    check's name, and no pull request waits on it.
+R22. Its token is read-only: the workflow's `permissions` is `contents: read`, and no job sets a
+    token of its own. No step reads a secret.
+R23. Two jobs, `audit-rust` and `audit-web`, each check out `dev` with `persist-credentials:
+    false`, set up only the tools their stage checks for, with the actions and the full commit
+    SHAs `ci.yml`'s `rust` and `web` jobs use and the `cargo-deny` version the `rust` job
+    installs, and run `bash scripts/check.sh audit-rust` and `bash scripts/check.sh audit-web`.
+    Each audit stage runs in exactly one job, and no other stage runs. No job or step sets
+    `continue-on-error`, and neither audit runs under a condition, so a red audit reds its job and
+    the run. No cache is restored or saved.
+R24. Each job uploads its stage logs with `if: ${{ always() }}`, from the directory its
+    `CHECK_LOG_DIR` names, under an artifact name of its own, so a red run's advisories are read
+    from its logs.
+R25. A census, `scripts/tests/test_advisory_audit.py`, holds R21 to R24 over every workflow file,
+    `.yml` and `.yaml` alike, through the workflow reader of `test_ci_workflows.py`, and a planted
+    workflow for each weakening shows that it refuses one by name. Every read it makes goes
+    through that module's loader or its `gate_stages`, so it adds no `NOT_WORKFLOW_READS` entry.
+
+| file | context | change |
+|---|---|---|
+| `.github/workflows/advisory-audit.yml` | repo | added by the section 19 amendment: R21 to R24 |
+| `scripts/tests/test_advisory_audit.py` | repo | added by the section 19 amendment: A25 and A26 (R25) |
+| `docs/specs/SPEC-038-ci-runs-the-gate-in-parallel-jobs-and-only-dev-and-main-save-a-cache.md` | repo | changed by the section 19 amendment: sections 19 and 20 |
+| `docs/decisions/ADR-055-the-gate-runs-in-parallel-jobs-and-only-a-push-saves-a-cache.md` | repo | changed by the section 19 amendment: an amendment appended |
+| `docs/red-first/SPEC-038.md` | repo | changed by the section 19 amendment: an addendum, A25 and A26 |
+| `changelog.d/ci-advisory-audit.md` | repo | added by the section 19 amendment |
+
+- It changes no Rust, no `ci.yml`, no `scripts/check.sh`, no `deny.toml`, no ruleset file, no
+  `.mergify.yml` and no `test_ci_workflows.py`. It adds no required check, no mutation row and no
+  production script, and it ignores no advisory.
+- The run files nothing: its conclusion and its uploaded stage logs are its result.
+
+## 20. Acceptance criteria added by the section 19 amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A25 | the workflows hold exactly one workflow that runs an audit stage on a schedule, and it meets R21 to R24: a daily cron at a minute no other workflow uses, a dispatch and no other event, a read-only token no job widens, full commit SHAs, checkouts of `dev` that keep no credential, each audit stage in exactly one job and no other stage, no `continue-on-error` and no condition on an audit, each job's stage logs uploaded whatever its audit read, and `ci.yml`'s `cargo-deny` version | `test_advisory_audit.py`, over the repository's workflow directory |
+| A26 | the census refuses each planted weakening by name, and passes the planted audited shape, saved as `.yml` or `.yaml` | `test_advisory_audit.py`, over planted workflows in a scratch directory |
+
+```acceptance
+A25: python3 -m unittest discover -s scripts/tests -p test_advisory_audit.py -k test_the_workflows_hold_one_scheduled_audit_that_meets_every_rule
+A26: python3 -m unittest discover -s scripts/tests -p test_advisory_audit.py -k test_each_planted_weakening_is_refused_by_name
+```
+
+A25 reads red at a commit that holds the census and no scheduled audit, by assertion: no workflow
+runs an audit stage on a schedule. A26 judges the census itself, over planted workflows of its own
+that hold every shape it reads, among them a pull request trigger, a push trigger, a missing
+dispatch, an hourly cron, a minute another workflow schedules, a token that writes, a job that
+writes issues, a tag in place of a SHA, a persisted credential, a checkout of another branch, an
+audit stage left out or run twice, a stage that is not an audit, `continue-on-error`, a condition,
+a missing or conditional upload, one artifact name for both jobs and a `cargo-deny` version of its
+own.
+
 ## 19. Amendment: every job that runs the gate's tests uploads its JUnit results
 
 ### The problem, measured

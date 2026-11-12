@@ -123,3 +123,17 @@ A23: red at ce231144: AssertionError: Lists differ: ['0 steps run actions/depend
 A23: green at 10821d9c
 A24: not red: it judges the census over planted workflows of its own, which hold every shape it reads at the commit that adds them
 ```
+
+## Addendum: A25 and A26, the scheduled advisory audit
+
+The lines above stand. A25's census and A26's planted workflows were committed with no scheduled
+audit workflow (49c8c6a0), and A25 read red by name in the pull request's own `hygiene` job. The
+workflow was added in dd8bff95 with both tests unchanged, and A25 reads green there; the commit
+after dd8bff95 changes only this record. A26 judges the census itself over planted workflows that
+hold every shape it reads, so it passes at the commit that adds it.
+
+```red-first
+A25: red at 49c8c6a0: AssertionError: Lists differ: ['0 scheduled workflows run an audit stage, not 1'] != [] (job 130520477783)
+A25: green at dd8bff95
+A26: not red: it judges the census over planted workflows of its own, which hold every shape it reads at the commit that adds them
+```

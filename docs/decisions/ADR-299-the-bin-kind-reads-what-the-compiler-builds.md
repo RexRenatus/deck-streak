@@ -124,3 +124,37 @@ it was chosen against.
 ### Confirmation of the amendment
 
 SPEC-039's A52 and A53, and the rows `S03996` to `S03999`.
+
+## Amendment: an unpathed `[[bin]]` is read by cargo's older rule, or refused (#527)
+
+Insert-only; everything above stands. A `[[bin]]` table with no `path`, whose name no inferred
+binary holds, took the path `src/main.rs` in every edition, and cargo reads it otherwise: under
+edition 2015 from its older paths, `src/<name>.rs` first when the package has no library target,
+and under every later edition not at all (SPEC-039 sections 43 and 44). Each decision names what
+it was chosen against.
+
+- Reading cargo's older rule under edition 2015, chosen because cargo builds the file that rule
+  names, so a `bin::` killer of such a crate runs the binary cargo builds.
+- Refusing every unpathed table no inferred binary is named for, rejected because it refuses
+  layouts cargo decides.
+- Keeping `src/main.rs` as the path of every such table, rejected because it names a file cargo
+  does not build when the package has no library target, and one cargo never reads after 2015.
+- Refusing by name where cargo refuses the manifest, chosen because a layout cargo refuses has no
+  binary to name, and a fallback would name one.
+- Reading `autolib` where the older rule asks for the library target, chosen because cargo's
+  target discovery reads `src/lib.rs` only while `autolib` is on; one that is not a boolean is
+  refused by name, as cargo refuses it.
+- Reading `src/lib.rs` alone as the library target, rejected because it names a library cargo
+  does not build under `autolib = false`.
+
+### Consequences of the amendment
+
+- Good, because the family is generated, so a later shape of the older rule joins the population
+  by a row in one of its tables.
+- Bad, because a 2015 crate that relies on the older rule carries a `bin::` killer the reader
+  names, where cargo asks for an explicit `path`. The census reads cargo's own answer, so a
+  release of cargo that drops the older rule fails the family and is seen at once.
+
+### Confirmation of the amendment
+
+SPEC-039's A81 to A85, and the rows `S03900`, `S03952` to `S03959` and `S03983` to `S03985`.

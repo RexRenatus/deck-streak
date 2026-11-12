@@ -1,0 +1,358 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S67200-NODE-MODULES-IS-A-TOOL-DIRECTORY",
+        "scripts/tests/test_build_output_census.py",
+        "    \"node_modules\": \"npm or pnpm\",",
+        "    \"node_modules-x\": \"npm or pnpm\",",
+        "`node_modules/` is a directory only npm or pnpm writes; without it a path under it is no site (SPEC-672 R2)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67201-PYCACHE-IS-A-TOOL-DIRECTORY",
+        "scripts/tests/test_build_output_census.py",
+        "    \"__pycache__\": \"CPython\",",
+        "    \"__pycache__-x\": \"CPython\",",
+        "`__pycache__/` is a directory only CPython writes; without it a path under it is no site (SPEC-672 R2)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67202-PYTEST-CACHE-IS-A-TOOL-DIRECTORY",
+        "scripts/tests/test_build_output_census.py",
+        "    \".pytest_cache\": \"pytest\",",
+        "    \".pytest_cache-x\": \"pytest\",",
+        "`.pytest_cache/` is a directory only pytest writes; without it a path under it is no site (SPEC-672 R2)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67203-RUFF-CACHE-IS-A-TOOL-DIRECTORY",
+        "scripts/tests/test_build_output_census.py",
+        "    \".ruff_cache\": \"ruff\",",
+        "    \".ruff_cache-x\": \"ruff\",",
+        "`.ruff_cache/` is a directory only ruff writes; without it a path under it is no site (SPEC-672 R2)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67204-HTMLCOV-IS-A-TOOL-DIRECTORY",
+        "scripts/tests/test_build_output_census.py",
+        "    \"htmlcov\": \"coverage.py\",",
+        "    \"htmlcov-x\": \"coverage.py\",",
+        "`htmlcov/` is a directory only coverage.py writes; without it a path under it is no site (SPEC-672 R2)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67205-SVELTE-KIT-IS-A-TOOL-DIRECTORY",
+        "scripts/tests/test_build_output_census.py",
+        "    \".svelte-kit\": \"SvelteKit\",",
+        "    \".svelte-kit-x\": \"SvelteKit\",",
+        "`.svelte-kit/` is a directory only SvelteKit writes; without it a path under it is no site (SPEC-672 R2)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67206-VITE-IS-A-TOOL-DIRECTORY",
+        "scripts/tests/test_build_output_census.py",
+        "    \".vite\": \"Vite\",",
+        "    \".vite-x\": \"Vite\",",
+        "`.vite/` is a directory only Vite writes; without it a path under it is no site (SPEC-672 R2)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67207-BUILD-IS-A-TOOL-DIRECTORY",
+        "scripts/tests/test_build_output_census.py",
+        "    \".build\": \"SwiftPM\",",
+        "    \".build-x\": \"SwiftPM\",",
+        "`.build/` is a directory only SwiftPM writes; without it a path under it is no site (SPEC-672 R2)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67208-SWIFTPM-IS-A-TOOL-DIRECTORY",
+        "scripts/tests/test_build_output_census.py",
+        "    \".swiftpm\": \"SwiftPM\",",
+        "    \".swiftpm-x\": \"SwiftPM\",",
+        "`.swiftpm/` is a directory only SwiftPM writes; without it a path under it is no site (SPEC-672 R2)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67209-DERIVEDDATA-IS-A-TOOL-DIRECTORY",
+        "scripts/tests/test_build_output_census.py",
+        "    \"DerivedData\": \"Xcode\",",
+        "    \"DerivedData-x\": \"Xcode\",",
+        "`DerivedData/` is a directory only Xcode writes; without it a path under it is no site (SPEC-672 R2)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67210-XCUSERDATA-IS-A-TOOL-DIRECTORY",
+        "scripts/tests/test_build_output_census.py",
+        "    \"xcuserdata\": \"Xcode\",",
+        "    \"xcuserdata-x\": \"Xcode\",",
+        "`xcuserdata/` is a directory only Xcode writes; without it a path under it is no site (SPEC-672 R2)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67211-LAKE-IS-A-TOOL-DIRECTORY",
+        "scripts/tests/test_build_output_census.py",
+        "    \".lake\": \"Lake\",",
+        "    \".lake-x\": \"Lake\",",
+        "`.lake/` is a directory only Lake writes; without it a path under it is no site (SPEC-672 R2)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67212-MUTANTS-OUT-IS-A-TOOL-DIRECTORY",
+        "scripts/tests/test_build_output_census.py",
+        "    \"mutants.out\": \"cargo-mutants\",",
+        "    \"mutants.out-x\": \"cargo-mutants\",",
+        "`mutants.out/` is a directory only cargo-mutants writes; without it a path under it is no site (SPEC-672 R2)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67213-MUTANTS-OUT-OLD-IS-A-TOOL-DIRECTORY",
+        "scripts/tests/test_build_output_census.py",
+        "    \"mutants.out.old\": \"cargo-mutants\",",
+        "    \"mutants.out.old-x\": \"cargo-mutants\",",
+        "`mutants.out.old/` is a directory only cargo-mutants writes; without it a path under it is no site (SPEC-672 R2)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67214-STRYKER-TMP-IS-A-TOOL-DIRECTORY",
+        "scripts/tests/test_build_output_census.py",
+        "    \".stryker-tmp\": \"StrykerJS\",",
+        "    \".stryker-tmp-x\": \"StrykerJS\",",
+        "`.stryker-tmp/` is a directory only StrykerJS writes; without it a path under it is no site (SPEC-672 R2)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67215-TEST-RESULTS-IS-A-TOOL-DIRECTORY",
+        "scripts/tests/test_build_output_census.py",
+        "    \"test-results\": \"Playwright\",",
+        "    \"test-results-x\": \"Playwright\",",
+        "`test-results/` is a directory only Playwright writes; without it a path under it is no site (SPEC-672 R2)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67216-PLAYWRIGHT-REPORT-IS-A-TOOL-DIRECTORY",
+        "scripts/tests/test_build_output_census.py",
+        "    \"playwright-report\": \"Playwright\",",
+        "    \"playwright-report-x\": \"Playwright\",",
+        "`playwright-report/` is a directory only Playwright writes; without it a path under it is no site (SPEC-672 R2)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67217-BLOB-REPORT-IS-A-TOOL-DIRECTORY",
+        "scripts/tests/test_build_output_census.py",
+        "    \"blob-report\": \"Playwright\",",
+        "    \"blob-report-x\": \"Playwright\",",
+        "`blob-report/` is a directory only Playwright writes; without it a path under it is no site (SPEC-672 R2)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67218-CHECK-LOGS-IS-A-TOOL-DIRECTORY",
+        "scripts/tests/test_build_output_census.py",
+        "    \".check-logs\": \"the gate\",",
+        "    \".check-logs-x\": \"the gate\",",
+        "`.check-logs/` is a directory only the gate writes; without it a path under it is no site (SPEC-672 R2)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67219-XCRESULT-IS-A-TOOL-SUFFIX",
+        "scripts/tests/test_build_output_census.py",
+        "TOOL_SUFFIXES = {\".xcresult\": \"xcodebuild\"}",
+        "TOOL_SUFFIXES = {\".xcresult-x\": \"xcodebuild\"}",
+        "a directory ending `.xcresult` is xcodebuild's result bundle; without it a path under one is no site (SPEC-672 R2)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67220-PYC-IS-A-CACHE-FILE",
+        "scripts/tests/test_build_output_census.py",
+        "    (re.compile(r\"\\.pyc\\Z\"), \"CPython\", \"*.pyc\"),",
+        "    (re.compile(r\"\\.pyx\\Z\"), \"CPython\", \"*.pyc\"),",
+        "a name ending `.pyc` is CPython's cache file; without it a compiled cache outside `__pycache__/` is no site (SPEC-672 R3)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67221-PYO-IS-A-CACHE-FILE",
+        "scripts/tests/test_build_output_census.py",
+        "    (re.compile(r\"\\.pyo\\Z\"), \"CPython\", \"*.pyo\"),",
+        "    (re.compile(r\"\\.pyq\\Z\"), \"CPython\", \"*.pyo\"),",
+        "a name ending `.pyo` is CPython's optimised cache file; without it such a file is no site (SPEC-672 R3)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67222-COVERAGE-DATA-FILE",
+        "scripts/tests/test_build_output_census.py",
+        "    (re.compile(r\"\\A\\.coverage(?:\\..+)?\\Z\"), \"coverage.py\", \".coverage\"),",
+        "    (re.compile(r\"\\A\\.coveragx(?:\\..+)?\\Z\"), \"coverage.py\", \".coverage\"),",
+        "`.coverage` is coverage.py's data file; without it the data file is no site (SPEC-672 R3)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67223-COVERAGE-PARALLEL-SUFFIX",
+        "scripts/tests/test_build_output_census.py",
+        "    (re.compile(r\"\\A\\.coverage(?:\\..+)?\\Z\"), \"coverage.py\", \".coverage\"),",
+        "    (re.compile(r\"\\A\\.coverage\\Z\"), \"coverage.py\", \".coverage\"),",
+        "a suffixed `.coverage.` name is a parallel run's data file; without the suffix arm it is no site (SPEC-672 R3)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67224-VITE-TIMESTAMP-FILE",
+        "scripts/tests/test_build_output_census.py",
+        "    (re.compile(r\"\\Avite\\.config\\.[cm]?[jt]s\\.timestamp-\"), \"Vite\", \"vite.config.*.timestamp-*\"),",
+        "    (re.compile(r\"\\Avite\\.config\\.[cm]?[jt]s\\.timestamq-\"), \"Vite\", \"vite.config.*.timestamp-*\"),",
+        "Vite's bundled configuration file is a cache file; without its timestamp form it is no site (SPEC-672 R3)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67225-TARGET-NEEDS-ITS-MANIFEST",
+        "scripts/tests/test_build_output_census.py",
+        "    \"target\": (\"cargo\", \"Cargo.toml\"),",
+        "    \"target\": (\"cargo\", \"Cargo.tomlx\"),",
+        "`target/` beside a tracked `Cargo.toml` is cargo's output; without that manifest it is never a site (SPEC-672 R4)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67226-BUILD-NEEDS-ITS-MANIFEST",
+        "scripts/tests/test_build_output_census.py",
+        "    \"build\": (\"SvelteKit or Vite\", \"package.json\"),",
+        "    \"build\": (\"SvelteKit or Vite\", \"package.jsonx\"),",
+        "`build/` beside a tracked `package.json` is SvelteKit or Vite's output; without that manifest it is never a site (SPEC-672 R4)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67227-DIST-NEEDS-ITS-MANIFEST",
+        "scripts/tests/test_build_output_census.py",
+        "    \"dist\": (\"Vite\", \"package.json\"),",
+        "    \"dist\": (\"Vite\", \"package.jsonx\"),",
+        "`dist/` beside a tracked `package.json` is Vite's output; without that manifest it is never a site (SPEC-672 R4)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67228-COVERAGE-NEEDS-ITS-MANIFEST",
+        "scripts/tests/test_build_output_census.py",
+        "    \"coverage\": (\"Vitest\", \"package.json\"),",
+        "    \"coverage\": (\"Vitest\", \"package.jsonx\"),",
+        "`coverage/` beside a tracked `package.json` is Vitest's output; without that manifest it is never a site (SPEC-672 R4)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67229-REPORTS-NEEDS-ITS-MANIFEST",
+        "scripts/tests/test_build_output_census.py",
+        "    \"reports\": (\"StrykerJS\", \"package.json\"),",
+        "    \"reports\": (\"StrykerJS\", \"package.jsonx\"),",
+        "`reports/` beside a tracked `package.json` is StrykerJS's output; without that manifest it is never a site (SPEC-672 R4)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67230-THE-MANIFEST-SITS-IN-THE-HOLDING-DIRECTORY",
+        "scripts/tests/test_build_output_census.py",
+        "            if manifest in held.get(\"/\".join(parts[:depth]), set()):",
+        "            if manifest in held.get(\"/\".join(parts[: depth + 1]), set()):",
+        "a shared name's manifest is read in the directory holding it; read inside it instead, a cargo `target/` is no site (SPEC-672 R4)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67231-A-SHARED-NAME-NEEDS-A-MANIFEST",
+        "scripts/tests/test_build_output_census.py",
+        "            if manifest in held.get(\"/\".join(parts[:depth]), set()):",
+        "            if manifest in held.get(\"/\".join(parts[:depth]), set()) or True:",
+        "a shared name is a site only beside its tool's manifest; without the requirement a source tree named `build/` is a site (SPEC-672 R4)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_lookalike_or_a_source_tree_is_no_site"
+      ],
+      [
+        "S67232-PARAGLIDE-OUTPUT-IS-CONFIGURED",
+        "scripts/tests/test_build_output_census.py",
+        "    (re.compile(r\"\\Aweb/app/src/lib/paraglide\\Z\"), \"Paraglide\"),",
+        "    (re.compile(r\"\\Aweb/app/src/lib/paraglidx\\Z\"), \"Paraglide\"),",
+        "`web/app/src/lib/paraglide/` is Paraglide's output as this tree configures it; without it a path under it is no site (SPEC-672 R5)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67233-INLANG-OUTPUT-IS-CONFIGURED",
+        "scripts/tests/test_build_output_census.py",
+        "    (re.compile(r\"\\Aweb/app/project\\.inlang/cache\\Z\"), \"inlang\"),",
+        "    (re.compile(r\"\\Aweb/app/project\\.inlang/cachx\\Z\"), \"inlang\"),",
+        "`web/app/project.inlang/cache/` is inlang's output as this tree configures it; without it a path under it is no site (SPEC-672 R5)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67234-XCODEGEN-OUTPUT-IS-CONFIGURED",
+        "scripts/tests/test_build_output_census.py",
+        "    (re.compile(r\"\\Aios/[^/]+\\.xcodeproj\\Z\"), \"XcodeGen\"),",
+        "    (re.compile(r\"\\Aios/[^/]+\\.xcodeprox\\Z\"), \"XcodeGen\"),",
+        "an `ios/<name>.xcodeproj/` is XcodeGen's output as this tree configures it; without it a path under it is no site (SPEC-672 R5)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67235-XCODEBUILD-OUTPUT-IS-CONFIGURED",
+        "scripts/tests/test_build_output_census.py",
+        "    (re.compile(r\"\\Aios/EnginePackage/DeckStreakFFI\\.xcframework\\Z\"), \"xcodebuild\"),",
+        "    (re.compile(r\"\\Aios/EnginePackage/DeckStreakFFI\\.xcframeworx\\Z\"), \"xcodebuild\"),",
+        "the placed framework is xcodebuild's output as this tree configures it; without it a path under it is no site (SPEC-672 R5)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67236-UNIFFI-OUTPUT-IS-CONFIGURED",
+        "scripts/tests/test_build_output_census.py",
+        "    (re.compile(r\"\\Aios/EnginePackage/Sources/DeckStreakFFI\\Z\"), \"UniFFI\"),",
+        "    (re.compile(r\"\\Aios/EnginePackage/Sources/DeckStreakFFX\\Z\"), \"UniFFI\"),",
+        "the placed bindings is UniFFI's output as this tree configures it; without it a path under it is no site (SPEC-672 R5)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67237-A-DIRECTORY-HOLDS-ITS-FILE-NAMES",
+        "scripts/tests/test_build_output_census.py",
+        "        held.setdefault(head, set()).add(name)",
+        "        held.setdefault(head, set()).add(head)",
+        "each directory holds its files' names; holding its own name instead, no manifest is found and no shared name is a site (SPEC-672 R4)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_a_path_under_a_directory_a_tool_writes_is_a_site"
+      ],
+      [
+        "S67238-A-LISTED-SITE-IS-SKIPPED",
+        "scripts/tests/test_build_output_census.py",
+        "            continue",
+        "            pass",
+        "a listed site prints nothing and fails nothing; without the skip it is reported as unlisted (SPEC-672 R7)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_the_level_decides_an_unlisted_site_and_a_stale_entry_always_fails"
+      ],
+      [
+        "S67239-THE-LEVEL-CHOOSES-A-LINE-OR-A-FAILURE",
+        "scripts/tests/test_build_output_census.py",
+        "        (lines if level == \"warn\" else failures).append(line)",
+        "        (failures if level == \"warn\" else lines).append(line)",
+        "at warn an unlisted site is a printed line and at fail a failure; swapped, warn fails and fail passes (SPEC-672 R7)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_the_level_decides_an_unlisted_site_and_a_stale_entry_always_fails"
+      ],
+      [
+        "S67240-A-STALE-ENTRY-FAILS",
+        "scripts/tests/test_build_output_census.py",
+        "    for path in sorted(set(listed) - set(found)):",
+        "    for path in sorted(set()):",
+        "a listed path that is no site fails at both levels; without the arm a stale entry passes (SPEC-672 R8)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_the_level_decides_an_unlisted_site_and_a_stale_entry_always_fails"
+      ],
+      [
+        "S67241-THE-LEVEL-IS-WARN",
+        "scripts/tests/test_build_output_census.py",
+        "LEVEL = \"warn\"",
+        "LEVEL = \"fail\"",
+        "the census lands at warn; at fail every unlisted site fails before its own delivery moves it (SPEC-672 R11)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_the_level_decides_an_unlisted_site_and_a_stale_entry_always_fails"
+      ],
+      [
+        "S67242-AN-EMPTY-POPULATION-IS-REFUSED",
+        "scripts/tests/test_build_output_census.py",
+        "    paths = examined(\"tracked path(s)\", paths)",
+        "    paths = list(paths)",
+        "an empty population is refused as VOID; without the refusal it passes with nothing judged (SPEC-672 R9)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_an_empty_population_is_refused"
+      ],
+      [
+        "S67243-A-COMMENT-LINE-PLANTS-NO-PATH",
+        "scripts/tests/test_build_output_census.py",
+        "    return [line for line in text.splitlines() if line and not line.startswith(\"#\")]",
+        "    return [line for line in text.splitlines() if line]",
+        "a fixture line opening `#` says why the file is planted and plants no path; read as a path, an empty fixture is not empty (SPEC-672 R12)",
+        "test_build_output_census.PlantedPathListsAreJudged.test_an_empty_population_is_refused"
+      ]
+    ]
+  }
+}

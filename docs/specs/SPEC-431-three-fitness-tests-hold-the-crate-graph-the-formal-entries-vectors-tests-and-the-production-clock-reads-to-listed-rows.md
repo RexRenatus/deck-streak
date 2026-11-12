@@ -348,3 +348,67 @@ row is then also stale).
 R18 holds again at the dev that this pull request merges when it is checked: the lists gain the
 rows that dev adds over the rebuild's cut, each citing ADR-445 and named in the last part of
 ADR-445's appendix, with no product change and no test changed.
+
+## 11. Amendment: the two owed vectors tests, their acceptance criteria, rows and file manifest
+
+This section amends the requirements above. It adds the vectors tests that `lean/SensitiveDeck`
+and `lean/TableCensusReach` owed (section 5, #878), and removes their two `owed` rows in the same
+change. No product file changes, and no census, assertion, row, refusal or test is removed or
+relaxed.
+
+R20. `crates/ingest/tests/formal_vectors_sensitive_deck.rs` reads `formal/vectors/sensitive-deck.jsonl`. Its header names the entry,
+     the covered file and the anchor; the test builds the vectors' deck tree, each name joined from
+     its parts by the port's separator written as a literal; and for every card vector `admits`
+     gives the vector's admission. It prints the decks and the card vectors it examined, holds
+     each answer's count exact, and holds the header's count equal to their sum.
+R21. `crates/economy/tests/formal_vectors_table_census_reach.rs` reads `formal/vectors/table-census-reach.jsonl`. Its header names the entry,
+     the covered file and the anchor; the test plants SPEC-331 A1's population for each census's
+     name in the writer's order, each tree's label equal to its vector's; and for every vector the
+     shared reader refuses exactly the files the vector's `reach` lists. It prints the trees it
+     examined by table, holds each count exact, and holds a positive control per name, the name's
+     pieces joined in one file, refused by that file.
+R22. `config/vectors-parity.json` holds no `owed` row for either entry, so R7 holds each entry to
+     its test; its other `owed` rows, its `unimplemented` rows and its `as_found` rows are
+     unchanged. Row S43115 removes the `lean/RetiredListShape` row in place of the
+     `lean/TableCensusReach` row it removed, an entry of the same finding class, with its killer
+     unchanged.
+
+| id | criterion | decided by |
+|---|---|---|
+| A12 | The kept-away rule answers every vector `lean/SensitiveDeck`'s port writes (R20) | ADR-445 D2 |
+| A13 | The shared reader refuses exactly each vector's `reach` over every tree `lean/TableCensusReach`'s port writes, and refuses each control (R21) | ADR-445 D2 |
+
+```acceptance
+A12: cargo test -p deck-streak-ingest --test formal_vectors_sensitive_deck -- --exact the_kept_away_rule_answers_every_lean_vector
+A13: cargo test -p deck-streak-economy --test formal_vectors_table_census_reach -- --exact the_table_census_reach_answers_every_lean_vector
+```
+
+A4 is unchanged and decides R22: with either row removed and its test absent, the census refuses
+the entry as an implemented entry with no vectors test and no owed row.
+
+Mutation rows, in this SPEC's band:
+
+| id | target | mutant | killer |
+|---|---|---|---|
+| S43115-OWED-ROW-DROPPED | `config/vectors-parity.json` | the `lean/RetiredListShape` row removed (re-anchored from the `lean/TableCensusReach` row) | A4 |
+| S43137-A-NAME-PREFIX-IS-NO-ANCESTOR | `crates/ingest/src/sensitive.rs` | `under` admits a remainder that does not start with the separator | A12 |
+| S43138-THE-SEPARATOR-IS-THE-PORTS | `crates/ingest/src/settings.rs` | `DECK_SEPARATOR` written as another control character | A12 |
+| S43139-AN-UNREADABLE-SET-IS-UNREADABLE | `crates/ingest/src/sensitive.rs` | an unreadable set answered as unresolved | A12 |
+| S43140-A-LONE-CHARACTER-STAYS-OUT-OF-THE-POOL | `tools/table-census/table_census.rs` | a piece of one character pooled | A13 |
+| S43141-EACH-REACH-COVERS-THE-NAME | `tools/table-census/table_census.rs` | each file's reach discarded | A13 |
+
+File manifest of this amendment:
+
+| path | part | change |
+|---|---|---|
+| `crates/ingest/tests/formal_vectors_sensitive_deck.rs` | crates | added: the kept-away rule's vectors test, A12 |
+| `crates/economy/tests/formal_vectors_table_census_reach.rs` | crates | added: the shared reader's vectors test, A13 |
+| `config/vectors-parity.json` | config | changed: the two `owed` rows removed (R22) |
+| `scripts/mutation-rows.d/S43100-S43199.json` | scripts | changed: S43115 re-anchored, and rows S43137 to S43141 added |
+| `docs/specs/SPEC-431-three-fitness-tests-hold-the-crate-graph-the-formal-entries-vectors-tests-and-the-production-clock-reads-to-listed-rows.md` | docs | changed: this section appended |
+| `docs/schematics/fitness-tests-crate-edges-formal-vectors-and-clock-reads.md` | docs | changed: the rows line restated from `config/vectors-parity.json` (the owed and unimplemented rows and their count) |
+| `docs/red-first/SPEC-431.md` | docs | changed: A12 and A13 recorded |
+| `changelog.d/formal-vectors-tests-878.md` | changelog | added: the fragment |
+
+No other path changes: no product file, no `Cargo.toml`, no file under `formal/`, and no existing
+test module.

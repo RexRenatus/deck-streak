@@ -1,4 +1,4 @@
-//! The review fixture's day (SPEC-615 A1 to A3).
+//! The review fixture's day (SPEC-615 A1 to A3 and A5).
 //!
 //! The review fixture is a version-2 collection, whose next day starts at its rollover hour on the
 //! reading host's own clock. The first test sets the hour whose day ends soonest, the condition a
@@ -7,6 +7,9 @@
 //! the pinned fixture's text card to the four interval words SPEC-348's A1 pins, through the
 //! adapter, in the app's order of calls. The third reads the fixture's writer and holds it to one
 //! pin, on the review collection, between the review and parity builds.
+//!
+//! The fourth plants a directory that an earlier run left under this process id and holds the
+//! scratch helper to removing it before a test writes.
 
 // A failed setup step fails the test, as clippy.toml allows inside a test function.
 #![allow(clippy::expect_used)]
@@ -81,11 +84,14 @@ fn text(bytes: Vec<u8>) -> String {
 }
 
 /// A scratch directory for one test, named by the test and this process, and absent before the
-/// test writes it.
+/// test writes it: a directory that an earlier run left under the same id is removed first.
 fn scratch(test: &str) -> PathBuf {
     let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
         .join("ffi-fixture-day-cutoff")
         .join(format!("{test}-{}", std::process::id()));
+    if dir.exists() {
+        std::fs::remove_dir_all(&dir).expect("an earlier run's scratch directory is removed");
+    }
     assert!(
         !dir.exists(),
         "the scratch directory {} is absent before the test writes it",
@@ -276,5 +282,29 @@ fn the_fixture_writer_pins_the_review_collection_once() {
         at("mod day_cutoff;").len(),
         1,
         "the writer includes the day pin once"
+    );
+}
+
+#[test]
+fn an_earlier_runs_scratch_directory_is_cleared_before_a_test_writes() {
+    // An earlier run whose process had this one's id left its directory behind, with a file in it.
+    let left = Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join("ffi-fixture-day-cutoff")
+        .join(format!("a5-{}", std::process::id()));
+    std::fs::create_dir_all(&left).expect("the earlier run's directory is planted");
+    std::fs::write(left.join("collection.anki2"), b"left by an earlier run")
+        .expect("the earlier run's file is planted");
+    assert!(
+        left.is_dir(),
+        "the planted directory is there before the helper runs"
+    );
+    let dir = scratch("a5");
+    assert_eq!(
+        dir, left,
+        "the helper names the directory by the test and this process"
+    );
+    assert!(
+        !dir.exists(),
+        "the helper clears an earlier run's directory before the test writes it"
     );
 }
