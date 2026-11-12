@@ -1,0 +1,118 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S66800-GROUP-BY-NAME",
+        "scripts/tests/test_lock_duplicates.py",
+        "        groups[entry[\"name\"]].append(entry)",
+        "        groups[key(entry)].append(entry)",
+        "entries are grouped by name, so one name at two versions is one group (SPEC-668 R2)",
+        "test_lock_duplicates.TheCensusJudgesItsPlantedLocks.test_a_name_at_two_versions_warns_at_warn_and_fails_at_fail"
+      ],
+      [
+        "S66801-VERSIONS-FORM",
+        "scripts/tests/test_lock_duplicates.py",
+        "    if len({entry.get(\"version\") for entry in held}) >= 2:",
+        "    if len({entry.get(\"version\") for entry in held}) >= 3:",
+        "a name at two versions is a site (SPEC-668 R2)",
+        "test_lock_duplicates.TheCensusJudgesItsPlantedLocks.test_a_name_at_two_versions_warns_at_warn_and_fails_at_fail"
+      ],
+      [
+        "S66802-SOURCES-FORM",
+        "scripts/tests/test_lock_duplicates.py",
+        "    if len({entry.get(\"source\") for entry in held}) >= 2:",
+        "    if len({entry.get(\"source\") for entry in held}) >= 3:",
+        "a name at one version from two sources is a site (SPEC-668 R2)",
+        "test_lock_duplicates.TheCensusJudgesItsPlantedLocks.test_one_name_from_two_sources_is_a_site"
+      ],
+      [
+        "S66803-LISTED-HOLDS",
+        "scripts/tests/test_lock_duplicates.py",
+        "        if name in listed:",
+        "        if False:",
+        "a listed site passes at both levels (SPEC-668 R5)",
+        "test_lock_duplicates.TheCensusJudgesItsPlantedLocks.test_a_listed_duplicate_is_clean_at_both_levels"
+      ],
+      [
+        "S66804-UNLISTED-FAILS-AT-FAIL",
+        "scripts/tests/test_lock_duplicates.py",
+        "        if level == \"fail\":",
+        "        if False:",
+        "an unlisted site fails at fail (SPEC-668 R6)",
+        "test_lock_duplicates.TheCensusJudgesItsPlantedLocks.test_a_name_at_two_versions_warns_at_warn_and_fails_at_fail"
+      ],
+      [
+        "S66805-UNLISTED-PASSES-AT-WARN",
+        "scripts/tests/test_lock_duplicates.py",
+        "        if level == \"fail\":",
+        "        if True:",
+        "an unlisted site passes at warn (SPEC-668 R6)",
+        "test_lock_duplicates.TheCensusJudgesItsPlantedLocks.test_a_name_at_two_versions_warns_at_warn_and_fails_at_fail"
+      ],
+      [
+        "S66806-STALE-FOUND",
+        "scripts/tests/test_lock_duplicates.py",
+        "    for name in sorted(set(listed) - set(sites)):",
+        "    for name in sorted(set()):",
+        "a listed name that is no site is stale (SPEC-668 R7)",
+        "test_lock_duplicates.TheCensusJudgesItsPlantedLocks.test_a_listed_name_no_longer_duplicated_is_stale_at_both_levels"
+      ],
+      [
+        "S66807-STALE-FAILS-AT-WARN",
+        "scripts/tests/test_lock_duplicates.py",
+        "        failures.append(stale)",
+        "        failures.extend([stale] if level == \"fail\" else [])",
+        "a stale entry fails at warn too (SPEC-668 R7)",
+        "test_lock_duplicates.TheCensusJudgesItsPlantedLocks.test_a_listed_name_no_longer_duplicated_is_stale_at_both_levels"
+      ],
+      [
+        "S66808-EMPTY-VOID",
+        "scripts/tests/test_lock_duplicates.py",
+        "    entries = examined(\"package(s) in the lock\", packages(text))",
+        "    entries = packages(text)",
+        "an empty lock is VOID, never a pass (SPEC-668 R1)",
+        "test_lock_duplicates.TheCensusJudgesItsPlantedLocks.test_an_empty_lock_is_void"
+      ],
+      [
+        "S66809-FRAGMENT-DROPPED",
+        "scripts/tests/test_lock_duplicates.py",
+        "    return source.split(\"#\", 1)[0] if source is not None else None",
+        "    return source",
+        "a git source loses its #<commit> as a dependency string writes it (SPEC-668 R4)",
+        "test_lock_duplicates.TheCensusJudgesItsPlantedLocks.test_one_name_from_two_sources_is_a_site"
+      ],
+      [
+        "S66810-VERSION-QUALIFIER",
+        "scripts/tests/test_lock_duplicates.py",
+        "                if spelled[\"version\"] in (None, other.get(\"version\"))",
+        "                if spelled[\"version\"] in (None, spelled[\"version\"])",
+        "a dependency string's version picks one entry of a duplicated name (SPEC-668 R4)",
+        "test_lock_duplicates.TheCensusJudgesItsPlantedLocks.test_a_name_at_two_versions_warns_at_warn_and_fails_at_fail"
+      ],
+      [
+        "S66811-DEPENDENTS-NAMED",
+        "scripts/tests/test_lock_duplicates.py",
+        "                found[key(matches[0])].add(entry[\"name\"])",
+        "                pass",
+        "each version's dependents are named in its line (SPEC-668 R4, R6)",
+        "test_lock_duplicates.TheCensusJudgesItsPlantedLocks.test_a_name_at_two_versions_warns_at_warn_and_fails_at_fail"
+      ],
+      [
+        "S66812-UNDECIDED-FAILS",
+        "scripts/tests/test_lock_duplicates.py",
+        "        failures.append(line)",
+        "        lines.append(line)",
+        "a dependency string that names no one entry fails (SPEC-668 R4)",
+        "test_lock_duplicates.TheCensusJudgesItsPlantedLocks.test_a_dependency_that_names_no_one_entry_is_undecided_at_both_levels"
+      ],
+      [
+        "S66813-LEVEL-WARN",
+        "scripts/tests/test_lock_duplicates.py",
+        "LEVEL = \"warn\"",
+        "LEVEL = \"fail\"",
+        "the census starts at warn (SPEC-668 R8)",
+        "test_lock_duplicates.TheWorkspaceLockHoldsOnlyListedDuplicates.test_the_census_starts_at_warn"
+      ]
+    ]
+  }
+}

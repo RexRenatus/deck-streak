@@ -82,3 +82,25 @@ program that is no shell, examined and passing.
 A12: red at 32a0c9d3: assertion `left == right` failed: the three source sets hold 349 sources (left: 419, right: 349)
 A12: green at 1e29f006
 ```
+
+## Section 11: the ruling rule
+
+A14 to A16 (R20 to R23) were committed in a6ea995e over two stubs that keep every input and drop the
+behaviour: `rulings` returns `Ok` with no line and `recorded` returns `Ok`, each under one lint
+expectation, so each red below is its criterion's assertion and never a missing name. The green
+commit, 51a00d3c, replaces the two stubs with the rule and removes their lint expectations; it changes
+no test, no assertion, no planted row and no register row. The commit after it adds the rows, this
+record and the fragment, and edits no test file.
+
+A14 reads the real tree: every admitted row on dev is held before the rule, so the rule holds there
+by construction. A control mutation that drops one row from `BEFORE_THE_RULE`, never committed,
+reads A14 red on its exact count while the rule alone only warns. No CI run reads the green commit
+alone: every green below is read at the pushed head, which carries its code unchanged.
+
+```red-first
+A14: not red: every admitted row on dev is held before the rule, so it holds at the base by construction; the control that drops one held row reads it red: assertion `left == right` failed: the register holds 2 row(s): 2 before the ruling rule, 0 citing a ruling (left: (2, 1, 0), right: (2, 2, 0))
+A15: red at a6ea995e: assertion `left == right` failed: at warn each uncited row is reported by its reason and the census passes (left: Ok([]))
+A15: green at 51a00d3c
+A16: red at a6ea995e: assertion `left == right` failed: an entry no row matches is stale at Warn (left: Ok([]))
+A16: green at 51a00d3c
+```

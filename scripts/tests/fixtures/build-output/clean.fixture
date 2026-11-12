@@ -1,0 +1,28 @@
+# Planted clean paths (SPEC-672 R4, R6): the same file names outside a tool's directory, source
+# trees whose names a tool also uses with no manifest of that tool beside them, files that name a
+# directory without sitting under it, and files a tool writes that the tree keeps on purpose.
+Cargo.toml
+Cargo.lock
+package.json
+pnpm-lock.yaml
+web/app/package.json
+web/app/vite.config.ts
+.gitignore
+web/app/.gitignore
+docs/node_modules.md
+scripts/stage.py
+scripts/coverage.py
+crates/core/build.rs
+docs/build/index.md
+crates/core/src/target/mod.rs
+web/app/src/lib/dist/index.ts
+web/app/src/reports/page.svelte
+tools/coverage/coverage.toml
+scripts/tests/fixtures/coverage/uncovered.lcov
+web/app/src/lib/paraglide.ts
+web/app/project.inlang/settings.json
+ios/project.yml
+ios/EnginePackage/Package.swift
+ios/EnginePackage/Sources/EngineShim/shim.swift
+.sqlx/query-entry.json
+web/app/tests/verify/__screenshots__/phone-light/home.png
