@@ -204,7 +204,7 @@ fn names_a_secret(clause: &str) -> bool {
 }
 
 /// Each clause of `text` that names a token or a digest and compares it, as `line: clause`.
-fn secret_comparisons(text: &str) -> Vec<String> {
+fn refused_clauses(text: &str) -> Vec<String> {
     clauses(&code_of(text))
         .into_iter()
         .filter(|(_, clause)| {
@@ -227,7 +227,7 @@ fn the_guard_compares_only_digests_in_constant_time() {
     // comment or a string literal says.
     let planted = fs::read_to_string(root.join("tests/fixtures/planted_token_compare.rs.fixture"))
         .expect("the planted fixture");
-    let refused: Vec<usize> = secret_comparisons(&planted)
+    let refused: Vec<usize> = refused_clauses(&planted)
         .iter()
         .map(|finding| {
             finding
@@ -240,7 +240,7 @@ fn the_guard_compares_only_digests_in_constant_time() {
         refused,
         vec![14, 19, 24],
         "{:#?}",
-        secret_comparisons(&planted)
+        refused_clauses(&planted)
     );
 
     let sources: Vec<(PathBuf, String)> = examined("source file(s)", rust_files(&root.join("src")))
@@ -296,7 +296,7 @@ fn the_guard_compares_only_digests_in_constant_time() {
     let findings: Vec<String> = sources
         .iter()
         .flat_map(|(path, text)| {
-            secret_comparisons(text)
+            refused_clauses(text)
                 .into_iter()
                 .map(move |finding| format!("{}:{finding}", name(path)))
         })
