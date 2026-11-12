@@ -137,3 +137,27 @@ A25: red at 49c8c6a0: AssertionError: Lists differ: ['0 scheduled workflows run 
 A25: green at dd8bff95
 A26: not red: it judges the census over planted workflows of its own, which hold every shape it reads at the commit that adds them
 ```
+
+## Addendum: A27 to A29 and A31, the JUnit results
+
+The lines above stand. The census of A27 to A29 and the python stage's case of A31 were committed
+with no JUnit file, upload or reporter and no retry setting in the tree (2866bc9f), and A27, A28 and
+A31 read red by name in the pull request's own `hygiene` job. The workflow steps, the nextest,
+Vitest and Playwright configuration and the stage's writer were added in b5815d64 with the tests
+as 6418661c left them, and the three read green there; the commit after b5815d64 changes only this record. A29
+judges the census itself over planted weakenings that hold every shape it reads, so it passes at
+the commit that adds it.
+
+The same `hygiene` run also failed the older census of the test modules' file reads on three sites
+these tests added, two in A29's planted browser steps and one in A31's read of the JUnit file;
+6418661c reshaped those three sites and listed by its count the one the census still reads as dynamic, before b5815d64.
+
+```red-first
+A27: red at 2866bc9f: AssertionError: Lists differ: ['card-sandbox: 0 steps upload junit-card-sandbox, not one'] != [] (job 130462856425)
+A27: green at b5815d64
+A28: red at 2866bc9f: AssertionError: Lists differ: ['the default profile writes no junit.xml'[143 chars]try'] != [] (job 130462856425)
+A28: green at b5815d64
+A29: not red: it judges the census over planted weakenings of its own, which hold every shape it reads at the commit that adds them
+A31: red at 2866bc9f: AssertionError: False is not true : the stage wrote no JUnit file (job 130462856425)
+A31: green at b5815d64
+```
