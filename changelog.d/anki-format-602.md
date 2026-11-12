@@ -1,3 +1,0 @@
-### Added
-
-- A reader for Anki's schema-18 files: a new crate, `deck-streak-anki-format`, opens every foreign file through one defensive opener, which copies the bytes to a private file under a bound, opens the copy read-only with SQLite's defensive settings, registers the `unicase` collation and refuses a file whose digest, version, tables or schema objects are not the expected ones before any row is read. It reads all 14 tables of a collection and its media database, every column kept, as DeckStreak's own row types, and the 8 blob columns as typed views that keep their raw bytes. Ingest's 19 schema-18 statements and its wire walk move into the crate unchanged, and ingest imports them (SPEC-602, ADR-622, ADR-623).
