@@ -1,0 +1,118 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S67300-THE-BOUND-IS-ONE-MEBIBYTE",
+        "scripts/tests/test_large_files.py",
+        "BOUND = 1048576",
+        "BOUND = 1048577",
+        "a file one byte past 1 MiB with no entry reads clean (SPEC-673 R2)",
+        "test_large_files.PlantedListings.test_a_file_past_the_bound_with_no_entry_is_a_site"
+      ],
+      [
+        "S67301-A-FILE-AT-THE-BOUND-IS-NOT-A-SITE",
+        "scripts/tests/test_large_files.py",
+        "elif size > bound:",
+        "elif size >= bound:",
+        "a file exactly at the bound is reported as a site (SPEC-673 R4)",
+        "test_large_files.PlantedListings.test_a_file_at_the_bound_is_not_a_site"
+      ],
+      [
+        "S67302-A-LISTED-FILE-AT-ITS-SIZE-IS-NOT-A-SITE",
+        "scripts/tests/test_large_files.py",
+        "if size > listed[path][0]:",
+        "if size >= listed[path][0]:",
+        "a listed file at its recorded size is reported as grown past it (SPEC-673 R5)",
+        "test_large_files.PlantedListings.test_a_listed_file_at_or_under_its_recorded_size_is_not_a_site"
+      ],
+      [
+        "S67303-A-LISTED-FILE-GROWN-PAST-ITS-SIZE-IS-A-SITE",
+        "scripts/tests/test_large_files.py",
+        "if size > listed[path][0]:",
+        "if size > listed[path][0] + 1:",
+        "a listed file one byte past its recorded size reads clean (SPEC-673 R4)",
+        "test_large_files.PlantedListings.test_a_listed_file_grown_past_its_recorded_size_is_a_site"
+      ],
+      [
+        "S67304-A-LISTED-FILE-IS-JUDGED-BY-ITS-ENTRY",
+        "scripts/tests/test_large_files.py",
+        "if path in listed:",
+        "if False:",
+        "a listed file is judged by the bound alone, so each listed site is reported as unlisted (SPEC-673 R5)",
+        "test_large_files.PlantedListings.test_a_listed_file_at_or_under_its_recorded_size_is_not_a_site"
+      ],
+      [
+        "S67305-THE-PRESENT-SIZE-IS-THE-BLOBS-OWN",
+        "scripts/tests/test_large_files.py",
+        "present[path] = size",
+        "present[path] = 0",
+        "every listed file reads as at or under the bound, so each entry of a current site is stale (SPEC-673 R6)",
+        "test_large_files.PlantedListings.test_a_listed_file_at_or_under_its_recorded_size_is_not_a_site"
+      ],
+      [
+        "S67306-AN-ENTRY-WITH-NO-TRACKED-FILE-IS-STALE",
+        "scripts/tests/test_large_files.py",
+        "gone = sorted(path for path in listed if path not in present)",
+        "gone = []",
+        "an entry whose path holds no tracked file passes, so a moved or removed listed file leaves its entry behind (SPEC-673 R6)",
+        "test_large_files.PlantedListings.test_a_renamed_listed_file_leaves_a_stale_entry_and_an_unlisted_site"
+      ],
+      [
+        "S67307-AN-ENTRY-BACK-AT-THE-BOUND-IS-STALE",
+        "scripts/tests/test_large_files.py",
+        "present[path] <= bound",
+        "present[path] < bound",
+        "an entry whose file is back exactly at the bound is kept (SPEC-673 R6)",
+        "test_large_files.PlantedListings.test_a_listed_file_back_at_the_bound_leaves_a_stale_entry"
+      ],
+      [
+        "S67308-A-SIZE-THAT-IS-NOT-A-NUMBER-IS-NO-BLOB-SIZE",
+        "scripts/tests/test_large_files.py",
+        "int(size) if size.isdigit() else None",
+        "int(size) if size.isdigit() else 0",
+        "a submodule's commit reads as an empty file and is never undecided (SPEC-673 R3)",
+        "test_large_files.PlantedListings.test_an_entry_with_no_blob_size_is_undecided_and_a_link_is_judged_by_its_size"
+      ],
+      [
+        "S67309-A-STALE-ENTRY-FAILS-AT-BOTH-LEVELS",
+        "scripts/tests/test_large_files.py",
+        "return (sites + undecided if level == \"fail\" else []) + stale",
+        "return sites + undecided if level == \"fail\" else []",
+        "a stale entry passes at warn (SPEC-673 R9)",
+        "test_large_files.PlantedListings.test_the_level_decides_whether_a_site_fails_and_a_stale_entry_always_does"
+      ],
+      [
+        "S67310-A-SITE-FAILS-AT-FAIL",
+        "scripts/tests/test_large_files.py",
+        "return (sites + undecided if level == \"fail\" else []) + stale",
+        "return (undecided if level == \"fail\" else []) + stale",
+        "an unlisted or grown site passes at fail (SPEC-673 R9)",
+        "test_large_files.PlantedListings.test_the_level_decides_whether_a_site_fails_and_a_stale_entry_always_does"
+      ],
+      [
+        "S67311-AN-UNDECIDED-ENTRY-FAILS-AT-FAIL",
+        "scripts/tests/test_large_files.py",
+        "return (sites + undecided if level == \"fail\" else []) + stale",
+        "return (sites if level == \"fail\" else []) + stale",
+        "an entry with no blob size passes at fail (SPEC-673 R7, R9)",
+        "test_large_files.PlantedListings.test_the_level_decides_whether_a_site_fails_and_a_stale_entry_always_does"
+      ],
+      [
+        "S67312-THE-CENSUS-STARTS-AT-WARN",
+        "scripts/tests/test_large_files.py",
+        "LEVEL = \"warn\"",
+        "LEVEL = \"fail\"",
+        "the census starts at fail, a promotion no delivery of its own made (SPEC-673 R9)",
+        "test_large_files.TheListing.test_the_census_is_at_warn_and_each_entry_records_a_site_and_its_reason"
+      ],
+      [
+        "S67313-AN-EMPTY-POPULATION-IS-VOID",
+        "scripts/tests/test_large_files.py",
+        "entries = examined(\"file(s)\", entries)",
+        "entries = list(entries)",
+        "an empty population passes in place of VOID (SPEC-673 R10)",
+        "test_large_files.PlantedListings.test_an_empty_population_is_void"
+      ]
+    ]
+  }
+}

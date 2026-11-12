@@ -1,0 +1,3 @@
+# A file listed at 2000000 bytes as assets/listed.bin, moved to a new path at the same size. No
+# arm follows it: the old entry is stale and the new path is an unlisted site (SPEC-673 R6).
+100644 blob 2000000	assets/moved/listed.bin

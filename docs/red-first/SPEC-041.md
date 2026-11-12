@@ -591,3 +591,14 @@ A27: green at de97462c
 A28: green at de97462c
 A29: green at de97462c
 ```
+
+## The kept claim's export (#538)
+
+A30's test was written against an export that already carried each queue row's claim by its value
+(`crates/notifications/src/data_rights.rs`, SPEC-041 §8), so it passes at its base and is not red
+first. Its mutant shows what it proves: row S04195 exports every queue row's claim as null, as the
+plant #538 names does, and the rows job proves the row killed by this test.
+
+```red-first
+A30: not red: the export already carried each queue row's claim by its value; the test pins it with a seeded row abandoned with its claim kept, and row S04195, which exports every claim as null, is its mutant
+```

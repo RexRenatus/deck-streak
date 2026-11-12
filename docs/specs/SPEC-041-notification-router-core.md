@@ -710,3 +710,48 @@ workspace is an `#[expect]` with a reason at the bot transport's client construc
 statement". `crates/notifications/tests/request_allow_list.rs` names both sites, and
 `the_only_suppression_of_the_rule_is_an_expect_at_a_named_transport_site` finds each once and only
 them. The four paths, their reasons and every other refusal A18 states are unchanged.
+
+## 14. Amendment: the export carries a kept claim by its value (#538)
+
+§8's R16a and R16b leave a queue row `abandoned` with its claim kept when its fate is unknown
+("may have been sent"), and the data-rights export carries the `claim` column with the row
+(ADR-300). The symmetry probe (SPEC-021 A1) seeded every `notification_queue` row with a null
+claim, so an export that wrote every claim as null still carried each seeded row whole, and
+SPEC-021's A1 held. This amendment states the class it closes: **the export carries each queue
+row's claim by its value, a kept claim included.** No production code changes, and the probe's
+other tests are unchanged.
+
+- **R18: a kept claim is seeded, and its export is asserted by its value.** The probe's seeds add
+  one `notification_queue` row, `abandoned` with its claim kept, beside the 101 seeded rows whose
+  claim is null, none of which changes; the queue then holds 102 seeded rows, and SPEC-021's 101
+  stays each table's floor. SPEC-021's A1 holds that row exported whole, and A30 finds it in the
+  export by its key and holds its `claim` equal to the value the seed wrote, spelled in the test,
+  after it holds that the seeded row read from the table carries the same value.
+- **The row.** S04195 pins the export of `claim` in `crates/notifications/src/data_rights.rs`: its
+  mutant reads the claim and yields none, so every exported claim is null, and A30's test kills it.
+  The killer is in the coordination crate, so the row sits in `CARGO_KILLED_SCRIPT_MUTATIONS`,
+  whose killer crate is a cell of its own.
+- **What this does NOT do.**
+  - It removes, narrows or relaxes no seed, table, key or assertion of the probe, and no seed whose
+    claim is null (#538).
+  - It seeds no `sending` row: its claim is exported by the same line the row pins, and the
+    abandoned row is the one a recap reads with its claim kept (#538).
+
+File manifest of the amendment:
+
+| path | change |
+|---|---|
+| `crates/coordination/tests/data_rights_symmetry.rs` | the seed of a queue row abandoned with its claim kept, and A30's test |
+| `scripts/mutation-rows.d/S04100-S04199.json` | row S04195 |
+| `docs/red-first/SPEC-041.md` | A30's not-red line |
+| `changelog.d/data-rights-kept-claim-538.md` | the changelog fragment |
+
+## 15. Acceptance criteria of the kept claim's export (#538)
+
+| id | criterion | decided by |
+|---|---|---|
+| A30 | a queue row abandoned with its claim kept is seeded beside the rows whose claim is null, and the export carries that claim by its value, spelled in the test; control: the seeded row read from the table carries the same value | `the_export_carries_the_claim_an_abandoned_queue_row_kept` |
+
+```acceptance
+A30: cargo test -p deck-streak-coordination --test data_rights_symmetry -- --exact the_export_carries_the_claim_an_abandoned_queue_row_kept
+```
