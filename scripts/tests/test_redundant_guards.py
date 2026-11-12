@@ -24,7 +24,7 @@ import re
 import unittest
 from pathlib import Path
 
-from _support import REPO
+from _support import REPO, examined
 
 FIXTURES = REPO / "scripts" / "tests" / "fixtures" / "redundant-guards"
 RULE = "redundant-guard"
@@ -138,13 +138,33 @@ SHELL_FUNCTION = re.compile(r"^(?:function\s+)?([A-Za-z_][\w-]*)\s*\(\s*\)")
 
 def language_of(rel):
     """The reader a repository path is read by, or None for test code and other files (R2, R3)."""
-    return None
+    name = rel.rsplit("/", 1)[-1]
+    if name.endswith(".rs"):
+        shipped = re.match(r"crates/[^/]+/(?:src/|build\.rs$)", rel) or rel.startswith("tools/")
+        return "rust" if shipped else None
+    if name.endswith(".py"):
+        if re.match(r"scripts/[^/]+\.py$", rel) or rel.startswith("deploy/"):
+            return "python"
+        return "python" if rel.startswith("tools/") and not name.startswith("test_") else None
+    if name.endswith((".ts", ".js", ".mjs", ".cjs", ".svelte")):
+        if not rel.startswith("web/") or WEB_TEST.search(rel):
+            return None
+        return "svelte" if name.endswith(".svelte") else "typescript"
+    if name.endswith(".swift"):
+        return "swift" if rel.startswith("ios/") and not IOS_TEST.search(rel) else None
+    return "shell" if name.endswith(".sh") else None
 
 
 def test_modules(rel, text):
     """The Rust files a file makes test code: itself under `#![cfg(test)]`, and each out-of-line
     module it declares under `#[cfg(test)]` (R3)."""
-    return set()
+    found = {rel} if RUST_TEST_FILE.search(text) else set()
+    folder, _, name = rel.rpartition("/")
+    stem = name.removesuffix(".rs")
+    base = folder if stem in ("mod", "lib", "main") else f"{folder}/{stem}"
+    for module in RUST_TEST_MODULE.findall(text):
+        found |= {f"{base}/{module}.rs", f"{base}/{module}/mod.rs"}
+    return found
 
 
 def population(root=REPO):
@@ -179,7 +199,7 @@ class Census:
 def census(root, files):
     """Read each (path, language) under root by its language's reader (R1, R4)."""
     found = Census()
-    for rel, language in files:
+    for rel, language in examined("file(s)", files):
         text = (root / rel).read_text(encoding="utf-8", errors="replace")
         try:
             READERS[language](found, rel, text)
@@ -190,6 +210,7 @@ def census(root, files):
 
 def conditions(found):
     """Print the count of conditions read under an enclosing condition, refusing zero (R4)."""
+    examined("condition(s) under an enclosing condition", range(found.under))
     return found
 
 
@@ -205,7 +226,20 @@ def keyed(sites):
 
 def verdict(sites, listed, level):
     """The printed lines and the failures for the found sites against a listing (R14)."""
-    return [], []
+    if level not in ("warn", "fail"):
+        return [], [f"LEVEL {level!r} is neither warn nor fail"]
+    found = keyed(sites)
+    warned, failed = [], []
+    for key, site in found.items():
+        if key in listed:
+            continue
+        detail = f"{RULE} {key} (line {site[1]}, {site[2]}, {site[4]} under line {site[5]})"
+        if level == "warn":
+            warned.append(f"WARN {detail}")
+        else:
+            failed.append(f"FAIL {detail}")
+    failed += [f"STALE {RULE} {key}" for key in listed if key not in found]
+    return warned, failed
 
 
 def tokens(text, lang):
@@ -384,6 +418,19 @@ def present_of(text):
 
 def decide(facts, inner):
     """(form, enclosing line) when a fact decides the conjunct, else None (R5 to R7)."""
+    text = norm(inner)
+    cmp = comparison(inner)
+    for ftext, ftoks, fline in facts:
+        if text == ftext or negated(text) == ftext:
+            return ("same-expression", fline)
+        fcmp = comparison(ftoks) if ftoks else None
+        if cmp and fcmp and range_decides(fcmp, cmp) is not None:
+            return ("range", fline)
+        present = present_of(ftext)
+        for check in (ABSENT_CHECK, PRESENT_CHECK):
+            match = check.match(text)
+            if present and match and next(g for g in match.groups() if g) == present:
+                return ("presence", fline)
     return None
 
 
