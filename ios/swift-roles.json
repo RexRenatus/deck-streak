@@ -54,6 +54,7 @@
   "ios/CardIsolation/Tests/CardIsolationTests/DocumentPolicyTests.swift": {"role": "test"},
   "ios/CardIsolation/Tests/CardIsolationTests/LinkActivationRefusalTests.swift": {"role": "test"},
   "ios/CardIsolation/Tests/CardIsolationTests/LinkStripTests.swift": {"role": "test"},
+  "ios/CardIsolation/Tests/CardIsolationTests/MacMenuRefusalTests.swift": {"role": "test"},
   "ios/CardIsolation/Tests/CardIsolationTests/NavigationGateTests.swift": {"role": "test"},
   "ios/CardIsolation/Tests/CardIsolationTests/PageGuardTests.swift": {"role": "test"},
   "ios/CardIsolation/Tests/CardIsolationTests/PeerConnectionRemovalTests.swift": {"role": "test"},

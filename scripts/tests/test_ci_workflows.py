@@ -1691,21 +1691,23 @@ class TheAppHasOneRustStaticLibrary(unittest.TestCase):
         steps = load("xcframework.yml")["jobs"]["xcframework"]["steps"]
         names = [step.get("name") for step in steps]
         self.assertIn("the XCFramework holds one Rust library", names)
-        after = names.index("the XCFramework, device and simulator slices")
+        after = names.index("the XCFramework, device, simulator and macOS slices")
         self.assertEqual(names.index("the XCFramework holds one Rust library"), after + 1)
         device = "DeckStreakFFI.xcframework/ios-arm64/libdeck_streak_ffi.a"
         simulator = "DeckStreakFFI.xcframework/ios-arm64-simulator/libdeck_streak_ffi.a"
+        macos = "DeckStreakFFI.xcframework/macos-arm64/libdeck_streak_ffi.a"
         third = "DeckStreakFFI.xcframework/ios-arm64/libxp.a"
         other = "DeckStreakFFI.xcframework/ios-arm64-simulator/libother.a"
         failed = (1, {"one-library": "fail"})
         cases = [
             (
-                "the umbrella in each slice",
-                {device: "", simulator: ""},
+                "the umbrella in each of the three slices",
+                {device: "", simulator: "", macos: ""},
                 (0, {"one-library": "pass"}),
             ),
-            ("a third library", {device: "", simulator: "", third: ""}, failed),
-            ("another library in the simulator slice", {device: "", other: ""}, failed),
+            ("the device and simulator slices alone", {device: "", simulator: ""}, failed),
+            ("a third library", {device: "", simulator: "", macos: "", third: ""}, failed),
+            ("another library in the simulator slice", {device: "", other: "", macos: ""}, failed),
             ("a single slice", {device: ""}, failed),
         ]
         for case, plant, verdict in examined("planted XCFrameworks", cases):

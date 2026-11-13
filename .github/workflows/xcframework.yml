@@ -54,7 +54,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: the pinned Rust toolchain and its two iOS targets, before the clock starts
+      - name: the pinned Rust toolchain and its iOS and macOS targets, before the clock starts
         run: |
           rustup show
           rustup target add aarch64-apple-ios aarch64-apple-ios-sim
@@ -63,7 +63,7 @@ jobs:
           curl -fsSL -o "$RUNNER_TEMP/protoc.zip" "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-osx-universal_binary.zip"
           echo "$PROTOC_MACOS_DIGEST  $RUNNER_TEMP/protoc.zip" | shasum -a 256 -c -
           unzip -q "$RUNNER_TEMP/protoc.zip" -d "$RUNNER_TEMP/protoc"
-      - name: the two static libraries, clocked from the first compile to the second archive
+      - name: the three static libraries, clocked from the first compile to the third archive
         run: |
           export PROTOC="$RUNNER_TEMP/protoc/bin/protoc"
           mkdir -p "$REPORT"
@@ -109,7 +109,7 @@ jobs:
             exit 1
           fi
           echo pass > "$REPORT/modulemap"
-      - name: the XCFramework, device and simulator slices
+      - name: the XCFramework, device, simulator and macOS slices
         run: |
           mkdir -p headers
           cp bindings/deck_streak_ffiFFI.h bindings/module.modulemap headers/
