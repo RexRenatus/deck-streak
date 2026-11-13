@@ -68,6 +68,9 @@ struct DeckListView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            FirstRunOffer(model: model)
+        }
         .background(Color.tideBackground)
         .tint(Color.tideAccent)
         .navigationTitle("Decks")

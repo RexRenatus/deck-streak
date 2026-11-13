@@ -15,6 +15,9 @@ final class AppModel {
     private(set) var review: ReviewModel?
     /// The open's or the list's refusal, as its sentence, shown in place of the list.
     var refusal: String?
+    /// Whether the collection is still opening and its decks are not yet listed; the deck list
+    /// shows its loading state until they are, refusal or not (SPEC-680 R2).
+    private(set) var loading = true
     /// Whether the account sheet is shown.
     var showingAccount = false
     /// The configured sync user, shown as text and never typed.
@@ -59,6 +62,7 @@ final class AppModel {
     func start() async {
         guard !started else { return }
         started = true
+        defer { loading = false }
         do {
             try await session.open()
             decks = try await session.decks()
