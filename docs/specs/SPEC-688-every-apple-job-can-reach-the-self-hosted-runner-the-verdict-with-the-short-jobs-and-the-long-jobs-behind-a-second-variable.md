@@ -5,7 +5,7 @@
   (`scripts/tests/test_ci_workflows.py`).
 - **Decided by:** ADR-708 (the long Apple jobs reach the self-hosted runner for this repository's
   own pull requests behind a second variable).
-- **Status:** planned
+- **Status:** accepted
 - **Schematic:** none: no component, data flow or state changes shape; three values of one
   workflow become expressions.
 
