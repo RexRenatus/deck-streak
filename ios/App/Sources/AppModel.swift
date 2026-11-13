@@ -75,7 +75,9 @@ final class AppModel {
     /// card, or closes the review when no deck is chosen (SPEC-348 R9).
     func openReview() async {
         review = chosenDeck.map { deck in
-            ReviewModel(deck: deck, session: ReviewSession(engine: session), night: night)
+            ReviewModel(
+                deck: deck, session: ReviewSession(engine: session), night: night,
+                settle: AnswerGate.settle)
         }
         await review?.start()
     }

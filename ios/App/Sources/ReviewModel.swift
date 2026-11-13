@@ -43,6 +43,8 @@ final class ReviewModel {
     /// Whether each face is asked as the engine's night face, as the system's dark mode is; the
     /// shell sets it from the colour scheme, and the next face asked follows it (SPEC-680 R1).
     var night: Bool
+    /// The shown answer's grades, closed for the settle interval after it shows (SPEC-680 R4).
+    let gate: AnswerGate
 
     private let session: ReviewSession
     private let voiceOverRunning: @MainActor () -> Bool
@@ -63,6 +65,7 @@ final class ReviewModel {
         self.night = night
         self.voiceOverRunning = voiceOverRunning
         self.installed = installed
+        gate = AnswerGate(interval: settle)
         undo = ReviewUndo(session: session)
         health = CardHealthModel(session: session)
         player.refused = { [weak self] line in self?.notes.append(line) }
@@ -91,9 +94,10 @@ final class ReviewModel {
                     autoplay: !voiceOverRunning(), installed: installed(), night: night)
                 show(face)
                 revealed = true
+                gate.answerShown()
                 phase = .answer
             }
-        case (.rate(let rating), .answer):
+        case (.rate(let rating), .answer) where gate.isOpen:
             phase = .answering
             await run {
                 try await session.answer(rating)

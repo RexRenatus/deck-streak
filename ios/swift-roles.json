@@ -2,6 +2,7 @@
   "ios/App/Sources/AccountView.swift": {"role": "view", "decisions": 1},
   "ios/App/Sources/AnswerBar.swift": {"role": "view", "decisions": 3},
   "ios/App/Sources/AnswerClock.swift": {"role": "model", "decisions": 2},
+  "ios/App/Sources/AnswerGate.swift": {"role": "model", "decisions": 3},
   "ios/App/Sources/AppModel.swift": {"role": "model", "decisions": 5},
   "ios/App/Sources/CardFaceView.swift": {"role": "card", "decisions": 2},
   "ios/App/Sources/CardHealthModel.swift": {"role": "model", "decisions": 1},
