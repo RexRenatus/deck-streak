@@ -28,8 +28,8 @@
       [
         "S56604-AN-ABSENT-SPEC-IS-REFUSED-BY-NAME",
         "scripts/ios_lane.py",
-        "    text = SPEC.read_text(encoding=\"utf-8\") if SPEC.is_file() else \"\"",
-        "    text = SPEC.read_text(encoding=\"utf-8\")",
+        "    found = NAME.search(SPEC.read_text(encoding=\"utf-8\")) if SPEC.is_file() else None",
+        "    found = NAME.search(SPEC.read_text(encoding=\"utf-8\"))",
         "an absent spec is refused by the lane's one line, never by a traceback (SPEC-566 R2, A4)",
         "test_ios_lane.LaneCredential.test_a_project_spec_that_names_no_project_is_refused_before_any_tool_runs"
       ],

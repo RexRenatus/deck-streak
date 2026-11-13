@@ -226,8 +226,7 @@ def app():
     """The app's Release build for a generic device, which both builds take: the project and the
     scheme that the top-level `name` of the app's project spec names (SPEC-566 R1). A spec that is
     absent or names no project is refused before any tool runs (R2)."""
-    text = SPEC.read_text(encoding="utf-8") if SPEC.is_file() else ""
-    found = NAME.search(text)
+    found = NAME.search(SPEC.read_text(encoding="utf-8")) if SPEC.is_file() else None
     if not found:
         raise Refused(f"the app's project spec {SPEC} names no project")
     name = found.group(1)
