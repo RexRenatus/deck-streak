@@ -250,7 +250,7 @@ jobs:
 
   harness:
     needs: xcframework
-    runs-on: xcode-27
+    runs-on: ${{ (vars.DS_MINI == 'on' && vars.DS_MINI_LONG == 'on' && github.actor != 'dependabot[bot]' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","macOS","ARM64","ds-mini","ds-mini-sim"]') || 'xcode-27' }}
     timeout-minutes: 150
     env:
       REPORT: ${{ github.workspace }}/harness-report
@@ -640,7 +640,7 @@ jobs:
 
   release-and-app:
     needs: xcframework
-    runs-on: xcode-27
+    runs-on: ${{ (vars.DS_MINI == 'on' && vars.DS_MINI_LONG == 'on' && github.actor != 'dependabot[bot]' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","macOS","ARM64","ds-mini","ds-mini-sim"]') || 'xcode-27' }}
     timeout-minutes: 130
     env:
       REPORT: ${{ github.workspace }}/harness-report
@@ -1278,7 +1278,7 @@ jobs:
   verdict:
     needs: [xcframework, harness-wire, card-isolation, harness, release-and-app]
     if: ${{ always() }}
-    runs-on: xcode-27
+    runs-on: ${{ (vars.DS_MINI == 'on' && github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository))) && fromJSON('["self-hosted","macOS","ARM64","ds-mini"]') || 'xcode-27' }}
     timeout-minutes: 10
     steps:
       - name: every job of the body succeeded
