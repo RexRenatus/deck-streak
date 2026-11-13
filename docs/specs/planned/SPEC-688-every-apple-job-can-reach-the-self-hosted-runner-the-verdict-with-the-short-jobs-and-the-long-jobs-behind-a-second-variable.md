@@ -46,7 +46,7 @@ R1. **The verdict routes with the short jobs.** The `runs-on` of `verdict` is th
     no Apple tool, only the results of the jobs it needs.
 
 R2. **The long jobs take one expression of their own.** The `runs-on` of `harness` and of
-    `release-and-app` is one expression, the same in both: the four labels when `DS_MINI` and a
+    `release-and-app` is one expression, the same in both: the labels `self-hosted`, `macOS`, `ARM64`, `ds-mini` and `ds-mini-sim` when `DS_MINI` and a
     second repository variable, `DS_MINI_LONG`, both read `on`, the actor is not
     `dependabot[bot]` and the event is a pull request whose head repository is this repository;
     `xcode-27` otherwise.
@@ -86,7 +86,7 @@ a fork's pull request and a scheduled run), every value of `DS_MINI` and of `DS_
 | criterion | what it decides | test |
 |---|---|---|
 | A1 | the `runs-on` of `verdict` equals the short jobs' expression byte for byte and resolves as theirs in every scenario (R1) | `test_ci_workflows.py` |
-| A2 | `harness` and `release-and-app` hold the long expression, the same in both, and over every scenario, with the scenario count and the routed counts asserted, reach the four labels only for this repository's pull request with both variables on and a person as actor, `xcode-27` otherwise (R2, R3) | `test_ci_workflows.py` |
+| A2 | `harness` and `release-and-app` hold the long expression, the same in both, and over every scenario, with the scenario count and the routed counts asserted, reach the labels `self-hosted`, `macOS`, `ARM64`, `ds-mini` and `ds-mini-sim` only for this repository's pull request with both variables on and a person as actor, `xcode-27` otherwise (R2, R3) | `test_ci_workflows.py` |
 | A3 | planted copies of the long expression without the `DS_MINI` clause, without the `DS_MINI_LONG` clause, without the Dependabot clause, without the same-repository clause, with another label list, and with the short expression in its place, are each refused by a scenario (R2, R3) | `test_ci_workflows.py` |
 | A4 | the jobs that hold each expression are exactly its own, and the hardening test admits each expression to its own jobs alone and refuses it under any other job or file (R4) | `test_ci_workflows.py` |
 
