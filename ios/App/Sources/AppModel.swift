@@ -67,7 +67,7 @@ final class AppModel {
             try await session.open()
             decks = try await session.decks()
         } catch {
-            refusal = sentence(error)
+            refusal = ErrorWords.text(of: error)
         }
     }
 
@@ -104,7 +104,7 @@ final class AppModel {
             try store.save(hostKey: hostKey)
             signedIn = true
         } catch {
-            message = sentence(error)
+            message = ErrorWords.text(of: error)
         }
     }
 
@@ -114,12 +114,7 @@ final class AppModel {
             try store.delete()
             signedIn = false
         } catch {
-            message = sentence(error)
+            message = ErrorWords.text(of: error)
         }
-    }
-
-    /// A failure's sentence: a refusal's own, or the error's description.
-    private func sentence(_ error: any Error) -> String {
-        (error as? Refusal)?.sentence ?? String(describing: error)
     }
 }
