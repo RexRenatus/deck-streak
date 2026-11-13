@@ -127,6 +127,7 @@ package, passed to the app by a launch argument that imports it through the impo
 |---|---|---|
 | `docs/specs/SPEC-681-import-an-anki-deck-package-from-the-files-app-on-iphone-and-ipad.md` | docs | added |
 | `docs/decisions/ADR-703-the-package-import-is-one-allow-listed-engine-call-behind-an-inner-member-bound.md` | docs | added |
+| `docs/schematics/the-app-campaigns-surfaces-each-carry-a-stride-table-whose-every-control-cites-a-line-that-holds.md` | docs | changed |
 | `docs/red-first/SPEC-681.md` | docs | added |
 | `changelog.d/ios-file-import-681.md` | docs | added |
 | `crates/ffi/src/package_bound.rs` | native adapter | added |
@@ -141,7 +142,9 @@ package, passed to the app by a launch argument that imports it through the impo
 | `crates/engine-core/tests/table.rs` | engine core tests | changed |
 | `crates/engine-core/tests/review_pairs.rs` | engine core tests | changed |
 | `crates/engine-core/tests/data_screen_pairs.rs` | engine core tests | changed |
+| `crates/kernel/tests/allow_list_arms.rs` | kernel tests | changed |
 | `ios/App/Info.plist` | app | changed |
+| `ios/App/Sources/AppModel.swift` | app | changed |
 | `ios/App/Sources/DeckListView.swift` | app | changed |
 | `ios/App/Sources/EngineSession.swift` | app | changed |
 | `ios/App/Sources/PackageImportRequest.swift` | app | added |
@@ -149,6 +152,7 @@ package, passed to the app by a launch argument that imports it through the impo
 | `ios/App/Sources/PackageImportView.swift` | app | added |
 | `ios/AppUITests/PackageImportFlowTests.swift` | app tests | added |
 | `ios/swift-roles.json` | app | changed |
+| `scripts/mutation-rows.d/S68100-S68199.json` | mutation rows | added |
 
 ## 6. What this does NOT do
 
