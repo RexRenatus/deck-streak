@@ -624,6 +624,21 @@ final class Probe {
         return view
     }
 
+    /// Loads the keeper under the warm-up bound and keeps it as `held` until `release()`, so every
+    /// view the running test builds is built while a loaded page holds WebKit's shared processes
+    /// (SPEC-689 R2). Returns whether it loaded.
+    static func hold() async throws -> Bool {
+        let ruleList = await RuleList.compile()
+        held = try await keeper(ruleList: ruleList)
+        return held != nil
+    }
+
+    /// Takes the held page down and clears `held`, from each test's `tearDown` (SPEC-689 R2).
+    static func release() {
+        held?.removeFromSuperview()
+        held = nil
+    }
+
     /// Takes one snapshot of `view` and decodes its pixels, under the ask bound (SPEC-609 R1).
     static func snapshot(_ view: WKWebView) async throws -> ViewSnapshot {
         let taken: ViewSnapshot = try await bounded(label: "snapshot") { answer in
@@ -871,12 +886,15 @@ final class PlantedCardTests: XCTestCase {
         await Probe.resetRecord()
         let warmedUp = try await Probe.warmUp()
         XCTAssertTrue(warmedUp, "the card probe warm-up: WebKit never started, so no card could load")
+        let held = try await Probe.hold()
+        XCTAssertTrue(held, "the keeper never loaded, so WebKit's shared processes were not held across this test's views")
     }
 
     /// SPEC-609 R5: the asks this test's pages answered, and the slowest, against the ask bound.
     override func tearDown() async throws {
         let line = await Probe.asksLine(self.name)
         print(line)
+        await Probe.release()
         try await super.tearDown()
     }
 
