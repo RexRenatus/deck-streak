@@ -54,12 +54,12 @@ final class ReviewFlowTests: XCTestCase {
     func test_a20_show_reveal_rate_next() throws {
         let app = try launchedOnTheFixture()
         tapWhenShown(app.staticTexts["deck-row-Review"].firstMatch)
-        let counts = ["count-new", "count-learning", "count-review"].map {
-            app.staticTexts[$0].firstMatch
-        }
+        // The three counts read as one element (SPEC-680 R8); its label holds each count.
+        let counts = app.descendants(matching: .any).matching(identifier: "counts").firstMatch
         let textCard = app.webViews.staticTexts["a text card"].firstMatch
         let first = reading(until: ["4 new", "0 learning", "0 to review", "shown"]) {
-            counts.map { label(of: $0) } + [shown(textCard) ? "shown" : notShown]
+            label(of: counts).components(separatedBy: ", ")
+                + [shown(textCard) ? "shown" : notShown]
         }
 
         tapWhenShown(app.buttons["Show Answer"].firstMatch)

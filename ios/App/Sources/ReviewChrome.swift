@@ -16,6 +16,7 @@ struct ReviewChrome: View {
                 Text(model.deck.name)
                     .font(.headline)
                     .accessibilityIdentifier("detail")
+                    .accessibilityAddTraits(.isHeader)
                     .foregroundStyle(Color.tideInk)
                 Spacer()
                 Button {
@@ -57,12 +58,18 @@ struct ReviewChrome: View {
             }
             .labelStyle(.iconOnly)
             HStack(spacing: 16) {
-                Text("\(model.counts.new) new").accessibilityIdentifier("count-new")
-                    .foregroundStyle(Color.tideInk)
-                Text("\(model.counts.learning) learning").accessibilityIdentifier("count-learning")
-                    .foregroundStyle(Color.tideInk)
-                Text("\(model.counts.review) to review").accessibilityIdentifier("count-review")
-                    .foregroundStyle(Color.tideInk)
+                // The queue's three counts read as one element, in the order shown (SPEC-680 R8).
+                HStack(spacing: 16) {
+                    Text("\(model.counts.new) new")
+                        .foregroundStyle(Color.tideInk)
+                    Text("\(model.counts.learning) learning")
+                        .foregroundStyle(Color.tideInk)
+                    Text("\(model.counts.review) to review")
+                        .foregroundStyle(Color.tideInk)
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(countsLabel)
+                .accessibilityIdentifier("counts")
                 Spacer()
                 // Its title is its VoiceOver label, though it shows its icon alone (SPEC-507 R16).
                 Button {
@@ -111,5 +118,11 @@ struct ReviewChrome: View {
     /// The flag button's title and symbol: an icon with a text label, never a colour alone.
     private var flagTitle: (title: String, symbol: String) {
         model.flagged ? ("Flagged red", "flag.fill") : ("Flag", "flag")
+    }
+
+    /// The queue's counts as one label, in the order shown (SPEC-680 R8).
+    private var countsLabel: String {
+        let counts = model.counts
+        return "\(counts.new) new, \(counts.learning) learning, \(counts.review) to review"
     }
 }
