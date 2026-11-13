@@ -4,7 +4,7 @@ SPEC-690's one criterion, A1, is `test_m2_memory`, read by name in the
 `apple / release-and-app` job's report row on the iPad (A16) and the iPhone 17. It runs only
 on the Apple runner, and it asserts nothing before or after the change, as SPEC-339's record
 discloses for it (not red, a measurement). So A1 has no red commit: its green line names
-the commit that carries the change, and its proof is three later `apple / release-and-app`
+the commit that carries the change, and its proof is three later hosted `apple / release-and-app`
 runs that read `test_m2_memory` Passed on both simulators, each cited by job id (SPEC-690,
 section 3).
 

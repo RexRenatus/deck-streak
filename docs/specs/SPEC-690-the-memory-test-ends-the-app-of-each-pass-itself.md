@@ -37,7 +37,7 @@ iPad" (`.github/workflows/xcframework.yml` lines 758 to 771).
 - The background-assertion form, job 131737192964 (run 43379037977): `test_m1_cold_start` timed
   out acquiring a background assertion at its launch on line 38, on the iPhone, at a fresh launch
   with no instance to end. The same job read `test_m2_memory` Passed on both simulators.
-- After that job, seven `apple / release-and-app` jobs finished: jobs 131779618608, 131752580592,
+- After that job, seven release-and-app jobs finished, four as `apple / release-and-app` and three as `release-and-app` in run 43384953899: jobs 131779618608, 131752580592,
   131864992201, 131842555491 and 131880144608 read `test_m2_memory` Passed on both simulators,
   and jobs 131791440929 and 131872983969 never finished the step and left no log to read.
 
@@ -59,9 +59,9 @@ iPad" (`.github/workflows/xcframework.yml` lines 758 to 771).
 
 ## 3. Acceptance criteria of SPEC-690
 
-| criterion | statement | decided by |
+| id | criterion | decided by |
 |---|---|---|
-| A1 | `test_m2_memory` reads Passed on the iPad (A16) and the iPhone 17 in three later `apple / release-and-app` runs, each cited by job id | `test_m2_memory`, by name in the step's report row on both destinations |
+| A1 | `test_m2_memory` reads Passed on the iPad (A16) and the iPhone 17 in three later hosted `apple / release-and-app` runs, each cited by job id | `test_m2_memory`, by name in the step's report row on both destinations |
 
 ```acceptance
 A1: xcodebuild test -project ios/Harness.xcodeproj -scheme Harness -configuration Release -destination "platform=iOS Simulator,name=$IPHONE_SIM" -destination "platform=iOS Simulator,name=$IPAD_SIM" -disable-concurrent-destination-testing -only-testing:HarnessUITests/HarnessMeasureTests/test_m2_memory
