@@ -38,6 +38,10 @@ anki.workspace = true
 tokio = { workspace = true, features = ["rt"] }
 # ADR-640 (SPEC-618 R9): the bench harness, for `benches/` alone.
 divan.workspace = true
+# ADR-703 (SPEC-681): the zip writer and the zstd encoder, for the package import tests alone,
+# which plant each package and its inner members at run time.
+zip = { version = "9.1.2", default-features = false, features = ["deflate"] }
+zstd.workspace = true
 
 [features]
 # ADR-345 D3: the Swift bindings generator, turned on only by the XCFramework workflow; a workspace
