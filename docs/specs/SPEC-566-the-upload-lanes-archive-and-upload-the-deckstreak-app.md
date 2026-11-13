@@ -96,6 +96,7 @@ and is read there by name. Section 7 holds what only a lane run can measure.
 | `docs/decisions/ADR-363-testflight-lane.md` | docs | changed: an appended amendment, insert-only |
 | `docs/schematics/testflight-lane.md` | docs | changed: an appended section, insert-only |
 | `changelog.d/app-archive-scheme-566.md` | docs | added |
+| `docs/schematics/the-app-campaigns-surfaces-each-carry-a-stride-table-whose-every-control-cites-a-line-that-holds.md` | docs | changed: four cells re-pointed to the test module's moved lines |
 
 ## 5. What this does NOT cover
 
