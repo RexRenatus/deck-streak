@@ -461,3 +461,26 @@ fn a_member_that_fails_inside_the_bound_reads_as_unreadable() {
         "the refused package writes no note and no card"
     );
 }
+
+/// A source-text guard: the crate root declares the package bound module once, public and
+/// bare, with no attribute that hides it on the line before. Row S68114 mutates that
+/// declaration, a change no behaviour test can see.
+#[test]
+fn the_crate_root_declares_the_package_bound_module_publicly() {
+    let root = include_str!("../src/lib.rs");
+    let lines: Vec<&str> = root.lines().collect();
+    let at: Vec<usize> = (0..lines.len())
+        .filter(|&index| lines[index] == "pub mod package_bound;")
+        .collect();
+    assert_eq!(
+        at.len(),
+        1,
+        "the crate root declares `pub mod package_bound;` as one bare line"
+    );
+    let before = at[0].checked_sub(1).map_or("", |index| lines[index]);
+    assert_ne!(
+        before.trim(),
+        "#[doc(hidden)]",
+        "the line before `pub mod package_bound;` is no `#[doc(hidden)]` attribute"
+    );
+}
