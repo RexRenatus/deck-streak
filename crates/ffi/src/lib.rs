@@ -14,6 +14,8 @@
 //! - [`health`]: one card's health as the core reads it, field for field, and the card health
 //!   panel's sections in the words the app shows as they are (SPEC-507 R12, R13).
 //!   [`engine::Engine::card_health`] reads it through the core's two fixed reads.
+//! - [`package_bound`]: the package import's bound, which reads every member of a picked
+//!   package before the engine imports it, and its worded refusals (SPEC-681 R4, R5).
 //! - [`review_undo`]: the review's undo as the app shows it, the offer of its last answer, bury or
 //!   flag with the dialog's words, and the answer to the owner's confirmation (SPEC-515 R3 to R5).
 //!   [`engine::Engine::undo_offer`] and [`engine::Engine::undo`] answer them.
@@ -35,6 +37,7 @@ pub mod backups;
 pub mod engine;
 pub mod face;
 pub mod health;
+pub mod package_bound;
 pub mod review_undo;
 pub mod store_media;
 pub mod voices;

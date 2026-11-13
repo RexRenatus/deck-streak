@@ -30,8 +30,11 @@ pub struct Call {
 /// bury and flag join them (SPEC-358 R1): bury the shown card as the user's bury, and set its flag.
 /// The normal sync joins them (SPEC-503 R1), its endpoint and its media guarded by the core, as the
 /// web's is. The undo status joins them (SPEC-515 R1): the review's undo reads it before it offers
-/// and before it undoes, and the undo itself stays the owner's exempt write.
-pub const ALLOW_LIST: [Call; 12] = [
+/// and before it undoes, and the undo itself stays the owner's exempt write. The package
+/// import joins them (SPEC-681 R3): one call brings a picked deck package's notes and cards
+/// into the open collection, after the adapter has read the package under its bound
+/// (ADR-703 D2, D3).
+pub const ALLOW_LIST: [Call; 13] = [
     Call {
         service: 3,
         method: 0,
@@ -91,6 +94,11 @@ pub const ALLOW_LIST: [Call; 12] = [
         service: 5,
         method: 4,
         name: "CardsService.SetFlag",
+    },
+    Call {
+        service: 39,
+        method: 2,
+        name: "ImportExportService.ImportAnkiPackage",
     },
 ];
 
