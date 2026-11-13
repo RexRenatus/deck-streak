@@ -25,7 +25,7 @@ struct ReviewView: View {
         VStack(spacing: 0) {
             ReviewChrome(model: model)
             if model.phase == .finished {
-                Text("Congratulations! You have finished this deck for now.")
+                Text(FinishWords.text(answered: model.answered))
                     .font(.title3)
                     .foregroundStyle(Color.tideInk)
                     .multilineTextAlignment(.center)
