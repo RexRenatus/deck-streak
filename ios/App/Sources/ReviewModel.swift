@@ -47,6 +47,8 @@ final class ReviewModel {
     let gate: AnswerGate
 
     private let session: ReviewSession
+    /// Says each step of the review to VoiceOver through the poster handed in (SPEC-680 R6).
+    private let announcer: ReviewAnnouncer
     private let voiceOverRunning: @MainActor () -> Bool
     private let installed: @MainActor () -> [InstalledVoice]
     private let player = ClipPlayer()
@@ -66,6 +68,7 @@ final class ReviewModel {
         self.voiceOverRunning = voiceOverRunning
         self.installed = installed
         gate = AnswerGate(interval: settle)
+        announcer = ReviewAnnouncer(post: post)
         undo = ReviewUndo(session: session)
         health = CardHealthModel(session: session)
         player.refused = { [weak self] line in self?.notes.append(line) }
@@ -96,12 +99,14 @@ final class ReviewModel {
                 revealed = true
                 gate.answerShown()
                 phase = .answer
+                announcer.answerShown()
             }
         case (.rate(let rating), .answer) where gate.isOpen:
             phase = .answering
             await run {
                 try await session.answer(rating)
                 answered += 1
+                announcer.graded(rating)
                 try await next()
             }
         case (.bury, .question), (.bury, .answer), (.bury, .withheld):
@@ -151,6 +156,7 @@ final class ReviewModel {
         undo.read(step.undo)
         show(step.face)
         phase = step.phase
+        announcer.shown(step, answered: answered)
     }
 
     /// Shows `face` and plays its autoplay clips; showing a face stops what played (R13).
