@@ -51,6 +51,11 @@ const UNREADABLE_WORDS: &str =
     "This file is not an Anki deck package the app can read, so nothing was imported.";
 /// The review interval, in days, the source card carries into the package.
 const INTERVAL: i64 = 9;
+/// A zstd frame whose header descriptor sets the reserved bit, so the decoder refuses it as it
+/// reads, a few bytes into the member and far inside the bound.
+const CORRUPT_FRAME: [u8; 8] = [0x28, 0xb5, 0x2f, 0xfd, 0x08, 0x00, 0x00, 0x00];
+/// The field number the planted requests give the one field the import does not read.
+const UNREAD_FIELD: u64 = 3;
 
 /// The adapter, started from the default init message.
 fn engine() -> Arc<Engine> {
@@ -69,13 +74,27 @@ fn import_request(package: &Path) -> Vec<u8> {
 /// Opens the target through the adapter, sends the one import call, closes the target by
 /// dropping the engine, and returns what the import call answered.
 fn import(target: &Synthetic, package: &Path) -> Result<Vec<u8>, EngineRefusal> {
+    import_bytes(target, import_request(package))
+}
+
+/// Opens the target through the adapter, sends the import call with `request` as its bytes,
+/// closes the target by dropping the engine, and returns what the import call answered.
+fn import_bytes(target: &Synthetic, request: Vec<u8>) -> Result<Vec<u8>, EngineRefusal> {
     let engine = engine();
     engine
         .run(OPEN_COLLECTION.0, OPEN_COLLECTION.1, open_request(target))
         .expect("the adapter opens the target collection");
-    let imported = engine.run(IMPORT.0, IMPORT.1, import_request(package));
+    let imported = engine.run(IMPORT.0, IMPORT.1, request);
     drop(engine);
     imported
+}
+
+/// A request whose package path follows one field the import does not read, written as `field`
+/// gives it: the reader skips that field by its wire type and still finds the path.
+fn request_after(field: &[u8], package: &Path) -> Vec<u8> {
+    let mut request = field.to_vec();
+    request.extend_from_slice(&import_request(package));
+    request
 }
 
 /// One count the collection file answers, read with the engine's own API.
@@ -356,6 +375,85 @@ fn an_oversize_media_member_is_refused_before_any_row() {
         words(&refused),
         PAST_BOUND_WORDS,
         "a media member that decompresses one byte past the bound reads as the bound's words"
+    );
+    assert_eq!(
+        rows(&target.collection),
+        (1, 1),
+        "the refused package writes no note and no card"
+    );
+}
+
+/// The reader skips a varint field (wire type 0) that comes before the package path.
+#[test]
+fn a_varint_field_before_the_path_is_skipped_and_the_package_imports() {
+    let package = valid_package("varint-field");
+    let target = synthetic("varint-field-target");
+    let mut field = Vec::new();
+    wire::put_varint_field(&mut field, UNREAD_FIELD, 1);
+    let imported = import_bytes(&target, request_after(&field, &package));
+    assert_eq!(
+        rows(&target.collection),
+        (2, 2),
+        "a varint field before the path is skipped and the package imports; the import call \
+         answered {:?}",
+        imported.as_ref().map(Vec::len)
+    );
+}
+
+/// The reader skips a 64-bit field (wire type 1) that comes before the package path.
+#[test]
+fn a_fixed64_field_before_the_path_is_skipped_and_the_package_imports() {
+    let package = valid_package("fixed64-field");
+    let target = synthetic("fixed64-field-target");
+    let mut field = Vec::new();
+    wire::put_varint(&mut field, (UNREAD_FIELD << 3) | 1);
+    field.extend_from_slice(&[1, 2, 3, 4, 5, 6, 7, 8]);
+    let imported = import_bytes(&target, request_after(&field, &package));
+    assert_eq!(
+        rows(&target.collection),
+        (2, 2),
+        "a 64-bit field before the path is skipped and the package imports; the import call \
+         answered {:?}",
+        imported.as_ref().map(Vec::len)
+    );
+}
+
+/// The reader skips a 32-bit field (wire type 5) that comes before the package path.
+#[test]
+fn a_fixed32_field_before_the_path_is_skipped_and_the_package_imports() {
+    let package = valid_package("fixed32-field");
+    let target = synthetic("fixed32-field-target");
+    let mut field = Vec::new();
+    wire::put_varint(&mut field, (UNREAD_FIELD << 3) | 5);
+    field.extend_from_slice(&[1, 2, 3, 4]);
+    let imported = import_bytes(&target, request_after(&field, &package));
+    assert_eq!(
+        rows(&target.collection),
+        (2, 2),
+        "a 32-bit field before the path is skipped and the package imports; the import call \
+         answered {:?}",
+        imported.as_ref().map(Vec::len)
+    );
+}
+
+/// A member that fails to decode inside the bound is refused as unreadable, not as past the
+/// bound: only a read that passed the bound reads as the bound's words.
+#[test]
+fn a_member_that_fails_inside_the_bound_reads_as_unreadable() {
+    let target = synthetic("corrupt-member-target");
+    let package = target.dir.join("corrupt-member.apkg");
+    let members = replaced(
+        &valid_package("corrupt-member"),
+        "collection.anki21b",
+        &CORRUPT_FRAME,
+    );
+    plant(&package, &members);
+    let refused = import(&target, &package);
+    assert_eq!(
+        words(&refused),
+        UNREADABLE_WORDS,
+        "a collection member whose frame the decoder refuses inside the bound reads as the \
+         unreadable words"
     );
     assert_eq!(
         rows(&target.collection),
