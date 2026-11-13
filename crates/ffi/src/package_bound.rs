@@ -143,16 +143,20 @@ fn varint(bytes: &[u8], at: &mut usize) -> Option<u64> {
     None
 }
 
-/// Appends `value` as a protobuf varint.
+/// Appends `value` as a protobuf varint. The loop runs at most as many times as a `usize` varint
+/// has bytes, and every input writes its last byte and returns inside that bound.
 fn put_varint(out: &mut Vec<u8>, value: usize) {
     let mut value = value;
-    while value >= 0x80 {
-        let [low, ..] = ((value & 0x7F) | 0x80).to_le_bytes();
+    for _ in 0..usize::BITS.div_ceil(7) {
+        if value < 0x80 {
+            let [low, ..] = value.to_le_bytes();
+            out.push(low);
+            return;
+        }
+        let [low, ..] = ((value & 0x7F) + 0x80).to_le_bytes();
         out.push(low);
         value >>= 7;
     }
-    let [low, ..] = value.to_le_bytes();
-    out.push(low);
 }
 
 /// Reads every member of the package at `path` under the bound.
@@ -231,5 +235,40 @@ impl<R: Read> Read for Bounded<R> {
             self.past = true;
             Err(io::Error::other(PAST_BOUND))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::put_varint;
+
+    /// The bytes the varint writer appends for `value`.
+    fn written(value: usize) -> Vec<u8> {
+        let mut out = Vec::new();
+        put_varint(&mut out, value);
+        out
+    }
+
+    /// The varint writer's exact bytes at each width's edges, the largest input included.
+    #[test]
+    fn the_varint_writer_writes_exact_leb128_bytes() {
+        assert_eq!(written(0), [0x00], "zero is one byte");
+        assert_eq!(
+            written(0x7F),
+            [0x7F],
+            "the largest one-byte value is one byte"
+        );
+        assert_eq!(written(0x80), [0x80, 0x01], "the smallest two-byte value");
+        assert_eq!(written(0x3FFF), [0xFF, 0x7F], "the largest two-byte value");
+        assert_eq!(
+            written(0x4000),
+            [0x80, 0x80, 0x01],
+            "the smallest three-byte value"
+        );
+        assert_eq!(
+            written(usize::MAX),
+            [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01],
+            "the largest value takes the most bytes a usize varint takes"
+        );
     }
 }
