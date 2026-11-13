@@ -40,6 +40,9 @@ final class ReviewModel {
     /// The card info panel over the shown card, on the review's own session, so opening it stops
     /// this review's answer clock (SPEC-507 R14, R15).
     let health: CardHealthModel
+    /// Whether each face is asked as the engine's night face, as the system's dark mode is; the
+    /// shell sets it from the colour scheme, and the next face asked follows it (SPEC-680 R1).
+    var night: Bool
 
     private let session: ReviewSession
     private let voiceOverRunning: @MainActor () -> Bool
@@ -47,7 +50,7 @@ final class ReviewModel {
     private let player = ClipPlayer()
 
     init(
-        deck: Deck, session: ReviewSession, settle: Duration = .zero,
+        deck: Deck, session: ReviewSession, night: Bool = false, settle: Duration = .zero,
         post: @escaping @MainActor (UIAccessibility.Notification, Any?) -> Void = {
             notification, argument in
             UIAccessibility.post(notification: notification, argument: argument)
@@ -57,6 +60,7 @@ final class ReviewModel {
     ) {
         self.deck = deck
         self.session = session
+        self.night = night
         self.voiceOverRunning = voiceOverRunning
         self.installed = installed
         undo = ReviewUndo(session: session)
@@ -84,7 +88,7 @@ final class ReviewModel {
             phase = .revealing
             await run {
                 let face = try await session.reveal(
-                    autoplay: !voiceOverRunning(), installed: installed())
+                    autoplay: !voiceOverRunning(), installed: installed(), night: night)
                 show(face)
                 revealed = true
                 phase = .answer
@@ -134,7 +138,8 @@ final class ReviewModel {
 
     /// Shows the next card's question, or the designed end, and what the review's undo offers.
     private func next() async throws {
-        let step = try await session.next(autoplay: !voiceOverRunning(), installed: installed())
+        let step = try await session.next(
+            autoplay: !voiceOverRunning(), installed: installed(), night: night)
         counts = step.counts
         intervals = step.intervals
         revealed = false

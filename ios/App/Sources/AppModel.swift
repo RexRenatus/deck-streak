@@ -33,6 +33,9 @@ final class AppModel {
     /// The data screen, which lists and makes this device's backups through the same session
     /// (SPEC-516 R5).
     let data: DataModel
+    /// Whether the system shows its dark mode, so each review asks the engine's night face
+    /// (SPEC-680 R1).
+    private(set) var night = false
 
     private let configuration: SyncConfiguration
     private let session = EngineSession()
@@ -67,8 +70,17 @@ final class AppModel {
     /// Opens the chosen deck's review, which makes it the current deck (7,22) and shows its first
     /// card, or closes the review when no deck is chosen (SPEC-348 R9).
     func openReview() async {
-        review = chosenDeck.map { ReviewModel(deck: $0, session: ReviewSession(engine: session)) }
+        review = chosenDeck.map { deck in
+            ReviewModel(deck: deck, session: ReviewSession(engine: session), night: night)
+        }
         await review?.start()
+    }
+
+    /// Follows the system appearance: the open review and each review opened after it ask the
+    /// night face in dark mode (SPEC-680 R1).
+    func follow(night: Bool) {
+        self.night = night
+        review?.night = night
     }
 
     /// Signs in as the configured user at the configured endpoint with the typed password (R8).

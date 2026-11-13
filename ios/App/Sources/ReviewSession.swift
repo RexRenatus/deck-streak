@@ -65,7 +65,7 @@ actor ReviewSession {
         }
         let intervals = try await engine.intervals(card)
         let face = try await engine.face(
-            card.cardID, answer: false, autoplay: autoplay, installed: installed)
+            card.cardID, answer: false, night: night, autoplay: autoplay, installed: installed)
         let undo = try await undoOffer().dialog
         head = card
         clock.shown(at: now())
@@ -82,7 +82,7 @@ actor ReviewSession {
     ) async throws -> ReviewFace {
         try await shown(ReviewFace.empty) { card in
             try await engine.face(
-                card.cardID, answer: true, autoplay: autoplay, installed: installed)
+                card.cardID, answer: true, night: night, autoplay: autoplay, installed: installed)
         }
     }
 
