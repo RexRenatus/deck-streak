@@ -54,12 +54,12 @@ final class ReviewFlowTests: XCTestCase {
     func test_a20_show_reveal_rate_next() throws {
         let app = try launchedOnTheFixture()
         tapWhenShown(app.staticTexts["deck-row-Review"].firstMatch)
-        let counts = ["count-new", "count-learning", "count-review"].map {
-            app.staticTexts[$0].firstMatch
-        }
+        // The three counts read as one element (SPEC-680 R8); its label holds each count.
+        let counts = app.descendants(matching: .any).matching(identifier: "counts").firstMatch
         let textCard = app.webViews.staticTexts["a text card"].firstMatch
         let first = reading(until: ["4 new", "0 learning", "0 to review", "shown"]) {
-            counts.map { label(of: $0) } + [shown(textCard) ? "shown" : notShown]
+            label(of: counts).components(separatedBy: ", ")
+                + [shown(textCard) ? "shown" : notShown]
         }
 
         tapWhenShown(app.buttons["Show Answer"].firstMatch)
@@ -116,6 +116,20 @@ final class ReviewFlowTests: XCTestCase {
             read, [true, !installed],
             "A22: the picker lists System default, and says so when no voice is installed "
                 + "(installed: \(installed))")
+    }
+
+    /// The queue's three counts read as one element, labelled in the order shown (SPEC-680 R8).
+    @MainActor
+    func test_the_review_counts_read_as_one_element() throws {
+        let app = try launchedOnTheFixture()
+        tapWhenShown(app.staticTexts["deck-row-Review"].firstMatch)
+        let counts = app.descendants(matching: .any).matching(identifier: "counts").firstMatch
+        XCTAssertEqual(
+            reading(until: "4 new, 0 learning, 0 to review") { label(of: counts) },
+            "4 new, 0 learning, 0 to review",
+            "the queue's three counts read as one element, labelled in the order shown")
+        XCTAssertFalse(
+            app.staticTexts["count-new"].exists, "no count reads as an element of its own")
     }
 
     // MARK: - Steps

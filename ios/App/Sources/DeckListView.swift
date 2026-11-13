@@ -9,6 +9,8 @@ struct ShellView: View {
     @Bindable var model: AppModel
     @State private var columnVisibility = NavigationSplitViewVisibility.all
     @State private var compactColumn = NavigationSplitViewColumn.sidebar
+    /// The appearance the system shows, which the review's card face follows (SPEC-680 R1).
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         NavigationSplitView(
@@ -39,6 +41,9 @@ struct ShellView: View {
             AccountView(model: model)
         }
         .task { await model.start() }
+        .onChange(of: colorScheme, initial: true) {
+            model.follow(night: colorScheme == .dark)
+        }
     }
 }
 
@@ -63,6 +68,9 @@ struct DeckListView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            FirstRunOffer(model: model)
+        }
         .background(Color.tideBackground)
         .tint(Color.tideAccent)
         .navigationTitle("Decks")

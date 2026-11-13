@@ -62,6 +62,6 @@ struct AnswerBar: View {
         }
         .buttonStyle(style)
         .accessibilityValue(interval)
-        .disabled(model.phase != .answer)
+        .disabled(!model.gate.allows(model.phase))
     }
 }

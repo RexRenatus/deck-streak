@@ -196,14 +196,15 @@ actor EngineSession: SyncEngine, DataEngine {
     /// The face of `cardID`: its question, or its answer when `answer` is set, with the clips to
     /// play by themselves when `autoplay` is wished, each line of speech in the voice chosen for
     /// its language when that voice is installed, else in the installed voice its tag asks for
-    /// (SPEC-348 R5, R13; SPEC-393 R9). It asks for the day face: the screen sets no night classes
-    /// in this part.
+    /// (SPEC-348 R5, R13; SPEC-393 R9). It asks for the night face when `night` is set, as in the
+    /// system's dark mode, and for the day face otherwise (SPEC-680 R1).
     func face(
-        _ cardID: Int64, answer: Bool, autoplay: Bool, installed: [InstalledVoice]
+        _ cardID: Int64, answer: Bool, night: Bool = false, autoplay: Bool,
+        installed: [InstalledVoice]
     ) throws -> ReviewFace {
         let engine = try started()
         let face = try refused {
-            try engine.face(cardId: cardID, answer: answer, night: false, autoplay: autoplay)
+            try engine.face(cardId: cardID, answer: answer, night: night, autoplay: autoplay)
         }
         let voices = installed.map(Self.voice)
         let replay = face.replay.map { clip($0, voices) }

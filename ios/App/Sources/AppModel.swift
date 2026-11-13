@@ -15,6 +15,9 @@ final class AppModel {
     private(set) var review: ReviewModel?
     /// The open's or the list's refusal, as its sentence, shown in place of the list.
     var refusal: String?
+    /// Whether the collection is still opening and its decks are not yet listed; the deck list
+    /// shows its loading state until they are, refusal or not (SPEC-680 R2).
+    private(set) var loading = true
     /// Whether the account sheet is shown.
     var showingAccount = false
     /// The configured sync user, shown as text and never typed.
@@ -33,6 +36,9 @@ final class AppModel {
     /// The data screen, which lists and makes this device's backups through the same session
     /// (SPEC-516 R5).
     let data: DataModel
+    /// Whether the system shows its dark mode, so each review asks the engine's night face
+    /// (SPEC-680 R1).
+    private(set) var night = false
 
     private let configuration: SyncConfiguration
     private let session = EngineSession()
@@ -56,19 +62,31 @@ final class AppModel {
     func start() async {
         guard !started else { return }
         started = true
+        defer { loading = false }
         do {
             try await session.open()
             decks = try await session.decks()
         } catch {
-            refusal = sentence(error)
+            refusal = ErrorWords.text(of: error)
         }
     }
 
     /// Opens the chosen deck's review, which makes it the current deck (7,22) and shows its first
     /// card, or closes the review when no deck is chosen (SPEC-348 R9).
     func openReview() async {
-        review = chosenDeck.map { ReviewModel(deck: $0, session: ReviewSession(engine: session)) }
+        review = chosenDeck.map { deck in
+            ReviewModel(
+                deck: deck, session: ReviewSession(engine: session), night: night,
+                settle: AnswerGate.settle)
+        }
         await review?.start()
+    }
+
+    /// Follows the system appearance: the open review and each review opened after it ask the
+    /// night face in dark mode (SPEC-680 R1).
+    func follow(night: Bool) {
+        self.night = night
+        review?.night = night
     }
 
     /// Signs in as the configured user at the configured endpoint with the typed password (R8).
@@ -86,7 +104,7 @@ final class AppModel {
             try store.save(hostKey: hostKey)
             signedIn = true
         } catch {
-            message = sentence(error)
+            message = ErrorWords.text(of: error)
         }
     }
 
@@ -96,12 +114,7 @@ final class AppModel {
             try store.delete()
             signedIn = false
         } catch {
-            message = sentence(error)
+            message = ErrorWords.text(of: error)
         }
-    }
-
-    /// A failure's sentence: a refusal's own, or the error's description.
-    private func sentence(_ error: any Error) -> String {
-        (error as? Refusal)?.sentence ?? String(describing: error)
     }
 }

@@ -40,21 +40,35 @@ final class ReviewModel {
     /// The card info panel over the shown card, on the review's own session, so opening it stops
     /// this review's answer clock (SPEC-507 R14, R15).
     let health: CardHealthModel
+    /// Whether each face is asked as the engine's night face, as the system's dark mode is; the
+    /// shell sets it from the colour scheme, and the next face asked follows it (SPEC-680 R1).
+    var night: Bool
+    /// The shown answer's grades, closed for the settle interval after it shows (SPEC-680 R4).
+    let gate: AnswerGate
 
     private let session: ReviewSession
+    /// Says each step of the review to VoiceOver through the poster handed in (SPEC-680 R6).
+    private let announcer: ReviewAnnouncer
     private let voiceOverRunning: @MainActor () -> Bool
     private let installed: @MainActor () -> [InstalledVoice]
     private let player = ClipPlayer()
 
     init(
-        deck: Deck, session: ReviewSession,
+        deck: Deck, session: ReviewSession, night: Bool = false, settle: Duration = .zero,
+        post: @escaping @MainActor (UIAccessibility.Notification, Any?) -> Void = {
+            notification, argument in
+            UIAccessibility.post(notification: notification, argument: argument)
+        },
         voiceOverRunning: @escaping @MainActor () -> Bool = { UIAccessibility.isVoiceOverRunning },
         installed: @escaping @MainActor () -> [InstalledVoice] = InstalledVoices.all
     ) {
         self.deck = deck
         self.session = session
+        self.night = night
         self.voiceOverRunning = voiceOverRunning
         self.installed = installed
+        gate = AnswerGate(interval: settle)
+        announcer = ReviewAnnouncer(post: post)
         undo = ReviewUndo(session: session)
         health = CardHealthModel(session: session)
         player.refused = { [weak self] line in self?.notes.append(line) }
@@ -80,16 +94,19 @@ final class ReviewModel {
             phase = .revealing
             await run {
                 let face = try await session.reveal(
-                    autoplay: !voiceOverRunning(), installed: installed())
+                    autoplay: !voiceOverRunning(), installed: installed(), night: night)
                 show(face)
                 revealed = true
+                gate.answerShown()
                 phase = .answer
+                announcer.answerShown()
             }
-        case (.rate(let rating), .answer):
+        case (.rate(let rating), .answer) where gate.isOpen:
             phase = .answering
             await run {
                 try await session.answer(rating)
                 answered += 1
+                announcer.graded(rating)
                 try await next()
             }
         case (.bury, .question), (.bury, .answer), (.bury, .withheld):
@@ -130,7 +147,8 @@ final class ReviewModel {
 
     /// Shows the next card's question, or the designed end, and what the review's undo offers.
     private func next() async throws {
-        let step = try await session.next(autoplay: !voiceOverRunning(), installed: installed())
+        let step = try await session.next(
+            autoplay: !voiceOverRunning(), installed: installed(), night: night)
         counts = step.counts
         intervals = step.intervals
         revealed = false
@@ -138,6 +156,7 @@ final class ReviewModel {
         undo.read(step.undo)
         show(step.face)
         phase = step.phase
+        announcer.shown(step, answered: answered)
     }
 
     /// Shows `face` and plays its autoplay clips; showing a face stops what played (R13).
