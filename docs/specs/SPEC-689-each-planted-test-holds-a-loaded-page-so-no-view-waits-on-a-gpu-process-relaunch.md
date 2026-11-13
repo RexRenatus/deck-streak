@@ -34,7 +34,7 @@ reads 5 in job 131617974452, all in lines 5735 to 5767, and 0 in job 13166005979
 WebKit's GPU process exits when no page holds it. The planted test holds no page between its
 views; the factory test that holds one keeper page across its 13 rows (ADR-372 D11) does. The
 count of `GPUProcessProxy::gpuProcessExited: reason=IdleExit` lines between each test's start and
-end lines, per simulator pass:
+end lines (for the factory test, from its keeper's loaded line to its end line), per simulator pass:
 
 | pass | the planted test, no page held | the factory keeper test, one page held |
 |---|---|---|
@@ -52,7 +52,7 @@ The flow half's cause (#1473), the app's main thread blocked in the device's voi
 web content process exists, does not explain this one. No source under `ios/CardProbeTests/`,
 `ios/CardProbeHost/` or `ios/CardIsolation/Sources/` names `AVSpeech`, `speechVoices`,
 `import AVFoundation`, `InstalledVoices` or `ReviewModel` (0 files). The host's main thread wrote
-50 log lines from line 5694 to line 5775 with no gap above 2.67 s (job 131617974452), and the
+46 log lines from line 5694 to line 5775 with no gap above 2.67 s (job 131617974452), and the
 reference view's own web content process existed and had answered.
 
 ## 2. Requirements
