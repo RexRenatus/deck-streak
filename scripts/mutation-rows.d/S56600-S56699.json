@@ -1,0 +1,62 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S56601-THE-LANE-BUILDS-THE-SPECS-PROJECT",
+        "scripts/ios_lane.py",
+        "        f\"{SPEC.parent}/{name}.xcodeproj\",",
+        "        \"ios/Harness.xcodeproj\",",
+        "the lane builds the project the app's project spec names; with the harness's in its place the upload ships the harness again (SPEC-566 R1, A1)",
+        "test_ios_lane.LaneCredential.test_signing_imports_the_certificate_non_extractable_into_a_job_keychain"
+      ],
+      [
+        "S56602-THE-LANE-BUILDS-THE-SPECS-SCHEME",
+        "scripts/ios_lane.py",
+        "        \"-scheme\",\n        name,",
+        "        \"-scheme\",\n        \"Harness\",",
+        "both builds take the scheme the app's project spec names, never the harness's (SPEC-566 R1, A2)",
+        "test_ios_lane.LaneCredential.test_the_unsigned_build_stops_before_the_upload_and_says_so"
+      ],
+      [
+        "S56603-ONLY-THE-TOP-LEVEL-NAME-NAMES-THE-PROJECT",
+        "scripts/ios_lane.py",
+        "NAME = re.compile(r\"(?m)^name: (\\w+)$\")",
+        "NAME = re.compile(r\"name: (\\w+)\")",
+        "only a column-0 name line names the project; a nested name never does (SPEC-566 R2, A4)",
+        "test_ios_lane.LaneCredential.test_a_project_spec_that_names_no_project_is_refused_before_any_tool_runs"
+      ],
+      [
+        "S56604-AN-ABSENT-SPEC-IS-REFUSED-BY-NAME",
+        "scripts/ios_lane.py",
+        "    text = SPEC.read_text(encoding=\"utf-8\") if SPEC.is_file() else \"\"",
+        "    text = SPEC.read_text(encoding=\"utf-8\")",
+        "an absent spec is refused by the lane's one line, never by a traceback (SPEC-566 R2, A4)",
+        "test_ios_lane.LaneCredential.test_a_project_spec_that_names_no_project_is_refused_before_any_tool_runs"
+      ],
+      [
+        "S56605-THE-UNSIGNED-BUILD-READS-THE-SPEC-FIRST",
+        "scripts/ios_lane.py",
+        "    build = app()\n    lane = make_lane()",
+        "    lane = make_lane()\n    build = app()",
+        "the unsigned build reads the spec before it makes the lane's directory, so a refusal leaves nothing behind (SPEC-566 R2, A4)",
+        "test_ios_lane.LaneCredential.test_a_project_spec_that_names_no_project_is_refused_before_any_tool_runs"
+      ],
+      [
+        "S56611-THE-INTERNAL-LANE-GENERATES-THE-APP",
+        ".github/workflows/testflight-internal.yml",
+        "          \"$RUNNER_TEMP/xcodegen/bin/xcodegen\" generate --spec ios/app.yml",
+        "          \"$RUNNER_TEMP/xcodegen/bin/xcodegen\" generate --spec ios/project.yml",
+        "the internal lane generates the app's project it builds; the harness's twice in its place, the app's build finds no project (SPEC-566 R3)",
+        "test_testflight_workflows.TheTestflightLanes.test_each_app_job_generates_the_apps_project_after_the_harness_steps"
+      ],
+      [
+        "S56612-THE-RELEASE-LANE-GENERATES-THE-APP",
+        ".github/workflows/testflight-release.yml",
+        "          \"$RUNNER_TEMP/xcodegen/bin/xcodegen\" generate --spec ios/app.yml",
+        "          \"$RUNNER_TEMP/xcodegen/bin/xcodegen\" generate --spec ios/project.yml",
+        "the release lane generates the app's project it builds; the harness's twice in its place, the app's build finds no project (SPEC-566 R3)",
+        "test_testflight_workflows.TheTestflightLanes.test_each_app_job_generates_the_apps_project_after_the_harness_steps"
+      ]
+    ]
+  }
+}
