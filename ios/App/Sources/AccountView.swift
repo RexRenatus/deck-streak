@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// The account sheet (SPEC-347 R8): the configured sync user as text, one secure password field and
 /// a sign-in button; once signed in, "Signed in as" the user and a sign-out button. While a login
@@ -12,7 +13,9 @@ struct AccountView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Text(model.user).accessibilityIdentifier("account-user")
+                // The sync user, labelled; it is shown and never typed (SPEC-680 R7).
+                LabeledContent("Sync user", value: model.user)
+                    .accessibilityIdentifier("account-user")
                     .foregroundStyle(Color.tideInk)
                     .listRowBackground(Color.tideCard)
                 if model.signedIn {
@@ -25,6 +28,11 @@ struct AccountView: View {
                 } else {
                     SecureField("Password", text: $model.password)
                         .accessibilityIdentifier("password")
+                        .textContentType(.password)
+                        .submitLabel(.go)
+                        .onSubmit {
+                            Task { await model.signIn() }
+                        }
                         .disabled(model.signingIn)
                         .foregroundStyle(Color.tideInk)
                         .listRowBackground(Color.tideCard)
@@ -38,6 +46,11 @@ struct AccountView: View {
                 Text(model.message).accessibilityIdentifier("account-message")
                     .foregroundStyle(Color.tideMuted)
                     .listRowBackground(Color.tideCard)
+                    .onChange(of: model.message) { _, message in
+                        if !message.isEmpty {
+                            UIAccessibility.post(notification: .announcement, argument: message)
+                        }
+                    }
                 SyncView(model: model.sync)
                 NavigationLink(DataWords.title) {
                     DataView(model: model.data)
@@ -49,8 +62,10 @@ struct AccountView: View {
             .background(Color.tideBackground)
             .navigationTitle("Account")
             .toolbar {
-                Button("Done") { dismiss() }
-                    .accessibilityIdentifier("done")
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .accessibilityIdentifier("done")
+                }
             }
         }
         .tint(Color.tideAccent)

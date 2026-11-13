@@ -1,5 +1,5 @@
 {
-  "ios/App/Sources/AccountView.swift": {"role": "view", "decisions": 1},
+  "ios/App/Sources/AccountView.swift": {"role": "view", "decisions": 2},
   "ios/App/Sources/AnswerBar.swift": {"role": "view", "decisions": 3},
   "ios/App/Sources/AnswerClock.swift": {"role": "model", "decisions": 2},
   "ios/App/Sources/AnswerGate.swift": {"role": "model", "decisions": 3},
