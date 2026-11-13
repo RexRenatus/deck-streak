@@ -49,7 +49,11 @@ final class InstalledVoiceList {
 
     /// Starts `read` off the main actor, and keeps what it lists when it returns.
     init(read: @escaping @Sendable () -> [InstalledVoice]) {
-        voices = read()
+        let listed = Task.detached(priority: .userInitiated) { read() }
+        reading = Task { [weak self] in
+            let voices = await listed.value
+            self?.voices = voices
+        }
     }
 
     /// The device's voices listed so far, the review's default, which never waits (SPEC-687 R2).
