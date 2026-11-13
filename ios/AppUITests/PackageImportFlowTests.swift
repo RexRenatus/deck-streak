@@ -1,8 +1,8 @@
 // The deck package import on an iPhone and an iPad simulator (SPEC-681 A1, A4 and A6): the deck
 // list opens the system file importer, a file the app refuses reads as its words, and the empty
 // deck list offers the import. Each test launches the app with `-DSCollectionDirectory` on a
-// fresh, empty collection directory beside the review fixture, which the workflow step names to
-// the test runner as `DS_REVIEW_FIXTURE`. The refusal's test also plants a file that is no package
+// fresh, empty collection directory under the test runner's own temporary folder, which the app
+// reaches on the simulator. The refusal's test also plants a file that is no package
 // beside it and names it with `-DSImportPackage`, which imports it through the importer's own
 // path. The importer's test reads the system's own interface by element type first and its Cancel
 // button second, dismisses it, and never picks a file. A test waits for what it reads with a
@@ -65,17 +65,13 @@ final class PackageImportFlowTests: XCTestCase {
     /// import at start when `planting` holds its text.
     @MainActor
     private func launched(planting text: String?) throws -> XCUIApplication {
-        let named = try XCTUnwrap(
-            ProcessInfo.processInfo.environment["DS_REVIEW_FIXTURE"],
-            "the step names the review fixture as DS_REVIEW_FIXTURE")
-        let fixture = URL(filePath: named, directoryHint: .isDirectory)
+        let folder = FileManager.default.temporaryDirectory
         let stem = "package-import-\(UUID().uuidString)"
-        let fresh = fixture.deletingLastPathComponent().appending(
-            path: stem, directoryHint: .isDirectory)
+        let fresh = folder.appending(path: stem, directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: fresh, withIntermediateDirectories: true)
         var arguments = ["-DSCollectionDirectory", fresh.path(percentEncoded: false)]
         if let text {
-            let planted = fixture.deletingLastPathComponent().appending(path: "\(stem).apkg")
+            let planted = folder.appending(path: "\(stem).apkg")
             try Data(text.utf8).write(to: planted)
             arguments += ["-DSImportPackage", planted.path(percentEncoded: false)]
         }
