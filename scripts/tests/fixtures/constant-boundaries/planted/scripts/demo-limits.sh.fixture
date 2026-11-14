@@ -1,0 +1,20 @@
+# Planted: three comparisons against named constants, one against a literal and one undecided.
+readonly MAX_JOBS=4
+MIN_FREE=2
+SOFT_JOBS=3
+
+if [ "${1}" -gt "$MAX_JOBS" ]; then
+  exit 1
+fi
+if [ "${2}" -lt "$MIN_FREE" ]; then
+  exit 2
+fi
+if (( ${1} >= SOFT_JOBS )); then
+  echo busy
+fi
+if [ "${1}" -eq 0 ]; then
+  echo idle
+fi
+if [ "${3}" = "$DEMO_TARGET" ]; then
+  echo target
+fi

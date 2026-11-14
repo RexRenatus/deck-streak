@@ -1,0 +1,24 @@
+import { describe, expect, test } from 'vitest';
+import { full, MIN_QUERY, PAGE_SIZE, searchable } from './limits';
+
+describe('limits', () => {
+  test('one under the page size is not full', () => {
+    expect(full(PAGE_SIZE - 1)).toBe(false);
+  });
+  test('the page size is not full', () => {
+    expect(full(PAGE_SIZE)).toBe(false);
+  });
+  test('one over the page size is full', () => {
+    expect(full(PAGE_SIZE + 1)).toBe(true);
+  });
+  test('the shortest query is searchable', () => {
+    expect(searchable('x'.repeat(MIN_QUERY))).toBe(true);
+  });
+  test('the query minimum is positive', () => {
+    expect(MIN_QUERY > 0).toBe(true);
+  });
+  test('a badge one under the query minimum hides search', () => {});
+  test('a badge at the query minimum shows search', () => {});
+  test('a badge one over the query minimum shows search', () => {});
+  test('a badge at the soft width is narrow', () => {});
+});

@@ -1,0 +1,35 @@
+import unittest
+
+from demo_limits import MAX_RETRIES, MIN_DELAY, exhausted, waited
+from demo_support import shell_exit
+
+
+class Limits(unittest.TestCase):
+    def test_two_attempts_are_not_exhausted(self):
+        self.assertFalse(exhausted(MAX_RETRIES - 1))
+
+    def test_three_attempts_are_exhausted(self):
+        self.assertTrue(exhausted(MAX_RETRIES))
+
+    def test_four_attempts_are_exhausted(self):
+        self.assertTrue(exhausted(MAX_RETRIES + 1))
+
+    def test_the_minimum_delay_is_not_waited(self):
+        self.assertFalse(waited(MIN_DELAY))
+
+    def test_the_minimum_delay_is_positive(self):
+        self.assertTrue(MIN_DELAY > 0)
+
+
+class ShellLimits(unittest.TestCase):
+    def test_three_jobs_pass(self):
+        self.assertEqual(shell_exit(3, 9), 0)
+
+    def test_four_jobs_pass(self):
+        self.assertEqual(shell_exit(4, 9), 0)
+
+    def test_five_jobs_are_refused(self):
+        self.assertEqual(shell_exit(5, 9), 1)
+
+    def test_two_free_pass(self):
+        self.assertEqual(shell_exit(1, 2), 0)

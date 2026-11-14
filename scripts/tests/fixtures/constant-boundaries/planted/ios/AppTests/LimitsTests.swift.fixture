@@ -1,0 +1,25 @@
+import XCTest
+
+@testable import App
+
+final class LimitsTests: XCTestCase {
+    func testOneUnderTheLimitIsNotOver() {
+        XCTAssertFalse(overLimit(Limits.maxCards - 1))
+    }
+
+    func testTheLimitIsNotOver() {
+        XCTAssertFalse(overLimit(Limits.maxCards))
+    }
+
+    func testOneOverTheLimitIsOver() {
+        XCTAssertTrue(overLimit(Limits.maxCards + 1))
+    }
+
+    func testTheMinimumIsEnough() {
+        XCTAssertTrue(enoughCards(Limits.minCards))
+    }
+
+    func testTheSoftLimitIsBelowTheLimit() {
+        XCTAssertTrue(Limits.softCards < Limits.maxCards)
+    }
+}

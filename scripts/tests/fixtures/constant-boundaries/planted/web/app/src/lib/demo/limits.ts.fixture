@@ -1,0 +1,24 @@
+// Planted: three comparisons against named constants, one against a literal and one environment read.
+export const PAGE_SIZE = 20;
+export const MIN_QUERY = 2;
+export const SOFT_WIDTH = 64;
+
+export function full(count: number): boolean {
+  return count > PAGE_SIZE;
+}
+
+export function searchable(query: string): boolean {
+  return query.length >= MIN_QUERY;
+}
+
+export function narrow(width: number): boolean {
+  return width < SOFT_WIDTH;
+}
+
+export function none(count: number): boolean {
+  return count === 0;
+}
+
+export function verbose(mode: string): boolean {
+  return process.env.DEMO_MODE === mode;
+}
