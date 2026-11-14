@@ -1,0 +1,518 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S43400-THE-PRODUCT-WALK-READS-NO-INTEGRATION-TEST",
+        "scripts/tests/_fsm_tables.py",
+        "crates.glob(\"*/src/**/*.rs\")",
+        "crates.glob(\"*/*/**/*.rs\")",
+        "the product walk also reads crates/*/tests, so A2's planted integration test is walked and its reading fails as VOID, its walk's count differing from the independent listing's (SPEC-434 R4, R14, A2)",
+        "test_fsm_table.EveryProductStateEnumHasATable.test_only_a_product_state_enum_with_no_table_is_a_hit"
+      ],
+      [
+        "S43401-THE-PRODUCT-WALK-READS-EVERY-DEPTH-OF-SRC",
+        "scripts/tests/_fsm_tables.py",
+        "crates.glob(\"*/src/**/*.rs\")",
+        "crates.glob(\"*/src/*.rs\")",
+        "the product walk reads only the top level of each src, so the tree's reading walks fewer files than the independent listing counts and fails as VOID (SPEC-434 R4, R14, A1)",
+        "test_fsm_table.EveryProductStateEnumHasATable.test_the_tree_reading_reads_every_product_file_and_every_table"
+      ],
+      [
+        "S43402-THE-WALK-COUNT-IS-COMPARED-WITH-THE-LISTING",
+        "scripts/tests/_fsm_tables.py",
+        "if len(files) != len(independent):",
+        "if False:",
+        "the walk's count of product files is never compared with the independent listing's, so a walk that misses a file reads clean, not VOID (SPEC-434 R14, A13)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_every_rule_is_void_with_nothing_to_examine"
+      ],
+      [
+        "S43403-AN-ITEM-UNDER-CFG-TEST-IS-MASKED",
+        "scripts/tests/_fsm_tables.py",
+        "return masked_tests(masked_literals(text))",
+        "return masked_literals(text)",
+        "the #[cfg(test)] item mask is dropped, so an enum in a test module is read as a product state enum and is a hit (SPEC-434 R4, A2)",
+        "test_fsm_table.EveryProductStateEnumHasATable.test_only_a_product_state_enum_with_no_table_is_a_hit"
+      ],
+      [
+        "S43404-A-RUST-COMMENT-IS-MASKED",
+        "scripts/tests/_fsm_tables.py",
+        "end = comment_end(text, start)",
+        "end = None",
+        "the Rust comment mask is dropped, so an enum written in a line or block comment is read as a product state enum and is a hit (SPEC-434 R4, A2)",
+        "test_fsm_table.EveryProductStateEnumHasATable.test_only_a_product_state_enum_with_no_table_is_a_hit"
+      ],
+      [
+        "S43405-A-RUST-STRING-IS-MASKED",
+        "scripts/tests/_fsm_tables.py",
+        "end = literal_end(text, start)",
+        "end = None",
+        "the Rust string and character literal mask is dropped, so an enum written in a string or a raw string is read as a product state enum and is a hit (SPEC-434 R4, A2)",
+        "test_fsm_table.EveryProductStateEnumHasATable.test_only_a_product_state_enum_with_no_table_is_a_hit"
+      ],
+      [
+        "S43406-STATE-IS-AN-ENUM-SUFFIX",
+        "scripts/tests/_fsm_tables.py",
+        "SUFFIXES = (\"State\", ",
+        "SUFFIXES = (",
+        "State leaves the enum suffixes, so an enum named for a State with no table is no hit (SPEC-434 R4, A2)",
+        "test_fsm_table.EveryProductStateEnumHasATable.test_only_a_product_state_enum_with_no_table_is_a_hit"
+      ],
+      [
+        "S43407-STATUS-IS-AN-ENUM-SUFFIX",
+        "scripts/tests/_fsm_tables.py",
+        "\"State\", \"Status\", ",
+        "\"State\", ",
+        "Status leaves the enum suffixes, so an enum named for a Status with no table is no hit (SPEC-434 R4, A2)",
+        "test_fsm_table.EveryProductStateEnumHasATable.test_only_a_product_state_enum_with_no_table_is_a_hit"
+      ],
+      [
+        "S43408-PHASE-IS-AN-ENUM-SUFFIX",
+        "scripts/tests/_fsm_tables.py",
+        "\"Status\", \"Phase\", ",
+        "\"Status\", ",
+        "Phase leaves the enum suffixes, so an enum named for a Phase with no table is no hit (SPEC-434 R4, A2)",
+        "test_fsm_table.EveryProductStateEnumHasATable.test_only_a_product_state_enum_with_no_table_is_a_hit"
+      ],
+      [
+        "S43409-STAGE-IS-AN-ENUM-SUFFIX",
+        "scripts/tests/_fsm_tables.py",
+        "\"Phase\", \"Stage\", ",
+        "\"Phase\", ",
+        "Stage leaves the enum suffixes, so an enum named for a Stage with no table is no hit (SPEC-434 R4, A2)",
+        "test_fsm_table.EveryProductStateEnumHasATable.test_only_a_product_state_enum_with_no_table_is_a_hit"
+      ],
+      [
+        "S43410-STEP-IS-AN-ENUM-SUFFIX",
+        "scripts/tests/_fsm_tables.py",
+        "\"Stage\", \"Step\", ",
+        "\"Stage\", ",
+        "Step leaves the enum suffixes, so an enum named for a Step with no table is no hit (SPEC-434 R4, A2)",
+        "test_fsm_table.EveryProductStateEnumHasATable.test_only_a_product_state_enum_with_no_table_is_a_hit"
+      ],
+      [
+        "S43411-LIFECYCLE-IS-AN-ENUM-SUFFIX",
+        "scripts/tests/_fsm_tables.py",
+        "\"Step\", \"Lifecycle\", ",
+        "\"Step\", ",
+        "Lifecycle leaves the enum suffixes, so an enum named for a Lifecycle with no table is no hit (SPEC-434 R4, A2)",
+        "test_fsm_table.EveryProductStateEnumHasATable.test_only_a_product_state_enum_with_no_table_is_a_hit"
+      ],
+      [
+        "S43412-MODE-IS-AN-ENUM-SUFFIX",
+        "scripts/tests/_fsm_tables.py",
+        "\"Lifecycle\", \"Mode\")",
+        "\"Lifecycle\")",
+        "Mode leaves the enum suffixes, so an enum named for a Mode with no table is no hit (SPEC-434 R4, A2)",
+        "test_fsm_table.EveryProductStateEnumHasATable.test_only_a_product_state_enum_with_no_table_is_a_hit"
+      ],
+      [
+        "S43413-A-TUPLE-VARIANTS-FIELDS-ARE-NO-STATES",
+        "scripts/tests/_fsm_tables.py",
+        "\"(\": 1, \")\": -1, ",
+        "\"(\": 0, \")\": 0, ",
+        "the variant reader splits inside a tuple variant's parentheses, so its fields are read as pieces of their own and the reader refuses the variant as VOID (SPEC-434 R5, A3)",
+        "test_fsm_table.EveryProductStateEnumHasATable.test_every_variant_form_is_read_and_a_test_variant_is_not"
+      ],
+      [
+        "S43414-A-STRUCT-VARIANTS-FIELDS-ARE-NO-STATES",
+        "scripts/tests/_fsm_tables.py",
+        ", \"{\": 1, \"}\": -1}",
+        ", \"{\": 0, \"}\": 0}",
+        "the variant reader splits inside a struct variant's braces, so its fields are read as pieces of their own and the reader refuses the variant as VOID (SPEC-434 R5, A3)",
+        "test_fsm_table.EveryProductStateEnumHasATable.test_every_variant_form_is_read_and_a_test_variant_is_not"
+      ],
+      [
+        "S43415-A-VARIANT-WITH-A-DISCRIMINANT-IS-A-STATE",
+        "scripts/tests/_fsm_tables.py",
+        "head = text[at : discriminant(text, at, finish)].strip()",
+        "head = text[at : discriminant(text, at, finish)].strip() * (discriminant(text, at, finish) == finish)",
+        "a variant that carries a discriminant is dropped from its enum's states (SPEC-434 R5, A3)",
+        "test_fsm_table.EveryProductStateEnumHasATable.test_every_variant_form_is_read_and_a_test_variant_is_not"
+      ],
+      [
+        "S43416-AN-OUTER-ATTRIBUTE-KEEPS-ITS-VARIANT",
+        "scripts/tests/_fsm_tables.py",
+        "if CFG_TEST.search(text, begin, at):",
+        "if ATTRIBUTE.search(text, begin, at):",
+        "any outer attribute hides its variant, so an attributed variant is dropped from its enum's states (SPEC-434 R5, A3)",
+        "test_fsm_table.EveryProductStateEnumHasATable.test_every_variant_form_is_read_and_a_test_variant_is_not"
+      ],
+      [
+        "S43417-A-CFG-TEST-VARIANT-IS-NO-STATE",
+        "scripts/tests/_fsm_tables.py",
+        "if CFG_TEST.search(text, begin, at):",
+        "if False:",
+        "a #[cfg(test)] variant is kept as one of its enum's states (SPEC-434 R5, A3)",
+        "test_fsm_table.EveryProductStateEnumHasATable.test_every_variant_form_is_read_and_a_test_variant_is_not"
+      ],
+      [
+        "S43418-A-STATE-ENUM-WITH-NO-TABLE-IS-A-HIT",
+        "scripts/tests/_fsm_tables.py",
+        "if (path, name) not in tables:",
+        "if False:",
+        "a product state enum that no table names is not a FSM-TABLE hit (SPEC-434 R6, A2)",
+        "test_fsm_table.EveryProductStateEnumHasATable.test_only_a_product_state_enum_with_no_table_is_a_hit"
+      ],
+      [
+        "S43419-A-TABLE-NAMING-AN-ABSENT-FILE-IS-VOID",
+        "scripts/tests/_fsm_tables.py",
+        "if not (is_product(path) and source.is_file()):",
+        "if False:",
+        "a table naming an absent file is not refused as VOID: its read raises a file-not-found error instead, which A4's VOID assertion does not accept (SPEC-434 R6, A4)",
+        "test_fsm_table.EveryProductStateEnumHasATable.test_a_table_naming_what_is_absent_is_void"
+      ],
+      [
+        "S43420-A-TABLE-NAMING-AN-ABSENT-ENUM-IS-VOID",
+        "scripts/tests/_fsm_tables.py",
+        "if name not in enums:",
+        "if False:",
+        "a table naming an enum its file lacks is not refused as VOID: its lookup raises a key error instead, which A4's VOID assertion does not accept (SPEC-434 R6, A4)",
+        "test_fsm_table.EveryProductStateEnumHasATable.test_a_table_naming_what_is_absent_is_void"
+      ],
+      [
+        "S43421-A-TABLE-NAMING-AN-ABSENT-STATE-IS-VOID",
+        "scripts/tests/_fsm_tables.py",
+        "if absent:",
+        "if False:",
+        "a table naming a state its enum lacks, in initial, terminal or a row, reads clean, not VOID (SPEC-434 R6, A4)",
+        "test_fsm_table.EveryProductStateEnumHasATable.test_a_table_naming_what_is_absent_is_void"
+      ],
+      [
+        "S43422-THE-WALK-GOES-PAST-ONE-STEP",
+        "scripts/tests/_fsm_tables.py",
+        "queue.append(target)",
+        "None",
+        "the walk takes one step from the initial set and stops, so a state two rows away reads unreached (SPEC-434 R7, A6)",
+        "test_fsm_reach.EveryStateIsReachedFromTheInitialSet.test_only_a_state_no_walk_from_the_initial_set_reaches_is_a_hit"
+      ],
+      [
+        "S43423-THE-WALK-STARTS-FROM-EVERY-INITIAL-STATE",
+        "scripts/tests/_fsm_tables.py",
+        "reached = list(dict.fromkeys(initial))",
+        "reached = list(dict.fromkeys(initial[:1]))",
+        "the walk starts from the first initial state alone, so a state reached only from a second initial state reads unreached (SPEC-434 R7, A6)",
+        "test_fsm_reach.EveryStateIsReachedFromTheInitialSet.test_only_a_state_no_walk_from_the_initial_set_reaches_is_a_hit"
+      ],
+      [
+        "S43424-THE-WALK-STARTS-FROM-THE-INITIAL-SET-ALONE",
+        "scripts/tests/_fsm_tables.py",
+        "reached = walk(initial, moves)",
+        "reached = walk([*initial, *(state for state in states if state not in {row[1] for row in moves})], moves)",
+        "the walk also starts from every state no row enters, so an unreached state and the states it leads to read reached (SPEC-434 R7, A6)",
+        "test_fsm_reach.EveryStateIsReachedFromTheInitialSet.test_only_a_state_no_walk_from_the_initial_set_reaches_is_a_hit"
+      ],
+      [
+        "S43425-AN-UNREACHED-STATE-IS-A-HIT",
+        "scripts/tests/_fsm_tables.py",
+        "unreached = [state for state in states if state not in reached]",
+        "unreached = []",
+        "an unreached state is not a FSM-REACH hit (SPEC-434 R8, A6)",
+        "test_fsm_reach.EveryStateIsReachedFromTheInitialSet.test_only_a_state_no_walk_from_the_initial_set_reaches_is_a_hit"
+      ],
+      [
+        "S43426-FSM-REACH-EXAMINES-EVERY-STATE",
+        "scripts/tests/_fsm_tables.py",
+        "\"FSM-REACH\": (list(states), unreached),",
+        "\"FSM-REACH\": (list(initial), unreached),",
+        "FSM-REACH examines only the initial states, so the tree's reading examines fewer states than the register names (SPEC-434 R8, A5)",
+        "test_fsm_reach.EveryStateIsReachedFromTheInitialSet.test_the_tree_reading_reads_every_state_of_every_table"
+      ],
+      [
+        "S43427-A-REACHED-SINK-OUTSIDE-THE-TERMINAL-SET-IS-A-HIT",
+        "scripts/tests/_fsm_tables.py",
+        "\"FSM-DEAD-END\": (inner, [state for state in inner if state not in leaving]),",
+        "\"FSM-DEAD-END\": (inner, []),",
+        "a reached sink outside the terminal set is not a FSM-DEAD-END hit (SPEC-434 R9, A8)",
+        "test_fsm_dead_end.EveryReachedStateOutsideTheTerminalSetIsLeft.test_only_a_reached_sink_outside_the_terminal_set_is_a_hit"
+      ],
+      [
+        "S43428-FSM-DEAD-END-READS-REACHED-STATES-ALONE",
+        "scripts/tests/_fsm_tables.py",
+        "inner = [state for state in states if state in reached and state not in terminal]",
+        "inner = [state for state in states if state not in terminal]",
+        "FSM-DEAD-END reads unreached states too, so an unreached sink is a hit of FSM-REACH and of FSM-DEAD-END (SPEC-434 R9, R12, A19)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_no_state_is_a_hit_of_two_graph_rules"
+      ],
+      [
+        "S43429-A-TERMINAL-SINK-IS-NO-DEAD-END",
+        "scripts/tests/_fsm_tables.py",
+        "\"FSM-DEAD-END\": (inner, [state for state in inner if state not in leaving]),",
+        "\"FSM-DEAD-END\": (inner, [state for state in states if state in reached and state not in leaving]),",
+        "a reached terminal sink is a FSM-DEAD-END hit (SPEC-434 R9, A8)",
+        "test_fsm_dead_end.EveryReachedStateOutsideTheTerminalSetIsLeft.test_only_a_reached_sink_outside_the_terminal_set_is_a_hit"
+      ],
+      [
+        "S43430-A-SELF-LOOP-IS-AN-OUTGOING-ROW",
+        "scripts/tests/_fsm_tables.py",
+        "leaving = {source for source, _target, _on in moves}",
+        "leaving = {source for source, target, _on in moves if source != target}",
+        "a self-loop counts as no outgoing row, so a state whose only row is a self-loop is a FSM-DEAD-END hit (SPEC-434 R9, A8)",
+        "test_fsm_dead_end.EveryReachedStateOutsideTheTerminalSetIsLeft.test_only_a_reached_sink_outside_the_terminal_set_is_a_hit"
+      ],
+      [
+        "S43431-A-REACHED-TERMINAL-WITH-A-ROW-OUT-IS-A-HIT",
+        "scripts/tests/_fsm_tables.py",
+        "\"FSM-TERMINAL\": (ends, [state for state in ends if state in leaving]),",
+        "\"FSM-TERMINAL\": (ends, []),",
+        "a reached terminal with an outgoing row is not a FSM-TERMINAL hit (SPEC-434 R10, A10)",
+        "test_fsm_terminal.EveryReachedTerminalIsNeverLeft.test_only_a_reached_terminal_with_an_outgoing_row_is_a_hit"
+      ],
+      [
+        "S43432-A-TERMINALS-SELF-LOOP-IS-AN-OUTGOING-ROW",
+        "scripts/tests/_fsm_tables.py",
+        "\"FSM-TERMINAL\": (ends, [state for state in ends if state in leaving]),",
+        "\"FSM-TERMINAL\": (ends, [state for state in ends if any(row[0] == state != row[1] for row in moves)]),",
+        "a terminal's self-loop is not an outgoing row, so a reached terminal whose only row is a self-loop is no FSM-TERMINAL hit (SPEC-434 R10, A10)",
+        "test_fsm_terminal.EveryReachedTerminalIsNeverLeft.test_only_a_reached_terminal_with_an_outgoing_row_is_a_hit"
+      ],
+      [
+        "S43433-A-SINK-NOT-DECLARED-TERMINAL-IS-NO-TERMINAL-HIT",
+        "scripts/tests/_fsm_tables.py",
+        "\"FSM-TERMINAL\": (ends, [state for state in ends if state in leaving]),",
+        "\"FSM-TERMINAL\": (ends, [state for state in ends if state in leaving] + [state for state in inner if state not in leaving]),",
+        "a reached sink not declared terminal is a FSM-TERMINAL hit, so it is a hit of FSM-DEAD-END and of FSM-TERMINAL (SPEC-434 R10, R12, A19)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_no_state_is_a_hit_of_two_graph_rules"
+      ],
+      [
+        "S43434-FSM-TERMINAL-READS-REACHED-TERMINALS-ALONE",
+        "scripts/tests/_fsm_tables.py",
+        "ends = [state for state in states if state in reached and state in terminal]",
+        "ends = [state for state in states if state in terminal]",
+        "FSM-TERMINAL reads unreached terminals too, so an unreached terminal with a row is a FSM-TERMINAL hit (SPEC-434 R10, A10)",
+        "test_fsm_terminal.EveryReachedTerminalIsNeverLeft.test_only_a_reached_terminal_with_an_outgoing_row_is_a_hit"
+      ],
+      [
+        "S43435-TWO-TARGETS-FROM-ONE-STATE-AND-EVENT-ARE-A-HIT",
+        "scripts/tests/_fsm_tables.py",
+        "if len(found) > 1",
+        "if len(found) > 2",
+        "one state on one event to two states is not a FSM-DETERMINISTIC hit (SPEC-434 R11, A12)",
+        "test_fsm_deterministic.OneEventMovesOneStateOneWay.test_only_one_event_moving_one_state_two_ways_is_a_hit"
+      ],
+      [
+        "S43436-A-PAIR-IS-KEYED-BY-ITS-STATE-AND-EVENT-NOT-ITS-STATE",
+        "scripts/tests/_fsm_tables.py",
+        "targets[(source, on)].add(target)",
+        "targets[(source, source)].add(target)",
+        "pairs are keyed by the state alone, so one state on two events to two states is a FSM-DETERMINISTIC hit (SPEC-434 R11, A12)",
+        "test_fsm_deterministic.OneEventMovesOneStateOneWay.test_only_one_event_moving_one_state_two_ways_is_a_hit"
+      ],
+      [
+        "S43437-A-PAIR-IS-KEYED-BY-ITS-STATE-AND-EVENT-NOT-ITS-EVENT",
+        "scripts/tests/_fsm_tables.py",
+        "targets[(source, on)].add(target)",
+        "targets[(on, on)].add(target)",
+        "pairs are keyed by the event alone, so two states on one event to two states are a FSM-DETERMINISTIC hit (SPEC-434 R11, A12)",
+        "test_fsm_deterministic.OneEventMovesOneStateOneWay.test_only_one_event_moving_one_state_two_ways_is_a_hit"
+      ],
+      [
+        "S43438-EXAMINED-ZERO-IS-VOID",
+        "scripts/tests/_fsm_tables.py",
+        "if not examined:",
+        "if False:",
+        "a reading that examined nothing is not refused as VOID (SPEC-434 R14, A13)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_every_rule_is_void_with_nothing_to_examine"
+      ],
+      [
+        "S43439-A-TREE-WITH-NO-CRATES-IS-VOID",
+        "scripts/tests/_fsm_tables.py",
+        "if not (root / \"crates\").is_dir():",
+        "if False:",
+        "a tree with no crates/ is read as an empty tree, so its reading fails only as examining nothing, never as the tree with no crates/ (SPEC-434 R14, A13)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_every_rule_is_void_with_nothing_to_examine"
+      ],
+      [
+        "S43440-A-LISTED-ENTRY-NEEDS-A-RULING",
+        "scripts/tests/_fsm_tables.py",
+        "if not is_name(ruling):",
+        "if False:",
+        "a listed entry with no ruling is not refused for it: its ruling path is read from nothing and raises a type error instead, which A14's refusal assertion does not accept (SPEC-434 R3, A14)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_a_listed_entry_needs_a_ruling_that_exists_and_reads_stale_without_its_hit"
+      ],
+      [
+        "S43441-A-RULING-NAMES-A-FILE-THAT-EXISTS",
+        "scripts/tests/_fsm_tables.py",
+        "if not (Path(root) / ruling).is_file():",
+        "if False:",
+        "a listed entry whose ruling names no file is admitted (SPEC-434 R3, A14)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_a_listed_entry_needs_a_ruling_that_exists_and_reads_stale_without_its_hit"
+      ],
+      [
+        "S43442-A-RULING-IS-UNDER-DOCS-RULINGS",
+        "scripts/tests/_fsm_tables.py",
+        "if parts[: len(RULINGS)] != RULINGS or \"..\" in parts:",
+        "if \"..\" in parts:",
+        "a listed entry whose ruling is a file outside docs/rulings/ is admitted (SPEC-434 R3, A14)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_a_listed_entry_needs_a_ruling_that_exists_and_reads_stale_without_its_hit"
+      ],
+      [
+        "S43443-A-LISTED-ENTRY-NO-HIT-MATCHES-IS-STALE",
+        "scripts/tests/_fsm_tables.py",
+        "if (listed[\"file\"], listed[\"key\"]) not in found",
+        "if False",
+        "a listed entry that no hit matches does not read stale (SPEC-434 R3, A14)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_a_listed_entry_needs_a_ruling_that_exists_and_reads_stale_without_its_hit"
+      ],
+      [
+        "S43444-AT-FAIL-A-NEW-HIT-FAILS",
+        "scripts/tests/_fsm_tables.py",
+        "if reading.level == \"fail\" and (reading.new or reading.stale):",
+        "if reading.level == \"fail\" and (reading.stale):",
+        "at fail a new hit does not fail the test (SPEC-434 R13, A15)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_a_rule_at_fail_fails_on_new_and_stale_and_at_warn_prints_them"
+      ],
+      [
+        "S43445-AT-WARN-A-NEW-HIT-PASSES",
+        "scripts/tests/_fsm_tables.py",
+        "if reading.level == \"fail\" and (reading.new or reading.stale):",
+        "if reading.level in LEVELS and (reading.new or reading.stale):",
+        "at warn a new hit fails the test, as at fail (SPEC-434 R13, A15)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_a_rule_at_fail_fails_on_new_and_stale_and_at_warn_prints_them"
+      ],
+      [
+        "S43446-AT-FAIL-A-STALE-HIT-FAILS",
+        "scripts/tests/_fsm_tables.py",
+        "if reading.level == \"fail\" and (reading.new or reading.stale):",
+        "if reading.level == \"fail\" and (reading.new):",
+        "at fail a stale hit does not fail the test (SPEC-434 R13, A15)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_a_rule_at_fail_fails_on_new_and_stale_and_at_warn_prints_them"
+      ],
+      [
+        "S43447-A-HIT-LINE-CARRIES-NO-SOURCE-TEXT",
+        "scripts/tests/_fsm_tables.py",
+        "fields = [\"FSM-LINT\", reading.rule, reading.level, kind, where, hit.key]",
+        "fields = [\"FSM-LINT\", reading.rule, reading.level, kind, where, hit.key, Path(reading.root, hit.path).read_text(encoding=\"utf-8\").splitlines()[hit.line - 1].strip()]",
+        "a hit line carries the text of the line it names (SPEC-434 R13, A16)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_a_hit_line_names_its_site_and_never_its_source"
+      ],
+      [
+        "S43448-AN-UNKNOWN-LEVEL-IS-REFUSED",
+        "scripts/tests/_fsm_tables.py",
+        "if entry[\"level\"] not in LEVELS:",
+        "if False:",
+        "a rule's unknown level is admitted and read as warn (SPEC-434 R1, A17)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_the_register_names_five_rules_at_warn_and_refuses_the_malformed"
+      ],
+      [
+        "S43449-AN-UNKNOWN-RULE-IS-REFUSED",
+        "scripts/tests/_fsm_tables.py",
+        "set(rules) != set(RULES)",
+        "not set(RULES) <= set(rules)",
+        "a register naming a rule beside the five is admitted (SPEC-434 R1, A17)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_the_register_names_five_rules_at_warn_and_refuses_the_malformed"
+      ],
+      [
+        "S43450-AN-UNKNOWN-TABLE-KEY-IS-REFUSED",
+        "scripts/tests/_fsm_tables.py",
+        "unknown = set(table) - {*TABLE_KEYS, \"no_moves\"}",
+        "unknown = set()",
+        "a table holding an unknown key is admitted (SPEC-434 R2, A17)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_the_register_names_five_rules_at_warn_and_refuses_the_malformed"
+      ],
+      [
+        "S43451-A-MISSING-TERMINAL-IS-REFUSED",
+        "scripts/tests/_fsm_tables.py",
+        "terminal = need(table, \"terminal\", where)",
+        "terminal = table.get(\"terminal\", [])",
+        "a table with no terminal key is admitted, its terminal set read as empty (SPEC-434 R2, A17)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_the_register_names_five_rules_at_warn_and_refuses_the_malformed"
+      ],
+      [
+        "S43452-AN-EMPTY-INITIAL-SET-IS-REFUSED",
+        "scripts/tests/_fsm_tables.py",
+        "if not initial:",
+        "if False:",
+        "a table with an empty initial set is admitted (SPEC-434 R2, A17)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_the_register_names_five_rules_at_warn_and_refuses_the_malformed"
+      ],
+      [
+        "S43453-A-DUPLICATE-TABLE-IS-REFUSED",
+        "scripts/tests/_fsm_tables.py",
+        "seen.add(key)",
+        "None",
+        "two tables naming one file and enum are admitted (SPEC-434 R2, A17)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_the_register_names_five_rules_at_warn_and_refuses_the_malformed"
+      ],
+      [
+        "S43454-A-DUPLICATE-ROW-IS-REFUSED",
+        "scripts/tests/_fsm_tables.py",
+        "if row in rows:",
+        "if False:",
+        "a table holding one row twice is admitted (SPEC-434 R2, A17)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_the_register_names_five_rules_at_warn_and_refuses_the_malformed"
+      ],
+      [
+        "S43455-A-TABLE-WITH-NO-MOVES-NEEDS-A-REASON",
+        "scripts/tests/_fsm_tables.py",
+        "if not moves and not is_name(table.get(\"no_moves\")):",
+        "if False:",
+        "a table with no moves and no no_moves reason is admitted (SPEC-434 R2, A17)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_the_register_names_five_rules_at_warn_and_refuses_the_malformed"
+      ],
+      [
+        "S43456-A-TABLE-WITH-MOVES-HAS-NO-REASON",
+        "scripts/tests/_fsm_tables.py",
+        "if moves and \"no_moves\" in table:",
+        "if False:",
+        "a table with moves and a no_moves reason is admitted (SPEC-434 R2, A17)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_the_register_names_five_rules_at_warn_and_refuses_the_malformed"
+      ],
+      [
+        "S43457-FSM-TABLE-LANDS-AT-WARN",
+        "config/fsm-tables.json",
+        "\"FSM-TABLE\": {\"level\": \"warn\"",
+        "\"FSM-TABLE\": {\"level\": \"fail\"",
+        "FSM-TABLE's level in the register reads fail (SPEC-434 R1, A17)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_the_register_names_five_rules_at_warn_and_refuses_the_malformed"
+      ],
+      [
+        "S43458-FSM-REACH-LANDS-AT-WARN",
+        "config/fsm-tables.json",
+        "\"FSM-REACH\": {\"level\": \"warn\"",
+        "\"FSM-REACH\": {\"level\": \"fail\"",
+        "FSM-REACH's level in the register reads fail (SPEC-434 R1, A17)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_the_register_names_five_rules_at_warn_and_refuses_the_malformed"
+      ],
+      [
+        "S43459-FSM-DEAD-END-LANDS-AT-WARN",
+        "config/fsm-tables.json",
+        "\"FSM-DEAD-END\": {\"level\": \"warn\"",
+        "\"FSM-DEAD-END\": {\"level\": \"fail\"",
+        "FSM-DEAD-END's level in the register reads fail (SPEC-434 R1, A17)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_the_register_names_five_rules_at_warn_and_refuses_the_malformed"
+      ],
+      [
+        "S43460-FSM-TERMINAL-LANDS-AT-WARN",
+        "config/fsm-tables.json",
+        "\"FSM-TERMINAL\": {\"level\": \"warn\"",
+        "\"FSM-TERMINAL\": {\"level\": \"fail\"",
+        "FSM-TERMINAL's level in the register reads fail (SPEC-434 R1, A17)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_the_register_names_five_rules_at_warn_and_refuses_the_malformed"
+      ],
+      [
+        "S43461-FSM-DETERMINISTIC-LANDS-AT-WARN",
+        "config/fsm-tables.json",
+        "\"FSM-DETERMINISTIC\": {\"level\": \"warn\"",
+        "\"FSM-DETERMINISTIC\": {\"level\": \"fail\"",
+        "FSM-DETERMINISTIC's level in the register reads fail (SPEC-434 R1, A17)",
+        "test_fsm_table_lints.TheTableLintsShareOneReading.test_the_register_names_five_rules_at_warn_and_refuses_the_malformed"
+      ],
+      [
+        "S43462-THE-CHEST-TABLE-NAMES-THE-FILE-THAT-DECLARES-ITS-ENUM",
+        "config/fsm-tables.json",
+        "\"file\": \"crates/quests/src/chest_store.rs\"",
+        "\"file\": \"crates/quests/src/chests.rs\"",
+        "ChestState's table names crates/quests/src/chests.rs, which does not declare it, so the tree's reading fails as VOID (SPEC-434 R6, R16, A1)",
+        "test_fsm_table.EveryProductStateEnumHasATable.test_the_tree_reading_reads_every_product_file_and_every_table"
+      ],
+      [
+        "S43463-A-CHEST-ROW-NAMES-A-STATE-ITS-ENUM-DECLARES",
+        "config/fsm-tables.json",
+        "{\"from\": \"Sealed\", \"to\": \"Opened\", \"on\": \"mark_opened\"}",
+        "{\"from\": \"Sealed\", \"to\": \"Open\", \"on\": \"mark_opened\"}",
+        "a ChestState row names Open for Opened, a state its enum lacks, so the tree's reading fails as VOID (SPEC-434 R6, R16, A1)",
+        "test_fsm_table.EveryProductStateEnumHasATable.test_the_tree_reading_reads_every_product_file_and_every_table"
+      ]
+    ]
+  }
+}
