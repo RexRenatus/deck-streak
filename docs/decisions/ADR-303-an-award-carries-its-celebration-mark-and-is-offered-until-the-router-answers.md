@@ -112,3 +112,19 @@ router's answer and assert exactly one send over the following evaluations.
 ## More Information
 
 SPEC-073, ADR-041, ADR-071; issues #74, #75 and #76.
+
+## Amendment: the award port is covered (SPEC-477, ADR-494)
+
+The confirmation above names `formal/tla/AwardOnce/`. Its `Commit` action abstracts the award
+port's unique key as `UniqueKey`, and until SPEC-477 no cover named the port itself, so a change to
+it was not reported. The model now covers `crates/progression/src/badges/award.rs` at `award`, and
+its comments re-read the port: a key no rule accepts is refused before any write; one insert that
+writes nothing on a conflict of the key and tier answers `AlreadyAwarded`; a catalog badge is
+written with its mark unset, as this decision chose; and a band badge is written marked by the band
+step, which no cover of the model names, so its arm moves no variable of the model. No constant,
+action, property or witness changed. A later change to `award` reads `STALE` on the model's three
+properties until the model is re-read against it (ADR-494 D2).
+
+The class rule of `crates/coordination/tests/badges_steps.rs`, which confirms this decision's
+one-award-per-key outcome over every study badge, also holds the night and early windows' edges
+under three study-day rules, in a test of its own (SPEC-477 A1).

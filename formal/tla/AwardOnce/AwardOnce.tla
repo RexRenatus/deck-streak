@@ -11,6 +11,7 @@
 \* @phx covers crates/coordination/src/level_up.rs anchor=announce_level_up digest=sha256:57e63cd0b8c6a8a153f6242d33eea4ab14ed493d8a98e6f4ef6538a8f471d303
 \* @phx covers crates/notifications/src/router.rs anchor=route digest=sha256:7bcf52fe22d886b3d71dfa0fa8e6dfb1d266a9a6b1662bada5482a2cd0c54dcb
 \* @phx covers crates/notifications/src/ledger.rs anchor=claim digest=sha256:0116ef4925de04614d09ac18952c0a0b0f7248fd65f5d4f6ca555448836a6ab7
+\* @phx covers crates/progression/src/badges/award.rs anchor=award digest=sha256:17e9e6c76d81877062c2722aff7d3e3a581e68317d753aaeb92d8b6d78e5b3c1
 \* @phx cites #74, #75, #76
 \* @phx property AwardOnce ramp=report
 \* @phx property CelebrateAtMostOnce ramp=report
@@ -62,6 +63,13 @@
 \*   habit_badges.rs::evaluate (#94) is a second Commit (award) inside the same fold write, over
 \*   habit badge keys no other step awards, offered by the same offer_badges drain; the model is
 \*   per key, so the step is a stutter of every key it does not award (re-read 2026-10-03).
+\*   The award port itself, award.rs::award (covered, re-read for #544): a key no rule accepts is
+\*   refused before any write, a stutter; otherwise one INSERT ... ON CONFLICT DO NOTHING on the
+\*   key and tier's primary key, so a second award of the same key and tier writes nothing and
+\*   answers AlreadyAwarded (UniqueKey), and one written row answers Awarded. A catalog badge is
+\*   written with its mark unset (design "mark"); a band badge is written marked, and only
+\*   band_badges.rs::evaluate, which no cover here names, awards one (the band-up celebrates it),
+\*   so the band arm is a stutter of the model's key.
 \* - Commit (record, Recheck): records.rs::upsert re-reads the kind's row inside the day's write,
 \*   names a row of another day whose mark is unset ("celebration not sent"), then upserts; a row
 \*   of the same day keeps its mark, so a best that climbs all day is one award, unless the row is
