@@ -43,13 +43,15 @@ final class ReviewModel {
 
     private let session: ReviewSession
     private let voiceOverRunning: @MainActor () -> Bool
+    /// The installed voices each step hands the engine: by default the device's list as far as
+    /// it is read, so no step waits for the device (SPEC-687 R2).
     private let installed: @MainActor () -> [InstalledVoice]
     private let player = ClipPlayer()
 
     init(
         deck: Deck, session: ReviewSession,
         voiceOverRunning: @escaping @MainActor () -> Bool = { UIAccessibility.isVoiceOverRunning },
-        installed: @escaping @MainActor () -> [InstalledVoice] = InstalledVoices.all
+        installed: @escaping @MainActor () -> [InstalledVoice] = InstalledVoiceList.listed
     ) {
         self.deck = deck
         self.session = session
