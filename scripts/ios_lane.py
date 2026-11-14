@@ -41,6 +41,9 @@ line on standard error and exit 1, and writes no output.
 Before the first read, `sign` prints the decoded certificate's shape by one class of a closed set,
 and nothing of the certificate; a placed text that does not decode from base64 is refused after
 its class, before any tool runs (SPEC-692 R1 and R2).
+
+The re-wrap takes the PBES2 form first, and the SHA-1 based compatibility form once, only after the
+keychain refuses the first (SPEC-692 R4).
 """
 
 import argparse
@@ -107,6 +110,13 @@ SHAPES = ("der-sequence", "pem-armour", "base64-text", "other")
 # Base64 text once ASCII whitespace is removed: its alphabet, then at most two pad characters; a
 # length that is a multiple of four is checked beside it, so the text is strict base64.
 BASE64_TEXT = re.compile(rb"[A-Za-z0-9+/]+={0,2}")
+# The two forms a re-wrap takes, in the order the keychain is offered them: PBES2 with AES-256
+# and a SHA-256 MAC, then, once and only after the keychain refuses it, the SHA-1 based
+# compatibility form.
+FORMS = (
+    ("pbes2", ("-certpbe", "AES-256-CBC", "-keypbe", "AES-256-CBC", "-macalg", "sha256")),
+    ("sha1-compat", ("-certpbe", "PBE-SHA1-3DES", "-keypbe", "PBE-SHA1-3DES", "-macalg", "sha1")),
+)
 
 
 class Refused(Exception):
@@ -339,6 +349,60 @@ def certificate_shape(data):
     return next(shape for shape in SHAPES if meets[shape])
 
 
+def rewrap(openssl, bundle, passphrase, pem, protection):
+    """Re-wrap what the certificate read wrote out, `pem`, into `bundle` under the run-time
+    passphrase, its key and certificate protected and its MAC made as `protection`, one form of
+    `FORMS`, names (SPEC-692 R4)."""
+    tool(
+        openssl,
+        "pkcs12",
+        "-export",
+        "-out",
+        str(bundle),
+        "-passin",
+        f"pass:{passphrase}",
+        "-passout",
+        f"pass:{passphrase}",
+        *protection,
+        stdin=pem,
+    )
+
+
+def job_keychain(keychain, password):
+    """Create the job keychain under the generated password, set its lock settings and unlock
+    it."""
+    tool("security", "create-keychain", "-p", password, keychain)
+    tool("security", "set-keychain-settings", "-lut", "21600", keychain)
+    tool("security", "unlock-keychain", "-p", password, keychain)
+
+
+def offered(bundle, keychain, passphrase):
+    """Offer the re-wrapped bundle to the job keychain as a non-extractable import codesign may
+    use, with no credential part in the environment, and return whether the keychain took it.
+    The keychain's output is kept in memory and never printed, logged, written to a file or put
+    in a refusal (SPEC-692 R4)."""
+    done = subprocess.run(
+        [
+            "security",
+            "import",
+            str(bundle),
+            "-k",
+            keychain,
+            "-P",
+            passphrase,
+            "-f",
+            "pkcs12",
+            "-x",
+            "-T",
+            "/usr/bin/codesign",
+        ],
+        env=without_credential(),
+        capture_output=True,
+        text=True,
+    )
+    return done.returncode == 0
+
+
 def sign():
     """Check the profile, import the certificate into a job keychain, install the profile, write
     the include file and archive the app (SPEC-352 R8, R9, R13)."""
@@ -378,42 +442,27 @@ def sign():
     pem = read_certificate(openssl, original, passphrase)
     original.unlink()
     bundle = lane / "certificate.p12"
-    tool(
-        openssl,
-        "pkcs12",
-        "-export",
-        "-out",
-        str(bundle),
-        "-passin",
-        f"pass:{passphrase}",
-        "-passout",
-        f"pass:{passphrase}",
-        "-certpbe",
-        "PBE-SHA1-3DES",
-        "-keypbe",
-        "PBE-SHA1-3DES",
-        "-macalg",
-        "sha1",
-        stdin=pem,
-    )
     keychain = str(lane / "lane.keychain-db")
-    tool("security", "create-keychain", "-p", keychain_password, keychain)
-    tool("security", "set-keychain-settings", "-lut", "21600", keychain)
-    tool("security", "unlock-keychain", "-p", keychain_password, keychain)
-    tool(
-        "security",
-        "import",
-        str(bundle),
-        "-k",
-        keychain,
-        "-P",
-        passphrase,
-        "-f",
-        "pkcs12",
-        "-x",
-        "-T",
-        "/usr/bin/codesign",
-    )
+    (first, protection), (second, compatibility) = FORMS
+    rewrap(openssl, bundle, passphrase, pem, protection)
+    job_keychain(keychain, keychain_password)
+    if offered(bundle, keychain, passphrase):
+        accepted = first
+    else:
+        # The one retry (SPEC-692 R4): the refused form named, the job keychain made anew, the
+        # bundle re-wrapped once under the compatibility form and offered once more, never a third
+        # time.
+        print(
+            f"keychain import failed: form {first}; importing once more under form {second}",
+            flush=True,
+        )
+        tool("security", "delete-keychain", keychain)
+        job_keychain(keychain, keychain_password)
+        rewrap(openssl, bundle, passphrase, pem, compatibility)
+        if not offered(bundle, keychain, passphrase):
+            raise Refused(f"security import failed: form {first}, form {second}")
+        accepted = second
+    print(f"keychain import under form {accepted}: ok", flush=True)
     bundle.unlink()
     tool(
         "security",
