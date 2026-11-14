@@ -340,12 +340,27 @@ final class Probe {
     /// The slowest answered ask of the running test, in seconds (SPEC-609 R5).
     static var slowestAsk: TimeInterval = 0
 
-    /// Resets the probe record and the measurement, from each test's `setUp` (SPEC-609 R3, R5).
+    /// The loaded page held across the running test's views, if any: while it lives, WebKit's
+    /// GPU and networking processes have a page to serve between one view's teardown and the next
+    /// view's build (SPEC-689 R1, R2).
+    static var held: WKWebView?
+
+    /// How many views the running test built while the held page answered loaded (SPEC-689 R1).
+    static var heldViews = 0
+
+    /// The probe records of the views the running test built while no held page answered loaded
+    /// (SPEC-689 R1).
+    static var unheld: [String] = []
+
+    /// Resets the probe record and the measurement, from each test's `setUp` (SPEC-609 R3, R5;
+    /// SPEC-689 R1).
     static func resetRecord() {
         probing = "no probe"
         probes = 0
         answeredAsks = 0
         slowestAsk = 0
+        heldViews = 0
+        unheld = []
     }
 
     /// The line each test's `tearDown` prints: the asks its pages answered and the slowest, against
@@ -609,6 +624,21 @@ final class Probe {
         return view
     }
 
+    /// Loads the keeper under the warm-up bound and keeps it as `held` until `release()`, so every
+    /// view the running test builds is built while a loaded page holds WebKit's shared processes
+    /// (SPEC-689 R2). Returns whether it loaded.
+    static func hold() async throws -> Bool {
+        let ruleList = await RuleList.compile()
+        held = try await keeper(ruleList: ruleList)
+        return held != nil
+    }
+
+    /// Takes the held page down and clears `held`, from each test's `tearDown` (SPEC-689 R2).
+    static func release() {
+        held?.removeFromSuperview()
+        held = nil
+    }
+
     /// Takes one snapshot of `view` and decodes its pixels, under the ask bound (SPEC-609 R1).
     static func snapshot(_ view: WKWebView) async throws -> ViewSnapshot {
         let taken: ViewSnapshot = try await bounded(label: "snapshot") { answer in
@@ -670,6 +700,14 @@ final class Probe {
         let recorder = Recorder()
         recorder.permissive = variant.permissive
         let layers = variant.layers
+        // Whether a loaded page holds WebKit's shared processes as this view is built, asked of
+        // the held page itself: a view built with none held waits on the GPU process's relaunch
+        // whenever the previous view's teardown let it exit (SPEC-689 R1).
+        if let held = Probe.held, try await Probe.reportsLoaded(held) {
+            Probe.heldViews += 1
+        } else {
+            Probe.unheld.append(Probe.probing)
+        }
         let view: WKWebView
         switch variant {
         case .shipped:
@@ -848,12 +886,15 @@ final class PlantedCardTests: XCTestCase {
         await Probe.resetRecord()
         let warmedUp = try await Probe.warmUp()
         XCTAssertTrue(warmedUp, "the card probe warm-up: WebKit never started, so no card could load")
+        let held = try await Probe.hold()
+        XCTAssertTrue(held, "the keeper never loaded, so WebKit's shared processes were not held across this test's views")
     }
 
     /// SPEC-609 R5: the asks this test's pages answered, and the slowest, against the ask bound.
     override func tearDown() async throws {
         let line = await Probe.asksLine(self.name)
         print(line)
+        await Probe.release()
         try await super.tearDown()
     }
 
@@ -926,6 +967,27 @@ final class PlantedCardTests: XCTestCase {
         XCTAssertEqual(
             silent, Set(UNOBSERVABLE.keys),
             "the cards whose reference view reached nothing, against the declared UNOBSERVABLE")
+    }
+
+    /// SPEC-689 R1, R2: every view a planted test builds is built while a loaded page holds
+    /// WebKit's shared processes, so no view waits on a relaunch of the GPU process that the
+    /// previous view's teardown let exit. Two planted cards are shown as the planted test shows
+    /// each one, in the reference view and then the card view, so three of the four views are
+    /// built after another view's teardown.
+    @MainActor
+    func test_every_planted_view_is_built_while_a_kept_page_holds_the_shared_processes() async throws {
+        let probe = try await Probe.make()
+        let ids = ["img", "event-handler"]
+        let cards = examined("planted cards", PLANTED.filter { planted in ids.contains(planted.id) })
+        XCTAssertEqual(cards.map(\.id), ids, "the planted cards this test shows")
+        for card in cards {
+            let (_, took) = try await probe.show(card, in: .reference, window: nil)
+            _ = try await probe.show(card, in: .shipped, window: window(took))
+        }
+        XCTAssertEqual(
+            Probe.unheld, [],
+            "views built while no loaded page held WebKit's shared processes, so each could wait on a GPU process relaunch")
+        XCTAssertEqual(Probe.heldViews, 2 * cards.count, "the views built while the kept page answered loaded")
     }
 
     @MainActor
