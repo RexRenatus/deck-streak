@@ -1,11 +1,16 @@
 import Foundation
 
-/// The deck package import's request and its copy of the picked file (SPEC-681 R2). The request is
-/// `ImportAnkiPackageRequest` with the package's path alone, field 1: the native adapter reads the
-/// package under its bound and writes the import's options itself (ADR-703). The copy sits in the
-/// app's temporary folder, made while the picked file's security-scoped access is held, so the
-/// engine reads a file the app owns.
+/// The deck package import's requests and its copy of the picked file (SPEC-681 R2, R6). The
+/// import's request is `ImportAnkiPackageRequest` with the package's path alone, field 1: the
+/// native adapter reads the package under its bound and writes the import's options itself
+/// (ADR-703). The copy sits in the app's temporary folder, made while the picked file's
+/// security-scoped access is held, so the engine reads a file the app owns.
 enum PackageImportRequest {
+    /// The request that reads whether the deck list is empty (R6): `GetDeckNamesRequest` with
+    /// `skip_empty_default`, field 1, and `include_filtered`, field 2, both true, so the engine
+    /// leaves out its default deck while that deck holds no card and names every other deck.
+    static let skippingEmptyDefault: [UInt8] = [0x08, 0x01, 0x10, 0x01]
+
     /// The request's bytes: field 1, length-delimited, holding the path's UTF-8 bytes.
     static func bytes(path: String) -> [UInt8] {
         let text = Array(path.utf8)

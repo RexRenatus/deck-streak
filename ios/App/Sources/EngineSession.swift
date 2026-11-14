@@ -115,6 +115,16 @@ actor EngineSession: SyncEngine, DataEngine, PackageImportEngine {
         .map { Deck(id: $0.id, name: $0.name) }
     }
 
+    /// Whether the deck list is empty (SPEC-681 R6): asked to leave out its default deck while that
+    /// deck holds no card, the engine names no deck. A fresh collection's list shows the default
+    /// deck alone, with no card in it, so it reads as empty.
+    func deckListIsEmpty() throws -> Bool {
+        try Responses.deckNames(
+            call(EngineCall.deckNames, PackageImportRequest.skippingEmptyDefault)
+        )
+        .isEmpty
+    }
+
     /// Imports a picked deck package's notes and cards into the open collection through the one
     /// allowed call (SPEC-681 R2): the file is copied into the temporary folder, the copy's path is
     /// the request, and the copy is removed after the call. A package the adapter refuses throws

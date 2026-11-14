@@ -17,7 +17,7 @@ struct PackageImportControls: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .overlay { PackageImportOffer(model: model, importer: importer) }
+            .overlay { PackageImportOffer(importer: importer) }
             .safeAreaInset(edge: .bottom) { PackageImportRefusal(importer: importer) }
             .toolbar {
                 Button("Import") { importer.showingImporter = true }
@@ -31,13 +31,13 @@ struct PackageImportControls: ViewModifier {
     }
 }
 
-/// The offer the deck list shows while it holds no deck (R6).
+/// The offer the deck list shows while the list is empty (R6), as the importer reads it from the
+/// engine: a fresh collection's list shows the engine's default deck alone, which holds no card.
 struct PackageImportOffer: View {
-    let model: AppModel
     let importer: PackageImportModel
 
     var body: some View {
-        if model.decks.isEmpty {
+        if importer.listIsEmpty {
             VStack(spacing: 16) {
                 Text("No decks yet. Import an Anki deck package from Files.")
                     .foregroundStyle(Color.tideMuted)

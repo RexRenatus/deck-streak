@@ -56,14 +56,15 @@ final class AppModel {
         packageImport = PackageImportModel(engine: session)
     }
 
-    /// Opens the collection and lists its decks, once per model (R7), then imports the package
-    /// the launch names, if it names one (SPEC-681 R2).
+    /// Opens the collection and lists its decks, once per model (R7), reads whether the list is
+    /// empty, then imports the package the launch names, if it names one (SPEC-681 R2, R6).
     func start() async {
         guard !started else { return }
         started = true
         do {
             try await session.open()
             decks = try await session.decks()
+            try await packageImport.readListIsEmpty()
             decks = await packageImport.importAtLaunch(keeping: decks)
         } catch {
             refusal = sentence(error)
