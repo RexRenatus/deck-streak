@@ -73,6 +73,8 @@ SIGNING_SETTINGS = (
     "CODE_SIGNING_ALLOWED",
 )
 INCLUDE = Path("ios/Config/Signing.local.xcconfig")
+APP_SPEC = Path("ios/app.yml")
+REFUSED_SPEC = "the app's project spec ios/app.yml names no project\n"
 LOGIN_KEYCHAIN = "/fixture/login.keychain-db"
 BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 # The one shim, installed under each tool's name. It reads the sentinels from a file beside it, so
@@ -599,6 +601,14 @@ class LaneCredential(unittest.TestCase):
         for directory in (self.shims, self.bin, self.home, self.temp, self.checkout / "ios/Config"):
             directory.mkdir(parents=True)
         self.lane = self.temp / "lane"
+        # The lane reads the project and the scheme it builds from the app's project spec
+        # (SPEC-566 R1); the fixture's spec names a project under a name drawn at run time.
+        self.project = f"Fixture{uuid.uuid4().hex[:12]}"
+        (self.checkout / APP_SPEC).write_text(
+            f"# A fixture spec.\nname: {self.project}\n"
+            "options:\n  createIntermediateGroups: true\n",
+            encoding="utf-8",
+        )
         for tool in ("openssl", "security", "xcodebuild"):
             shim = self.bin / tool
             shim.write_text(f"#!{sys.executable}\n{SHIM}", encoding="utf-8")
@@ -859,9 +869,9 @@ class LaneCredential(unittest.TestCase):
             [
                 "archive",
                 "-project",
-                "ios/Harness.xcodeproj",
+                f"ios/{self.project}.xcodeproj",
                 "-scheme",
-                "Harness",
+                self.project,
                 "-configuration",
                 "Release",
                 "-destination",
@@ -1003,6 +1013,8 @@ class LaneCredential(unittest.TestCase):
     def test_the_unsigned_build_stops_before_the_upload_and_says_so(self):
         harness = (REPO / "ios/Config/Harness.xcconfig").read_text(encoding="utf-8")
         self.assertEqual(xcconfig(harness)["DS_APP_ID"].split(".")[0], "invalid")
+        app = (REPO / "ios/Config/App.xcconfig").read_text(encoding="utf-8")
+        self.assertEqual(xcconfig(app)["DS_APP_ID"].split(".")[0], "invalid")
         code, _, errors, records, _ = self.step("build-unsigned")
         build = self.one(records, "xcodebuild", "build")
         self.assertEqual(
@@ -1010,9 +1022,9 @@ class LaneCredential(unittest.TestCase):
             [
                 "build",
                 "-project",
-                "ios/Harness.xcodeproj",
+                f"ios/{self.project}.xcodeproj",
                 "-scheme",
-                "Harness",
+                self.project,
                 "-configuration",
                 "Release",
                 "-destination",
@@ -1375,6 +1387,48 @@ class LaneCredential(unittest.TestCase):
         self.assertEqual(
             (code, errors.splitlines(), records), (1, ["no openssl is on the PATH"], [])
         )
+
+    def test_the_lane_builds_the_deckstreak_app_from_the_trees_project_spec(self):
+        # SPEC-566 A3 (R1): with the tree's own app spec in the checkout, both builds name the
+        # app's project and scheme, and that spec's scheme of its name archives Release.
+        spec = (REPO / APP_SPEC).read_text(encoding="utf-8")
+        self.assertRegex(spec, r"(?m)^name: DeckStreak$")
+        self.assertRegex(
+            spec, r"(?ms)^schemes:\n  DeckStreak:\n.*?^    archive:\n      config: Release$"
+        )
+        (self.checkout / APP_SPEC).write_text(spec, encoding="utf-8")
+        app = ["-project", "ios/DeckStreak.xcodeproj", "-scheme", "DeckStreak"]
+        code, _, errors, records, _ = self.step("build-unsigned")
+        self.assertEqual(code, 0, errors)
+        self.assertEqual(self.one(records, "xcodebuild", "build")["args"][1:5], app)
+        code, _, errors, _, _ = self.step("clean")
+        self.assertEqual(code, 0, errors)
+        _, records = self.sign()
+        self.assertEqual(self.one(records, "xcodebuild", "archive")["args"][1:5], app)
+
+    def test_a_project_spec_that_names_no_project_is_refused_before_any_tool_runs(self):
+        # SPEC-566 A4 (R2): a spec that is absent, names its project only indented, or quotes
+        # the name is refused by both steps with the one line, before any tool runs, with no
+        # lane directory, no include file and no mask.
+        plants = [
+            ("absent", None),
+            ("indented", "packages:\n  Planted:\n    name: Planted\n"),
+            ("quoted", 'name: "Planted"\n'),
+        ]
+        steps = (("build-unsigned", ()), ("sign", ("CERTIFICATE", "PASSWORD", "PROFILE")))
+        spec = self.checkout / APP_SPEC
+        for plant, text in examined("planted specs", plants):
+            if text is None:
+                spec.unlink()
+            else:
+                spec.write_text(text, encoding="utf-8")
+            for verb, parts in steps:
+                with self.subTest(plant=plant, verb=verb):
+                    code, printed, errors, records, _ = self.step(verb, parts)
+                    self.assertEqual((code, errors, records), (1, REFUSED_SPEC, []))
+                    self.assertFalse(self.lane.exists())
+                    self.assertFalse((self.checkout / INCLUDE).exists())
+                    self.assertEqual(self.masks(printed), [])
 
 
 if __name__ == "__main__":

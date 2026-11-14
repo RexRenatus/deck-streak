@@ -101,6 +101,10 @@ jobs:
       - name: the project, generated
         run: |
           "$RUNNER_TEMP/xcodegen/bin/xcodegen" generate --spec ios/project.yml
+      # The app the lane builds (SPEC-566 R3): its project is generated from its spec.
+      - name: the app's project, generated
+        run: |
+          "$RUNNER_TEMP/xcodegen/bin/xcodegen" generate --spec ios/app.yml
       - name: the credential, by presence
         id: preflight
         env:

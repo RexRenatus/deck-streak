@@ -5,6 +5,8 @@
 // model's VoiceOver reading and installed voices are handed in, so a test decides both. The
 // fixture's second collection holds one image occlusion card, which the model withholds: no
 // reveal and no rating, only a flag and a bury (SPEC-380 A14).
+// The device's voice list is read off the main thread, and a review shows its first card while
+// the list's read is still held (SPEC-687).
 import AVFoundation
 import Foundation
 import XCTest
@@ -195,6 +197,35 @@ final class ReviewModelTests: XCTestCase {
             "A14: a flag keeps the withheld card, and a bury moves on to the designed end")
     }
 
+    @MainActor
+    func test_a1_the_device_voice_list_is_read_off_the_main_thread() async {
+        let read = HeldRead()
+        let list = InstalledVoiceList(read: { read.voices() })
+        read.release()
+        _ = await list.reading?.value
+        XCTAssertEqual(
+            read.threads, [false],
+            "the device's voice list is read once, off the main thread (SPEC-687)")
+        XCTAssertEqual(list.voices, [testVoice], "the list keeps what its read returned (SPEC-687)")
+    }
+
+    @MainActor
+    func test_a2_the_first_card_shows_while_the_voice_list_is_read() async throws {
+        let directory = try freshFixture()
+        let (engine, review) = try await openedFixture(directory)
+        let read = HeldRead()
+        let list = InstalledVoiceList(read: { read.voices() })
+        let model = ReviewModel(
+            deck: review, session: ReviewSession(engine: engine),
+            voiceOverRunning: { true }, installed: { list.voices })
+        await model.start()
+        let (phase, ended) = (model.phase, read.ended)
+        read.release()
+        _ = await list.reading?.value
+        XCTAssertEqual(phase, .question, "the review shows its first card (SPEC-687)")
+        XCTAssertFalse(ended, "the first card shows while the voice list's read is held (SPEC-687)")
+    }
+
     // MARK: - Steps
 
     /// A model over a fresh copy of the fixture, started on its deck `Review`, and that copy.
@@ -237,4 +268,31 @@ private func silence(seconds: Int) -> Data {
     var bytes = Data()
     for piece in pieces { bytes.append(contentsOf: piece) }
     return bytes
+}
+
+/// A voice list read a test holds: it notes whether it ran on the main thread, then waits for the
+/// test's release, for a bounded time, so a read on the main thread cannot hang the test.
+private final class HeldRead: @unchecked Sendable {
+    private let lock = NSLock()
+    private let gate = DispatchSemaphore(value: 0)
+    private var onMain: [Bool] = []
+    private var done = false
+
+    /// For each time the read ran, whether it ran on the main thread.
+    var threads: [Bool] { lock.withLock { onMain } }
+    /// Whether the read has returned.
+    var ended: Bool { lock.withLock { done } }
+
+    /// The read: it returns the test's voice once released.
+    func voices() -> [InstalledVoice] {
+        lock.withLock { onMain.append(Thread.isMainThread) }
+        _ = gate.wait(timeout: .now() + 20)
+        lock.withLock { done = true }
+        return [testVoice]
+    }
+
+    /// Lets the read return.
+    func release() {
+        gate.signal()
+    }
 }
