@@ -7,7 +7,7 @@ missing behaviour: `verdict`, `harness` and `release-and-app` still read `xcode-
 were read by test name in this pull request's own `ci` run 43433922753, its `hygiene` job 131914070839,
 from the job's `python.log`, at `9d368dd`, the head of the first push, which changes only
 documents after the red commit: `git diff --quiet e89e25b 9d368dd --
-.github/workflows/xcframework.yml scripts/tests/test_ci_workflows.py` reads rc 0. There
+.github/workflows/xcframework.yml scripts/tests/test_ci_workflows.py` reads rc 0. There,
 eleven tests of `test_ci_workflows.py` failed, each by an assertion and no error, and no other
 test of the stage failed: the four criteria and the seven moved pins, `test_a_planted_route_is_refused_by_its_scenario`, `test_no_workflow_uses_a_self_hosted_runner_or_a_privileged_trigger`, `test_one_job_body_serves_the_change_and_the_tag`, `test_the_app_is_generated_tested_and_archived_in_the_harness_job`, `test_the_short_apple_jobs_reach_the_mini_only_on_this_repositorys_own_events_with_the_variable_on`, `test_the_sibling_repeats_the_harness_prefix_and_boot_then_runs_the_moved_steps`, `test_the_verdict_needs_every_other_job_and_fails_unless_each_reads_success`. Each red line
 below quotes its test's first failing assertion from that log.

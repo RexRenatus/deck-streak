@@ -26,9 +26,9 @@ the fallback of every job. SPEC-591 R3's and R8's admitted runner for `release-a
 - The `runs-on` of `verdict` becomes the short jobs' expression unchanged. It needs no Apple tool,
   only the results of the jobs it needs, so it follows them.
 - The `runs-on` of `harness` and `release-and-app` becomes one new expression: the labels
-  `self-hosted`, `macOS`, `ARM64`, `ds-mini` and `ds-mini-sim` when `DS_MINI` and a second repository variable,
-  `DS_MINI_LONG`, both read `on`, the actor is not `dependabot[bot]` and the event is a pull
-  request whose head repository is this repository; `xcode-27` otherwise.
+  `self-hosted`, `macOS`, `ARM64`, `ds-mini` and `ds-mini-sim` when `DS_MINI` and a second
+  repository variable, `DS_MINI_LONG`, both read `on`, the actor is not `dependabot[bot]` and
+  the event is a pull request whose head repository is this repository; `xcode-27` otherwise.
 - `DS_MINI_LONG` is the trial switch, set outside the tree. Until it reads `on`, both long jobs run
   where they run today, and the upload lanes' and the tag's runs keep both long jobs hosted
   whatever the variables read.

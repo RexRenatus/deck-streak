@@ -36,8 +36,8 @@ The long jobs' hosted wall times, read from the forge's records of completed run
 | `release-and-app` | 48m27s | 43121315660 | 130872110099 |
 
 Hosted, the two long jobs of a run run side by side. Run one after the other, the same two jobs
-would take 195m38s in run 43191874176 (jobs 131098502329 and 131098502470) and 161m19s in run
-43290095817 (jobs 131441786878 and 131441786904).
+would take 195m38s in run 43191874176 (jobs 131098502329 and 131098502470)
+and 161m19s in run 43290095817 (jobs 131441786878 and 131441786904).
 
 ## 2. Requirements
 
@@ -46,10 +46,10 @@ R1. **The verdict routes with the short jobs.** The `runs-on` of `verdict` is th
     no Apple tool, only the results of the jobs it needs.
 
 R2. **The long jobs take one expression of their own.** The `runs-on` of `harness` and of
-    `release-and-app` is one expression, the same in both: the labels `self-hosted`, `macOS`, `ARM64`, `ds-mini` and `ds-mini-sim` when `DS_MINI` and a
-    second repository variable, `DS_MINI_LONG`, both read `on`, the actor is not
-    `dependabot[bot]` and the event is a pull request whose head repository is this repository;
-    `xcode-27` otherwise.
+    `release-and-app` is one expression, the same in both: the labels `self-hosted`, `macOS`,
+    `ARM64`, `ds-mini` and `ds-mini-sim` when `DS_MINI` and a second repository variable,
+    `DS_MINI_LONG`, both read `on`, the actor is not `dependabot[bot]` and the event is a pull
+    request whose head repository is this repository; `xcode-27` otherwise.
 
 R3. **Every other run keeps the long jobs hosted.** A push, a release tag push, a dispatch and a
     fork's pull request run both long jobs on `xcode-27` whatever the variables read, so every
