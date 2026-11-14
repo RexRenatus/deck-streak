@@ -247,3 +247,31 @@ the Linux control-group v2 documentation (`memory.max`, `memory.swap.max`, `memo
 `memory.peak`); systemd's `systemd.scope(5)`, `systemd.service(5)` (`OOMPolicy=`) and `systemd-run(1)`; cargo-nextest's
 status lines; GitHub's hosted-runner documentation (passwordless `sudo`) and the runner project's guidance on the shutdown
 signal.
+
+## 8. Amendment: the counts after the command wait for the scope to hold the script alone (SPEC-467, #469)
+
+Issue #469; SPEC-467 and ADR-484. Sections 1 to 7 stand as written, and this section only adds to
+them.
+
+- **R4's "after the command" is now: after the command, and once the scope holds the script's own
+  process alone.** When the command returns, the script reads its scope's `cgroup.procs` at most
+  `reads` times (the bound `wait_for_scope` already takes, 50 by default), pausing between reads as
+  `wait_for_scope` does, and stops at the first read that lists its own process alone. Only then
+  does it read `memory.events` and then `memory.peak`, and finish the record as R4 says. A run whose
+  processes all ended with its command reads the file once, pauses nothing, and records, prints and
+  returns exactly what R4 and R5 say.
+- **R13 gains one value read after the command.** `cgroup.procs` is whole only when it holds one or
+  more lines, each a process ID of one to twenty ASCII decimal digits, with no ID twice. A file that
+  is not whole is read once and writes the record with `in_force` false, `state` `done`, zero
+  counts and the reason `cgroup.procs is not whole after the command`. A file that still lists
+  another process when the bound passes writes the same record with the reason
+  `cgroup.procs holds <n> other process(es) after the command`. Either prints
+  `memory-scope: NOT IN FORCE after the command: <reason>`, and the command's exit status is still
+  the script's.
+- **Why.** A process the command started can outlive it, and the kernel can stop it at the cap
+  after the script read the counts, or between its two reads. Such a kill was neither counted nor
+  made the record void, so the leg could read as untouched. SPEC-467's criteria decide the change,
+  and `formal/tla/LateKillCounted` models the reads.
+- **Nothing else here changes:** the cap, the scope's properties, the checks before the command,
+  the record's fields and its shape, the verdict's reading of it (R8 to R12), and every criterion
+  of section 3, each of which still holds.

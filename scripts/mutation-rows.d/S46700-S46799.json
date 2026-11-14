@@ -1,0 +1,94 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S46700-THE-COUNTS-WAIT-FOR-THE-SCOPE",
+        "scripts/memory_scope.py",
+        "    why = alone_after(here, pid, reads)\n",
+        "    why = None\n",
+        "the counts after the command are read only once cgroup.procs lists the script alone, so a kill while another process of the command lives is counted or voids the record (SPEC-467 R1, R2)",
+        "test_memory_scope.TheLateKill.test_a_kill_between_the_two_reads_while_a_process_lives_is_counted_or_the_record_is_void"
+      ],
+      [
+        "S46701-A-PROCESS-OUTLIVING-THE-BOUND-VOIDS",
+        "scripts/memory_scope.py",
+        "    return f\"cgroup.procs holds {others} other process(es) after the command\"\n",
+        "    return None\n",
+        "a process of the command still listed when the bound on the reads passes voids the record, so a kill after both reads is never read as a clean run (SPEC-467 R3)",
+        "test_memory_scope.TheLateKill.test_a_kill_after_both_reads_while_a_process_lives_is_counted_or_the_record_is_void"
+      ],
+      [
+        "S46702-ALONE-MEANS-NO-OTHER-PROCESS",
+        "scripts/memory_scope.py",
+        "        if others == 0:\n",
+        "        if others <= 1:\n",
+        "the scope holds the script alone only when cgroup.procs lists no other process, so one process of the command left alive keeps the script waiting (SPEC-467 R1)",
+        "test_memory_scope.TheLateKill.test_a_kill_between_the_two_reads_while_a_process_lives_is_counted_or_the_record_is_void"
+      ],
+      [
+        "S46703-A-LIST-NOT-WHOLE-VOIDS",
+        "scripts/memory_scope.py",
+        "            return \"cgroup.procs is not whole after the command\"\n",
+        "            return None\n",
+        "a cgroup.procs that is not whole voids the record at its first read, so a process list that cannot be read is never taken for the script alone (SPEC-467 R4)",
+        "test_memory_scope.TheLateKill.test_a_process_list_that_is_not_whole_after_the_command_voids_the_record"
+      ],
+      [
+        "S46704-THE-PAUSE-IS-A-TENTH",
+        "scripts/memory_scope.py",
+        "        if read + 1 < reads:\n            time.sleep(0.1)\n",
+        "        if read + 1 < reads:\n            time.sleep(0)\n",
+        "two reads of cgroup.procs are a tenth of a second apart, so the bound on the reads is a bound on the time the script waits (SPEC-467 R1)",
+        "test_memory_scope.TheLateKill.test_the_scope_is_read_after_the_command_at_most_reads_times_and_no_longer"
+      ],
+      [
+        "S46705-THE-READS-ARE-BOUNDED-BY-READS",
+        "scripts/memory_scope.py",
+        "    for read in range(reads):\n",
+        "    for read in range(1):\n",
+        "cgroup.procs is read up to reads times, so a process that ends during the wait lets the counts be read and a kill during the wait is counted (SPEC-467 R1)",
+        "test_memory_scope.TheLateKill.test_a_kill_during_the_wait_is_counted_once_the_scope_holds_the_script_alone"
+      ],
+      [
+        "S46706-THE-SCRIPT-IS-NOT-ANOTHER-PROCESS",
+        "scripts/memory_scope.py",
+        "    return len(set(pids) - {pid})\n",
+        "    return len(set(pids))\n",
+        "the script's own process is left out of the count of other processes, so a run whose processes end with its command records what it recorded before (SPEC-467 R2)",
+        "test_memory_scope.TheLateKill.test_a_run_whose_processes_end_with_it_records_what_it_recorded_before"
+      ],
+      [
+        "S46707-AN-ID-TWICE-IS-NOT-WHOLE",
+        "scripts/memory_scope.py",
+        "    if len(set(pids)) != len(pids):\n",
+        "    if False:\n",
+        "a cgroup.procs that names one process ID twice is not whole and voids the record (SPEC-467 R4)",
+        "test_memory_scope.TheLateKill.test_a_process_list_that_is_not_whole_after_the_command_voids_the_record"
+      ],
+      [
+        "S46708-A-LINE-NOT-AN-ID-IS-NOT-WHOLE",
+        "scripts/memory_scope.py",
+        "    if None in pids:\n",
+        "    if False:\n",
+        "a cgroup.procs line that is not one to twenty ASCII digits is not whole and voids the record (SPEC-467 R4)",
+        "test_memory_scope.TheLateKill.test_a_process_list_that_is_not_whole_after_the_command_voids_the_record"
+      ],
+      [
+        "S46709-AN-EMPTY-LIST-IS-NOT-WHOLE",
+        "scripts/memory_scope.py",
+        "    lines = lines_of(group / \"cgroup.procs\")\n    if not lines:\n",
+        "    lines = lines_of(group / \"cgroup.procs\")\n    if lines is None:\n",
+        "an empty cgroup.procs is not whole and voids the record, so a list with no process is never read as the script alone (SPEC-467 R4)",
+        "test_memory_scope.TheLateKill.test_a_process_list_that_is_not_whole_after_the_command_voids_the_record"
+      ],
+      [
+        "S46710-THE-COUNTS-ARE-READ-ONLY-WHEN-ALONE",
+        "scripts/memory_scope.py",
+        "counts_after(here, cap) if why is None else (why, {})",
+        "counts_after(here, cap)",
+        "the counts are read only when the wait found the script alone, so the wait's reason is never replaced by the counts' own (SPEC-467 R2, R3)",
+        "test_memory_scope.TheLateKill.test_a_kill_between_the_two_reads_while_a_process_lives_is_counted_or_the_record_is_void"
+      ]
+    ]
+  }
+}
