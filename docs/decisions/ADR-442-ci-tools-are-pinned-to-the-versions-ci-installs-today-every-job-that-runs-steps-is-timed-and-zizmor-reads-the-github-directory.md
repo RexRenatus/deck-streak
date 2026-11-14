@@ -283,3 +283,20 @@ so the rows number 30.
   installed unpinned.
 - Bad, because a pin read over one base goes stale over the next, so a rebuild reads every site
   again, as this note does.
+
+## Note: the install routes outside the install action, and the form of an action pin
+
+SPEC-428 section 11 carries the decision past the install action. A tool CI installs by any other
+route is held to an exact version the same way: a download by its digest, a cargo install by
+`--locked` and an exact version or revision, a pip install by its hashes, Node by an exact
+`.nvmrc` and Rust by the exact toolchain file, and any other route is refused until a rule of its
+own takes it. The one new pin, `.nvmrc`'s 24.22.2, is the release CI already set up (job
+128965020951), so D4 holds: no tool moves under its pin, and a re-pin stays a reviewed edit under
+D6. Each action pin keeps its full commit sha and carries its version as a trailing comment, one
+commit and one comment per action across the workflow files.
+
+### Consequences of the note
+
+- Good, because a route with no rule cannot be added unnoticed: the census refuses it by name.
+- Bad, because the runner image's own packages, the image's Xcode minor version and what an action
+  fetches inside itself stay outside any rule of the tree.
