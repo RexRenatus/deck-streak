@@ -8,11 +8,11 @@ A2: green at 55d9a90
 A3: red at cae56dd: assertion `left == right` failed: the native allow-list admits service 39 method 2 as the package import
 A3: green at 55d9a90
 A4: red at cae56dd: assertion `left == right` failed: a file that is no package reads as the refusal's words
-A4: green at 2a256f6
+A4: green at ab8dfbb
 A5: red at cae56dd: assertion `left == right` failed: a collection member that decompresses one byte past the bound reads as the bound's words
 A5: green at 55d9a90
 A6: red at 97755f2: XCTAssertTrue failed at PackageImportFlowTests.swift:57 on the iPhone and the iPad: the empty deck list shows the import offer import-deck, ready to tap
-A6: green at 2a256f6
+A6: green at ab8dfbb
 ```
 
 The native tests were committed in cae56dd with every other input kept. A2, A3, A4's native
@@ -36,7 +36,16 @@ iPhone and then the iPad`, read A1's `testTheDeckListOpensTheSystemFileImporter`
 A4's `testARefusedPackageReadsAsWords` red at lines 43 and 47 and A6's
 `testTheEmptyDeckListOffersTheImport` red at line 57, on the iPhone and on the iPad, each at its
 own assertion. A4's native test is green from 55d9a90, so A4 is green with its interface test, at
-2a256f6.
+ab8dfbb.
+
+At 2a256f6 the third push's `release-and-app` job (132147994612), in the same step, read A1
+green and A4 and A6 red again, on the iPhone and on the iPad: A4 at line 47 and A6 at line 57,
+each having polled for the offer `import-deck` until its wait ran out. The same step read
+`test_a8_a_fresh_install_lists_the_engines_default_deck` green, so a fresh collection's deck list
+holds the engine's default deck, and the offer showed only for a list that holds no deck at all.
+ab8dfbb shows the offer while the list is empty as the engine reads it: asked to leave out its
+default deck while that deck holds no card, the engine names no deck. It changes no test file, so
+A4 and A6 are green at ab8dfbb.
 
 55d9a90 carries the import pair into the four lists that pin the two tables: `EXPECTED` in
 `crates/ffi/tests/review_pairs.rs`, `NATIVE` in `crates/engine-core/tests/table.rs` and in
@@ -67,4 +76,4 @@ The SPEC's file manifest gains four rows the build measured: the kernel census t
 schematic, the band of mutation rows and `ios/App/Sources/AppModel.swift`, which holds the import
 model.
 
-The green commit `2a256f6` carries the importer, and `git diff --quiet 2a256f6 HEAD -- Cargo.lock changelog.d/ios-file-import-681.md crates/engine-core/src/table.rs crates/engine-core/tests/data_screen_pairs.rs crates/engine-core/tests/review_pairs.rs crates/engine-core/tests/table.rs crates/ffi/Cargo.toml crates/ffi/src/allow_list.rs crates/ffi/src/engine.rs crates/ffi/src/lib.rs crates/ffi/src/package_bound.rs crates/ffi/tests/package_import.rs crates/ffi/tests/review_pairs.rs crates/kernel/tests/allow_list_arms.rs ios/App/Info.plist ios/App/Sources/AppModel.swift ios/App/Sources/DeckListView.swift ios/App/Sources/EngineSession.swift ios/App/Sources/PackageImportModel.swift ios/App/Sources/PackageImportRequest.swift ios/App/Sources/PackageImportView.swift ios/AppUITests/PackageImportFlowTests.swift ios/swift-roles.json scripts/mutation-rows.d/S68100-S68199.json` reads rc 0.
+The green commit `ab8dfbb` carries the importer, and `git diff --quiet ab8dfbb HEAD -- Cargo.lock changelog.d/ios-file-import-681.md crates/engine-core/src/table.rs crates/engine-core/tests/data_screen_pairs.rs crates/engine-core/tests/review_pairs.rs crates/engine-core/tests/table.rs crates/ffi/Cargo.toml crates/ffi/src/allow_list.rs crates/ffi/src/engine.rs crates/ffi/src/lib.rs crates/ffi/src/package_bound.rs crates/ffi/tests/package_import.rs crates/ffi/tests/review_pairs.rs crates/kernel/tests/allow_list_arms.rs ios/App/Info.plist ios/App/Sources/AppModel.swift ios/App/Sources/DeckListView.swift ios/App/Sources/EngineSession.swift ios/App/Sources/PackageImportModel.swift ios/App/Sources/PackageImportRequest.swift ios/App/Sources/PackageImportView.swift ios/AppUITests/PackageImportFlowTests.swift ios/swift-roles.json scripts/mutation-rows.d/S68100-S68199.json` reads rc 0.
