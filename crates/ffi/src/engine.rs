@@ -1,5 +1,6 @@
 //! The engine handle, its typed refusal and the one entry point (SPEC-336 R1, R3).
 
+use std::borrow::Cow;
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -24,6 +25,7 @@ use deck_streak_engine_core::table::{ExemptWrite, Transport};
 use crate::allow_list::allowed;
 use crate::face::{CardFace, MediaFolder};
 use crate::health::CardHealth;
+use crate::package_bound;
 use crate::review_undo::{self, UndoDone, UndoKind, UndoOffered};
 
 /// Why a call was not answered with the response's bytes. A native client reads it as a thrown
@@ -114,10 +116,15 @@ impl Engine {
     /// endpoint and handed to the core, which refuses the login unless the statement admits this
     /// client (SPEC-374 R8).
     ///
+    /// Before a package import, the adapter reads the package under its bound and sends the
+    /// engine the package's path with the import's four options (SPEC-681 R2, R4).
+    ///
     /// # Errors
     ///
     /// [`EngineRefusal::NotAllowed`] for a call outside the allow-list, and
     /// [`EngineRefusal::Engine`] when the engine answers an allowed call with an error.
+    /// A package the adapter refuses before the engine runs is an [`EngineRefusal::Engine`]
+    /// too, its message the refusal's words (SPEC-681 R5).
     #[expect(
         clippy::needless_pass_by_value,
         reason = "a foreign caller's bytes cross the boundary owned, as the bindings pass them"
@@ -133,6 +140,13 @@ impl Engine {
         {
             self.dispatcher.handshake(read_statement(&url).as_deref());
         }
+        // A package import reaches the engine only after the adapter has read the package under
+        // its bound, with the import's four options written into its request (SPEC-681 R2, R4).
+        let input = if (service, method) == IMPORT_PACKAGE {
+            Cow::Owned(package_bound::checked_request(&input).map_err(import_refusal)?)
+        } else {
+            Cow::Borrowed(input.as_slice())
+        };
         self.dispatcher
             .run(service, method, &input)
             .map_err(refusal)
@@ -818,6 +832,9 @@ impl std::error::Error for PressRefusal {}
 /// The engine's sync login, `BackendSyncService.SyncLogin`: the one call the statement's read
 /// precedes (SPEC-374 R8).
 const SYNC_LOGIN: (u32, u32) = (1, 3);
+
+/// `ImportExportService.ImportAnkiPackage`, the package import's one call (SPEC-681 R2).
+const IMPORT_PACKAGE: (u32, u32) = (39, 2);
 /// The longest the statement's read may take, from its connection to its body's last byte.
 const STATEMENT_TIMEOUT: Duration = Duration::from_secs(10);
 /// The most bytes the statement's body may hold.
@@ -871,6 +888,15 @@ async fn statement(url: &str) -> Option<Vec<u8>> {
         if body.len() > STATEMENT_CAP {
             return Some(Vec::new());
         }
+    }
+}
+
+/// The adapter's refusal for a package it will not import: an engine refusal whose message is
+/// the refusal's words, so the app reads it as it reads any engine refusal (SPEC-681 R5;
+/// ADR-703 D4).
+fn import_refusal(refused: package_bound::Refused) -> EngineRefusal {
+    EngineRefusal::Engine {
+        error: refused.backend_error(),
     }
 }
 

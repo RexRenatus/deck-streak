@@ -25,7 +25,7 @@ use deck_streak_engine_core::table::{
 /// flag, which the native review runs as the web's does (SPEC-358 R1), with the normal sync,
 /// which the native client syncs with as the web client does (SPEC-503 R1), and with the undo
 /// status, which the native review reads before and while it undoes (SPEC-515 R1).
-const NATIVE: [(u32, u32); 12] = [
+const NATIVE: [(u32, u32); 13] = [
     (1, 3),
     (1, 5),
     (3, 0),
@@ -38,6 +38,7 @@ const NATIVE: [(u32, u32); 12] = [
     (13, 14),
     (13, 24),
     (27, 6),
+    (39, 2),
 ];
 
 /// The web engine's study calls (SPEC-345 M4), less `AnswerCard` (SPEC-365 R4, R7) and `Undo`
