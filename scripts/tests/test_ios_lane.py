@@ -1295,17 +1295,24 @@ class LaneCredential(unittest.TestCase):
     def test_each_failed_certificate_read_prints_one_class_and_nothing_of_openssl(self):
         marker = uuid.uuid4().hex
         # Each text also holds the words of every class after its own, so the order of the tests
-        # is what picks its class; the first three match only when case is ignored.
+        # is what picks its class; the first three match only when case is ignored, as do the
+        # next two.
         cases = [
             (
                 "wrong-password",
-                f"Mac verify failure\n{marker}: unsupported, unknown option\n",
+                f"Mac verify failure\n{marker}: unsupported, unknown option\ncan't open, asn1\n",
             ),
             (
                 "legacy-algorithm",
-                f"Error outputting keys and certificates\n{marker}: Unsupported; bad option\n",
+                f"Error outputting keys and certificates\n{marker}: Unsupported; bad option\n"
+                "unable to load, asn1\n",
             ),
-            ("option-refused", f"pkcs12: Unrecognized flag legacy\n{marker}\n"),
+            (
+                "option-refused",
+                f"pkcs12: Unrecognized flag legacy\n{marker}\ncould not read, asn1\n",
+            ),
+            ("could-not-read", f"pkcs12: Could not read {marker}\nASN1 decoding\n"),
+            ("asn1-decode", f"pkcs12: {marker}: error in ASN1 encoding routines\n"),
             ("unrecognised", f"pkcs12: {marker}: the input could not be read\n"),
         ]
         for name, text in examined("refused reads", cases):
