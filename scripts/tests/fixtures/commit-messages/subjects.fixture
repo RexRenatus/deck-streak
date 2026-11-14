@@ -1,0 +1,37 @@
+== clean-scope 1 planted-person
+feat(census): read each commit subject of the range
+
+The body explains the change.
+
+== clean-bare 1 planted-person
+docs: name the house types
+
+== clean-bang 1 planted-person
+fix(census)!: read the range by its first parent
+
+== clean-caps 1 planted-person
+Test(census): plant a type in capitals
+
+== clean-rel 1 planted-person
+release: cut the next version
+
+== clean-72 1 planted-person
+docs(census): state every subject form the census reads, and each reason
+
+== squash 1 planted-person
+docs(census): name the merge subjects a tool writes (#1)
+
+== no-type 1 planted-person
+Update the census
+
+== no-desc 1 planted-person
+feat(census):
+
+== empty-scope 1 planted-person
+feat(): read the range
+
+== other-type 1 planted-person
+wip(census): read the range
+
+== over-limit 1 planted-person
+docs(census): state every subject form the census reads, and each reason.

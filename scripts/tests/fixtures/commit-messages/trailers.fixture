@@ -1,0 +1,71 @@
+== co-author 1 planted-person
+docs(census): plant a co-author
+
+Co-authored-by: Planted Person <planted@example.invalid>
+
+== sign-off 1 planted-person
+docs(census): plant a sign-off
+
+Signed-off-by: Planted Person <planted@example.invalid>
+
+== caps-key 1 planted-person
+docs(census): plant a key in capitals
+
+CO-AUTHORED-BY: Planted Person <planted@example.invalid>
+
+== spaced-key 1 planted-person
+docs(census): plant a space before the colon
+
+Signed-off-by : Planted Person <planted@example.invalid>
+
+== folded 1 planted-person
+docs(census): plant a folded trailer
+
+Co-authored-by: Planted
+  Person <planted@example.invalid>
+
+== quarter 1 planted-person
+docs(census): plant a sign-off under prose
+
+A paragraph of prose,
+on three lines,
+and then a trailer git writes.
+Signed-off-by: Planted Person <planted@example.invalid>
+
+== refs 1 planted-person
+docs(census): plant a reference
+
+Refs: #1
+
+== break-dash 1 planted-person
+feat(census)!: plant a breaking footer with a hyphen
+
+BREAKING-CHANGE: the census reads every commit
+
+== break-space 1 planted-person
+feat(census)!: plant a breaking footer with a space
+
+BREAKING CHANGE: the census reads every commit
+
+== prose 1 planted-person
+docs(census): plant a co-author under prose
+
+A paragraph of prose,
+on three lines,
+and then a trailer git does not write.
+Co-authored-by: Planted Person <planted@example.invalid>
+
+== middle 1 planted-person
+docs(census): plant a co-author in a middle paragraph
+
+Co-authored-by: Planted Person <planted@example.invalid>
+
+The last paragraph is prose.
+
+== divider 1 planted-person
+docs(census): plant a co-author after the divider
+
+The body.
+---
+
+Co-authored-by: Planted Person <planted@example.invalid>
