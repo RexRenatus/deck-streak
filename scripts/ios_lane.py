@@ -37,6 +37,10 @@ A build tool's full output goes to a file under the lane, and a step prints only
 error and warning lines, each private value redacted (R13). A failed certificate read prints one
 line naming its class, from a closed set, and nothing of openssl's own output. A refusal is one
 line on standard error and exit 1, and writes no output.
+
+Before the first read, `sign` prints the decoded certificate's shape by one class of a closed set,
+and nothing of the certificate; a placed text that does not decode from base64 is refused after
+its class, before any tool runs (SPEC-692 R1 and R2).
 """
 
 import argparse
@@ -94,6 +98,13 @@ READ_FAILURES = (
     ("legacy-algorithm", ("unsupported",)),
     ("option-refused", ("unknown option", "unrecognized flag", "bad option")),
 )
+# The shapes a decoded certificate is named by before its first read, tested in this order: an
+# ASN.1 SEQUENCE whose length octets are well formed and cover exactly the bytes after them, or
+# its indefinite form closed by end-of-contents; PEM armour; base64 text again; anything else.
+SHAPES = ("der-sequence", "pem-armour", "base64-text", "other")
+# Base64 text once ASCII whitespace is removed: its alphabet, then at most two pad characters; a
+# length that is a multiple of four is checked beside it, so the text is strict base64.
+BASE64_TEXT = re.compile(rb"[A-Za-z0-9+/]+={0,2}")
 
 
 class Refused(Exception):
@@ -298,6 +309,34 @@ def read_certificate(openssl, original, passphrase):
     return legacy.stdout
 
 
+def der_sequence(data):
+    """Whether `data` is one ASN.1 SEQUENCE: its tag, then a definite length (the short form, or
+    the long form in one to four octets) equal to the bytes after the header, or the indefinite
+    form, whose bytes end with the two end-of-contents octets."""
+    if len(data) < 2 or data[0] != 0x30:
+        return False
+    if data[1] == 0x80:
+        return len(data) >= 4 and data.endswith(b"\x00\x00")
+    octets = data[1] - 0x80 if data[1] > 0x80 else 0
+    if octets > 4 or len(data) < 2 + octets:
+        return False
+    length = int.from_bytes(data[2 : 2 + octets], "big") if octets else data[1]
+    return length == len(data) - 2 - octets
+
+
+def certificate_shape(data):
+    """The first class of `SHAPES` the decoded certificate `data` meets, tested in that order
+    (SPEC-692 R1). Nothing of `data` is printed, logged, written to a file or put in a refusal."""
+    text = b"".join(data.split())
+    meets = {
+        "der-sequence": der_sequence(data),
+        "pem-armour": data.lstrip().startswith(b"-----BEGIN"),
+        "base64-text": len(text) % 4 == 0 and BASE64_TEXT.fullmatch(text) is not None,
+        "other": True,
+    }
+    return next(shape for shape in SHAPES if meets[shape])
+
+
 def sign():
     """Check the profile, import the certificate into a job keychain, install the profile, write
     the include file and archive the app (SPEC-352 R8, R9, R13)."""
@@ -320,10 +359,20 @@ def sign():
         raise Refused("the profile's app id is the placeholder, whose first label is invalid")
     if openssl is None:
         raise Refused("no openssl is on the PATH")
+    # The certificate is decoded once and named by its shape before any tool runs (SPEC-692 R1);
+    # a placed text the decode refuses takes the class `other`, then the one refusal (R2).
+    try:
+        certificate = base64.b64decode(os.environ["CERTIFICATE"])
+    except ValueError:
+        certificate = None
+    shape = "other" if certificate is None else certificate_shape(certificate)
+    print(f"certificate shape: class {shape}", flush=True)
+    if certificate is None:
+        raise Refused("the certificate does not decode from base64")
     print(tool(openssl, "version"), end="", flush=True)
     lane = make_lane()
     original = lane / "original.p12"
-    write_private(original, base64.b64decode(os.environ["CERTIFICATE"]))
+    write_private(original, certificate)
     pem = read_certificate(openssl, original, passphrase)
     original.unlink()
     bundle = lane / "certificate.p12"
