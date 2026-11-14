@@ -297,8 +297,10 @@ final class Probe {
     /// The probe, with the rule list compiled from the factory's own source and the fixture image
     /// written to a fresh temporary directory.
     static func make() async throws -> Probe {
-        let list = try? await WKContentRuleListStore.default().compileContentRuleList(
-            forIdentifier: RuleList.identifier, encodedContentRuleList: RuleList.source)
+        let list = try await Probe.started(label: "rule list") {
+            try? await WKContentRuleListStore.default().compileContentRuleList(
+                forIdentifier: RuleList.identifier, encodedContentRuleList: RuleList.source)
+        }
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("card-probe-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -394,6 +396,38 @@ final class Probe {
             ask(script, handler)
         }
         return answer
+    }
+
+    /// The one bound on a wait the suite starts on its own, which is not a page ask: a listener
+    /// pair, the witness, a rule list compile or the planted cookie (SPEC-624 R1, R2). Runs
+    /// `operation` in an unstructured main-actor task and returns its value or rethrows its error,
+    /// or throws `ProbeStall`, labelled `label` and naming `probing`, when it has not finished within
+    /// `seconds`. It resumes once, through the one-shot guard, so a late finish after a stall is
+    /// dropped. A start wait is no page ask, so the asks line does not count it (SPEC-609 R5).
+    static func started<Value: Sendable>(
+        label: String, seconds: TimeInterval = Probe.askSeconds,
+        _ operation: @escaping @MainActor @Sendable () async throws -> Value
+    ) async throws -> Value {
+        let probe = probing
+        return try await withCheckedThrowingContinuation {
+            (continuation: CheckedContinuation<Value, any Error>) in
+            let once = AskGuard(continuation)
+            once.timer = Task { @MainActor in
+                try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                guard !Task.isCancelled else {
+                    return
+                }
+                _ = once.take(.failure(ProbeStall(label: label, probe: probe, seconds: seconds)))
+            }
+            Task { @MainActor in
+                do {
+                    let value = try await operation()
+                    _ = once.take(.success(value))
+                } catch {
+                    _ = once.take(.failure(error))
+                }
+            }
+        }
     }
 
     /// The label an ask of `script` carries in a stall: the name of one of the suite's own scripts,
@@ -560,7 +594,7 @@ final class Probe {
         if let reading = warmedUp {
             return reading
         }
-        let ruleList = await RuleList.compile()
+        let ruleList = try await Probe.started(label: "warm-up rule list") { await RuleList.compile() }
         let off = try await warmUpLoad(switchedOn: false, body: "<p>a card</p>", ruleList: ruleList)
         let on = try await warmUpLoad(
             switchedOn: true, body: "<script>\(ranMarker)</script><p>a card</p>", ruleList: ruleList)
@@ -661,8 +695,8 @@ final class Probe {
         Probe.probes += 1
         Probe.probing = "\(card.id) in \(String(describing: variant)) (probe \(Probe.probes))"
         let listeners = try Listeners()
-        try await listeners.start()
         defer { listeners.cancel() }
+        try await Probe.started(label: "listeners") { try await listeners.start() }
         let label = "v" + UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
         let address = Address(
             tcpPort: listeners.tcpPort, udpPort: listeners.udpPort, fixture: fixture, label: label)
@@ -829,6 +863,30 @@ final class FallsSilentPage {
         } else {
             kept.append(answer)
         }
+    }
+}
+
+/// A listener pair the start wait starts, standing in for one whose state never reaches ready: its
+/// start keeps the continuation it waits on and never resumes it, and its cancel ends that wait by
+/// throwing, as a cancelled listener's state does (SPEC-624 R5, A1).
+@MainActor
+final class StalledListeners {
+    private var kept: [CheckedContinuation<Void, any Error>] = []
+
+    /// Waits for a ready state that never comes, keeping its continuation, as such a pair would.
+    func start() async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+            kept.append(continuation)
+        }
+    }
+
+    /// Ends every kept wait once by throwing `CancellationError()`, as a cancelled listener's
+    /// `.cancelled` state does, then keeps none.
+    func cancel() {
+        for continuation in kept {
+            continuation.resume(throwing: CancellationError())
+        }
+        kept = []
     }
 }
 
@@ -1236,7 +1294,7 @@ final class PlantedCardTests: XCTestCase {
         let cookie = try XCTUnwrap(
             HTTPCookie(properties: [.domain: "app-state.invalid", .path: "/", .name: "planted", .value: planted]),
             "the planted cookie was not made")
-        await WKWebsiteDataStore.default().httpCookieStore.setCookie(cookie)
+        try await Probe.started(label: "cookie") { await WKWebsiteDataStore.default().httpCookieStore.setCookie(cookie) }
         let file = probe.directory.appendingPathComponent("app-state.txt")
         try Data(planted.utf8).write(to: file)
         URLCredentialStorage.shared.set(
@@ -1333,8 +1391,8 @@ final class PlantedCardTests: XCTestCase {
     func test_a_lookup_a_card_asks_for_reaches_the_witness_only_from_the_reference() async throws {
         let probe = try await Probe.make()
         let witness = try Witness()
-        try await witness.start()
         defer { witness.cancel() }
+        try await Probe.started(label: "witness") { try await witness.start() }
         let views: [(name: String, variant: Variant)] = [
             ("reference", .reference), ("shipped", .shipped), ("scripted", .scripted),
         ]
@@ -1570,5 +1628,46 @@ final class PlantedCardTests: XCTestCase {
         let said = try XCTUnwrap(stall, "A2: the load wait came back with no probe stall: \(line)").description
         XCTAssertTrue(said.contains("the ready ask"), "A2: the stall names no ready ask: \(said)")
         XCTAssertTrue(said.contains("within 2 s"), "A2: the stall names no bound in whole seconds: \(said)")
+    }
+
+    /// SPEC-624 A1 (R1, R5): a start wait over a listener pair that never gets ready ends at its own
+    /// bound with a stall that names its label, the probe it stopped on and the bound, inside its
+    /// watchdog, so a start wait cannot hang its test.
+    @MainActor
+    func test_a_listener_that_never_gets_ready_fails_at_the_ask_bound_and_names_its_probe() async throws {
+        let listeners = StalledListeners()
+        defer { listeners.cancel() }
+        Probe.probing = "a planted card in a stalled view (probe 1)"
+        let outcome = Outcome<Void>()
+        let start = Date()
+        Task { @MainActor in
+            do {
+                try await Probe.started(label: "listeners", seconds: 2) { try await listeners.start() }
+                outcome.result = .success(())
+            } catch {
+                outcome.result = .failure(error)
+            }
+            outcome.finished = Date()
+        }
+        let returned = try await Probe.poll(10) { outcome.result != nil }
+        guard returned != nil, let result = outcome.result else {
+            XCTFail(
+                "A1 watchdog: the start wait over a listener pair that never gets ready, with `seconds: 2`, had not returned by the end of the watchdog, `seconds: 10`, so the start wait has no bound")
+            return
+        }
+        let elapsed = (outcome.finished ?? Date()).timeIntervalSince(start)
+        var stall: ProbeStall?
+        if case .failure(let error) = result {
+            stall = error as? ProbeStall
+        }
+        let line = "card probe stalled start: stalled=\(stall != nil) elapsed=\(String(format: "%.2f", elapsed))"
+        print(line)
+        let said = try XCTUnwrap(stall, "A1: the start wait came back with no probe stall: \(line)").description
+        XCTAssertTrue(said.contains("the listeners ask"), "A1: the stall names no start label: \(said)")
+        XCTAssertTrue(
+            said.contains("a planted card in a stalled view (probe 1)"), "A1: the stall names no probe: \(said)")
+        XCTAssertTrue(said.contains("within 2 s"), "A1: the stall names no bound in whole seconds: \(said)")
+        XCTAssertGreaterThanOrEqual(elapsed, 2, "A1: the start wait stalled before its bound, `seconds: 2`: \(line)")
+        XCTAssertLessThan(elapsed, 10, "A1: the start wait stalled only at the watchdog, `seconds: 10`: \(line)")
     }
 }
