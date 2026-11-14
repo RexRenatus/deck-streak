@@ -330,7 +330,7 @@ def der_sequence(data):
     if data[1] == 0x80:
         return len(data) >= 4 and data.endswith(b"\x00\x00")
     octets = data[1] - 0x80 if data[1] > 0x80 else 0
-    if octets > 4 or len(data) < 2 + octets:
+    if octets > 4 or len(data[2:]) < octets:
         return False
     length = int.from_bytes(data[2 : 2 + octets], "big") if octets else data[1]
     return length == len(data) - 2 - octets
@@ -398,7 +398,6 @@ def offered(bundle, keychain, passphrase):
         ],
         env=without_credential(),
         capture_output=True,
-        text=True,
     )
     return done.returncode == 0
 
