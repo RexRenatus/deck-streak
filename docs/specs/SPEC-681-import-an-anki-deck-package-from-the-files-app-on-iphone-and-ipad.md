@@ -11,7 +11,7 @@ The app has no route to a deck without sync. Each finding below is read by name 
 change's base.
 
 - **The app.** `ios/App/Sources/DeckListView.swift` (74 lines) shows the decks in a `List` (line
-  57) titled `Decks` (line 68), with no empty state: a fresh install shows an empty list.
+  57) titled `Decks` (line 68), with no empty state: a fresh install lists its default deck alone.
   `ios/App/Info.plist` (52 lines) declares no document type. `EngineCall` in
   `ios/App/Sources/EngineSession.swift` (line 8) names six calls, and none imports.
 - **The engine's own import.** `ImportExportService.ImportAnkiPackage`
