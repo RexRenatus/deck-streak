@@ -138,6 +138,10 @@ discarded when the job ends.
 ## The certificate read, and its one retry
 
 ```
+ decode the certificate -> print: certificate shape: class <der-sequence | pem-armour | base64-text | other>
+        |  a text that does not decode: class other, then refuse:
+        |  the certificate does not decode from base64, before any tool runs
+        v
  TMP/lane/original.p12, the password line on stdin, the environment minus every credential part
         |
         v
@@ -151,8 +155,15 @@ discarded when the job ends.
         |  fails -> refuse: openssl pkcs12 read failed: first class <a>, -legacy class <b>
         v
  no third read; after a refusal no further tool runs
+
+ re-wrap (pbes2) -> security import -x -T codesign
+        |  ok -> print: keychain import under form <form>: ok
+        |  refused -> print one line; the job keychain anew; re-wrap (sha1-compat) -> import once more
+        |  refused again -> refuse: security import failed: form pbes2, form sha1-compat
 ```
 
+| `could-not-read` | `could not read`, `can't open` or `unable to load` |
+| `asn1-decode` | `asn1` |
 | class | openssl's standard error holds (case-blind; the first row that matches wins) |
 |---|---|
 | `wrong-password` | `invalid password` or `mac verify` |

@@ -1,0 +1,78 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S69200-THE-DEFINITE-DER-SEQUENCE-IS-NAMED",
+        "scripts/ios_lane.py",
+        "return length == len(data) - 2 - octets",
+        "return False",
+        "a DER sequence whose definite length covers the bytes after its header is named der-sequence; taken away, the planted definite sequence reads other (SPEC-692 R1)",
+        "test_ios_lane.LaneCredential.test_the_certificate_shape_is_printed_as_one_fixed_class_before_the_first_read"
+      ],
+      [
+        "S69201-THE-INDEFINITE-DER-SEQUENCE-IS-NAMED",
+        "scripts/ios_lane.py",
+        "return len(data) >= 4 and data.endswith(b\"\\x00\\x00\")",
+        "return False",
+        "a DER sequence in the indefinite form closed by end-of-contents is named der-sequence; taken away, the planted indefinite sequence reads other (SPEC-692 R1)",
+        "test_ios_lane.LaneCredential.test_the_certificate_shape_is_printed_as_one_fixed_class_before_the_first_read"
+      ],
+      [
+        "S69202-PEM-ARMOUR-IS-NAMED",
+        "scripts/ios_lane.py",
+        "\"pem-armour\": data.lstrip().startswith(b\"-----BEGIN\"),",
+        "\"pem-armour\": False,",
+        "a PEM begin boundary after leading whitespace is named pem-armour; taken away, the planted armour reads other (SPEC-692 R1)",
+        "test_ios_lane.LaneCredential.test_the_certificate_shape_is_printed_as_one_fixed_class_before_the_first_read"
+      ],
+      [
+        "S69203-BASE64-TEXT-IS-NAMED",
+        "scripts/ios_lane.py",
+        "\"base64-text\": len(text) % 4 == 0 and BASE64_TEXT.fullmatch(text) is not None,",
+        "\"base64-text\": False,",
+        "strict base64 text is named base64-text; taken away, the planted twice-encoded secret reads other (SPEC-692 R1)",
+        "test_ios_lane.LaneCredential.test_the_certificate_shape_is_printed_as_one_fixed_class_before_the_first_read"
+      ],
+      [
+        "S69204-OTHER-IS-THE-FALL-THROUGH",
+        "scripts/ios_lane.py",
+        "\"other\": True,",
+        "\"other\": False,",
+        "a certificate no other class takes falls through to other; without the fall-through the step names no shape for the planted body led by a NUL (SPEC-692 R1)",
+        "test_ios_lane.LaneCredential.test_the_certificate_shape_is_printed_as_one_fixed_class_before_the_first_read"
+      ],
+      [
+        "S69205-A-TEXT-THAT-DOES-NOT-DECODE-IS-REFUSED",
+        "scripts/ios_lane.py",
+        "raise Refused(\"the certificate does not decode from base64\")",
+        "pass",
+        "a placed text the decode refuses is refused after its class, before any tool; without the refusal the version call runs and the step fails on the missing bytes (SPEC-692 R2)",
+        "test_ios_lane.LaneCredential.test_a_certificate_that_does_not_decode_is_refused_after_its_class_before_any_tool"
+      ],
+      [
+        "S69206-COULD-NOT-READ-IS-A-CLASS",
+        "scripts/ios_lane.py",
+        "(\"could-not-read\", (\"could not read\", \"can't open\", \"unable to load\")),",
+        "(\"could-not-read\", ()),",
+        "the phrases for an input openssl cannot open or load name the class could-not-read; emptied, the planted text reads as the next class (SPEC-692 R3)",
+        "test_ios_lane.LaneCredential.test_each_failed_certificate_read_prints_one_class_and_nothing_of_openssl"
+      ],
+      [
+        "S69207-ASN1-DECODE-IS-A-CLASS",
+        "scripts/ios_lane.py",
+        "(\"asn1-decode\", (\"asn1\",)),",
+        "(\"asn1-decode\", ()),",
+        "the phrase for openssl's ASN.1 decoding library names the class asn1-decode; emptied, the planted text reads unrecognised (SPEC-692 R3)",
+        "test_ios_lane.LaneCredential.test_each_failed_certificate_read_prints_one_class_and_nothing_of_openssl"
+      ],
+      [
+        "S69208-THE-KEYCHAIN-IS-OFFERED-TWO-IMPORTS-AT-MOST",
+        "scripts/ios_lane.py",
+        "if not offered(bundle, keychain, passphrase):",
+        "if not offered(bundle, keychain, passphrase) and not offered(bundle, keychain, passphrase):",
+        "a second refused import refuses naming both forms; with one more offer the keychain is offered a third import (SPEC-692 R4)",
+        "test_ios_lane.LaneCredential.test_a_refused_keychain_import_is_imported_once_more_under_the_compatibility_form"
+      ]
+    ]
+  }
+}

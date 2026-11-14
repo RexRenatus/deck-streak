@@ -348,3 +348,7 @@ amends R9 and R13; D3's signing path and D6's private log otherwise stand.
   dev already holds (#1050). D9's "rendered when the lane moves to the
   app's scheme (#625)" is superseded by ADR-584 D7: the move renders no sync setting (#634). D1,
   D2, D4 to D7 and the signing they decide are unchanged.
+
+- SPEC-692 (ADR-711): D3's re-wrap takes the PBES2 form first and the SHA-1 based compatibility
+  form once after a refused import; D6's private log gains one shape line and two read classes,
+  each a fixed word. D1, D2 and D4 to D9 are unchanged.
