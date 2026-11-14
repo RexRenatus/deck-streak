@@ -1,9 +1,10 @@
 """The TestFlight lane's steps, run as child processes over fixture repositories and recording
 shims (SPEC-352 A1 to A13 and A26 to A28, ADR-363 D2 to D7 and its amendment).
 
-`scripts/ios_lane.py` is never imported: each test runs it with `sys.executable`, in a fixture
-checkout, with an environment the test builds from `PATH`, a scratch `HOME` and the GitHub
-variables the step reads, so nothing of the session reaches it. Every number a test expects is a
+`scripts/ios_lane.py` is imported by one test alone, which reads `der_sequence`'s answers to
+planted bytes in-process; every other test runs it with `sys.executable`, in a fixture checkout,
+with an environment the test builds from `PATH`, a scratch `HOME` and the GitHub variables the
+step reads, so nothing of the session reaches it. Every number a test expects is a
 literal the fixture's history fixes, never one the script computed, and every refusal is matched
 as one whole line of the script's error output.
 
@@ -1259,6 +1260,36 @@ class LaneCredential(unittest.TestCase):
                 self.assertNotIn(marker, printed)
                 self.assertNotIn(marker, errors)
 
+    def test_each_keychain_import_line_is_written_out_before_the_next_tool_runs(self):
+        # The refused import's line reaches the step's output before the job keychain is deleted,
+        # and the accepted import's line before the partition list is set, so a log shows each
+        # line beside the tool it is about.
+        refused = f"security: SecKeychainItemImport: {uuid.uuid4().hex}\n"
+        failed = b"keychain import failed: form pbes2; importing once more under form sha1-compat\n"
+        first = b"keychain import under form pbes2: ok\n"
+        again = b"keychain import under form sha1-compat: ok\n"
+        cases = [
+            ("the first import", [], [(first, "set-key-partition-list")]),
+            (
+                "the import once more",
+                [refused],
+                [(failed, "delete-keychain"), (again, "set-key-partition-list")],
+            ),
+        ]
+        for case, texts, lines in examined("keychain import paths", cases):
+            with self.subTest(case=case):
+                self.step("clean")
+                self.refuse_imports(*texts)
+                code, printed, errors, records, _ = self.step(
+                    "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+                )
+                self.assertEqual(code, 0, errors)
+                written = printed.encode("utf-8")
+                self.assertEqual(
+                    [self.one(records, "security", tool)["stdout_size"] for _, tool in lines],
+                    [written.index(line) + len(line) for line, _ in lines],
+                )
+
     def test_the_profile_is_installed_where_xcode_reads_it_and_cleaned_up_alone(self):
         profiles = self.home / "Library/Developer/Xcode/UserData/Provisioning Profiles"
         profiles.mkdir(parents=True)
@@ -1365,6 +1396,57 @@ class LaneCredential(unittest.TestCase):
         self.assertFalse(self.lane.exists())
         self.assertNotIn(marker, printed)
         self.assertNotIn(marker, errors)
+
+    def test_the_certificate_shape_holds_at_each_length_and_alphabet_edge(self):
+        # Each planted certificate as the secret's decoded bytes, at an edge of the length octets
+        # or of the base64 test. The version call is made to fail, so each sign stops on its one
+        # refusal right after the shape line, before any read.
+        cases = [
+            ("an empty sequence", "der-sequence", b"\x30\x00"),
+            ("a short-form sequence over one boolean", "der-sequence", b"\x30\x03\x01\x01\x00"),
+            ("a one-octet long form over no contents", "der-sequence", b"\x30\x81\x00"),
+            ("an indefinite sequence over no contents", "der-sequence", b"\x30\x80\x00\x00"),
+            ("an indefinite form with no end-of-contents", "other", b"\x30\x80\x02\x01\x00"),
+            ("a long form in five octets", "other", b"\x30\x85\x00\x00\x00\x00\x01\x00"),
+            ("a set, not a sequence", "other", b"\x31\x03\x01\x01\x00"),
+            ("base64 letters short of a group of four", "other", b"MIIBCgK"),
+            ("four octets outside the base64 alphabet", "other", b"\x01\x02\x03\x04"),
+        ]
+        (self.shims / "fail-version").touch()
+        for case, name, certificate in examined("certificate shape edges", cases):
+            with self.subTest(case=case):
+                self.values["CERTIFICATE"] = base64_text(certificate)
+                code, printed, errors, records, _ = self.step(
+                    "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+                )
+                self.assertEqual(
+                    [line for line in printed.splitlines() if not line.startswith("::add-mask::")],
+                    [f"certificate shape: class {name}"],
+                )
+                self.assertEqual(
+                    (code, errors.splitlines(), records),
+                    (1, ["openssl version failed with exit 1"], []),
+                )
+
+    def test_the_sequence_predicate_answers_true_or_false_and_no_other_value(self):
+        # `der_sequence` reads nothing but the bytes it is given, so this test alone imports the
+        # lane: each answer, from every return of the predicate, is the bool True or False.
+        sys.path.insert(0, str(LANE.parent))
+        self.addCleanup(sys.path.remove, str(LANE.parent))
+        import ios_lane
+
+        cases = [
+            ("a set, not a sequence", b"\x31\x03\x01\x01\x00", False),
+            ("an indefinite sequence over no contents", b"\x30\x80\x00\x00", True),
+            ("an indefinite form with no end-of-contents", b"\x30\x80\x02\x01\x00", False),
+            ("a long form in five octets", b"\x30\x85\x00\x00\x00\x00\x01\x00", False),
+            ("long-form length octets cut short", b"\x30\x82\x01", False),
+            ("a short-form sequence over one boolean", b"\x30\x03\x01\x01\x00", True),
+            ("a length naming more bytes than follow", b"\x30\x05\x01\x01\x00", False),
+        ]
+        for case, data, answer in examined("planted byte strings", cases):
+            with self.subTest(case=case):
+                self.assertIs(ios_lane.der_sequence(data), answer)
 
     def test_a_failed_certificate_read_is_read_once_more_under_legacy(self):
         self.refuse_reads("Error: Unsupported algorithm RC2-40-CBC\n")
