@@ -157,3 +157,15 @@ policy and its kept control; its two carriage-return plants become a NUL in the 
 NUL in the title, the one character no attribute value can carry. R3's read-back is unchanged: it
 compares the whole head, the whole card document and the whole title, and refuses any host that
 does not read back as written. SPEC-462's A1 to A5 decide the change.
+
+## Amendment: SPEC-425 section 10, the host's frame carries the card frame's sandbox
+
+SPEC-425's section 10 (#852) and ADR-421's amendment for #852 change what R1 and A4 say of the
+host's frame. The host's one frame now carries `sandbox`, set from `FRAME_SANDBOX` and empty, before
+its `title` and its `srcdoc`, so W1 is set at two points, on the card frame and on the host's frame,
+as W2 is. Where R1 says the host's frame carries no `sandbox` attribute, and A4 says the frame holds
+the frame document with no sandbox attribute, read: with an empty `sandbox` attribute, and no other
+attribute added. A1's and A4's tests read the three names `sandbox`, `srcdoc` and `title`; every
+other assertion of section 3's criteria stays as written. R7's harness takes both points off for the W1 variant,
+so W1 off leaves no sandbox anywhere, as before. The host policy (R2), the read-back (R3) and the
+planted suite (R5) are unchanged.

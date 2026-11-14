@@ -89,3 +89,26 @@ The app's config overrides the generated parent, whose in-tree source, the `type
 hook in `web/app/svelte.config.js:38-50`, pushes include paths and sets no option. Before this
 delivery the type-checked tree holds five `switch` statements and 0 fall-throughs, so the flag
 refuses nothing today and refuses the first fall-through a change adds.
+
+## 4. The frame arm (SPEC-425 section 10, #852)
+
+A third table, `FRAME_SHAPES`, holds one arm, `iframe without sandbox`, read by the same matcher
+over the same walk, in a test of its own. At dev `0756b82f` the walk holds two `iframe` tags:
+`CardFrame.svelte:19`, which names `sandbox`, and the host's frame at `frame-host.ts:46`, which
+does not. The host's frame now carries the card frame's sandbox, so the arm reads none.
+
+```mermaid
+flowchart LR
+  files["the walk's shipped files"] --> match["sinksIn over raw text, given a table"]
+  frames["FRAME_SHAPES: iframe without sandbox"] --> match
+  match --> a4["A4: no iframe without sandbox"]
+  plants["plants and near misses"] --> a4
+  value["FRAME_SANDBOX, empty: policy.js"] --> card["the card frame: CardFrame.svelte"]
+  value --> host["the host's frame: frame-host.ts"]
+  card --> files
+  host --> files
+```
+
+| arm | table | held at | proved by |
+|---|---|---|---|
+| `iframe without sandbox` | `FRAME_SHAPES` | none | SPEC-425 A4's plants and near misses |

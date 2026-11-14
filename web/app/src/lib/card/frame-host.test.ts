@@ -37,7 +37,7 @@ describe('the card frame host', () => {
     expect(host.body.children).toHaveLength(1);
     const frame = host.body.children[0];
     expect(frame.tagName).toBe('IFRAME');
-    expect(frame.getAttributeNames().sort()).toEqual(['srcdoc', 'title']);
+    expect(frame.getAttributeNames().sort()).toEqual(['sandbox', 'srcdoc', 'title']);
     expect(frame.getAttribute('srcdoc')).toBe(card);
     expect(frame.getAttribute('title')).toBe(title);
 
@@ -153,5 +153,27 @@ describe('the card frame host', () => {
     expect(refusedCards).toEqual([0]);
     expect(refusedTitles).toEqual([0]);
     expect(changed).toEqual([]);
+  });
+
+  // SPEC-425 section 10, R9, A5 (#852). The host's one frame carries the card frame's own sandbox,
+  // empty, as its first attribute, for the host policy, an empty policy and a title that names a
+  // sandbox value, so the card document is sandboxed by its own frame as well as by its inheritance.
+  it("the host's one frame is sandboxed with no token, as the card frame is", () => {
+    const hosts = [
+      frameHost('<p>a</p>', 'The card'),
+      frameHost('<p>a</p>', 'The card', ''),
+      frameHost('<p>a</p>', '" sandbox="allow-scripts')
+    ];
+    let seen = 0;
+    for (const kept of hosts) {
+      expect(kept.refused).toBeUndefined();
+      const frame = parsed(kept.srcdoc).body.children[0];
+      expect(frame.tagName).toBe('IFRAME');
+      expect(frame.getAttribute('sandbox')).toBe('');
+      expect(frame.getAttributeNames()).toEqual(['sandbox', 'title', 'srcdoc']);
+      seen += 1;
+    }
+    console.log(`examined ${seen} of ${hosts.length} hosts`);
+    expect(seen).toBe(3);
   });
 });

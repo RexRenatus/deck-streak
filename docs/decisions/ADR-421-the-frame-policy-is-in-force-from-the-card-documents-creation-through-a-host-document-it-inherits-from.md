@@ -229,3 +229,26 @@ ADR-416 wrote it, and a new planted case proves the host's point alone.
 
 - Issue #787; #771 and ADR-416 (the strip of every `srcset`); #766, #652, SPEC-398 and ADR-412 (Firefox in the card suite, D6's engine reading); ADR-352 and SPEC-341 (the layers). ADR-416 and ADR-412 are not edited: this ADR records the amendment of their Firefox reading.
 - SPEC-407 and `docs/red-first/SPEC-407.md`; the schematic `docs/schematics/card-frame-channels.md` (sections 2, 3 and 9).
+
+## Amendment for #852
+
+### D8. The host's frame carries the card frame's sandbox, so W1 is one value set at two points
+
+D2 left the host's frame with no `sandbox` attribute, since a nested frame's document takes its
+parent document's sandboxing flags, and rejected a second attribute because W1 would become two
+attributes in two places. SPEC-425 section 10 holds an `iframe` without `sandbox` at none in the
+sink census, and the host's frame is that arm's one site. The host's frame now carries `sandbox`,
+set from `FRAME_SANDBOX` (`web/app/src/lib/card/policy.js:18` at dev `0756b82f`), the one value the
+card frame sets too: W1 is one value in one place, set at two points, as W2 is one policy delivered
+at two. The card document's flags are the ones it inherited before, every flag, so no card
+behaviour changes. A `srcdoc` document's policy is its frame's node document's, whatever that
+frame's `sandbox`, so the host policy is in force in the card document from its creation, which
+SPEC-407's A6 reads in every engine. The attribute comes first in the frame's tag; the host policy
+and the read-back are unchanged. The harness's W1 variant takes the host's frame's sandbox off with
+the card frame's, and its host is then the one it built before, byte for byte.
+
+Chosen against:
+- Tokens on the host's frame: rejected because the card document runs no script, submits no form, opens no popup and reads no other document, so it needs none.
+- A literal empty `sandbox` on the host's frame: rejected because the two frames would then hold two values that could drift apart; one constant keeps them one.
+- The attribute set through the DOM, or written by an interpolated attribute string: rejected because the census reads text, so it would not see the attribute and would read the frame as a hit.
+- The W1 variant left as it was: rejected because W1 off would then keep the host's frame sandboxed, so the variant would no longer turn its layer off, and the carriage-return case (ADR-479 D7) could no longer reach the card document where the harness reads it.
