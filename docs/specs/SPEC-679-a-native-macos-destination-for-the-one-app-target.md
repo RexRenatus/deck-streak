@@ -159,6 +159,11 @@ serves as Mac menus and as iPad key commands; the workflow's slice check (`xcfra
 | A13 | a CI job builds the DeckStreak scheme for a macOS destination with the pinned Xcode and runs its unit tests there, whenever a pull request changes an Apple or FFI path | the lane's pull request |
 | A14 | the job's runner is admitted by its workflow's file name, as ADR-345 admits the Apple job's, and the lane spends nothing | the lane's pull request |
 
+On macOS the lane's unit-test step skips CredentialStoreTests and SyncModelTests, the two classes
+that call the keychain, so the lane claims neither class on macOS; the iPhone and iPad unit tests
+still run both. A follow-up pull request reads both classes on macOS under a test host signed with
+the team's identity and removes the skip in the same change.
+
 ## 10. References
 
 ADR-342; ADR-345 (D4); ADR-358 and SPEC-347 R4 (the app's generated project); ADR-350 and

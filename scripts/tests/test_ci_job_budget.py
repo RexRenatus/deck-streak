@@ -63,6 +63,7 @@ BUDGET = {
     ("dependency-review.yml", "pull_request"): (1, "the dependency review"),
     ("engine-measure.yml", "pull_request"): (1, "one measuring job"),
     ("fsrs7-measure.yml", "pull_request"): (1, "one measuring job"),
+    ("macos-on-change.yml", "pull_request"): (7, "the macOS job and the job body's six jobs"),
     ("matrix-limit.yml", "pull_request"): (5, "the rehearsal, each computed matrix once"),
     ("mutation-prices.yml", "pull_request"): (2, "the population, its computed prices once"),
     ("mutation-weekly.yml", "pull_request"): (23, "the battery's jobs, its Rust shards once"),

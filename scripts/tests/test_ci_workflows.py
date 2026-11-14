@@ -38,12 +38,13 @@ PINNED = re.compile(r"^[\w.-]+/[\w.-]+(?:/[\w.-]+)*@[0-9a-f]{40}$")
 LOCAL_CALL = re.compile(r"\$/\.github/workflows/([^/@\s]+)")
 STAGES = re.compile(r"^STAGES_ALL=\(([^)]*)\)", re.M)
 THIS_REPOSITORY = "RexRenatus/deck-streak"
-# The one workflow admitted to a runner that is not a pinned Ubuntu image, and the one runner it is
-# admitted to (SPEC-336, ADR-345 D4): the XCFramework job needs Apple's SDKs, which only a macOS
-# runner holds. The admission is by the workflow's file name, so the same runner under any other
-# name is refused, and this workflow on any other runner is refused. Three of its jobs are taken
-# out of the file's admission by file and job (SPEC-621, ADR-643): SHORT_APPLE_JOBS below.
-ADMITTED_RUNNERS = {"xcframework.yml": "xcode-27"}
+# The two workflows admitted to a runner that is not a pinned Ubuntu image, and the one runner each
+# is admitted to (SPEC-336, ADR-345 D4): the XCFramework job needs Apple's SDKs, which only a macOS
+# runner holds, and the macOS lane tests the app on a Mac (SPEC-679 section 9b). The admission is
+# by the workflow's file name, so the same runner under any other name is refused, and each of
+# these workflows on any other runner is refused. Three of xcframework.yml's jobs are taken out of
+# the file's admission by file and job (SPEC-621, ADR-643): SHORT_APPLE_JOBS below.
+ADMITTED_RUNNERS = {"xcframework.yml": "xcode-27", "macos-on-change.yml": "xcode-27"}
 # The one `runs-on` value of the three short Apple jobs (SPEC-621 R1, R2, R4, R5): the self-hosted
 # labels when the repository variable DS_MINI is `on`, the actor is not Dependabot, and the event is
 # a push, a dispatch or a pull request whose head repository is this repository; the file's
@@ -776,6 +777,7 @@ class WorkflowsAreHardened(unittest.TestCase):
             [
                 ("apple-on-change.yml", "apple", body),
                 ("apple-on-tag.yml", "apple", body),
+                ("macos-on-change.yml", "framework", body),
                 ("testflight-internal.yml", "framework", body),
                 ("testflight-release.yml", "framework", body),
             ],
@@ -1196,6 +1198,7 @@ class CiToolsArePinnedAndJobsBounded(unittest.TestCase):
         for call in (
             ("apple-on-change.yml", "apple"),
             ("apple-on-tag.yml", "apple"),
+            ("macos-on-change.yml", "framework"),
             ("testflight-internal.yml", "framework"),
             ("testflight-release.yml", "framework"),
         ):

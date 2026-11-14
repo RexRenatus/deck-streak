@@ -51,10 +51,14 @@ targets:
         SWIFT_STRICT_CONCURRENCY: complete
         SUPPORTS_MACCATALYST: NO
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
   DeckStreakTests:
     type: bundle.unit-test
-    platform: iOS
-    deploymentTarget: "17.0"
+    supportedDestinations: [iOS, macOS]
+    platform: auto
+    deploymentTarget:
+      iOS: "17.0"
+      macOS: "14.0"
     sources:
       - path: AppTests
     dependencies:
@@ -64,6 +68,8 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: $(DS_APP_ID).tests
         TARGETED_DEVICE_FAMILY: "1,2"
+        "TEST_HOST[sdk=macosx*]": $(BUILT_PRODUCTS_DIR)/DeckStreak.app/Contents/MacOS/DeckStreak
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
   DeckStreakUITests:
     type: bundle.ui-testing
     platform: iOS
@@ -91,3 +97,13 @@ schemes:
         - DeckStreakUITests
     archive:
       config: Release
+  # The macOS test action: the unit tests alone, because DeckStreakUITests is iOS-only and
+  # -only-testing does not keep a scheme's test target out of build-for-testing.
+  DeckStreakMac:
+    build:
+      targets:
+        DeckStreak: all
+    test:
+      config: Debug
+      targets:
+        - DeckStreakTests
