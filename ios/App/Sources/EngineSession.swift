@@ -391,3 +391,5 @@ actor EngineSession: SyncEngine, DataEngine {
             quality: qualities[min(max(voice.quality, 0), 2)])
     }
 }
+
+extension EngineSession: ShellEngine {}

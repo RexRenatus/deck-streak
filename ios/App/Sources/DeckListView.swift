@@ -4,11 +4,13 @@ import SwiftUI
 /// reads "Choose a deck" until a deck is chosen, then shows its review screen (SPEC-348 R9). The
 /// iPhone starts on the deck list and shows the detail once a deck is chosen; the iPad shows both
 /// columns side by side. The columns' layout is the view's own state; the chosen deck and its
-/// review are the model's, so they survive the collapse.
+/// review are the model's, so they survive the collapse. The shell hands each scene phase and
+/// the review's close to the model, which syncs at those moments (SPEC-600 R1).
 struct ShellView: View {
     @Bindable var model: AppModel
     @State private var columnVisibility = NavigationSplitViewVisibility.all
     @State private var compactColumn = NavigationSplitViewColumn.sidebar
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         NavigationSplitView(
@@ -18,7 +20,7 @@ struct ShellView: View {
         } detail: {
             if let review = model.review {
                 ReviewView(model: review) {
-                    model.chosenDeck = nil
+                    Task { await model.closeReview() }
                     compactColumn = .sidebar
                 }
             } else {
@@ -39,6 +41,9 @@ struct ShellView: View {
             AccountView(model: model)
         }
         .task { await model.start() }
+        .onChange(of: scenePhase) { _, phase in
+            Task { await model.phaseChanged(phase) }
+        }
     }
 }
 
