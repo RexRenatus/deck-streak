@@ -1,0 +1,15 @@
+name: planted
+on: push
+jobs:
+  first:
+    steps:
+      - run: planted-check
+  second:
+    steps:
+      - run: planted-check
+  third:
+    steps:
+      - run: planted-check
+  other:
+    steps:
+      - run: echo planted
