@@ -1,0 +1,94 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S66901-A-SUITE-PAST-ITS-MARGIN-IS-A-SITE",
+        "scripts/tests/test_suite_time_ratchet.py",
+        "if figure > limit:",
+        "if figure > limit + 1e9:",
+        "a suite over its bound by more than its margin is a site; without the comparison it reads clean (SPEC-669 R3)",
+        "test_suite_time_ratchet.PlantedSuiteTimes.test_a_suite_over_its_bound_past_its_margin_is_a_site"
+      ],
+      [
+        "S66902-THE-MARGIN-KEEPS-ITS-FLOOR",
+        "scripts/tests/test_suite_time_ratchet.py",
+        "limit = bound + max(ratio * bound, floor)",
+        "limit = bound + ratio * bound",
+        "the margin is the larger of its ratio of the bound and its floor; without the floor a suite within its margin is a site (SPEC-669 R3)",
+        "test_suite_time_ratchet.PlantedSuiteTimes.test_a_suite_over_its_bound_within_its_margin_is_clean"
+      ],
+      [
+        "S66903-A-FASTER-SUITE-IS-REPORTED",
+        "scripts/tests/test_suite_time_ratchet.py",
+        "elif bound > refreshed:",
+        "elif bound > refreshed + 1e9:",
+        "a suite whose figure would list a lower bound is reported for the listing; without the arm it reads clean (SPEC-669 R5)",
+        "test_suite_time_ratchet.PlantedSuiteTimes.test_a_faster_suite_is_reported_for_the_listing"
+      ],
+      [
+        "S66904-NO-TIME-RECORDED-IS-NEVER-PASSED",
+        "scripts/tests/test_suite_time_ratchet.py",
+        "verdicts[key] = \"untimed\"",
+        "verdicts[key] = \"clean\"",
+        "a suite with no time recorded is reported, never passed; without the arm it reads clean (SPEC-669 R4)",
+        "test_suite_time_ratchet.PlantedSuiteTimes.test_a_suite_with_no_time_recorded_is_reported_never_passed"
+      ],
+      [
+        "S66905-A-STALE-LISTING-ENTRY-FAILS",
+        "scripts/tests/test_suite_time_ratchet.py",
+        "failures = sorted(key for key in entries if key not in present)",
+        "failures = []",
+        "a listing entry that names no current suite fails; without the arm it is dropped unseen (SPEC-669 R6)",
+        "test_suite_time_ratchet.PlantedSuiteTimes.test_a_listing_entry_naming_no_current_suite_fails"
+      ],
+      [
+        "S66906-AN-EMPTY-POPULATION-IS-REFUSED",
+        "scripts/tests/test_suite_time_ratchet.py",
+        "suites = examined(\"suite(s)\", suites)",
+        "suites = list(suites)",
+        "the census prints what it examined and refuses an empty population; without it an empty population passes (SPEC-669 R1)",
+        "test_suite_time_ratchet.PlantedSuiteTimes.test_an_empty_population_is_void"
+      ],
+      [
+        "S66907-A-BINARY-IS-THE-SUM-OF-ITS-TESTS",
+        "scripts/tests/test_suite_time_ratchet.py",
+        "figures[key] = figures.get(key, 0.0) + float(m.group(1))",
+        "figures[key] = float(m.group(1))",
+        "a Rust binary's figure is the sum of its tests' own durations; without the sum it is its last test's (SPEC-669 R2)",
+        "test_suite_time_ratchet.PlantedSuiteTimes.test_each_runner_s_time_is_read_from_its_own_form"
+      ],
+      [
+        "S66908-A-MODULE-TAKES-ITS-OWN-RAN-LINE",
+        "scripts/tests/test_suite_time_ratchet.py",
+        "if last is not None and last[0] == int(m.group(2)):",
+        "if last is not None:",
+        "a Python module takes the time of the Ran line with its own count; without the count check it takes another's (SPEC-669 R2)",
+        "test_suite_time_ratchet.PlantedSuiteTimes.test_each_runner_s_time_is_read_from_its_own_form"
+      ],
+      [
+        "S66909-MILLISECONDS-ARE-READ-AS-SECONDS",
+        "scripts/tests/test_suite_time_ratchet.py",
+        "scale = 1000.0 if m.group(3) == \"ms\" else 1.0",
+        "scale = 1.0 if m.group(3) == \"ms\" else 1.0",
+        "a web unit file's duration in milliseconds is read in seconds; without the scale it reads a thousand times larger (SPEC-669 R2)",
+        "test_suite_time_ratchet.PlantedSuiteTimes.test_each_runner_s_time_is_read_from_its_own_form"
+      ],
+      [
+        "S66910-A-CRATE-S-DOC-TESTS-TAKE-THEIR-RESULT-LINES",
+        "scripts/tests/test_suite_time_ratchet.py",
+        "figures[key] = figures.get(key, 0.0) + float(r.group(1))",
+        "figures[key] = figures.get(key, 0.0)",
+        "a crate's doc tests take the duration of their result lines; without it they read no time (SPEC-669 R2)",
+        "test_suite_time_ratchet.PlantedSuiteTimes.test_each_runner_s_time_is_read_from_its_own_form"
+      ],
+      [
+        "S66911-THE-MERGED-DOC-TEST-FORM-TAKES-ITS-OWN-LINE",
+        "scripts/tests/test_suite_time_ratchet.py",
+        "figures[(\"rustdoc\", crate)] = float(a.group(1))",
+        "pass",
+        "a crate whose doc tests print the merged form takes its all-doctests line, which covers both blocks; without it the crate reads its result lines' sum (SPEC-669 R2)",
+        "test_suite_time_ratchet.PlantedSuiteTimes.test_each_runner_s_time_is_read_from_its_own_form"
+      ]
+    ]
+  }
+}

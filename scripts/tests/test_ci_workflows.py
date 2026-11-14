@@ -3239,6 +3239,8 @@ class TheGateRunsInParallelJobs(unittest.TestCase):
                     "bench-rust",
                     "bench-web-build",
                     "bench-web",
+                    # SPEC-669 adds the suite-time census, which reads the gate jobs' stage logs.
+                    "suite-times",
                 ]
             ),
         )

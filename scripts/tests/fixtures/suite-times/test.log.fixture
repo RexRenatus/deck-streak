@@ -1,0 +1,8 @@
+    Starting 6 tests across 6 binaries
+        PASS [   9.000s] alpha::under under_its_bound
+        PASS [  20.500s] alpha::over first_half
+        PASS [  24.500s] alpha::over second_half
+        PASS [  35.000s] alpha::within within_its_margin
+        PASS [   5.000s] alpha::faster faster_than_its_bound
+        PASS [   0.010s] alpha unit_test
+     Summary [  94.010s] 6 tests run: 6 passed, 0 skipped
