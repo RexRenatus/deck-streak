@@ -13,6 +13,8 @@ A5: red at cae56dd: assertion `left == right` failed: a collection member that d
 A5: green at 55d9a90
 A6: red at 97755f2: XCTAssertTrue failed at PackageImportFlowTests.swift:57 on the iPhone and the iPad: the empty deck list shows the import offer import-deck, ready to tap
 A6: green at ab8dfbb
+A7: red at 6f1668f: XCTAssertEqual failed at PackageImportFlowTests.swift:72 on the iPhone and the iPad: ("["Default", "No decks yet. Import an Anki deck package from Files.", "Import a deck"]") is not equal to ("["Default", "No cards yet. Import an Anki deck package from Files.", "Import a deck"]") - beside the default deck's row the offer reads that no card is held yet
+A7: green at 41a9b69
 ```
 
 The native tests were committed in cae56dd with every other input kept. A2, A3, A4's native
@@ -77,3 +79,10 @@ schematic, the band of mutation rows and `ios/App/Sources/AppModel.swift`, which
 model.
 
 The green commit `ab8dfbb` carries the importer, and `git diff --quiet ab8dfbb HEAD -- Cargo.lock changelog.d/ios-file-import-681.md crates/engine-core/src/table.rs crates/engine-core/tests/data_screen_pairs.rs crates/engine-core/tests/review_pairs.rs crates/engine-core/tests/table.rs crates/ffi/Cargo.toml crates/ffi/src/allow_list.rs crates/ffi/src/engine.rs crates/ffi/src/lib.rs crates/ffi/src/package_bound.rs crates/ffi/tests/package_import.rs crates/ffi/tests/review_pairs.rs crates/kernel/tests/allow_list_arms.rs ios/App/Info.plist ios/App/Sources/AppModel.swift ios/App/Sources/DeckListView.swift ios/App/Sources/EngineSession.swift ios/App/Sources/PackageImportModel.swift ios/App/Sources/PackageImportRequest.swift ios/App/Sources/PackageImportView.swift ios/AppUITests/PackageImportFlowTests.swift ios/swift-roles.json scripts/mutation-rows.d/S68100-S68199.json` reads rc 0.
+
+The words' interface test `testTheOfferReadsTrueBesideTheDefaultDeck` was committed alone with
+every other input kept, and read red at its assertion on the iPhone and the iPad, quoting the
+offer's old sentence beside the default deck's row. The words' commit changes that sentence alone,
+and the test reads green there with no test changed.
+
+The green commit `41a9b69` carries the words, and `git diff --quiet 41a9b69 HEAD -- ios/App/Sources/PackageImportView.swift ios/AppUITests/PackageImportFlowTests.swift` reads rc 0.
