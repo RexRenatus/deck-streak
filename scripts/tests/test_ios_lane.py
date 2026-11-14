@@ -141,6 +141,11 @@ elif tool == "security" and args[0] == "delete-keychain":
     Path(args[-1]).unlink()
 elif tool == "security" and args[0] == "import":
     entry["imported"] = Path(args[1]).is_file()
+    # The fixture's refused imports, beside its refused reads: each import takes the next one's
+    # text as its standard error and exits 1, until none is left.
+    if fixture.get("refused imports"):
+        err = fixture["refused imports"].pop(0)
+        (shims / "fixture.json").write_text(json.dumps(fixture))
 elif tool == "security" and args[0] == "list-keychains" and "-s" not in args:
     out = f'    "{fixture["login"]}"\\n'
 elif tool == "security" and args[0] == "find-certificate":
@@ -755,6 +760,13 @@ class LaneCredential(unittest.TestCase):
         fixture["refused reads"] = list(errors)
         (self.shims / "fixture.json").write_text(json.dumps(fixture), encoding="utf-8")
 
+    def refuse_imports(self, *errors):
+        """Make the next `len(errors)` keychain imports exit 1, each with its text from `errors` as
+        the keychain's standard error; every other tool behaves as before."""
+        fixture = json.loads((self.shims / "fixture.json").read_text(encoding="utf-8"))
+        fixture["refused imports"] = list(errors)
+        (self.shims / "fixture.json").write_text(json.dumps(fixture), encoding="utf-8")
+
     def reads(self, records):
         """The records of the certificate reads, every `openssl` call but the re-wrap."""
         return [r for r in records if r["tool"] == "openssl" and "-export" not in r["args"]]
@@ -1098,11 +1110,11 @@ class LaneCredential(unittest.TestCase):
                 "-passout",
                 f"pass:{passphrase}",
                 "-certpbe",
-                "PBE-SHA1-3DES",
+                "AES-256-CBC",
                 "-keypbe",
-                "PBE-SHA1-3DES",
+                "AES-256-CBC",
                 "-macalg",
-                "sha1",
+                "sha256",
             ],
             ["security", "create-keychain", "-p", keychain_password, keychain],
             ["security", "set-keychain-settings", "-lut", "21600", keychain],
@@ -1140,10 +1152,112 @@ class LaneCredential(unittest.TestCase):
         called = [[r["tool"], *r["args"]] for r in examined("signing calls", records)]
         self.assertEqual(called[:-1], expected[:-1])
         self.assertEqual(called[-1][:2], expected[-1])
+        # No re-wrap argument names a SHA-1 based algorithm.
+        (rewrap,) = [call for call in called if "-export" in call]
+        self.assertEqual([word for word in rewrap if "sha1" in word.lower()], [])
         code, _, errors, records, _ = self.step("upload-to-testflight", ("KEY", "KEYID", "ISSUER"))
         self.assertEqual(code, 0, errors)
         key = Path(self.one(records, "xcodebuild", "-exportArchive")["key"]["path"])
         self.assertEqual((key.parent.parent, key.parent.name[:4]), (self.lane, "key-"))
+
+    def test_a_refused_keychain_import_is_imported_once_more_under_the_compatibility_form(self):
+        """RED-FIRST: when the keychain refuses the first import, the step names the refused form, makes
+        the job keychain anew, re-wraps once under the compatibility form and imports once more; a
+        second refusal refuses naming both forms, and nothing runs after it."""
+        marker = uuid.uuid4().hex
+        refused = f"security: SecKeychainItemImport: {marker}\n"
+        pbes2 = ["-certpbe", "AES-256-CBC", "-keypbe", "AES-256-CBC", "-macalg", "sha256"]
+        compat = ["-certpbe", "PBE-SHA1-3DES", "-keypbe", "PBE-SHA1-3DES", "-macalg", "sha1"]
+        failed = "keychain import failed: form pbes2; importing once more under form sha1-compat"
+        # Every tool the step runs, by its first argument (each openssl call as a read or the
+        # re-wrap), up to the second import: the job keychain made anew between the two.
+        through = [
+            "read",
+            "re-wrap",
+            "create-keychain",
+            "set-keychain-settings",
+            "unlock-keychain",
+            "import",
+            "delete-keychain",
+            "create-keychain",
+            "set-keychain-settings",
+            "unlock-keychain",
+            "re-wrap",
+            "import",
+        ]
+        after = [
+            "set-key-partition-list",
+            "list-keychains",
+            "list-keychains",
+            "find-certificate",
+            "find-identity",
+            "archive",
+        ]
+        cases = [
+            (
+                "one refused import",
+                [refused],
+                0,
+                through + after,
+                [failed, "keychain import under form sha1-compat: ok"],
+            ),
+            ("two refused imports", [refused, refused], 1, through, [failed]),
+        ]
+        keychain = str(self.lane / "lane.keychain-db")
+        for case, texts, exit_code, ran, said in examined("refused imports", cases):
+            with self.subTest(case=case):
+                self.step("clean")
+                self.refuse_imports(*texts)
+                code, printed, errors, records, _ = self.step(
+                    "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+                )
+                imports = [r for r in records if r["args"][:1] == ["import"]]
+                self.assertEqual(
+                    len(imports), 2, f"the keychain was offered {len(imports)} import(s)"
+                )
+                tools = [
+                    ("re-wrap" if "-export" in r["args"] else "read")
+                    if r["tool"] == "openssl"
+                    else r["args"][0]
+                    for r in records
+                ]
+                self.assertEqual(tools, ran)
+                rewraps = [r["args"][-6:] for r in records if "-export" in r["args"]]
+                self.assertEqual(rewraps, [pbes2, compat])
+                self.assertEqual([r["imported"] for r in imports], [True, True])
+                password = self.masks(printed)[5]
+                made = [
+                    r["args"]
+                    for r in records
+                    if r["args"][0] in ("create-keychain", "unlock-keychain")
+                ]
+                self.assertEqual(
+                    made,
+                    [
+                        ["create-keychain", "-p", password, keychain],
+                        ["unlock-keychain", "-p", password, keychain],
+                    ]
+                    * 2,
+                )
+                self.assertEqual(
+                    self.one(records, "security", "delete-keychain")["args"],
+                    ["delete-keychain", keychain],
+                )
+                self.assertEqual(
+                    [line for line in printed.splitlines() if line.startswith("keychain import")],
+                    said,
+                )
+                self.assertEqual(code, exit_code, errors)
+                if exit_code:
+                    self.assertEqual(
+                        errors.splitlines(),
+                        ["security import failed: form pbes2, form sha1-compat"],
+                    )
+                    self.assertFalse((self.checkout / INCLUDE).exists())
+                else:
+                    self.assertTrue((self.checkout / INCLUDE).exists())
+                self.assertNotIn(marker, printed)
+                self.assertNotIn(marker, errors)
 
     def test_the_profile_is_installed_where_xcode_reads_it_and_cleaned_up_alone(self):
         profiles = self.home / "Library/Developer/Xcode/UserData/Provisioning Profiles"
@@ -1176,8 +1290,8 @@ class LaneCredential(unittest.TestCase):
         self.sign()
         self.step("upload-to-testflight", ("KEY", "KEYID", "ISSUER"))
         # The step's own fixed lines name no value and come from no build tool, so they are set
-        # aside: the certificate's shape line.
-        own = {"certificate shape: class der-sequence"}
+        # aside: the certificate's shape line and the keychain import's line.
+        own = {"certificate shape: class der-sequence", "keychain import under form pbes2: ok"}
         for out, _, _ in examined("steps", self.runs):
             lines = [line for line in out.splitlines() if line not in own]
             self.assertEqual(lines[-2:], ["warning: <redacted>", "error: <redacted>"])
