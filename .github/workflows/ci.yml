@@ -1395,6 +1395,27 @@ jobs:
           tool: zizmor@1.31.1
       - name: zizmor audits the workflows themselves
         run: zizmor --no-online-audits --persona regular .github
+      # SPEC-663 (ADR-685): actionlint at its pinned release reads every workflow, at warn. The
+      # download is checked against its digest, the external linters stay off so the run depends on
+      # the pinned binary alone, and the run's output and exit are saved for the census, which
+      # prints each finding no listing holds and fails only when the output is missing or unread.
+      - name: actionlint 1.7.11, checksum verified
+        env:
+          ACTIONLINT_SHA256: 900919a84f2229bac68ca9cd4103ea297abc35e9689ebb842c6e34a3d1b01b0a
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/actionlint.tgz" https://github.com/rhysd/actionlint/releases/download/v1.7.11/actionlint_1.7.11_linux_amd64.tar.gz
+          echo "$ACTIONLINT_SHA256  $RUNNER_TEMP/actionlint.tgz" | sha256sum -c -
+          mkdir -p "$HOME/.local/bin" && tar -xzf "$RUNNER_TEMP/actionlint.tgz" -C "$HOME/.local/bin" actionlint
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: actionlint reads every workflow into a saved output and exit
+        run: |
+          code=0
+          actionlint -shellcheck= -pyflakes= -format '{{json .}}' > "$RUNNER_TEMP/actionlint.json" || code=$?
+          echo "$code" > "$RUNNER_TEMP/actionlint.exit"
+      - name: the census reads the saved output and the gate jobs' tool sets, at warn
+        env:
+          ACTIONLINT_OUTPUT: ${{ runner.temp }}/actionlint.json
+        run: python3 -m unittest discover -s scripts/tests -p test_workflow_lint.py
 
   base-is-dev:
     runs-on: ubuntu-24.04
