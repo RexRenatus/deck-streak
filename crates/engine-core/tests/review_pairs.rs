@@ -40,7 +40,7 @@ const DESCRIBE_NEXT_STATES: (u32, u32) = (13, 24);
 /// only the owner's gesture runs (SPEC-371 R2), and with the review's bury and flag (SPEC-358 R1)
 /// and the normal sync (SPEC-503 R1), and with the undo status, which the native review reads
 /// before and while it undoes (SPEC-515 R1).
-const NATIVE: [(u32, u32); 12] = [
+const NATIVE: [(u32, u32); 13] = [
     (1, 3),
     (1, 5),
     (3, 0),
@@ -53,6 +53,7 @@ const NATIVE: [(u32, u32); 12] = [
     (13, 14),
     (13, 24),
     (27, 6),
+    (39, 2),
 ];
 /// The eight exempt writes, held for a gesture on every transport (SPEC-345 M8; SPEC-364 R1;
 /// SPEC-371 R2).

@@ -339,3 +339,12 @@ amends R9 and R13; D3's signing path and D6's private log otherwise stand.
   `-legacy`, which the next run shows; the owner then re-exports the bundle in a form that openssl
   reads, as "What would make this wrong" already says, with no design change.
 - The identity match (SPEC-352 R8 as amended): D3's manual signing now matches the profile's developer certificates to the job keychain's identities by the SHA-256 that `security find-certificate -Z` prints beside each identity's SHA-1, and hands signing the SHA-1 Apple's tools print; the lane computes no SHA-1 of its own, and a profile not issued for the imported certificate is still refused. Rejected: `usedforsecurity=False` on the SHA-1, because the weak-hashing query does not model that argument and still reads the call; a SHA-1 computed by another tool, because it moves the same hash out of the query's sight; a changed name or a dismissed alert, because either leaves the hash in place; and the identity's common name for the match, because a name can match more than one identity in the search list.
+
+- SPEC-566 (ADR-584): the lanes archive, export and upload the app. D3's last clause, "the archive
+  builds the scheme `Harness`'s `Harness` target alone", is superseded by ADR-584 D2: the archive
+  builds the scheme the app's project spec names, through the include the app's settings name last.
+  D8's last bullet, "Leaving them to the app shell — rejected, because the lane's first upload is the
+  harness", is superseded: the lanes now upload the app (ADR-584 D2), whose own catalog and icon set
+  dev already holds (#1050). D9's "rendered when the lane moves to the
+  app's scheme (#625)" is superseded by ADR-584 D7: the move renders no sync setting (#634). D1,
+  D2, D4 to D7 and the signing they decide are unchanged.
