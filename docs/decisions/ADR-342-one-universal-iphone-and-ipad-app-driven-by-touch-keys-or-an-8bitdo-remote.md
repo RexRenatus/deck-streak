@@ -93,3 +93,36 @@ the two-button work amends it. The rest of the record stands.
 - Two grades on the web, Again and Good: chosen because every surface that grades a card offers exactly two grades.
 - Keys `2` and `4` and the d-pad's up and down kept as aliases of the two grades: rejected because a Hard or Easy press would record a grade the learner did not press.
 - Amending this record only when the native client changes too: rejected because it would state four grades for the web while the web offers two.
+
+## Amendment: a native macOS destination for the one app (SPEC-679)
+
+This amendment adds a destination to the Decision Outcome's one SwiftUI target. The target
+`DeckStreak` in `ios/app.yml` gains a macOS destination, built natively from the same sources:
+no second app target, no second project and no Mac Catalyst build. Its minimum version is macOS
+14.0, the first macOS release that carries the Observation framework the shared sources' models
+and bindings use, and their sensory feedback. The
+iPhone and iPad destinations, their deployment target, their scheme and their tests stand.
+
+- **The Mac idiom.** On a Mac the app sets body text at 13 pt and controls 28 pt high, with menus and windows: the
+  review's actions sit in a menu with their keys, the decks and the review open in a resizable
+  window, and settings open in a window of their own.
+- **The remote and the keys.** One set of menu commands carries the keys, which a Mac shows in its
+  menu bar and an iPad reads as key commands; a gamepad is read through the GameController
+  framework on both.
+- **Screen awake.** While a remote is paired and a review is open, the Mac app keeps the display
+  awake through the system's activity assertion, and ends it when the iOS app would turn its idle
+  timer back on.
+- **Platform code.** A call the macOS SDK lacks stays behind a platform conditional for iOS, and
+  gains a macOS counterpart where the Mac needs the behaviour: the card's web view host, the
+  VoiceOver state and announcements, and the sync credential's keychain item.
+- **The engine.** The engine's XCFramework holds a third slice, for macOS, next to the device and simulator
+  ones (ADR-345); SPEC-679 section 9 holds that build and its CI lane.
+
+The rest of the record stands.
+
+- One app target with a native macOS destination: chosen because it adds the Mac with one target, one set of sources and one scheme.
+- Mac Catalyst: rejected because it carries the iPad app's UIKit layer to the Mac, so its controls, menus and windows are translations of the Mac's own, which a native destination uses directly.
+- A second app target or project for macOS: rejected because it doubles the settings, schemes and lanes for the same sources, as this record's two-app option would.
+- The iPad app run unchanged on a Mac: rejected because it keeps touch-sized controls and the iPad layout, with no Mac menus or windows.
+- A later minimum version: rejected because each dated API the sources call starts at macOS 14.0, and each later release leaves out the Macs that stop at the one before it.
+- An earlier minimum version: rejected because the Observation framework the models use starts at macOS 14.0, so every model and binding would be rewritten first.
