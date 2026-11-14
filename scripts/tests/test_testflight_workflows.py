@@ -14,6 +14,7 @@ import unittest
 from _support import REPO, examined
 from test_ci_workflows import (
     ADMITTED_RUNNERS,
+    APP_GENERATE,
     CACHE_BY_THEMSELVES,
     PINNED,
     SECRET,
@@ -88,6 +89,7 @@ ANCESTRY = "the tag is SemVer, annotated, and its commit is on main"
 # and the harness job's variables those steps and the build read.
 FIRST = "this run's XCFramework, bindings and synthetic collection"
 LAST = "the project, generated"
+APP_PROJECT = "the app's project, generated"
 HARNESS_ENV = ("REPORT", "RESULTS", "DEVELOPER_DIR", "XCODEGEN_VERSION", "XCODEGEN_DIGEST")
 PLAN_OUTPUTS = ("lane", "number", "version")
 # A step's own variable, placed as `strings` places it.
@@ -421,6 +423,27 @@ class TheTestflightLanes(unittest.TestCase):
                 [f"python3 scripts/ios_lane.py plan --lane {LANES[name]}"],
                 name,
             )
+
+    def test_each_app_job_generates_the_apps_project_after_the_harness_steps(self):
+        # SPEC-566 R3, the app-project criterion: each lane's app job generates the app's project
+        # in one step, right after the steps it copies from the harness job and right before the
+        # credential's preflight, by the framework workflow's own app generate line.
+        for name in examined("lane files", LANES):
+            steps = steps_of(lane_jobs(name).get("app") or {})
+            named = [step.get("name") for step in steps]
+            self.assertEqual(named.count(APP_PROJECT), 1, name)
+            at = named.index(APP_PROJECT)
+            self.assertEqual(named[at - 1], LAST, name)
+            self.assertEqual(steps[at + 1].get("id"), "preflight", name)
+            self.assertEqual(steps[at], {"name": APP_PROJECT, "run": APP_GENERATE + "\n"}, name)
+            elsewhere = [
+                place
+                for index, step in enumerate(steps)
+                if index != at
+                for place, text in strings(step)
+                if "ios/app.yml" in text
+            ]
+            self.assertEqual(elsewhere, [], name)
 
 
 class TheReleaseLaneHasASecondPath(unittest.TestCase):

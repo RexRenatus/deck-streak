@@ -49,7 +49,7 @@ final class HarnessMeasureTests: XCTestCase {
     func test_m2_memory() {
         let app = XCUIApplication()
         let options = fivePasses()
-        options.invocationOptions = [.manuallyStart]
+        options.invocationOptions = [.manuallyStart, .manuallyStop]
         measure(metrics: [XCTMemoryMetric(application: app)], options: options) {
             app.launch()
             startMeasuring()
@@ -68,6 +68,8 @@ final class HarnessMeasureTests: XCTestCase {
                 good.tap()
             }
             _ = app.staticTexts["new-count"].firstMatch.waitForExistence(timeout: engineWait)
+            stopMeasuring()
+            app.terminate()
         }
     }
 }

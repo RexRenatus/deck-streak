@@ -492,3 +492,28 @@ R8's parenthetical now reads: (the SHA-256 that `security find-certificate -Z` p
 | `docs/specs/SPEC-352-testflight-lane.md`, `docs/decisions/ADR-363-testflight-lane.md`, `docs/red-first/SPEC-352.md` | docs | changed: insert-only amendments |
 
 The amendment changes no workflow, trigger, secret, environment or code-scanning setting.
+
+### SPEC-566: the lanes archive and upload the app
+
+SPEC-566 (ADR-584) moves both lanes from the harness to the app. What it supersedes here, each by
+name; every other line of this SPEC stands:
+
+- R9's last two sentences, "the archive builds the scheme `Harness`'s `Harness` target alone" and
+  "No tracked file changes, and `ios/Config/Harness.xcconfig`'s opening comment says so", are
+  superseded by SPEC-566 R1 and R2: the archive builds the project and the scheme that
+  `ios/app.yml`'s top-level `name` names, `DeckStreak`'s `DeckStreak` target alone, whose settings,
+  `ios/Config/App.xcconfig`, name the same ignored include last. `ios/Config/Harness.xcconfig` stays
+  byte-unchanged, so its opening comment's lane sentence is superseded here and not edited.
+- R7's build with no credential placed builds the app, with the app's committed placeholder app id
+  (`invalid.deckstreak.app`, first label `invalid`), by SPEC-566 R1.
+- R18's "rendered when the lane moves to the app's scheme (#625)", and section 5's bullets "It
+  archives the harness's scheme `Harness`, not the app's" and "It points no build at a sync user",
+  are superseded by SPEC-566: the lane moves to the app's scheme and renders no sync setting; the
+  app's sync endpoint and user, SPEC-347 R14's, stay the committed placeholders until a later
+  change renders them (#634).
+- R19 holds for the harness unchanged. The app target's own catalog and brand icon set stand as dev
+  holds them (#1050), and SPEC-566 changes neither.
+- A9 and A13 are amended criteria: their pinned argument lists now name the project and the scheme
+  the fixture checkout's app spec names (SPEC-566 A1 and A2); their new reds are recorded in
+  `docs/red-first/SPEC-566.md`. A20 is unchanged: the step that generates the app's project follows
+  the copied range.
