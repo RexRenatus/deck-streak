@@ -119,9 +119,9 @@ CACHE_BY_THEMSELVES = (
 def admitted_runner(name, job=None):
     """The pattern every runner of the workflow `name` must match: a pinned Ubuntu image (SPEC-002
     A9), or, for a job SHORT_APPLE_JOBS names by file and job, the expression SHORT_APPLE_RUNNER
-    exactly and nothing else (SPEC-621), or, for the one workflow ADMITTED_RUNNERS names, its one
-    runner exactly (SPEC-336 R9), or, for a job ADMITTED_JOB_RUNNERS names by file and job, its one
-    runner exactly (SPEC-352 R15).
+    exactly and nothing else (SPEC-621), or, for a workflow ADMITTED_RUNNERS names, its one runner
+    exactly (SPEC-336 R9, SPEC-679 section 9b), or, for a job ADMITTED_JOB_RUNNERS names by file
+    and job, its one runner exactly (SPEC-352 R15).
     `job` is the job whose own `runs-on` the runner is, or None for a value placed anywhere else,
     which only the file's own admission or the Ubuntu pattern can admit."""
     if (name, job) in SHORT_APPLE_JOBS:
