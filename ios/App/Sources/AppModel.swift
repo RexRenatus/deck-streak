@@ -38,37 +38,55 @@ final class AppModel {
     private let session = EngineSession()
     private let store: SyncCredentialStore
     private var started = false
+    /// Builds the review of a chosen deck on its session; a test hands in a review that reads no
+    /// device voice (SPEC-347 A16).
+    private let makeReview: @MainActor (Deck, ReviewSession) -> ReviewModel
 
     /// Reads the stored host key once, so a stored item reads as signed in at launch with no
-    /// network call (R8).
-    init(configuration: SyncConfiguration = .current) {
+    /// network call (R8). The review it opens is the review model's own unless one is handed in.
+    init(
+        configuration: SyncConfiguration = .current,
+        review: @escaping @MainActor (Deck, ReviewSession) -> ReviewModel = { deck, session in
+            ReviewModel(deck: deck, session: session)
+        }
+    ) {
         let store = SyncCredentialStore(
             service: configuration.endpoint, account: configuration.user)
         self.configuration = configuration
         self.store = store
+        makeReview = review
         user = configuration.user
         signedIn = (try? store.hostKey()) != nil
         sync = SyncModel(engine: session, store: store, endpoint: configuration.endpoint)
         data = DataModel(engine: session)
     }
 
-    /// Opens the collection and lists its decks, once per model (R7).
-    func start() async {
+    /// Opens the collection and lists its decks, once per model (R7). The arguments are the
+    /// launch arguments the session reads, so a test can name a collection directory of its own.
+    func start(arguments: [String] = CommandLine.arguments) async {
         guard !started else { return }
         started = true
         do {
-            try await session.open()
+            try await session.open(arguments: arguments)
             decks = try await session.decks()
         } catch {
             refusal = sentence(error)
         }
     }
 
-    /// Opens the chosen deck's review, which makes it the current deck (7,22) and shows its first
-    /// card, or closes the review when no deck is chosen (SPEC-348 R9).
+    /// Opens the review of the chosen deck, which makes it the current deck (7,22), and hands it to
+    /// the detail pane once its start has answered, at its first card or its designed end, so the
+    /// pane never builds a card view over a review still loading; no deck chosen closes the review.
+    /// A changed choice cancels the task that opened the last one, which then hands nothing over
+    /// (SPEC-348 R9, SPEC-347 section 11).
     func openReview() async {
-        review = chosenDeck.map { ReviewModel(deck: $0, session: ReviewSession(engine: session)) }
-        await review?.start()
+        let opening = chosenDeck.map { deck in
+            makeReview(deck, ReviewSession(engine: session))
+        }
+        review = nil
+        await opening?.start()
+        guard !Task.isCancelled else { return }
+        review = opening
     }
 
     /// Signs in as the configured user at the configured endpoint with the typed password (R8).
