@@ -33,6 +33,9 @@ final class AppModel {
     /// The data screen, which lists and makes this device's backups through the same session
     /// (SPEC-516 R5).
     let data: DataModel
+    /// The deck package import, which imports through the same session and gives the list the
+    /// decks the collection then holds (SPEC-681 R1, R2).
+    let packageImport: PackageImportModel
 
     private let configuration: SyncConfiguration
     private let session = EngineSession()
@@ -50,15 +53,19 @@ final class AppModel {
         signedIn = (try? store.hostKey()) != nil
         sync = SyncModel(engine: session, store: store, endpoint: configuration.endpoint)
         data = DataModel(engine: session)
+        packageImport = PackageImportModel(engine: session)
     }
 
-    /// Opens the collection and lists its decks, once per model (R7).
+    /// Opens the collection and lists its decks, once per model (R7), reads whether the list is
+    /// empty, then imports the package the launch names, if it names one (SPEC-681 R2, R6).
     func start() async {
         guard !started else { return }
         started = true
         do {
             try await session.open()
             decks = try await session.decks()
+            try await packageImport.readListIsEmpty()
+            decks = await packageImport.importAtLaunch(keeping: decks)
         } catch {
             refusal = sentence(error)
         }

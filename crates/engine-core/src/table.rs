@@ -118,9 +118,10 @@ impl Exempt {
 /// ADR-521 D1) and the undo status the native review's undo reads (SPEC-515 R1; ADR-533 D1), and
 /// the web column is the web engine's study calls with its sync calls (SPEC-345 M1, M4; SPEC-364
 /// R1); a parity test holds each adapter's own table equal to its column.
-/// A pair one transport may make is not thereby admitted on the other: the native client neither
-/// closes the collection nor adds notes through this table (ADR-356 D2).
-pub const ORDINARY: [Ordinary; 18] = [
+/// A pair one transport may make is not thereby admitted on the other: the native client never
+/// closes the collection through this table, and it adds notes only through the package import
+/// (ADR-356 D2; ADR-703 D2).
+pub const ORDINARY: [Ordinary; 19] = [
     Ordinary {
         service: 1,
         method: 3,
@@ -246,6 +247,13 @@ pub const ORDINARY: [Ordinary; 18] = [
         name: "CardRenderingService.HtmlToTextLine",
         native: false,
         web: true,
+    },
+    Ordinary {
+        service: 39,
+        method: 2,
+        name: "ImportExportService.ImportAnkiPackage",
+        native: true,
+        web: false,
     },
 ];
 

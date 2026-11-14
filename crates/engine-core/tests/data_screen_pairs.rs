@@ -18,7 +18,7 @@ use std::collections::BTreeSet;
 use deck_streak_engine_core::table::{ANSWERED, EXEMPT, ORDINARY};
 
 /// The ordinary rows at the base, by pair and the engine's name.
-const ORDINARY_ROWS: [(u32, u32, &str); 18] = [
+const ORDINARY_ROWS: [(u32, u32, &str); 19] = [
     (1, 3, "BackendSyncService.SyncLogin"),
     (1, 5, "BackendSyncService.SyncCollection"),
     (3, 0, "BackendCollectionService.OpenCollection"),
@@ -37,6 +37,7 @@ const ORDINARY_ROWS: [(u32, u32, &str); 18] = [
     (27, 6, "CardRenderingService.RenderExistingCard"),
     (27, 9, "CardRenderingService.StripAvTags"),
     (27, 14, "CardRenderingService.HtmlToTextLine"),
+    (39, 2, "ImportExportService.ImportAnkiPackage"),
 ];
 
 /// The exempt rows at the base, by pair and the engine's name.
@@ -75,7 +76,7 @@ fn the_data_screens_add_no_engine_pair() {
         .copied()
         .collect();
     let rows = support::examined("row(s) of the per-transport table", rows);
-    assert_eq!(rows.len(), 27, "18 ordinary, 8 exempt and 1 answered");
+    assert_eq!(rows.len(), 28, "19 ordinary, 8 exempt and 1 answered");
     for (table, found, base) in [
         ("ordinary", &ordinary, &ORDINARY_ROWS[..]),
         ("exempt", &exempt, &EXEMPT_ROWS[..]),

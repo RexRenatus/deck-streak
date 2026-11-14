@@ -1336,6 +1336,8 @@ dependencies = [
  "reqwest 0.13.5",
  "tokio",
  "uniffi",
+ "zip",
+ "zstd",
 ]
 
 [[package]]
