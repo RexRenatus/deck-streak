@@ -1070,10 +1070,10 @@ jobs:
           if-no-files-found: warn
 
   # The web engine (SPEC-338 R8, R9; ADR-349): Anki's engine built for wasm32 with its bindings,
-  # held to ADR-336's budget of 8000000 bytes gzip -9, then the browser tests over that module in
-  # Chromium and WebKit. The build's only wasm32 settings are on scripts/web-engine-build.sh's
-  # command line: no .cargo/config.toml and no RUSTFLAGS (ADR-348). It restores the Rust cache for
-  # the registry and saves none.
+  # held to ADR-336's budget of 8000000 bytes gzip -9, then the engine suite over that module and
+  # the study suite over the staged build, each in Chromium, WebKit and Firefox. The build's only
+  # wasm32 settings are on scripts/web-engine-build.sh's command line: no .cargo/config.toml and no
+  # RUSTFLAGS (ADR-348). It restores the Rust cache for the registry and saves none.
   web-engine:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -1164,9 +1164,9 @@ jobs:
         run: python3 scripts/web-engine-size.py --module target/web-engine/deck_streak_web_engine_bg.wasm --bindings target/web-engine/deck_streak_web_engine.js
       - name: the Mini App's dependencies
         run: pnpm install --frozen-lockfile
-      - name: Chromium's headless shell and WebKit, with their system libraries
-        run: pnpm --dir web/app exec playwright install --with-deps --only-shell chromium webkit
-      - name: the browser tests over the module (Chromium and WebKit, persistent profiles)
+      - name: Chromium's headless shell, WebKit and Firefox, with their system libraries
+        run: pnpm --dir web/app exec playwright install --with-deps --only-shell chromium webkit firefox
+      - name: the browser tests over the module (Chromium, WebKit and Firefox, persistent profiles)
         run: pnpm --dir web/app test:engine
       - name: the Mini App's build, which the study suite serves
         run: pnpm --dir web/app build
@@ -1176,7 +1176,7 @@ jobs:
       # serves, so a companion file copied into the site fails here before it can be deployed.
       - name: the census of the staged build (no companion file in the public site)
         run: python3 scripts/companion-site-census.py --root web/app/build
-      - name: the study suite over the staged build (Chromium and WebKit, persistent profiles)
+      - name: the study suite over the staged build (Chromium, WebKit and Firefox, persistent profiles)
         run: pnpm --dir web/app test:study
 
   # The benches (SPEC-618): per lane a build job with a read-only token, which runs every build
