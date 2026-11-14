@@ -30,4 +30,14 @@ enum InstalledVoices {
         identifier.flatMap(AVSpeechSynthesisVoice.init(identifier:))
             ?? AVSpeechSynthesisVoice(language: language)
     }
+
+    /// Sets the audio session for spoken audio that ducks other audio, before a face's clips
+    /// play. A Mac app sets no session, so on macOS this does nothing (SPEC-679).
+    static func setSpokenAudioSession() {
+        #if os(iOS)
+        try? AVAudioSession.sharedInstance().setCategory(
+            .playback, mode: .spokenAudio,
+            options: [.duckOthers, .interruptSpokenAudioAndMixWithOthers])
+        #endif
+    }
 }

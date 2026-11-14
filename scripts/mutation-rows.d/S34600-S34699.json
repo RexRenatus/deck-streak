@@ -20,7 +20,7 @@
       [
         "S34602-XCFRAMEWORK-LIBRARY-SET",
         ".github/workflows/xcframework.yml",
-        "          test \"$libraries\" = \"ios-arm64-simulator/libdeck_streak_ffi.a ios-arm64/libdeck_streak_ffi.a \"",
+        "          test \"$libraries\" = \"ios-arm64-simulator/libdeck_streak_ffi.a ios-arm64/libdeck_streak_ffi.a macos-arm64/libdeck_streak_ffi.a \"",
         "          true",
         "the one-library step stops comparing the XCFramework's archives with the umbrella's one per slice, so a third library or a missing slice passes (SPEC-346 R5, A7)",
         "test_ci_workflows.TheAppHasOneRustStaticLibrary.test_the_xcframework_holds_one_rust_library_per_slice"

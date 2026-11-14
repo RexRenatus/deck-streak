@@ -1,5 +1,8 @@
 import ObjectiveC
 import WebKit
+#if os(iOS)
+import UIKit
+#endif
 
 /// The card view's layers: the seven of SPEC-349 R2 (the schematic's section 4), then L8, the
 /// peer-connection removal (SPEC-355 R3, section 7), then L10 to L13, the containment layer for
@@ -70,7 +73,7 @@ public enum CardWebViewFactory {
         layers: Set<CardLayer>, ruleList: WKContentRuleList?, switchedOn: Bool = false
     ) -> WKWebView {
         let built = Built(switchedOn: switchedOn, scriptsFollowVerdict: layers.contains(.L2))
-        let view = WKWebView(
+        let view = CardWebView(
             frame: .zero,
             configuration: configuration(layers: layers, ruleList: ruleList, built: built))
         // What was built stays with the view, so its verdict reads the view (SPEC-355 R2).
@@ -380,5 +383,18 @@ private final class Retained: Sendable {
     static func kept<T>(_ type: T.Type, by view: WKWebView, under key: Retained) -> T? {
         objc_getAssociatedObject(view, UnsafeRawPointer(Unmanaged.passUnretained(key).toOpaque()))
             as? T
+    }
+}
+
+extension CardWebViewFactory {
+    /// The card's page zoom, which the card view sets on each view this factory makes: the body
+    /// text style's Dynamic Type scale on iOS, and 1 on macOS, whose body text is 13 pt and does
+    /// not scale (SPEC-679).
+    @MainActor public static var bodyTextZoom: CGFloat {
+        #if os(iOS)
+        return UIFontMetrics(forTextStyle: .body).scaledValue(for: 1)
+        #else
+        return 1
+        #endif
     }
 }

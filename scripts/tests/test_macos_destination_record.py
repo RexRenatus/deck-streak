@@ -24,6 +24,7 @@ LAST_LINE = "- Amending this record only when the native client changes too: rej
 REJECTED = (
     "Mac Catalyst: rejected because",
     "A second app target or project for macOS: rejected because",
+    "The iPad app run unchanged on a Mac: rejected because",
 )
 # The two phrasings that name a minimum macOS version: the amendment's and the SPEC's.
 MINIMUM = (
@@ -155,8 +156,8 @@ def ios_deployment_targets(block):
 class TheMacosDestinationIsRecorded(unittest.TestCase):
     def test_adr_342_carries_one_macos_amendment(self):
         """R1, R2: ADR-342 holds exactly one heading that names macOS and SPEC-679, after the last
-        line the record held before it, and that section rejects Mac Catalyst and a second app
-        target or project."""
+        line the record held before it, and that section names as rejected
+        Mac Catalyst, a second target and the iPad app run unchanged on a Mac."""
         lines = lines_of(self, ADR)
         examined("heading(s) of ADR-342", [line for line in lines if line.startswith("#")])
         found = macos_headings(lines)

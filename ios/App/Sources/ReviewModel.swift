@@ -1,5 +1,5 @@
+import Foundation
 import Observation
-import UIKit
 
 /// The review screen's state, held in a model and never in a view's state, so a size-class change
 /// keeps it (SPEC-348 R16). Every gesture enters through `perform`, whose cases pair a gesture
@@ -48,7 +48,7 @@ final class ReviewModel {
 
     init(
         deck: Deck, session: ReviewSession,
-        voiceOverRunning: @escaping @MainActor () -> Bool = { UIAccessibility.isVoiceOverRunning },
+        voiceOverRunning: @escaping @MainActor () -> Bool = AppModel.voiceOverRunning,
         installed: @escaping @MainActor () -> [InstalledVoice] = InstalledVoices.all
     ) {
         self.deck = deck

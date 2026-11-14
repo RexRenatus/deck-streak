@@ -20,7 +20,7 @@ struct AnswerBar: View {
         HStack(spacing: 8) {
             if model.phase == .finished {
                 Button(action: back) {
-                    Text("Back to Decks").frame(maxWidth: .infinity, minHeight: 44)
+                    Text("Back to Decks").frame(maxWidth: .infinity, minHeight: ControlHeight.least)
                 }
                 .buttonStyle(.borderedProminent)
             } else if model.revealed {
@@ -30,7 +30,7 @@ struct AnswerBar: View {
                 Button {
                     Task { await model.perform(.showAnswer) }
                 } label: {
-                    Text("Show Answer").frame(maxWidth: .infinity, minHeight: 44)
+                    Text("Show Answer").frame(maxWidth: .infinity, minHeight: ControlHeight.least)
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(model.phase != .question)
@@ -58,7 +58,7 @@ struct AnswerBar: View {
                 Text(title).font(.headline)
                 Text(interval).font(.caption).accessibilityHidden(true)
             }
-            .frame(maxWidth: .infinity, minHeight: 44)
+            .frame(maxWidth: .infinity, minHeight: ControlHeight.least)
         }
         .buttonStyle(style)
         .accessibilityValue(interval)
