@@ -222,6 +222,43 @@ def numbers():
     ]
 
 
+# The closed set a decoded profile's shape is named by, in the order its classes are tested: a DER
+# sequence holding an XML property list, a DER sequence holding none, base64 text, a binary
+# property list, an XML property list with no DER wrapper, and any other bytes (SPEC-704 R1).
+PROFILE_SHAPES = (
+    "der-xml-plist",
+    "der-no-plist",
+    "base64-text",
+    "binary-plist",
+    "xml-plist",
+    "other",
+)
+
+
+def profile_shape(blob):
+    """The class of `PROFILE_SHAPES` the decoded profile `blob` is named by, read from its bytes
+    alone. A DER sequence opens with the SEQUENCE tag 0x30 and then a length's first octet in one
+    of X.690's three forms: the short (below 0x80), the indefinite (0x80) or the long (0x81 to
+    0xFE, with that many length octets after it; 0xFF is reserved). What the length covers is never
+    read. An XML property list is what the signing step's search finds; base64 text is base64
+    alphabet characters and whitespace alone; a binary property list opens with its `bplist00`
+    magic (SPEC-704 R1)."""
+    plist = re.search(rb"<\?xml.*</plist>", blob, re.DOTALL) is not None
+    first = blob[1] if len(blob) > 1 and blob[0] == 0x30 else None
+    der = first is not None and (
+        first <= 0x80 or (0x80 < first < 0xFF and len(blob) - 2 >= first - 0x80)
+    )
+    holds = (
+        der and plist,
+        der,
+        re.fullmatch(rb"[A-Za-z0-9+/= \t\n\r\f\v]+", blob) is not None,
+        blob.startswith(b"bplist00"),
+        plist,
+        True,
+    )
+    return next(shape for shape, held in zip(PROFILE_SHAPES, holds) if held)
+
+
 def app():
     """The app's Release build for a generic device, which both builds take: the project and the
     scheme that the top-level `name` of the app's project spec names (SPEC-566 R1). A spec that is
@@ -304,7 +341,20 @@ def sign():
     build = app()
     openssl = shutil.which("openssl")
     blob = base64.b64decode(os.environ["PROFILE"])
-    profile = plistlib.loads(re.search(rb"<\?xml.*</plist>", blob, re.DOTALL).group())
+    # The profile's shape, a class and two counts and nothing of the value, is printed and written
+    # out before its parse, and a profile with no XML property list is refused by its class
+    # (SPEC-704 R1, R2).
+    shape = profile_shape(blob)
+    outside = len(re.findall(r"[^A-Za-z0-9+/= \t\n\r\f\v]", os.environ["PROFILE"]))
+    print(
+        f"profile shape: class {shape}, {len(blob)} decoded bytes, {outside} stored characters"
+        " outside the base64 alphabet"
+    )
+    sys.stdout.flush()
+    found = re.search(rb"<\?xml.*</plist>", blob, re.DOTALL)
+    if found is None:
+        raise Refused(f"the profile holds no XML property list: class {shape}")
+    profile = plistlib.loads(found.group())
     entitlements = profile["Entitlements"]
     team = profile["TeamIdentifier"][0]
     app_id = entitlements["application-identifier"].removeprefix(f"{team}.")
