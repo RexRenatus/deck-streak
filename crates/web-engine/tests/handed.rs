@@ -43,3 +43,16 @@ fn an_empty_set_admits_nothing() {
     assert_eq!(empty.refused(), []);
     assert_eq!(empty.read(&hash, 1_000), None);
 }
+
+/// The crate root, as the compiler reads it.
+const CRATE_ROOT: &str = include_str!("../src/lib.rs");
+
+/// A source-text guard: the crate root declares `handed` among the native modules, as written.
+/// The row of SPEC-601 A12 on that line mutates it, a change no behaviour test can see.
+#[test]
+fn the_crate_root_declares_the_handed_module_as_written() {
+    assert!(
+        CRATE_ROOT.contains("pub mod files;\npub mod handed;\npub mod study;\n"),
+        "the crate root declares handed between files and study, with no attribute"
+    );
+}

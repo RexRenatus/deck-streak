@@ -102,3 +102,16 @@ Each is an edge this delivery's manifests add, under no target table:
 - `ffi -> collection`, a `[dependencies]` row (D6).
 - `ffi -> media`, a `[dependencies]` row (D6).
 - `web-engine -> media`, a `[dependencies]` row (D6).
+
+## D10. The lines cargo-mutants never mutates carry hand rows (amends SPEC-601 by its section 10)
+
+- **Chosen: every changed code line of the seven files carries a hand row whose killer fails on its mutant.**
+  cargo-mutants mutates function bodies and the operators of a constant's initializer, never a literal, a macro's
+  arguments, an attribute, or a module or use declaration, so these lines had no mutant and no row. A statement's row
+  is killed through the store call that runs it; a register entry's through the statement census; a migration's
+  through the opener's migration test; a crate root's declaration through a source-text guard, since its mutant builds
+  and no behaviour test reads it.
+- **A recorded equivalent:** not chosen, since a record must bind exactly one listed mutant and these lines have none,
+  so a record there reads stale.
+- **Reading the declarations as quiet lines in the verdict:** not chosen here; it would change what the verdict names,
+  which is the verdict's own decision.

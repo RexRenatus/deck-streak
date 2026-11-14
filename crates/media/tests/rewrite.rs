@@ -187,3 +187,24 @@ fn a_tag_name_must_end_its_word() {
         "imgx is not img"
     );
 }
+
+/// The crate root, as the compiler reads it.
+const CRATE_ROOT: &str = include_str!("../src/lib.rs");
+
+/// A source-text guard: the crate root declares the `rewrite` module among its modules and
+/// re-exports `rewrite` among its names, each block as written. The rows of SPEC-601 A12 mutate
+/// these two lines, a change no behaviour test can see.
+#[test]
+fn the_crate_root_declares_and_re_exports_the_rewrite_as_written() {
+    for block in [
+        "\n\npub mod bind;\npub mod css;\npub mod hash;\npub mod index;\npub mod latex;\n\
+         pub mod name;\npub mod rewrite;\npub mod scan;\npub mod sha1;\npub mod sweep;\n\n",
+        "pub use name::{CertifiedName, MediaName, NameRefusal};\npub use rewrite::rewrite;\n\
+         pub use scan::scan;\n",
+    ] {
+        assert!(
+            CRATE_ROOT.contains(block),
+            "the crate root holds {block:?} as written"
+        );
+    }
+}
