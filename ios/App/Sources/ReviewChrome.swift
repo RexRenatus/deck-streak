@@ -22,25 +22,25 @@ struct ReviewChrome: View {
                     Task { await model.perform(.replay) }
                 } label: {
                     Label("Replay", systemImage: "arrow.counterclockwise")
-                        .frame(minWidth: 44, minHeight: 44)
+                        .frame(minWidth: 44, minHeight: ControlHeight.least)
                 }
                 Button {
                     Task { await model.perform(.stop) }
                 } label: {
                     Label("Stop", systemImage: "stop.fill")
-                        .frame(minWidth: 44, minHeight: 44)
+                        .frame(minWidth: 44, minHeight: ControlHeight.least)
                 }
                 Button {
                     model.showingVoices = true
                 } label: {
                     Label("Voices", systemImage: "person.wave.2")
-                        .frame(minWidth: 44, minHeight: 44)
+                        .frame(minWidth: 44, minHeight: ControlHeight.least)
                 }
                 Button {
                     Task { await model.perform(.bury) }
                 } label: {
                     Label("Bury", systemImage: "eye.slash")
-                        .frame(minWidth: 44, minHeight: 44)
+                        .frame(minWidth: 44, minHeight: ControlHeight.least)
                 }
                 .accessibilityIdentifier("bury")
                 .disabled(!idle)
@@ -49,7 +49,7 @@ struct ReviewChrome: View {
                 } label: {
                     Label(flagTitle.title, systemImage: flagTitle.symbol)
                         .labelStyle(.titleAndIcon)
-                        .frame(minWidth: 44, minHeight: 44)
+                        .frame(minWidth: 44, minHeight: ControlHeight.least)
                 }
                 .accessibilityIdentifier("flag")
                 .disabled(!idle)
@@ -70,7 +70,7 @@ struct ReviewChrome: View {
                 } label: {
                     Label("Card info", systemImage: "info.circle")
                         .labelStyle(.iconOnly)
-                        .frame(minWidth: 44, minHeight: 44)
+                        .frame(minWidth: 44, minHeight: ControlHeight.least)
                 }
                 .accessibilityIdentifier("card-info")
                 .disabled(!idle)

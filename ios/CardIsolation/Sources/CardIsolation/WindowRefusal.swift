@@ -1,6 +1,8 @@
 import WebKit
 #if os(iOS)
 import UIKit
+#else
+import AppKit
 #endif
 
 /// The card view's UI delegate, layer L6 (SPEC-349 R2, ADR-360 D1), with the refusal arms a
@@ -82,3 +84,23 @@ public final class WindowRefusal: NSObject, WKUIDelegate {
     }
     #endif
 }
+
+#if os(macOS)
+/// L6's context-menu arm on macOS, the view the factory makes there (SPEC-679): a Mac web view
+/// opens a context menu of its own, which asks the UI delegate nothing, so while the window
+/// refusal is the view's UI delegate, each menu is emptied before it opens, and no menu item opens
+/// a link or the page.
+/// It does NOT stop a click on a link; the link-activation refusal (L10) does.
+final class CardWebView: WKWebView {
+    override func willOpenMenu(_ menu: NSMenu, with event: NSEvent) {
+        super.willOpenMenu(menu, with: event)
+        if uiDelegate is WindowRefusal {
+            menu.removeAllItems()
+        }
+    }
+}
+#else
+/// The view the factory makes on iOS is WebKit's own: the refusal's delegate answer above holds
+/// its menu.
+typealias CardWebView = WKWebView
+#endif

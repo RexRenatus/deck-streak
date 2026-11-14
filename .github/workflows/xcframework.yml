@@ -1,10 +1,11 @@
 name: xcframework
 
 # The FFI adapter as an XCFramework for an iPhone and an iPad (SPEC-336 R6 to R9, ADR-345 D3 and
-# D4): the adapter's static library for a device (aarch64-apple-ios) and for the simulator on Apple
-# silicon (aarch64-apple-ios-sim), the Swift bindings generated in library mode by the generator the
-# adapter itself builds, a check that the generated modulemap names no builtin clang module, one
-# XCFramework holding both slices, and a consumer check that typechecks the generated Swift against
+# D4), and for a Mac (SPEC-679): the adapter's static library for a device (aarch64-apple-ios), for
+# the simulator on Apple silicon (aarch64-apple-ios-sim) and for a Mac on Apple silicon
+# (aarch64-apple-darwin), the Swift bindings generated in library mode by the generator the adapter
+# itself builds, a check that the generated modulemap names no builtin clang module, one XCFramework
+# holding the three slices, and a consumer check that typechecks the generated Swift against
 # each slice's own headers. It publishes the build time, each slice's size and both checks as the
 # run's summary and as the `xcframework` artifact, beside the framework and the bindings.
 # apple-on-change.yml calls it on a pull request into dev that changes an Apple or FFI path,
@@ -48,6 +49,8 @@ jobs:
       PROTOC_MACOS_DIGEST: 99ea004549c139f46da5638187a85bbe422d78939be0fa01af1aa8ab672e395f
       # The lowest iOS the consumer check typechecks the bindings for.
       IOS_DEPLOYMENT: "17.0"
+      # The lowest macOS (SPEC-679's minimum): the macOS library is built and typechecked for it.
+      MACOSX_DEPLOYMENT_TARGET: "14.0"
       # Xcode 27.0 (27A266a): the same path on GitHub's xcode-27 image and in cirruslabs' single-Xcode 27 image.
       DEVELOPER_DIR: /Applications/Xcode_27.app/Contents/Developer
     steps:
@@ -57,7 +60,7 @@ jobs:
       - name: the pinned Rust toolchain and its iOS and macOS targets, before the clock starts
         run: |
           rustup show
-          rustup target add aarch64-apple-ios aarch64-apple-ios-sim
+          rustup target add aarch64-apple-ios aarch64-apple-ios-sim aarch64-apple-darwin
       - name: protoc, checksum-verified
         run: |
           curl -fsSL -o "$RUNNER_TEMP/protoc.zip" "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-osx-universal_binary.zip"
@@ -69,7 +72,7 @@ jobs:
           mkdir -p "$REPORT"
           sysctl -n hw.ncpu > "$REPORT/runner-cpus"
           started=$(date +%s)
-          for target in aarch64-apple-ios aarch64-apple-ios-sim; do
+          for target in aarch64-apple-ios aarch64-apple-ios-sim aarch64-apple-darwin; do
             cargo rustc --locked --release -p deck-streak-ffi --lib --crate-type staticlib --target "$target"
           done
           echo "$(( $(date +%s) - started ))" > "$REPORT/build-seconds"
@@ -116,6 +119,7 @@ jobs:
           xcodebuild -create-xcframework \
             -library target/aarch64-apple-ios/release/libdeck_streak_ffi.a -headers headers \
             -library target/aarch64-apple-ios-sim/release/libdeck_streak_ffi.a -headers headers \
+            -library target/aarch64-apple-darwin/release/libdeck_streak_ffi.a -headers headers \
             -output DeckStreakFFI.xcframework
           find DeckStreakFFI.xcframework -name '*.a' -exec stat -f '%N %z' {} \; | tee "$REPORT/slices"
       - name: the XCFramework holds one Rust library
@@ -123,14 +127,14 @@ jobs:
           echo fail > "$REPORT/one-library"
           libraries=$(cd DeckStreakFFI.xcframework && find . -name '*.a' | sed 's|^\./||' | LC_ALL=C sort | tr '\n' ' ')
           echo "libraries: $libraries"
-          test "$libraries" = "ios-arm64-simulator/libdeck_streak_ffi.a ios-arm64/libdeck_streak_ffi.a "
+          test "$libraries" = "ios-arm64-simulator/libdeck_streak_ffi.a ios-arm64/libdeck_streak_ffi.a macos-arm64/libdeck_streak_ffi.a "
           echo pass > "$REPORT/one-library"
       - name: the consumer check, the generated Swift typechecked against each slice's headers
         run: |
           echo fail > "$REPORT/consumer"
-          for slice in ios-arm64:iphoneos: ios-arm64-simulator:iphonesimulator:-simulator; do
-            IFS=: read -r dir sdk suffix <<< "$slice"
-            target="arm64-apple-ios${IOS_DEPLOYMENT}${suffix}"
+          for slice in ios-arm64:iphoneos:ios${IOS_DEPLOYMENT} ios-arm64-simulator:iphonesimulator:ios${IOS_DEPLOYMENT}-simulator macos-arm64:macosx:macos${MACOSX_DEPLOYMENT_TARGET}; do
+            IFS=: read -r dir sdk platform <<< "$slice"
+            target="arm64-apple-${platform}"
             xcrun --sdk "$sdk" swiftc -typecheck -target "$target" \
               -I "DeckStreakFFI.xcframework/$dir/Headers" bindings/deck_streak_ffi.swift
             echo "$dir typechecks"
@@ -158,7 +162,7 @@ jobs:
               seconds = read(name)
               return f"{int(seconds) / 60:.1f} minutes" if seconds else "not measured"
           rows = [
-              ("two static libraries, release", minutes("build-seconds")),
+              ("three static libraries, release", minutes("build-seconds")),
               ("Swift bindings, library mode", minutes("bindgen-seconds")),
               ("modulemap names no builtin clang module", read("modulemap") or "not measured"),
               ("generated Swift typechecks against each slice", read("consumer") or "not measured"),

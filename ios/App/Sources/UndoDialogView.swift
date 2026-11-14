@@ -24,14 +24,14 @@ struct UndoDialogView: View {
             }
             HStack(spacing: 12) {
                 Button(action: keep) {
-                    Text(verbatim: offer.keep).frame(maxWidth: .infinity, minHeight: 44)
+                    Text(verbatim: offer.keep).frame(maxWidth: .infinity, minHeight: ControlHeight.least)
                 }
                 .buttonStyle(.borderedProminent)
                 .focused($keyboardOnKeep)
                 .accessibilityFocused($readerOnKeep)
                 .accessibilityIdentifier("undo-keep")
                 Button(action: confirm) {
-                    Text(verbatim: offer.confirm).frame(maxWidth: .infinity, minHeight: 44)
+                    Text(verbatim: offer.confirm).frame(maxWidth: .infinity, minHeight: ControlHeight.least)
                 }
                 .buttonStyle(.bordered)
                 .accessibilityIdentifier("undo-confirm")

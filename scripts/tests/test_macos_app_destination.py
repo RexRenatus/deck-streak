@@ -6,6 +6,8 @@ import re
 import unittest
 from pathlib import Path
 
+from _mutants_finder import indent_of
+
 REPO = Path(__file__).resolve().parents[2]
 APP = "ios/app.yml"
 XCCONFIG = "ios/Config/App.xcconfig"
@@ -40,10 +42,6 @@ def spec_minimum(case):
     return named.pop()
 
 
-def depth(line):
-    return len(line) - len(line.lstrip(" "))
-
-
 def target_block(case, lines):
     """The lines under the target's key in `targets:`, up to the next key at its indent."""
     case.assertIn("targets:", lines, f"{APP} holds no targets key")
@@ -51,7 +49,7 @@ def target_block(case, lines):
     case.assertIn(f"  {TARGET}:", lines[head:], f"{APP} holds no {TARGET} target")
     block = []
     for line in lines[lines.index(f"  {TARGET}:", head) + 1 :]:
-        if line.strip() and depth(line) <= 2:
+        if line.strip() and indent_of(line) <= 2:
             break
         block.append(line)
     return block
@@ -77,7 +75,7 @@ def entries_under(block, key):
         if line.strip() == f"{key}:":
             entries = {}
             for inner in block[at + 1 :]:
-                if inner.strip() and depth(inner) <= depth(line):
+                if inner.strip() and indent_of(inner) <= indent_of(line):
                     break
                 name, colon, value = inner.strip().partition(":")
                 if colon and value.strip():
