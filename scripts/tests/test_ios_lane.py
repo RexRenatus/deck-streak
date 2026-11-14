@@ -621,7 +621,10 @@ class LaneCredential(unittest.TestCase):
             "profile name": f"Profile {uuid.uuid4().hex}",
             "profile uuid": str(uuid.uuid4()).upper(),
         }
-        self.certificate = os.urandom(512)
+        # The certificate is a synthetic DER sequence, a header over a random body, so every sign
+        # names its shape `der-sequence`; it holds no signing material.
+        body = os.urandom(508)
+        self.certificate = b"\x30\x82" + len(body).to_bytes(2, "big") + body
         self.developer_certificate = os.urandom(256)
         # The identity as the keychain names it: a SHA-1 only the fake `security` prints, paired
         # with the SHA-256 of the profile's certificate, so the test computes no SHA-1 itself.
@@ -1172,12 +1175,82 @@ class LaneCredential(unittest.TestCase):
         (self.shims / "fixture.json").write_text(json.dumps(fixture), encoding="utf-8")
         self.sign()
         self.step("upload-to-testflight", ("KEY", "KEYID", "ISSUER"))
+        # The step's own fixed lines name no value and come from no build tool, so they are set
+        # aside: the certificate's shape line.
+        own = {"certificate shape: class der-sequence"}
         for out, _, _ in examined("steps", self.runs):
-            lines = out.splitlines()
+            lines = [line for line in out.splitlines() if line not in own]
             self.assertEqual(lines[-2:], ["warning: <redacted>", "error: <redacted>"])
             self.assertEqual(
                 [line[:12] for line in lines[:-2]], ["::add-mask::"] * (len(lines) - 2)
             )
+
+    def test_the_certificate_shape_is_printed_as_one_fixed_class_before_the_first_read(self):
+        """RED-FIRST: before the version call and the certificate read, the step prints one line naming
+        the decoded certificate's shape by one class of a closed set, and nothing of the certificate."""
+        marker = uuid.uuid4().hex
+        body = marker.encode("utf-8") + os.urandom(200)
+        armour = "CERTIFICATE-----"
+        pem = f"\n  -----BEGIN {armour}\n{marker}\n-----END {armour}\n"
+        twice = f"MIIB{marker}\n{base64_text(os.urandom(189))}\n"
+        # Each planted certificate as the secret's decoded bytes: a DER sequence in both length
+        # forms, PEM armour after whitespace, base64 text (the secret encoded twice) and a body led
+        # by a NUL, which no other class takes.
+        cases = [
+            ("a definite DER sequence", "der-sequence", b"\x30\x81" + bytes([len(body)]) + body),
+            ("an indefinite DER sequence", "der-sequence", b"\x30\x80" + body + b"\x00\x00"),
+            ("PEM armour", "pem-armour", pem.encode("utf-8")),
+            ("base64 text", "base64-text", twice.encode("utf-8")),
+            ("a NUL-led body", "other", b"\x00" + body),
+        ]
+        for case, name, certificate in examined("certificate shapes", cases):
+            with self.subTest(case=case):
+                self.step("clean")
+                self.values["CERTIFICATE"] = base64_text(certificate)
+                code, printed, errors, records, _ = self.step(
+                    "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+                )
+                expected = f"certificate shape: class {name}"
+                shapes = [
+                    line for line in printed.splitlines() if line.startswith("certificate shape:")
+                ]
+                self.assertEqual(
+                    shapes,
+                    [expected],
+                    f"the certificate's shape was printed {len(shapes)} time(s), not once",
+                )
+                self.assertEqual(code, 0, errors)
+                written = printed.encode("utf-8")
+                after = written.index(f"{expected}\n".encode("utf-8")) + len(expected) + 1
+                version = (self.shims / "version.jsonl").read_text(encoding="utf-8").splitlines()
+                self.assertGreaterEqual(json.loads(version[-1])["stdout_size"], after)
+                self.assertGreaterEqual(self.reads(records)[0]["stdout_size"], after)
+                self.assertNotIn(marker, printed)
+                self.assertNotIn(marker, errors)
+
+    def test_a_certificate_that_does_not_decode_is_refused_after_its_class_before_any_tool(self):
+        """RED-FIRST: a placed certificate that does not decode from base64 prints the class `other`,
+        then refuses with one fixed line before any tool runs."""
+        marker = uuid.uuid4().hex
+        # A PEM text placed in place of its base64: its 62 characters of the base64 alphabet leave
+        # the last group of four two short, so the lenient decode refuses its padding.
+        armour = "CERTIFICATE-----"
+        self.values["CERTIFICATE"] = f"-----BEGIN {armour}\n{marker}\n-----END {armour}\n"
+        code, printed, errors, records, _ = self.step(
+            "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+        )
+        self.assertEqual(
+            [line for line in printed.splitlines() if not line.startswith("::add-mask::")],
+            ["certificate shape: class other"],
+        )
+        self.assertEqual(
+            (code, errors.splitlines()), (1, ["the certificate does not decode from base64"])
+        )
+        self.assertEqual(records, [])
+        self.assertFalse((self.shims / "version.jsonl").exists())
+        self.assertFalse(self.lane.exists())
+        self.assertNotIn(marker, printed)
+        self.assertNotIn(marker, errors)
 
     def test_a_failed_certificate_read_is_read_once_more_under_legacy(self):
         self.refuse_reads("Error: Unsupported algorithm RC2-40-CBC\n")
@@ -1244,7 +1317,10 @@ class LaneCredential(unittest.TestCase):
                 )
                 self.assertEqual(
                     [line for line in printed.splitlines() if not line.startswith("::add-mask::")],
-                    [f"pkcs12 read failed: class {name}; reading once more with -legacy"],
+                    [
+                        "certificate shape: class der-sequence",
+                        f"pkcs12 read failed: class {name}; reading once more with -legacy",
+                    ],
                 )
                 self.assertEqual(
                     errors.splitlines(),
@@ -1271,7 +1347,10 @@ class LaneCredential(unittest.TestCase):
         self.assertEqual([r for r in records if r["tool"] == "security"], [])
         self.assertEqual(
             [line for line in printed.splitlines() if not line.startswith("::add-mask::")],
-            ["pkcs12 read failed: class wrong-password; reading once more with -legacy"],
+            [
+                "certificate shape: class der-sequence",
+                "pkcs12 read failed: class wrong-password; reading once more with -legacy",
+            ],
         )
         self.assertFalse((self.checkout / INCLUDE).exists())
 
