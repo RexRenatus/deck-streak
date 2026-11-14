@@ -53,4 +53,5 @@ request. Agents never approve a workflow run from a fork, and never merge a pull
 
 - [CHARTER.md](CHARTER.md): the hard constraints.
 - [docs/decisions/](docs/decisions/): every ADR.
+- [docs/rulings/](docs/rulings/): the owner's 28 signed rulings; each is kept as written, and a later ruling supersedes it.
 - [docs/specs/](docs/specs/): every SPEC, with `docs/specs/planned/` for the next waves.
