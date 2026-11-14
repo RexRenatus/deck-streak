@@ -62,3 +62,13 @@ the fallback of every job. SPEC-591 R3's and R8's admitted runner for `release-a
 - Long jobs that take longer on the self-hosted runner, one after the other, than hosted side by
   side, so that the move costs more than it saves.
 - A toolchain or simulator runtime that changes under a running job on the self-hosted runner.
+
+## Amendment: the long jobs also reach the runner for a push or a dispatch on dev
+
+SPEC-688's amendment moves this decision: the expression of `harness` and `release-and-app` also
+reaches the self-hosted labels for a push or a workflow dispatch whose ref is `refs/heads/dev`,
+behind the same two variables, `DS_MINI` and `DS_MINI_LONG`, with the actor not `dependabot[bot]`.
+Of the upload lanes only the internal lane's runs on dev reach the runner, and the release lane's
+and the tag's runs, a push to main, any other ref, a schedule and a fork's pull request keep both
+long jobs on `xcode-27`. The two long jobs name no secret and no environment, and the internal
+lane's call passes none. The rest of this decision stands.
