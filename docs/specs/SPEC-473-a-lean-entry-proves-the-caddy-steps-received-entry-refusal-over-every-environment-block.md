@@ -159,3 +159,54 @@ lines beside those of A2 and A3.
 ## References
 
 #484, #423, #428, #468; ADR-490; SPEC-127 and its A39; ADR-198; SPEC-295.
+
+## Amendment: the vectors whose block holds an empty entry run too
+
+This amendment is SPEC-473's own, for #484. R7 and A2 ran the step on every vector's block save
+the 3 whose block holds an empty entry, vectors 1, 2 and 27. The route that hands a step its
+entries exactly, `EXEC_ENTRIES` in `scripts/tests/test_deploy_scripts.py`, read each entry as a hex
+word, the words split at spaces; an empty entry's hex is an empty word, and the split drops it. On
+that route vector 1's block, one empty entry, reaches the step as a block of no entry, which the
+step refuses as an environment it could not read, while the vector's answer is to proceed; on
+vector 27's block the step proceeds on a block of three entries, which is not the vector's block.
+
+- **R10.** `EXEC_ENTRIES` reads each entry as one word, `x` and then the entry's hex, and both
+  calls that hand it entries write them so. An empty entry is the word `x` and reaches the step as
+  itself; a block of no entry is no word; a word written without its `x` is hex of odd length,
+  which fails before the exec. Both calls still start the step through `launch`, with the same
+  entries, the same file sourced first and the same environment for `launch` to judge, and no
+  other route starts it.
+- **R11.** The vectors test of A2 runs every vector's block, the 3 whose block holds an empty entry
+  included, under the locales R7 names, and compares each run's exit status and whole stderr with
+  the vector. It asserts that it examined 63 of 63 vectors, that the vectors whose block holds an
+  empty entry are exactly vectors 1, 2 and 27, and that each of those 3 ran under all three locales
+  and every run reached its comparison. R7's words "save the 3 whose block holds an empty entry"
+  and A2's words "(60 of 63; the test names the other 3, which are not measured)" no longer hold;
+  the rest of R7 and A2 stands, and so do A2's fence line and rows.
+
+## Acceptance criteria of the empty-entry amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A4 | every vector's block, the 3 whose block holds an empty entry included (63 of 63), run through `deploy.sh caddy-install` with no tag under each locale R7 names, exits 1 with exactly the vector's stderr, and vectors 1, 2 and 27 each run under all three locales (R10, R11) | `test_deploy_scripts.TheCaddyInstall.test_a_caddy_step_agrees_with_every_vector_of_its_lean_proof`, in CI only |
+
+A4 runs in CI only, because `test_deploy_scripts.py` executes the deploy scripts. Its test is
+A2's, so A2's test reads red at this amendment's red commit by A4's assertion.
+
+```acceptance
+A4: python3 -m unittest discover -s scripts/tests -p test_deploy_scripts.py -k a_caddy_step_agrees_with_every_vector_of_its_lean_proof
+```
+
+## File manifest of the empty-entry amendment
+
+| path | part | change |
+|---|---|---|
+| `scripts/tests/test_deploy_scripts.py` | 2 | `EXEC_ENTRIES` reads each entry as `x` and its hex, and its two calls write them so (R10); the vectors test runs all 63 vectors and asserts it (R11) |
+| `docs/specs/SPEC-473-a-lean-entry-proves-the-caddy-steps-received-entry-refusal-over-every-environment-block.md` | 2 | this amendment, appended after the file's last line |
+| `docs/red-first/SPEC-473.md` | 2 | A4's red and green lines, in a section appended after the file's last line |
+| `changelog.d/deploy-entry-refusal-empty-entry-473.md` | 2 | new: the changelog fragment |
+| `docs/decisions/ADR-490-the-caddy-steps-settings-check-is-one-function-that-a-lean-entry-ports-proves-and-ties-to-its-vectors.md` | 2 | an amendment on the vectors test's route, appended after the file's last line |
+| `docs/schematics/the-caddy-steps-settings-check-and-its-lean-proof.md` | 2 | the vectors test's node and its row name A4 and read 63 of 63 vectors, the 3 that hold an empty entry included |
+
+The insertion this amendment makes is these sections, appended after the file's last line, and
+nothing above them is edited (SPEC-038 section 8).

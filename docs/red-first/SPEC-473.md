@@ -73,3 +73,25 @@ it changes no existing assertion, no vector and no deploy script. Nothing after 
 this delivery's own files:
 `git diff --quiet 202fe307 HEAD -- deploy scripts/tests/test_deploy_scripts.py scripts/mutation-rows.d/S47300-S47399.json formal/lean/Formal/DeployEntryRefusal.lean formal/lean/Formal/DeployEntryRefusalVectors.lean formal/vectors/deploy-entry-refusal.jsonl`
 exits 0.
+
+## Amendment: the vectors whose block holds an empty entry
+
+The amendment's red commit changes only `scripts/tests/test_deploy_scripts.py`: the vectors test
+runs every vector, the 3 whose block holds an empty entry among them, and asserts that it examined
+63 of 63, against `EXEC_ENTRIES` as it stood, which drops an empty entry. There vector 1's block,
+one empty entry, reaches the step as a block of no entry, and the step refuses it as an
+environment it could not read, where the vector's answer is to proceed. The green commit changes
+how `EXEC_ENTRIES` reads its entries and how its two calls write them, and no assertion: each entry
+is one word, `x` and its hex, so an empty entry reaches the step as itself. A2's test is the one A4
+names, so it reads red at the red commit by A4's assertion; A2's lines above stand.
+
+A4 runs in CI only, because `test_deploy_scripts.py` executes the deploy scripts. Its red line
+joins two lines of the stage log CI kept for the job that runs that module at the red commit, the
+assertion's first line and the line where its message ends; `[...]` stands for the lines between.
+Nothing after the green commit changes the deploy scripts, the tests or the entry:
+`git diff --quiet 216f750778b33dded639e7bd8ef24710d039c85f HEAD -- deploy scripts/tests formal` exits 0.
+
+```red-first
+A4: red at 908dd34bd023f1bbf69dc207539c9c31f290a835: AssertionError: Tuples differ: (1, b'deploy: the environment this step received could not be read\n') != (1, b'deploy: usage: deploy.sh caddy-install TAG\n') [...] + (1, b'deploy: usage: deploy.sh caddy-install TAG\n') : vector 1, []: the step departs from the Lean entry
+A4: green at 216f750778b33dded639e7bd8ef24710d039c85f
+```
