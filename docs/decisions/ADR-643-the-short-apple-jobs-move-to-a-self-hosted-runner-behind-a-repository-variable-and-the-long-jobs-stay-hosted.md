@@ -83,3 +83,13 @@ so it named neither `release-and-app` nor `verdict`, and it is replaced by this 
   the approval rule together are meant to prevent.
 - Short jobs that wait longer on the self-hosted runner than on `xcode-27`, which would make the
   move cost more than it saves.
+
+## Amendment: ADR-708 routes the verdict and the long jobs
+
+ADR-708, deciding SPEC-688, amends this decision: `verdict` now takes the short jobs' expression,
+and `harness` and `release-and-app` take one expression of their own that reaches the self-hosted
+labels only when `DS_MINI` and a second repository variable, `DS_MINI_LONG`, both read `on`, the
+actor is not `dependabot[bot]` and the event is a pull request whose head repository is this
+repository, `xcode-27` otherwise. The decision that `harness`, `release-and-app` and `verdict` run
+on `xcode-27` on every event now reads with ADR-708, under which the upload lanes' and the tag's
+runs keep both long jobs hosted. The rest of this decision stands.
