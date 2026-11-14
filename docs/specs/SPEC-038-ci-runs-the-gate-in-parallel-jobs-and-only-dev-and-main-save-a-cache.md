@@ -907,3 +907,94 @@ writes issues, a tag in place of a SHA, a persisted credential, a checkout of an
 audit stage left out or run twice, a stage that is not an audit, `continue-on-error`, a condition,
 a missing or conditional upload, one artifact name for both jobs and a `cargo-deny` version of its
 own.
+
+## 21. Amendment: every job that runs the gate's tests uploads its JUnit results
+
+### The problem, measured
+
+No `ci.yml` job writes or uploads a JUnit file, so a test that failed once and passed on a re-run
+leaves no record a reader can count. The latest dev push run, run 42582016940, uploaded 15
+artifacts and none of them holds test results (`gh api repos/RexRenatus/deck-streak/actions/runs/42582016940/artifacts --jq '.artifacts[].name'`).
+Seven of its jobs run tests: `rust`, `engine` (two slices), `release` and `web` through check.sh,
+and `card-sandbox`, `web-engine` and `hygiene`. Its test steps ran, as GitHub reports them:
+
+| job | job id | test step | step time |
+|---|---|---|---|
+| `rust` | 129090178681 | check.sh fmt clippy test doctest audit-rust | 2389 s, its `test` stage 2333 s (job 129090178681) |
+| `release` | 129090178740 | check.sh test-release | 2265 s (job 129090178740) |
+| `engine (2)` | 129090178946 | check.sh test-engine | 78 s (job 129090178946) |
+| `hygiene` | 129090178646 | check.sh python scrub secrets | 650 s (job 129090178646) |
+
+### Requirements
+
+R26. Every `ci.yml` job whose steps run tests uploads the JUnit results its runners write, as the
+artifact `junit-<job>` (a matrix slice's name ends in its slice), from `${{ runner.temp }}/junit/`,
+in one step that runs whatever the steps before it concluded, that warns and never fails when no
+file was written, and that follows every step that runs tests. No job that runs tests is left out.
+nextest's file is moved out of `target/` in a step that always runs, after the tests and before any
+cache is saved, so no cache carries one run's results into another. Every other runner a step runs
+is named a file of its own in that folder, in the step's env: Vitest's and the browser suite's in
+the web stage, a browser suite's in the step that runs its script, and the python stage's. Each
+configuration that adds a JUnit reporter adds it only when its variable names a file, so a run on a
+builder's machine reports as before. The python stage writes one test case per module, and hands
+no module its variable.
+
+R27. nextest's default profile writes `junit.xml`, retries a failing test once, and fails a test
+that passes on that retry, which its JUnit entry marks as a flaky failure. Every other profile,
+the mutants profile among them, sets its own retries to 0, because a custom profile inherits the
+default one, and fails a pass on a retry. No per-test override of any profile retries a test or
+passes a pass on a retry, because an override wins over a profile's own settings and the default
+profile's overrides reach every profile. No env or step of a job that runs tests, and no line of
+`scripts/check.sh`, sets `NEXTEST_RETRIES`, `NEXTEST_FLAKY_RESULT`, `--retries` or
+`--flaky-result`, each of which overrides the profiles and every per-test override.
+
+R28. No step of a job that uploads JUnit results continues on an error. An upload never turns a
+failing job green, and a missing file never fails one.
+
+### Acceptance criteria added by this amendment
+
+| id | criterion | decided by |
+|---|---|---|
+| A27 | every `ci.yml` job that runs tests uploads its JUnit results and meets R26 and R28, and each configuration that adds a JUnit reporter holds its gated reporter once | `test_ci_workflows.py`, over `ci.yml`, `web/app/vite.config.ts` and the four Playwright configurations |
+| A28 | the default profile writes `junit.xml`, retries once and fails a pass on retry, every other profile retries nothing, no override retries a test or passes a pass on retry, and no test job or `scripts/check.sh` sets nextest's retry switches (R27) | `test_ci_workflows.py`, over `.config/nextest.toml`, `ci.yml` and `scripts/check.sh` |
+| A29 | the census refuses each planted weakening by name, and reads each planted run step as running tests or not | `test_ci_workflows.py`, over planted jobs, profiles, switches and configurations |
+| A31 | the python stage writes one test case per module to the file its variable names, a failing module's case with its exit and its output, and hands no module the variable | `test_python_stage.py`, over planted suites |
+
+```acceptance
+A27: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_every_job_that_runs_tests_uploads_its_junit_results
+A28: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_the_default_profile_retries_and_a_pass_on_retry_still_fails
+A29: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_each_planted_weakening_is_refused_by_name
+A31: python3 -m unittest discover -s scripts/tests -p test_python_stage.py -k test_the_stage_writes_one_test_case_per_module_to_the_named_file
+```
+
+A27, A28 and A31 read red at a commit that holds the tests and none of the changes they read, by
+assertion: no step uploads `junit-card-sandbox`, the default profile writes no `junit.xml`, and
+the stage wrote no JUnit file. A29 judges the census itself, over plants of its own.
+
+### File manifest rows (section 4)
+
+| file | change |
+|---|---|
+| `.github/workflows/ci.yml` | each test job's JUnit files and upload, and nextest's moves |
+| `.config/nextest.toml` | the default profile's JUnit path, retry and flaky result; the mutants profile's retries |
+| `web/app/vite.config.ts` | Vitest's JUnit reporter beside its own, when `VITEST_JUNIT_FILE` names a file |
+| `web/app/playwright.config.ts`, `web/app/playwright.card.config.ts`, `web/app/playwright.engine.config.ts`, `web/app/playwright.study.config.ts` | Playwright's JUnit reporter beside the configuration's own, when `PLAYWRIGHT_JUNIT_OUTPUT_FILE` names a file |
+| `scripts/python_stage.py` | the stage's JUnit results, one test case per module, when `PYTHON_STAGE_JUNIT_FILE` names a file |
+| `scripts/tests/test_python_stage.py` | A31, over planted suites |
+| `scripts/tests/test_ci_workflows.py` | the JUnit census, its planted cases, its three read sites and one listed dynamic site, the JUnit parse in `test_python_stage.py`; the stage-log and card upload counts leave out the job's JUnit upload |
+| `docs/specs/SPEC-038-ci-runs-the-gate-in-parallel-jobs-and-only-dev-and-main-save-a-cache.md` | this section |
+| `docs/red-first/SPEC-038.md` | A27 to A29 and A31 |
+| `changelog.d/ci-junit-results.md` | the fragment |
+
+### What this does NOT do
+
+- Doctests have no stable JUnit output and write none, and the python stage reports a module as
+  one test case, not each test inside it; both are tracked in #1356.
+- It sends the results nowhere but the run's own artifacts.
+
+### Risks
+
+- A red run takes longer: each failing nextest test runs once more, so the run grows by at most
+  the failing tests' own times; a green run is unchanged. The jobs' bounds are unchanged, and a run
+  that meets its bound still fails.
+- A build that fails before nextest runs writes no file; the upload warns and the job stays red.

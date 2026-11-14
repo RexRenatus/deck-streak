@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from xml.etree import ElementTree
 
 from _support import REPO, examined
 
@@ -20,6 +21,19 @@ TAIL = (
 )
 # A module that ends its process while it is imported, so it prints no Ran line.
 QUIET = "import os\n\nos._exit(0)\n"
+# A module that prints the variable the stage names its JUnit file in, as the module sees it.
+TOLD = (
+    "import os\nimport unittest\n\n\nclass Told(unittest.TestCase):\n"
+    "    def test_told(self):\n"
+    "        print('told', os.environ.get('PYTHON_STAGE_JUNIT_FILE'))\n"
+)
+# A red module whose output holds a character XML 1.0 cannot hold and a letter past ASCII.
+LOUD = (
+    "import unittest\n\n\nclass Loud(unittest.TestCase):\n"
+    "    def test_red(self):\n"
+    "        print('loud \\x1b[31m \\u00e9')\n"
+    "        self.assertEqual(1, 2)\n"
+)
 
 
 def planted(name, tests=1, red=False):
@@ -276,3 +290,58 @@ class EachModuleIsNamedBesideItsRanLine(unittest.TestCase):
         self.assertEqual(beside, [1, 2, 2, 1, None])
         self.assertEqual(lines[-1], "python: one ran 3 test(s), exit 0; two ran 3 test(s), exit 1")
         self.assertEqual(done.returncode, 1, done.stdout)
+
+
+class TheStageWritesItsJUnitResults(unittest.TestCase):
+    def test_the_stage_writes_one_test_case_per_module_to_the_named_file(self):
+        """SPEC-038 A31: with PYTHON_STAGE_JUNIT_FILE naming a file, the stage writes one test suite
+        per suite and one test case per module there after its last line, making the file's folder
+        or reusing it; a failing module's case carries its exit and its output, each character XML
+        cannot hold written as `?`; no module is handed the variable; with it empty, no file."""
+        tree = {
+            "one": {"test_a.py": planted("a"), "test_told.py": TOLD},
+            "two": {"test_d.py": LOUD},
+        }
+        verdict = "python: one ran 2 test(s), exit 0; two ran 1 test(s), exit 1"
+        with tempfile.TemporaryDirectory() as scratch:
+            junit = Path(scratch) / "junit" / "python" / "python.xml"
+            named = {"PYTHON_STAGE_JUNIT_FILE": str(junit)}
+            for attempt in examined("stage runs", ["fresh", "again"]):
+                done = run_stage(Path(scratch) / attempt, tree, ["one", "two"], **named)
+                self.assertTrue(junit.is_file(), "the stage wrote no JUnit file")
+                root = ElementTree.fromstring(junit.read_bytes())
+                self.assertIn("\u00e9".encode(), junit.read_bytes())
+                junit.unlink()
+                lines = done.stdout.splitlines()
+                self.assertEqual(lines[-1], verdict)
+                self.assertEqual(done.returncode, 1, done.stdout)
+                self.assertIn("told None", lines)
+                self.assertEqual((root.tag, root.attrib), ("testsuites", {"name": "python"}))
+                self.assertEqual(
+                    [(suite.tag, suite.attrib) for suite in root],
+                    [
+                        ("testsuite", {"name": "one", "tests": "2", "failures": "0"}),
+                        ("testsuite", {"name": "two", "tests": "1", "failures": "1"}),
+                    ],
+                )
+                cases = [
+                    (case.tag, case.attrib, [child.tag for child in case])
+                    for suite in root
+                    for case in suite
+                ]
+                self.assertEqual(
+                    cases,
+                    [
+                        ("testcase", {"classname": "one", "name": "test_a.py"}, []),
+                        ("testcase", {"classname": "one", "name": "test_told.py"}, []),
+                        ("testcase", {"classname": "two", "name": "test_d.py"}, ["failure"]),
+                    ],
+                )
+                failure = root.find("testsuite/testcase/failure")
+                self.assertEqual(failure.attrib, {"message": "exit 1"})
+                self.assertIn("loud ?[31m", failure.text)
+                self.assertIn("AssertionError: 1 != 2", failure.text)
+            empty = {"PYTHON_STAGE_JUNIT_FILE": ""}
+            done = run_stage(Path(scratch) / "empty", tree, ["one", "two"], **empty)
+            self.assertEqual(done.stdout.splitlines()[-1], verdict)
+            self.assertEqual(sorted(Path(scratch).rglob("*.xml")), [])
