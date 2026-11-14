@@ -1,0 +1,8 @@
+{
+  "name": "planted-root",
+  "private": true,
+  "devDependencies": {
+    "root-unused": "1",
+    "vitest": "1"
+  }
+}

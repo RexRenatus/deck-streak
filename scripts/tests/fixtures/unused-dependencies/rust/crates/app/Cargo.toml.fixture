@@ -1,0 +1,37 @@
+[package]
+name = "app"
+
+[features]
+extra = ["dep:feature-only"]
+
+[dependencies]
+alpha = "1"
+beta = "1"
+gamma = "1"
+delta = "1"
+epsilon = "1"
+zeta = "1"
+eta = "1"
+lib-member.workspace = true
+renamed-dep.workspace = true
+shared-helper.workspace = true
+local-rename = { package = "other-name", version = "1" }
+hyphen-name = "1"
+unused-one = "1"
+commented = "1"
+doctested = "1"
+build-only-normal = "1"
+outside = "1"
+included = "1"
+feature-only = { version = "1", optional = true }
+
+[dev-dependencies]
+testkit = "1"
+dev-unused = "1"
+
+[build-dependencies]
+codegen = "1"
+src-only-build = "1"
+
+[target.'cfg(unix)'.dependencies]
+unix-only = "1"

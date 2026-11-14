@@ -1,0 +1,4 @@
+fn main() {
+    codegen::emit();
+    build_only_normal::call();
+}
