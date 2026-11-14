@@ -12,6 +12,9 @@ change's base.
 
 - **The app.** `ios/App/Sources/DeckListView.swift` (74 lines) shows the decks in a `List` (line
   57) titled `Decks` (line 68), with no empty state: a fresh install lists its default deck alone.
+  On a fresh install, whose collection holds the engine's default deck alone with no card in it,
+  the import offer reads "No cards yet. Import an Anki deck package from Files." beside that
+  deck's row (R6, R7).
   `ios/App/Info.plist` (52 lines) declares no document type. `EngineCall` in
   `ios/App/Sources/EngineSession.swift` (line 8) names six calls, and none imports.
 - **The engine's own import.** `ImportExportService.ImportAnkiPackage`
@@ -80,6 +83,9 @@ nothing was imported."
 
 R6. The empty deck list offers the import.
 
+R7. On a collection holding only the engine's default deck, with no card in it, the offer's words
+read true beside that deck's row: they say no card is held yet, and never that no deck is.
+
 ## 3. Acceptance criteria
 
 | id | criterion | decided by |
@@ -90,6 +96,7 @@ R6. The empty deck list offers the import.
 | A4 | a package the app refuses reads as a worded error and writes no row, beside the valid package of A2 (R4, R5) | `crates/ffi/tests/package_import.rs` `an_unreadable_package_is_refused_in_words_with_no_row`; `ios/AppUITests/PackageImportFlowTests.swift` `testARefusedPackageReadsAsWords` |
 | A5 | a collection member and a media member each decompressing past the bound are refused in words before any row is read, beside the valid package of A2 (R4, R5) | `crates/ffi/tests/package_import.rs` `an_oversize_collection_member_is_refused_before_any_row` and `an_oversize_media_member_is_refused_before_any_row` |
 | A6 | the empty deck list offers the import (R6) | `ios/AppUITests/PackageImportFlowTests.swift` `testTheEmptyDeckListOffersTheImport` |
+| A7 | on a collection holding only the engine's default deck, with no card in it, the offer beside that deck's row reads "No cards yet. Import an Anki deck package from Files." and its button "Import a deck" (R7) | `ios/AppUITests/PackageImportFlowTests.swift` `testTheOfferReadsTrueBesideTheDefaultDeck` |
 
 ```acceptance
 A1: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -only-testing:DeckStreakUITests/PackageImportFlowTests/testTheDeckListOpensTheSystemFileImporter
@@ -100,6 +107,7 @@ A4: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -destin
 A5: cargo test -p deck-streak-ffi --test package_import -- --exact an_oversize_collection_member_is_refused_before_any_row
 A5: cargo test -p deck-streak-ffi --test package_import -- --exact an_oversize_media_member_is_refused_before_any_row
 A6: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -only-testing:DeckStreakUITests/PackageImportFlowTests/testTheEmptyDeckListOffersTheImport
+A7: xcodebuild test -project ios/DeckStreak.xcodeproj -scheme DeckStreak -destination "platform=iOS Simulator,name=$IPHONE_SIM,OS=$SIM_OS" -only-testing:DeckStreakUITests/PackageImportFlowTests/testTheOfferReadsTrueBesideTheDefaultDeck
 ```
 
 Each Rust test reaches the engine through the native adapter's own surface, and each package it
@@ -130,6 +138,7 @@ package, passed to the app by a launch argument that imports it through the impo
 | `docs/schematics/the-app-campaigns-surfaces-each-carry-a-stride-table-whose-every-control-cites-a-line-that-holds.md` | docs | changed |
 | `docs/red-first/SPEC-681.md` | docs | added |
 | `changelog.d/ios-file-import-681.md` | docs | added |
+| `changelog.d/ios-import-offer-words-681.md` | docs | added |
 | `crates/ffi/src/package_bound.rs` | native adapter | added |
 | `crates/ffi/src/allow_list.rs` | native adapter | changed |
 | `crates/ffi/src/engine.rs` | native adapter | changed |
