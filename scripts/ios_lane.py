@@ -92,11 +92,13 @@ DIGESTS = re.compile(r"SHA-256 hash: ([0-9A-F]{64})\s+SHA-1 hash: ([0-9A-F]{40})
 IDENTITY = re.compile(r"\) ([0-9A-F]{40}) \"")
 # The closed set a failed certificate read is named by: each class with the words of openssl's
 # standard error that choose it, tested case-blind in this order; any other error is
-# `unrecognised` (SPEC-352 R13 as amended).
+# `unrecognised` (SPEC-352 R13 as amended; SPEC-692 R3).
 READ_FAILURES = (
     ("wrong-password", ("invalid password", "mac verify")),
     ("legacy-algorithm", ("unsupported",)),
     ("option-refused", ("unknown option", "unrecognized flag", "bad option")),
+    ("could-not-read", ("could not read", "can't open", "unable to load")),
+    ("asn1-decode", ("asn1",)),
 )
 # The shapes a decoded certificate is named by before its first read, tested in this order: an
 # ASN.1 SEQUENCE whose length octets are well formed and cover exactly the bytes after them, or
