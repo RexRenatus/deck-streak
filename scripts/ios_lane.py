@@ -327,24 +327,32 @@ def sign():
     pem = read_certificate(openssl, original, passphrase)
     original.unlink()
     bundle = lane / "certificate.p12"
-    tool(
-        openssl,
-        "pkcs12",
-        "-export",
-        "-out",
-        str(bundle),
-        "-passin",
-        f"pass:{passphrase}",
-        "-passout",
-        f"pass:{passphrase}",
-        "-certpbe",
-        "PBE-SHA1-3DES",
-        "-keypbe",
-        "PBE-SHA1-3DES",
-        "-macalg",
-        "sha1",
-        stdin=pem,
-    )
+    # The re-wrap reads the key and then the certificate from its input, and the first read
+    # spends standard input, so the input is a file only its owner may read, removed at once.
+    certificate = lane / "certificate.pem"
+    write_private(certificate, pem.encode())
+    try:
+        tool(
+            openssl,
+            "pkcs12",
+            "-export",
+            "-in",
+            str(certificate),
+            "-out",
+            str(bundle),
+            "-passin",
+            f"pass:{passphrase}",
+            "-passout",
+            f"pass:{passphrase}",
+            "-certpbe",
+            "PBE-SHA1-3DES",
+            "-keypbe",
+            "PBE-SHA1-3DES",
+            "-macalg",
+            "sha1",
+        )
+    finally:
+        certificate.unlink()
     keychain = str(lane / "lane.keychain-db")
     tool("security", "create-keychain", "-p", keychain_password, keychain)
     tool("security", "set-keychain-settings", "-lut", "21600", keychain)
