@@ -1,0 +1,6 @@
+import Kit
+
+@main
+struct Main {
+    static func main() {}
+}

@@ -1,0 +1,5 @@
+packages:
+  - web/app
+
+overrides:
+  'host>vend': 'file:./vendor/vend'

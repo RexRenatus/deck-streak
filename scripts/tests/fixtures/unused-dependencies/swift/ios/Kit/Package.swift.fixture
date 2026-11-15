@@ -1,0 +1,16 @@
+// A planted package: each target's dependencies are judged by its own sources.
+import PackageDescription
+
+let package = Package(
+    name: "Kit",
+    products: [.library(name: "Kit", targets: ["Kit"])],
+    targets: [
+        .target(name: "Core"),
+        .target(name: "Kit", dependencies: ["Core"]),
+        .target(name: "Generated", dependencies: ["Core"], path: "Generated"),
+        .testTarget(
+            name: "KitTests",
+            dependencies: ["Kit", .product(name: "Helpers", package: "helpers")]
+        ),
+    ]
+)

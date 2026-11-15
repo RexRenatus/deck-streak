@@ -1,0 +1,4 @@
+const fs = require('node:fs');
+const helper = require('uses-require');
+
+module.exports = { fs, helper };

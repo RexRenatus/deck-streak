@@ -1,0 +1,3 @@
+# planted requirements
+requests==2.0
+unused-req>=1.0

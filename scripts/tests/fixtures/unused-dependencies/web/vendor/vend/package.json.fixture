@@ -1,0 +1,6 @@
+{
+  "name": "vend",
+  "devDependencies": {
+    "vend-tool": "1"
+  }
+}

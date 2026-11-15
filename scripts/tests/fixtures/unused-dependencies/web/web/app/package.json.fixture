@@ -1,0 +1,32 @@
+{
+  "name": "planted-app",
+  "private": true,
+  "scripts": {
+    "build": "cli build",
+    "check": "CI=1 pnpm exec svelte-check",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@scope/pkg": "1",
+    "configured-plugin": "1",
+    "unused-web": "1",
+    "uses-dynamic": "1",
+    "uses-from": "1",
+    "uses-require": "1",
+    "uses-side-effect": "1"
+  },
+  "devDependencies": {
+    "@scope/cli": "1",
+    "@sveltejs/kit": "1",
+    "@types/node": "1",
+    "@types/thing": "1",
+    "eslint": "1",
+    "jsdom": "1",
+    "styled": "1",
+    "svelte-check": "1",
+    "thing": "1"
+  },
+  "peerDependencies": {
+    "peer-only": "1"
+  }
+}

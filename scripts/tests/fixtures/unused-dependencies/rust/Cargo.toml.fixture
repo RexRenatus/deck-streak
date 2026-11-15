@@ -1,0 +1,8 @@
+[workspace]
+members = ["crates/*"]
+
+[workspace.dependencies]
+lib-member = { path = "crates/lib-member" }
+never-inherited = "1"
+renamed-dep = { package = "upstream-name", version = "1" }
+shared-helper = "1"

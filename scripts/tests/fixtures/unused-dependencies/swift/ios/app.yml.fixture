@@ -1,0 +1,19 @@
+name: Planted
+packages:
+  Kit:
+    path: Kit
+targets:
+  App:
+    type: application
+    sources:
+      - path: App
+    dependencies:
+      - package: Kit
+        product: Kit
+      - package: Unused
+  AppTests:
+    type: bundle.unit-test
+    sources:
+      - path: AppTests
+    dependencies:
+      - target: App

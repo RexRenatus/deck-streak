@@ -1,0 +1,3 @@
+import used_lint
+
+print(used_lint)

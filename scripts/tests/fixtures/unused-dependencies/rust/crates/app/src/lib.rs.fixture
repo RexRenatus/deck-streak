@@ -1,0 +1,32 @@
+//! A planted crate: each entry of its manifest is used by one form here, or by none.
+
+use alpha as first;
+extern crate beta;
+
+include!("data.in");
+
+/// Runs the planted uses.
+///
+/// ```
+/// doctested::run();
+/// ```
+pub fn run() {
+    gamma::start();
+    delta::shout!();
+    first::go();
+    libmem::ready();
+    renamed_dep::run();
+    shared_helper::go();
+    local_rename::call();
+    hyphen_name::call();
+    other::eta::lookalike();
+    src_only_build::call();
+    // commented::call();
+    let _kept = "a string is kept";
+}
+
+#[epsilon::main]
+fn entry() {}
+
+#[derive(zeta::Planted)]
+struct Planted;

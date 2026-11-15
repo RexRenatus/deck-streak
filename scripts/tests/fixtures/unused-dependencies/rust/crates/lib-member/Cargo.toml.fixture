@@ -1,0 +1,5 @@
+[package]
+name = "lib-member"
+
+[lib]
+name = "libmem"
