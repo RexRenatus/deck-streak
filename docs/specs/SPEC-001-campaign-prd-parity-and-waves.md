@@ -431,3 +431,13 @@ rule (ADR-059).
   and the host's `deckstreakd data` commands (`data-export-erase`, #14). The core credential's
   grant is read; an optional write credential grants write, and every tool that changes data
   needs it (SPEC-369, SPEC-119 section 17, #720, parent #157).
+- **The surfaces and the scheduler (2026-10-29, ADR-589).** DeckStreak is the web app (`web/app`)
+  and the universal iPhone and iPad app (`ios/`), over one engine; the Telegram Mini App and the
+  bot are deprecated. ADR-589 supersedes what this plan says of the Mini App or the bot as a
+  current surface, or of Telegram `initData` as the owner gate of a current surface, and the
+  earlier sections keep their text. Every celebration and nudge passes through the one router,
+  whose transports outside a session are APNs and web push (ADR-341); the cutover from the
+  predecessor (W8) runs on the web app; and a planned delivery that targets a Telegram surface is
+  re-targeted to the two apps by the delivery that builds it. Rex, DeckStreak's own memory model,
+  is to be its only scheduler (CHARTER item 22); until a Rex version is promoted, no Rex due is
+  written.

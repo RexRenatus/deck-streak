@@ -76,3 +76,12 @@ Mini App and the bot are deprecated, as ADR-589 and the charter's amendment reco
 DeckStreak's own memory model, becomes its only scheduler before 1.0 (CHARTER item 22). The
 problem's last sentence, the second and third goals and the first open question name a deprecated
 surface, and are read with this amendment; their text above is kept as it was.
+
+Amendment (2026-10-29, ADR-589): the Telegram Mini App and the bot are deprecated, and the four
+statements the note above reads with it are restated for the web app and the universal iPhone and
+iPad app. The problem's last sentence: they want the whole game, the second brain's daily study
+companions and an AI mentor per subject in those two apps. The second goal: daily pre-study
+readings in the two apps, written by a named mentor per subject. The third goal: one notification
+policy through the one router, whose transports outside a session are APNs and web push
+(ADR-341). The first open question: the owned domain for the landing page and the web app. The
+cutover from the predecessor (W8) runs on the web app. Their text above is kept as it was.

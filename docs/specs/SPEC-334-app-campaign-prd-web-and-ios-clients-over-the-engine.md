@@ -254,3 +254,14 @@ spaced-repetition study game, the owner's primary ones. Anki's Rust engine, pinn
 presents cards and records answers; Rex, DeckStreak's own memory model, becomes its only scheduler before 1.0, and
 until then the stock scheduler schedules every review. R2's engine requirement and every requirement that cites
 ANK-01's experimental half are unchanged.
+
+## 12. Amendment (2026-10-29, ADR-589): the surfaces, the cutover and the scheduler
+
+The two apps this campaign builds are DeckStreak's surfaces: the web app (`web/app`) and the
+universal iPhone and iPad app (`ios/`), and the one router's transports outside a session are APNs
+and web push (ADR-341). The Telegram Mini App and the bot are deprecated: ADR-589 supersedes what
+this campaign says of either as a current surface, and the text above is kept as it was. R12's
+last sentence (lines 77 and 78) and section 5 (line 162) run the cutover from the predecessor on
+the Telegram surfaces; it runs on the web app. Rex, DeckStreak's own memory model, is to be its
+only scheduler (CHARTER item 22); until a Rex version is promoted, no Rex due is written, and the
+stock scheduler schedules every review, as section 11 says.
