@@ -369,6 +369,67 @@ class TheCheckDecides(CheckCase):
                 self.assertNotIn(part, text)
         self.assertEqual(fixture.leftovers(), [])
 
+    def test_a23_an_app_store_eligible_build_that_outlives_the_internal_one_is_live(self):
+        internal = build(2, "2029-12-01T00:00:00Z", "2030-01-13T12:00:00Z")
+        outlives = build(
+            3, "2029-12-20T00:00:00Z", "2030-03-20T12:00:00Z", audience="APP_STORE_ELIGIBLE"
+        )
+        alone = build(
+            4, "2030-01-05T00:00:00Z", "2030-04-05T12:00:00Z", audience="APP_STORE_ELIGIBLE"
+        )
+        within = build(
+            2, "2029-12-01T00:00:00Z", "2030-01-13T12:00:00Z", audience="APP_STORE_ELIGIBLE"
+        )
+        invalid = build(
+            3,
+            "2029-12-20T00:00:00Z",
+            "2030-03-20T12:00:00Z",
+            state="INVALID",
+            audience="APP_STORE_ELIGIBLE",
+        )
+        expired = build(
+            3,
+            "2029-12-20T00:00:00Z",
+            "2030-03-20T12:00:00Z",
+            audience="APP_STORE_ELIGIBLE",
+            expired=True,
+        )
+        tied = build(
+            3, "2029-12-20T00:00:00Z", "2030-01-13T12:00:00Z", audience="APP_STORE_ELIGIBLE"
+        )
+        due = (
+            "due: internal build 2 expires 2030-01-13T12:00:00Z, within 7 days; "
+            "dispatched testflight-internal.yml on dev"
+        )
+        lane = [["workflow", "run", "testflight-internal.yml", "--ref", "dev"]]
+        cases = {
+            "a newer eligible build beyond the lead": (
+                listing(outlives, internal),
+                "healthy: internal build 3 expires 2030-03-20T12:00:00Z, more than 7 days away",
+                [],
+            ),
+            "eligible builds only": (
+                listing(alone),
+                "healthy: internal build 4 expires 2030-04-05T12:00:00Z, more than 7 days away",
+                [],
+            ),
+            "an eligible build within the lead": (listing(within), due, lane),
+            "an eligible build that is not valid is not live": (
+                listing(invalid, internal),
+                due,
+                lane,
+            ),
+            "an expired eligible build is not live": (listing(expired, internal), due, lane),
+            "an eligible build expiring at the same instant": (listing(tied, internal), due, lane),
+        }
+        for label, (body, line, dispatches) in cases.items():
+            with self.subTest(label):
+                fixture = self.fixture(body=body)
+                done = fixture.run("check")
+                self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+                self.assertIn(line, done.stdout.splitlines())
+                self.assertEqual(self.dispatched(fixture), dispatches)
+
 
 def load_script():
     import importlib.util
