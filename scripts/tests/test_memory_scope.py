@@ -110,6 +110,7 @@ class Plant:
             "memory.oom.group": "0\n",
             "memory.events": EVENTS,
             "memory.peak": "0\n",
+            "cgroup.procs": f"{self.pid}\n",
         }
         self.sudo_log = self.root / "sudo-argv"
         self.systemctl_log = self.root / "systemctl-argv"
@@ -832,6 +833,219 @@ class TheWholeValues(ScriptCase):
                 self.assertEqual(len(calls), expected_reads)
                 self.assertEqual(sleeps, [0.1] * (expected_reads - 1))
                 self.assertEqual(code, 0 if arrives <= reads else 78, out.getvalue())
+
+
+class TheLateKill(ScriptCase):
+    """A kill while a process the command started still lives is counted in the record, or the
+    record is void (SPEC-467 A1 to A6). The planted command leaves the scope's `cgroup.procs` as
+    the kernel writes it, one process ID per line, and a kill is planted in `memory.events`."""
+
+    KILL = b"low 0\nhigh 0\nmax 1\noom 1\noom_kill 1\noom_group_kill 0\n"
+    ONE_OTHER = {
+        "in_force": False,
+        "state": "done",
+        "reason": "cgroup.procs holds 1 other process(es) after the command",
+        "oom": 0,
+        "oom_kill": 0,
+        "max": 0,
+        "peak_percent": 0,
+    }
+    NOT_WHOLE = {
+        "in_force": False,
+        "state": "done",
+        "reason": "cgroup.procs is not whole after the command",
+        "oom": 0,
+        "oom_kill": 0,
+        "max": 0,
+        "peak_percent": 0,
+    }
+
+    def go(self, plant, procs, reads=2, files=None, alone_at=None, then=None):
+        """Run `run()` with a command that leaves `procs` as the scope's process list, rewrites the
+        `files` it is given and exits 3: (exit, stdout, the record, the reads of `cgroup.procs`,
+        the sleeps). The read numbered `alone_at` first rewrites the list to the script alone, and
+        `then` runs after each sleep is recorded."""
+        real, seen, sleeps = self.module.read_raw, [], []
+
+        def read_raw(path):
+            if path.name == "cgroup.procs":
+                seen.append(path)
+                if len(seen) == alone_at:
+                    path.write_bytes(b"%d\n" % plant.pid)
+            return real(path)
+
+        def sleep(seconds):
+            sleeps.append(seconds)
+            if then is not None:
+                then()
+
+        command = rewriting(plant, {"cgroup.procs": procs, **(files or {})})
+        out = io.StringIO()
+        with (
+            contextlib.redirect_stdout(out),
+            mock.patch.object(self.module, "read_raw", read_raw),
+            mock.patch.object(self.module.time, "sleep", sleep),
+        ):
+            code = self.module.run(command, plant.report, **{**plant.seams(), "reads": reads})
+        record = json.loads((plant.report / "memory-scope.json").read_text("utf-8"))
+        return code, out.getvalue(), record, len(seen), sleeps
+
+    def test_a_kill_between_the_two_reads_while_a_process_lives_is_counted_or_the_record_is_void(
+        self,
+    ):
+        plant = self.plant().build()
+        beside = b"%d\n424242\n" % plant.pid
+        real = self.module.events_of
+
+        def events_of(group):
+            counts = real(group)
+            # The counters' read after the command, while 424242 is listed: it is stopped now.
+            if (group / "cgroup.procs").read_bytes() == beside:
+                (group / "memory.events").write_bytes(self.KILL)
+            return counts
+
+        with mock.patch.object(self.module, "events_of", events_of):
+            code, out, record, _, _ = self.go(plant, beside)
+        self.assertEqual((code, record), (3, self.ONE_OTHER), out)
+
+    def test_a_kill_after_both_reads_while_a_process_lives_is_counted_or_the_record_is_void(self):
+        plant = self.plant().build()
+        beside = b"%d\n424242\n" % plant.pid
+        real = self.module.write_record
+
+        def write_record(report, record):
+            real(report, record)
+            # The record is done while 424242 is listed: it is stopped now.
+            if record["state"] == "done":
+                (plant.group / "memory.events").write_bytes(self.KILL)
+
+        with mock.patch.object(self.module, "write_record", write_record):
+            code, out, record, _, _ = self.go(plant, beside)
+        self.assertEqual((code, record), (3, self.ONE_OTHER), out)
+
+    def test_a_kill_during_the_wait_is_counted_once_the_scope_holds_the_script_alone(self):
+        plant = self.plant().build()
+        beside = b"%d\n424242\n" % plant.pid
+        procs = plant.group / "cgroup.procs"
+
+        def stopped():
+            # The first pause after the command: 424242 is stopped, so the list holds the script.
+            if procs.read_bytes() == beside:
+                procs.write_bytes(b"%d\n" % plant.pid)
+                events = b"low 0\nhigh 0\nmax 2\noom 1\noom_kill 1\noom_group_kill 0\n"
+                (plant.group / "memory.events").write_bytes(events)
+                (plant.group / "memory.peak").write_bytes(b"%d\n" % (plant.cap // 2))
+
+        code, out, record, _, sleeps = self.go(plant, beside, then=stopped)
+        wanted = {
+            "in_force": True,
+            "state": "done",
+            "reason": None,
+            "oom": 1,
+            "oom_kill": 1,
+            "max": 2,
+            "peak_percent": 50,
+        }
+        self.assertEqual((code, record), (3, wanted), out)
+        self.assertEqual(sleeps, [0.1])
+        self.assertEqual(
+            out, "memory-scope: peak 50% of the cap; the kernel stopped 1 process(es) at the cap\n"
+        )
+
+    def test_the_scope_is_read_after_the_command_at_most_reads_times_and_no_longer(self):
+        # (the read at which the script is alone, reads, the reads, the sleeps, in force)
+        cases = [
+            (1, 3, 1, [], True),
+            (2, 3, 2, [0.1], True),
+            (3, 3, 3, [0.1, 0.1], True),
+            (4, 3, 3, [0.1, 0.1], False),
+            (2, 1, 1, [], False),
+        ]
+        judged = []
+        for alone_at, reads, wanted_reads, wanted_sleeps, in_force in cases:
+            with tempfile.TemporaryDirectory() as directory:
+                plant = Plant(directory).build()
+                beside = b"%d\n424242\n" % plant.pid
+                code, out, record, seen, sleeps = self.go(plant, beside, reads, alone_at=alone_at)
+            case = (alone_at, reads)
+            self.assertEqual(
+                (seen, sleeps, record["in_force"]), (wanted_reads, wanted_sleeps, in_force), case
+            )
+            self.assertEqual(code, 3, (case, out))
+            judged.append(case)
+        examined("cases of the reads of cgroup.procs after the command", judged)
+
+    def test_a_process_list_that_is_not_whole_after_the_command_voids_the_record(self):
+        why = "memory-scope: NOT IN FORCE after the command: "
+        not_whole = why + "cgroup.procs is not whole after the command\n"
+        cases = [
+            ("absent", lambda pid: None, 2, self.NOT_WHOLE, not_whole),
+            ("a directory", lambda pid: DIRECTORY, 2, self.NOT_WHOLE, not_whole),
+            ("empty", lambda pid: b"", 2, self.NOT_WHOLE, not_whole),
+            ("not UTF-8", lambda pid: b"%d\n\xff\n" % pid, 2, self.NOT_WHOLE, not_whole),
+            ("CRLF", lambda pid: b"%d\r\n" % pid, 2, self.NOT_WHOLE, not_whole),
+            ("a trailing blank line", lambda pid: b"%d\n\n" % pid, 2, self.NOT_WHOLE, not_whole),
+            (
+                "a non-ASCII digit",
+                lambda pid: b"%d\n\xd9\xa1\n" % pid,
+                2,
+                self.NOT_WHOLE,
+                not_whole,
+            ),
+            ("a sign", lambda pid: b"%d\n-424242\n" % pid, 2, self.NOT_WHOLE, not_whole),
+            ("a word", lambda pid: b"%d\nkthreadd\n" % pid, 2, self.NOT_WHOLE, not_whole),
+            ("an ID twice", lambda pid: b"%d\n%d\n" % (pid, pid), 2, self.NOT_WHOLE, not_whole),
+            (
+                "the script alone",
+                lambda pid: b"%d\n" % pid,
+                2,
+                {
+                    "in_force": True,
+                    "state": "done",
+                    "reason": None,
+                    "oom": 0,
+                    "oom_kill": 0,
+                    "max": 0,
+                    "peak_percent": 0,
+                },
+                "memory-scope: peak 0% of the cap; the kernel stopped 0 process(es) at the cap\n",
+            ),
+            (
+                "the script beside 424242, one read",
+                lambda pid: b"%d\n424242\n" % pid,
+                1,
+                self.ONE_OTHER,
+                why + "cgroup.procs holds 1 other process(es) after the command\n",
+            ),
+        ]
+        judged = []
+        for label, shape, reads, wanted, line in cases:
+            with tempfile.TemporaryDirectory() as directory:
+                plant = Plant(directory).build()
+                code, out, record, seen, sleeps = self.go(plant, shape(plant.pid), reads)
+            self.assertEqual((seen, sleeps, record, out), (1, [], wanted, line), label)
+            self.assertEqual(code, 3, label)
+            judged.append(label)
+        examined("process lists after the command", judged)
+
+    def test_a_run_whose_processes_end_with_it_records_what_it_recorded_before(self):
+        plant = self.plant().build()
+        files = {"memory.events": event_bytes(AFTER), "memory.peak": b"%d\n" % (plant.cap // 2)}
+        code, out, record, _, sleeps = self.go(plant, b"%d\n" % plant.pid, files=files)
+        wanted = {
+            "in_force": True,
+            "state": "done",
+            "reason": None,
+            "oom": 1,
+            "oom_kill": 1,
+            "max": 3,
+            "peak_percent": 50,
+        }
+        self.assertEqual((code, record), (3, wanted), out)
+        self.assertEqual(
+            out, "memory-scope: peak 50% of the cap; the kernel stopped 1 process(es) at the cap\n"
+        )
+        self.assertEqual(sleeps, [])
 
 
 class TheCommandLine(ScriptCase):
