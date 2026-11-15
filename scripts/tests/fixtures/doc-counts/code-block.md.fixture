@@ -1,0 +1,29 @@
+---
+title: three planted files
+---
+
+# A planted living document
+
+Here two prose files are counted.
+
+```text
+four planted files
+```
+
+~~~~
+five planted files
+~~~~
+
+    six planted files
+
+> seven planted files
+
+<!-- eight planted files -->
+
+| what | count |
+|---|---|
+| planted files | 9 files |
+
+An inline `the 10 files` span is code.
+
+A run 123456789 printed 11 files.

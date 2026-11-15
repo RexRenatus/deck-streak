@@ -1,0 +1,206 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S67600-A-RED-FIRST-RECORD-STAYS-LIVING",
+        "scripts/tests/test_doc_counts.py",
+        "|docs/red-first/[^/]+\\.md\"",
+        "\"",
+        "a red-first record stays in the population, so its counts read as living claims, which the dated-record test refuses (SPEC-676 R2)",
+        "test_doc_counts.TheCountsDocumentsStateAreDerived.test_a_dated_record_leaves_the_population_by_its_rule"
+      ],
+      [
+        "S67601-AN-ADR-STAYS-LIVING",
+        "scripts/tests/test_doc_counts.py",
+        "\\.md|docs/decisions/ADR-[^/]+\\.md|docs/red-first",
+        "\\.md|docs/red-first",
+        "an ADR stays in the population, so its counts read as living claims, which the dated-record test refuses (SPEC-676 R2)",
+        "test_doc_counts.TheCountsDocumentsStateAreDerived.test_a_dated_record_leaves_the_population_by_its_rule"
+      ],
+      [
+        "S67602-A-DELIVERED-SPEC-STAYS-LIVING",
+        "scripts/tests/test_doc_counts.py",
+        "r\"^(?:docs/specs/SPEC-[^/]+\\.md|docs/decisions",
+        "r\"^(?:docs/decisions",
+        "a delivered SPEC stays in the population, so its counts read as living claims, which the dated-record test refuses (SPEC-676 R2)",
+        "test_doc_counts.TheCountsDocumentsStateAreDerived.test_a_dated_record_leaves_the_population_by_its_rule"
+      ],
+      [
+        "S67603-A-PLANNED-SPEC-LEAVES",
+        "scripts/tests/test_doc_counts.py",
+        "docs/specs/SPEC-[^/]+",
+        "docs/specs/(?:planned/)?SPEC-[^/]+",
+        "a planned SPEC leaves the population as if it were a record, which the dated-record test refuses (SPEC-676 R2)",
+        "test_doc_counts.TheCountsDocumentsStateAreDerived.test_a_dated_record_leaves_the_population_by_its_rule"
+      ],
+      [
+        "S67604-A-FRAGMENT-STAYS-LIVING",
+        "scripts/tests/test_doc_counts.py",
+        "r\"|changelog\\.d/(?!README\\.md$)[^/]+\\.md)$\"",
+        "r\")$\"",
+        "a changelog fragment stays in the population, so its counts read as living claims, which the dated-record test refuses (SPEC-676 R2)",
+        "test_doc_counts.TheCountsDocumentsStateAreDerived.test_a_dated_record_leaves_the_population_by_its_rule"
+      ],
+      [
+        "S67605-THE-FRAGMENT-README-LEAVES",
+        "scripts/tests/test_doc_counts.py",
+        "changelog\\.d/(?!README\\.md$)",
+        "changelog\\.d/",
+        "the fragment folder's guide leaves the population as if it were a record, which the dated-record test refuses (SPEC-676 R2)",
+        "test_doc_counts.TheCountsDocumentsStateAreDerived.test_a_dated_record_leaves_the_population_by_its_rule"
+      ],
+      [
+        "S67606-A-SIGNED-RULING-STAYS-LIVING",
+        "scripts/tests/test_doc_counts.py",
+        "adds this file\")",
+        "adds this rule\")",
+        "a ruling whose authority is the signed commit that adds it stays in the population, which the dated-record test refuses (SPEC-676 R2)",
+        "test_doc_counts.TheCountsDocumentsStateAreDerived.test_a_dated_record_leaves_the_population_by_its_rule"
+      ],
+      [
+        "S67607-THE-SIGNED-SENTENCE-LEAVES-ANYWHERE",
+        "scripts/tests/test_doc_counts.py",
+        "if name.startswith(\"docs/rulings/\") and SIGNED.search(text):",
+        "if SIGNED.search(text):",
+        "a document outside the rulings folder that quotes the signed sentence leaves the population, which the dated-record test refuses (SPEC-676 R2)",
+        "test_doc_counts.TheCountsDocumentsStateAreDerived.test_a_dated_record_leaves_the_population_by_its_rule"
+      ],
+      [
+        "S67608-A-RELEASED-SECTION-STAYS-LIVING",
+        "scripts/tests/test_doc_counts.py",
+        "r\"^## \\[\\d+",
+        "r\"^### \\[\\d+",
+        "the released changelog sections stay in the population beside its preamble, which the dated-record test refuses (SPEC-676 R2)",
+        "test_doc_counts.TheCountsDocumentsStateAreDerived.test_a_dated_record_leaves_the_population_by_its_rule"
+      ],
+      [
+        "S67609-A-TILDE-FENCE-IS-READ",
+        "scripts/tests/test_doc_counts.py",
+        "|~{3,})(.*)$\"",
+        ")(.*)$\"",
+        "a tilde fence no longer opens a code block, so its count reads as prose, which the not-read test refuses (SPEC-676 R4)",
+        "test_doc_counts.TheCountsDocumentsStateAreDerived.test_a_count_in_code_a_quote_front_matter_a_table_or_a_measured_run_is_not_read"
+      ],
+      [
+        "S67610-AN-INDENTED-BLOCK-IS-READ",
+        "scripts/tests/test_doc_counts.py",
+        "if indent >= 4 and blank and not listed:",
+        "if indent >= 5 and blank and not listed:",
+        "a block indented by four spaces reads as prose, so its count is read, which the not-read test refuses (SPEC-676 R4)",
+        "test_doc_counts.TheCountsDocumentsStateAreDerived.test_a_count_in_code_a_quote_front_matter_a_table_or_a_measured_run_is_not_read"
+      ],
+      [
+        "S67611-A-QUOTE-IS-READ",
+        "scripts/tests/test_doc_counts.py",
+        "if bare.startswith(\">\"):",
+        "if bare.startswith(\">>\"):",
+        "a block quote reads as prose, so its quoted count is read, which the not-read test refuses (SPEC-676 R4)",
+        "test_doc_counts.TheCountsDocumentsStateAreDerived.test_a_count_in_code_a_quote_front_matter_a_table_or_a_measured_run_is_not_read"
+      ],
+      [
+        "S67612-A-TABLE-BODY-IS-READ",
+        "scripts/tests/test_doc_counts.py",
+        "if table or (",
+        "if (",
+        "a table's body rows read as prose, so a measured count in a cell is read, which the not-read test refuses (SPEC-676 R5)",
+        "test_doc_counts.TheCountsDocumentsStateAreDerived.test_a_count_in_code_a_quote_front_matter_a_table_or_a_measured_run_is_not_read"
+      ],
+      [
+        "S67613-A-MEASURED-RUN-IS-READ",
+        "scripts/tests/test_doc_counts.py",
+        "`?\\d{6,}",
+        "`?\\d{10,}",
+        "a line naming its run id is no longer a figure measured once, so its count is read, which the not-read test refuses (SPEC-676 R6)",
+        "test_doc_counts.TheCountsDocumentsStateAreDerived.test_a_count_in_code_a_quote_front_matter_a_table_or_a_measured_run_is_not_read"
+      ],
+      [
+        "S67614-THREE-READS-AS-FOUR",
+        "scripts/tests/test_doc_counts.py",
+        "\"three\": 3,",
+        "\"three\": 4,",
+        "a spelt count reads as another number, so a bound claim that matches reads as a mismatch, which the match test refuses (SPEC-676 R3)",
+        "test_doc_counts.TheCountsDocumentsStateAreDerived.test_a_planted_bound_claim_whose_count_matches_is_clean"
+      ],
+      [
+        "S67615-A-MISMATCH-READS-CLEAN",
+        "scripts/tests/test_doc_counts.py",
+        ") != claim.count:",
+        ") == claim.count:",
+        "a bound claim whose derived count differs is clean and one that matches is a site, which the differs test refuses (SPEC-676 R8)",
+        "test_doc_counts.TheCountsDocumentsStateAreDerived.test_a_planted_bound_claim_whose_count_differs_is_a_site"
+      ],
+      [
+        "S67616-AN-UNBOUND-CLAIM-IS-NO-SITE",
+        "scripts/tests/test_doc_counts.py",
+        "found.append((key(claim), \"unbound\"))",
+        "pass",
+        "an unbound claim is no site, so a stated count no check derives passes unseen, which the unbound test refuses (SPEC-676 R9)",
+        "test_doc_counts.TheCountsDocumentsStateAreDerived.test_a_planted_unbound_claim_is_a_site_at_warn_and_fails_at_fail"
+      ],
+      [
+        "S67617-A-STALE-LISTING-ENTRY-PASSES",
+        "scripts/tests/test_doc_counts.py",
+        "if entry not in keys]",
+        "if entry in keys]",
+        "a listing entry that names no current site is not stale, and a current one is, which the stale test refuses (SPEC-676 R10)",
+        "test_doc_counts.TheCountsDocumentsStateAreDerived.test_a_listing_entry_that_names_no_site_fails_at_both_levels"
+      ],
+      [
+        "S67618-A-STALE-BINDING-PASSES",
+        "scripts/tests/test_doc_counts.py",
+        "stale.append(f\"bound {document} {words!r}\")",
+        "pass",
+        "a binding that names no current claim is not stale, which the stale test refuses (SPEC-676 R10)",
+        "test_doc_counts.TheCountsDocumentsStateAreDerived.test_a_listing_entry_that_names_no_site_fails_at_both_levels"
+      ],
+      [
+        "S67619-AN-UNLISTED-SITE-FAILS-AT-WARN",
+        "scripts/tests/test_doc_counts.py",
+        "(unlisted if level == \"fail\" else [])",
+        "(unlisted if level == \"warn\" else [])",
+        "an unlisted site fails at warn and passes at fail, which the unbound test refuses (SPEC-676 R10)",
+        "test_doc_counts.TheCountsDocumentsStateAreDerived.test_a_planted_unbound_claim_is_a_site_at_warn_and_fails_at_fail"
+      ],
+      [
+        "S67620-JOBS-ARE-COUNTED-WITHOUT-THE-COMMAND",
+        "scripts/tests/test_doc_counts.py",
+        "and command in line:",
+        "and command not in line:",
+        "the job derivation counts the jobs that do not run the command, so a matching bound claim reads as a mismatch, which the match test refuses (SPEC-676 R7)",
+        "test_doc_counts.TheCountsDocumentsStateAreDerived.test_a_planted_bound_claim_whose_count_matches_is_clean"
+      ],
+      [
+        "S67621-TRACKED-COUNTS-THE-OTHER-PATHS",
+        "scripts/tests/test_doc_counts.py",
+        "if fnmatch.fnmatchcase(name, pattern)]",
+        "if not fnmatch.fnmatchcase(name, pattern)]",
+        "the tracked derivation counts the paths its pattern does not match, which the match test refuses (SPEC-676 R7)",
+        "test_doc_counts.TheCountsDocumentsStateAreDerived.test_a_planted_bound_claim_whose_count_matches_is_clean"
+      ],
+      [
+        "S67622-FRONT-MATTER-IS-READ",
+        "scripts/tests/test_doc_counts.py",
+        "if lines[0].rstrip() == \"---\":",
+        "if lines[0].rstrip() == \"+++\":",
+        "front matter reads as prose, so its count is read, which the not-read test refuses (SPEC-676 R4)",
+        "test_doc_counts.TheCountsDocumentsStateAreDerived.test_a_count_in_code_a_quote_front_matter_a_table_or_a_measured_run_is_not_read"
+      ],
+      [
+        "S67623-A-COMMENT-IS-READ",
+        "scripts/tests/test_doc_counts.py",
+        "bare.startswith(\"<!--\")",
+        "bare.startswith(\"<!---\")",
+        "an HTML comment is no longer its own kind of line, which the not-read test refuses (SPEC-676 R4)",
+        "test_doc_counts.TheCountsDocumentsStateAreDerived.test_a_count_in_code_a_quote_front_matter_a_table_or_a_measured_run_is_not_read"
+      ],
+      [
+        "S67624-AN-INLINE-SPAN-IS-READ",
+        "scripts/tests/test_doc_counts.py",
+        "SPAN = re.compile(r\"(`+)(.+?)\\1\")",
+        "SPAN = re.compile(r\"(`+)(.+?)\\1x\")",
+        "an inline code span is no longer blanked, so a count inside it is read, which the not-read test refuses (SPEC-676 R5)",
+        "test_doc_counts.TheCountsDocumentsStateAreDerived.test_a_count_in_code_a_quote_front_matter_a_table_or_a_measured_run_is_not_read"
+      ]
+    ]
+  }
+}
