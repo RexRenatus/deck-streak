@@ -1,0 +1,174 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S65200-THE-OVER-ARM-REPORTS-A-ROUTE-PAST-ITS-ENTRY",
+        "scripts/web-route-size.py",
+        "elif figure > budget:",
+        "elif figure > budget + 1:",
+        "a route one byte over its entry is reported OVER BUDGET; an arm that admits one byte more passes the planted route (SPEC-652 R7)",
+        "test_web_route_size.EachRouteIsHeldToItsEntry.test_a_route_over_its_entry_is_reported_and_one_at_its_entry_is_not"
+      ],
+      [
+        "S65201-A-ROUTE-AT-ITS-ENTRY-IS-NOT-OVER",
+        "scripts/web-route-size.py",
+        "elif figure > budget:",
+        "elif figure >= budget:",
+        "a route at exactly its entry is within it; read as over, every route at its recorded figure would be reported (SPEC-652 R7)",
+        "test_web_route_size.EachRouteIsHeldToItsEntry.test_a_route_over_its_entry_is_reported_and_one_at_its_entry_is_not"
+      ],
+      [
+        "S65202-A-ROUTE-WITH-NO-ENTRY-HAS-NO-BUDGET",
+        "scripts/web-route-size.py",
+        "budget = table.get(route)",
+        "budget = table.get(route, 0)",
+        "a route with no entry is reported NO BUDGET, never read as an entry of zero bytes (SPEC-652 R7)",
+        "test_web_route_size.EachRouteIsHeldToItsEntry.test_a_route_with_no_entry_is_reported"
+      ],
+      [
+        "S65203-AN-ENTRY-FOR-A-GONE-ROUTE-IS-REPORTED",
+        "scripts/web-route-size.py",
+        "for route in sorted(set(table) - set(figures)):",
+        "for route in sorted(set(table) - set(table)):",
+        "an entry whose route is gone is reported GONE; without the arm the table keeps entries for no route (SPEC-652 R7)",
+        "test_web_route_size.EachRouteIsHeldToItsEntry.test_an_entry_for_a_route_that_is_gone_is_reported"
+      ],
+      [
+        "S65204-THE-RATCHET-STARTS-PAST-THE-MARGIN",
+        "scripts/web-route-size.py",
+        "elif budget - figure > RATCHET_MARGIN:",
+        "elif budget - figure >= RATCHET_MARGIN:",
+        "a route exactly the margin under its entry is left alone; one byte more asks the entry lowered (SPEC-652 R7)",
+        "test_web_route_size.EachRouteIsHeldToItsEntry.test_a_route_past_the_margin_under_its_entry_asks_the_entry_lowered"
+      ],
+      [
+        "S65205-THE-MARGIN-IS-1024-BYTES",
+        "scripts/web-route-size.py",
+        "RATCHET_MARGIN = 1024",
+        "RATCHET_MARGIN = 2048",
+        "the ratchet's margin is 1024 bytes gzip -9; a wider margin leaves a route that shrank by 1025 bytes at its old entry (SPEC-652 R7)",
+        "test_web_route_size.EachRouteIsHeldToItsEntry.test_a_route_past_the_margin_under_its_entry_asks_the_entry_lowered"
+      ],
+      [
+        "S65206-THE-CLOSURE-IS-TRANSITIVE",
+        "scripts/web-route-size.py",
+        "stack.extend(chunk.get(\"imports\", []))",
+        "stack.extend([])",
+        "a route's figure holds every chunk its nodes import statically, transitively; a walk that stops at the node leaves the imported chunks out (SPEC-652 R3, R4)",
+        "test_web_route_size.EachRouteIsHeldToItsEntry.test_a_routes_figure_is_its_static_closure_beyond_the_shell"
+      ],
+      [
+        "S65207-NO-DYNAMIC-IMPORT-IS-FOLLOWED",
+        "scripts/web-route-size.py",
+        "stack.extend(chunk.get(\"imports\", []))",
+        "stack.extend(chunk.get(\"imports\", []) + chunk.get(\"dynamicImports\", []))",
+        "a dynamic import is not followed; following one counts a chunk loaded on demand, and the client app's import of every node, in a figure (SPEC-652 R3, R4)",
+        "test_web_route_size.EachRouteIsHeldToItsEntry.test_a_routes_figure_is_its_static_closure_beyond_the_shell"
+      ],
+      [
+        "S65208-NO-STYLESHEET-IS-COUNTED",
+        "scripts/web-route-size.py",
+        "files.add(chunk[\"file\"])",
+        "files.update([chunk[\"file\"], *chunk.get(\"css\", [])])",
+        "a chunk's stylesheet is not its JavaScript; counted, it raises the route's figure by the planted sheet (SPEC-652 R3, R4)",
+        "test_web_route_size.EachRouteIsHeldToItsEntry.test_a_routes_figure_is_its_static_closure_beyond_the_shell"
+      ],
+      [
+        "S65209-A-ROUTE-LEAVES-THE-SHELLS-FILES-OUT",
+        "scripts/web-route-size.py",
+        "own = closure(manifest, keys) - shell_files",
+        "own = closure(manifest, keys)",
+        "a route's figure leaves out the files the shell holds; counted, a chunk the root layout shares is in the shell and in the route (SPEC-652 R3, R4)",
+        "test_web_route_size.EachRouteIsHeldToItsEntry.test_a_routes_figure_is_its_static_closure_beyond_the_shell"
+      ],
+      [
+        "S65210-A-LAYOUT-BELOW-THE-ROOT-IS-THE-ROUTES",
+        "scripts/web-route-size.py",
+        "keys = [key] + [layouts[at] for at in sorted(layouts) if folder.startswith(at)]",
+        "keys = [key]",
+        "a route's figure holds the node of each layout between it and the root layout; without it the layout's files are counted nowhere (SPEC-652 R3, R4)",
+        "test_web_route_size.EachRouteIsHeldToItsEntry.test_a_routes_figure_is_its_static_closure_beyond_the_shell"
+      ],
+      [
+        "S65211-THE-ROOT-LAYOUT-IS-THE-SHELLS",
+        "scripts/web-route-size.py",
+        "if named is None or (named.group(2) == \"layout\" and not named.group(1)):",
+        "if named is None:",
+        "the root layout's node is the shell's; read as a layout of every route, it leaves the shell and joins each route's figure (SPEC-652 R3, R4)",
+        "test_web_route_size.EachRouteIsHeldToItsEntry.test_a_routes_figure_is_its_static_closure_beyond_the_shell"
+      ],
+      [
+        "S65212-AN-EMPTY-POPULATION-IS-VOID",
+        "scripts/web-route-size.py",
+        "if not pages:",
+        "if False:",
+        "a build with no route reads VOID, examined 0 route(s), never a pass (SPEC-652 R2, R6, R9)",
+        "test_web_route_size.EachRouteIsHeldToItsEntry.test_a_build_or_table_that_does_not_read_or_holds_no_route_is_void"
+      ],
+      [
+        "S65213-A-PAGE-WITH-NO-NODE-IS-VOID",
+        "scripts/web-route-size.py",
+        "if missing:",
+        "if False:",
+        "a page under src/routes with no node in the manifest reads VOID; passed, a route the manifest does not name goes unmeasured (SPEC-652 R2, R6, R9)",
+        "test_web_route_size.EachRouteIsHeldToItsEntry.test_a_build_or_table_that_does_not_read_or_holds_no_route_is_void"
+      ],
+      [
+        "S65214-A-MISSING-FILE-IS-VOID",
+        "scripts/web-route-size.py",
+        "if not path.is_file():",
+        "if False:",
+        "a file the manifest names and the build does not hold reads VOID by name, never a crash or a pass (SPEC-652 R2, R6, R9)",
+        "test_web_route_size.EachRouteIsHeldToItsEntry.test_a_build_or_table_that_does_not_read_or_holds_no_route_is_void"
+      ],
+      [
+        "S65215-AN-EMPTY-FILE-IS-VOID",
+        "scripts/web-route-size.py",
+        "if path.stat().st_size == 0:",
+        "if path.stat().st_size < 0:",
+        "an empty file reads VOID; measured, its few compressed bytes would pass (SPEC-652 R2, R6, R9)",
+        "test_web_route_size.EachRouteIsHeldToItsEntry.test_a_build_or_table_that_does_not_read_or_holds_no_route_is_void"
+      ],
+      [
+        "S65216-A-FILE-OUTSIDE-THE-CLIENT-FOLDER-IS-VOID",
+        "scripts/web-route-size.py",
+        "if Path(name).is_absolute() or \"..\" in Path(name).parts:",
+        "if Path(name).is_absolute():",
+        "a file named above the client folder reads VOID; measured, a file outside the build would count in a figure (SPEC-652 R2, R6, R9)",
+        "test_web_route_size.EachRouteIsHeldToItsEntry.test_a_build_or_table_that_does_not_read_or_holds_no_route_is_void"
+      ],
+      [
+        "S65217-AN-ABSENT-GZIP-IS-VOID",
+        "scripts/web-route-size.py",
+        "if gzip is None:",
+        "if False:",
+        "an absent gzip reads VOID by name; without the check no figure is measured and the check crashes instead of saying why (SPEC-652 R2, R6, R9)",
+        "test_web_route_size.EachRouteIsHeldToItsEntry.test_a_build_or_table_that_does_not_read_or_holds_no_route_is_void"
+      ],
+      [
+        "S65218-AN-ENTRY-NAMES-ITS-JOB",
+        "scripts/web-route-size.py",
+        "type(job) is not int or job <= 0",
+        "type(job) is not int or job < 0",
+        "every entry names the job whose run measured it; job 0 names no run, so it reads VOID (SPEC-652 R2, R6, R9)",
+        "test_web_route_size.EachRouteIsHeldToItsEntry.test_a_build_or_table_that_does_not_read_or_holds_no_route_is_void"
+      ],
+      [
+        "S65219-THE-CHECK-STARTS-AT-WARN",
+        "scripts/web-route-size.py",
+        "LEVEL = \"warn\"",
+        "LEVEL = \"fail\"",
+        "the check lands at warn and moves to fail only by its own delivery (SPEC-652 R8, ADR-674 D6)",
+        "test_web_route_size.TheLevelDecidesWhetherAFindingFails.test_a_finding_fails_at_the_fail_level_and_passes_at_warn"
+      ],
+      [
+        "S65220-A-FINDING-FAILS-AT-THE-FAIL-LEVEL",
+        "scripts/web-route-size.py",
+        "return EXIT_FAIL if found and level == \"fail\" else EXIT_PASS",
+        "return EXIT_PASS",
+        "at the fail level a finding exits 1; an exit of 0 there would pass every finding (SPEC-652 R8)",
+        "test_web_route_size.TheLevelDecidesWhetherAFindingFails.test_a_finding_fails_at_the_fail_level_and_passes_at_warn"
+      ]
+    ]
+  }
+}

@@ -172,6 +172,12 @@
       "test_owner_bundle_size"
     ]
   },
+  "scripts/web-route-size.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_web_route_size"
+    ]
+  },
   "scripts/web_mutation_shards.py": {
     "dir": "scripts/tests",
     "modules": [

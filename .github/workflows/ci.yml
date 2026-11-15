@@ -281,6 +281,11 @@ jobs:
         env:
           CHECK_LOG_DIR: ${{ runner.temp }}/check-logs
         run: bash scripts/check.sh web audit-web
+      # SPEC-652 (ADR-674): each route's JavaScript against its entry in the budget file, read
+      # from the client build the step above left. At warn it reports and passes; it fails only
+      # when the build or the table cannot be read or holds no route (VOID).
+      - name: web-route-size (each route's JavaScript, gzip -9, against its budget, at warn)
+        run: python3 scripts/web-route-size.py --app web/app --budgets config/web-route-budgets.json
       - name: save the pnpm store
         if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main') && steps.pnpm-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
