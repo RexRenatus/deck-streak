@@ -37,3 +37,26 @@ one workflow and Markdown documents.
 | `test_ci_workflows.py` `test_the_long_apple_jobs_and_the_verdict_stay_hosted_on_every_event` REPLACED: it held `harness`, `release-and-app` and `verdict` on `xcode-27` in every scenario; SPEC-688's criteria replace it, holding the verdict to the short jobs' expression and route, and the two long jobs to one expression that reaches the self-hosted labels only for this repository's own pull request with `DS_MINI` and `DS_MINI_LONG` both on and an actor that is not Dependabot, `xcode-27` otherwise. The pins that read those jobs' `runs-on` move with it: `test_one_job_body_serves_the_change_and_the_tag` (each job's own expression), `app_steps_problems` (the runner of `release-and-app`), `split_copy_problems` and `split_verdict_problems` (the runners of `release-and-app` and of the verdict, which SPEC-591 R3 and R8 admitted as `xcode-27` and which now read as each job's route), `admitted_runner` and `apple_job_runner` (each expression admitted to its own jobs alone), `test_no_workflow_uses_a_self_hosted_runner_or_a_privileged_trigger`, and SPEC-621's `test_the_short_apple_jobs_reach_the_mini_only_on_this_repositorys_own_events_with_the_variable_on` and `test_a_planted_route_is_refused_by_its_scenario` (the verdict joins the short jobs) | `e89e25b` | the owner's decision that every Apple job can reach the self-hosted runner, the verdict with the short jobs and the long jobs behind a second variable on this repository's own pull requests |
 
 The green commit `9bbe166` carries the runs-on change, and `git diff --quiet 9bbe166 HEAD -- .github/workflows/xcframework.yml scripts/tests/test_ci_workflows.py` reads rc 0.
+
+## The dev push and dispatch routes
+
+The red commit `a5a9506` moved the long Apple jobs' pins in `test_ci_workflows.py` to the route that also reaches the self-hosted labels for a push or a dispatch on dev. In the `ci` run 43671830512, its `hygiene` job 132683351825, seven tests of that module failed, each by an assertion and no error, and no other test of the stage failed: the three criteria and the four moved pins `test_one_job_body_serves_the_change_and_the_tag`, `test_no_workflow_uses_a_self_hosted_runner_or_a_privileged_trigger`, `test_the_app_is_generated_tested_and_archived_in_the_harness_job` and `test_the_sibling_repeats_the_harness_prefix_and_boot_then_runs_the_moved_steps`. The green commit `9b79478` changes the two long jobs' `runs-on` line alone.
+
+```red-first
+A2: red at a5a9506:     self.assertEqual(jobs["harness"]["runs-on"], LONG_APPLE_RUNNER)
+A3: red at a5a9506:     self.assertEqual(apple_route_problems(jobs), [])
+A4: red at a5a9506:     self.assertEqual(holders[LONG_APPLE_RUNNER], ["harness", "release-and-app"])
+A2: green at 9b79478
+A3: green at 9b79478
+A4: green at 9b79478
+```
+
+### The weakening table of the dev routes
+
+Across `git diff 23b3ac22...HEAD`, no test is removed, renamed or skipped, and no filter, exclusion, skip list, sample or bound is added on the test side; one test's route is relaxed, named in the row below.
+
+| entry | commit | ruling |
+|---|---|---|
+| `test_ci_workflows.py` `test_the_long_jobs_reach_the_runner_only_on_own_pull_requests_with_both_variables_on` RELAXED: it held the long jobs on the five labels only for this repository's own pull request, every push and dispatch hosted; it now holds them there also for a push or a dispatch whose ref is dev, with a tag, the main branch, a schedule and a fork's pull request hosted. The other tests the red commit moves with it: `test_a_planted_long_route_is_refused_by_its_scenario`, `test_each_apple_expression_is_admitted_to_its_own_jobs_alone`, `test_one_job_body_serves_the_change_and_the_tag`, `test_no_workflow_uses_a_self_hosted_runner_or_a_privileged_trigger`, `test_the_app_is_generated_tested_and_archived_in_the_harness_job` and `test_the_sibling_repeats_the_harness_prefix_and_boot_then_runs_the_moved_steps`. | `a5a9506` | the owner's decision that the long Apple jobs also reach the self-hosted runner for the internal upload lane's push and dispatch runs on dev, behind the same two variables, while only the owner's accounts contribute to this repository |
+
+The green commit `9b79478` carries the runs-on change, and `git diff --quiet 9b79478 HEAD -- .github/workflows/xcframework.yml scripts/tests/test_ci_workflows.py` reads rc 0.
