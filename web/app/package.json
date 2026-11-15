@@ -22,7 +22,7 @@
     "@inlang/paraglide-js": "^2.29.2",
     "@inlang/plugin-message-format": "^4.5.6",
     "@lucide/svelte": "^1.66.0",
-    "@playwright/test": "^1.64.1",
+    "@playwright/test": "^1.65.0",
     "@stryker-mutator/core": "10.1.1",
     "@stryker-mutator/vitest-runner": "10.1.1",
     "@sveltejs/adapter-static": "^4.0.1",
