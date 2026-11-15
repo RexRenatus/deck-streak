@@ -67,7 +67,7 @@ flowchart LR
     checker["the formal checker: build, axioms, witness, vectors byte-equal, cover digest (A1)"] --> theorem
     checker --> vectors
     func["deploy.sh refuse_unlisted_settings"] --> checker
-    vectors --> vtest["A2: each block exactly, through execve, deploy.sh caddy-install with no tag, three locales"]
+    vectors --> vtest["A2 and A4: each block exactly, an empty entry included, through execve, deploy.sh caddy-install with no tag, three locales"]
     vtest --> func
     func --> answer["exit 1 and the whole stderr: the usage line when the check proceeds, the refusal line when it refuses"]
     answer --> vtest
@@ -77,7 +77,7 @@ flowchart LR
 | marked item | what it observes | where it runs |
 |---|---|---|
 | A1, the formal checker's check of `lean/DeployEntryRefusal` | the theorem, the witness, no hole, the vectors equal to the writer's output, the cover's digest | the committed tree, by the formal checker |
-| A2, `test_a_caddy_step_agrees_with_every_vector_of_its_lean_proof` | the step's exit status and whole stderr on every vector block that holds no empty entry (60 of 63; 3 named, not measured); the header; `SETTINGS` against the single-name blocks; an empty working directory; the function defined once and called by the arm | CI only |
+| A2 and A4, `test_a_caddy_step_agrees_with_every_vector_of_its_lean_proof` | the step's exit status and whole stderr on every vector block, the 3 that hold an empty entry included (63 of 63); the header; `SETTINGS` against the single-name blocks; an empty working directory; the function defined once and called by the arm | CI only |
 | A3, `test_a_caddy_step_reads_only_the_settings_it_names_and_refuses_any_other` | the declared opening, the call included, against bash's record | CI only |
 | the witness, `the_shells_variables_alone_admit_an_entry_no_shell_can_spell` | the claim is false of the check at dev `dafbbbbb` | the formal checker |
 | rows S47301 to S47303 | the call, the cut at the first `=`, the no-value test | CI, each killed by A2 |
