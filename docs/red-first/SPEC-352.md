@@ -71,6 +71,8 @@ A30: red at d2c61361: AssertionError: 0 != 1 : security find-certificate ran 0 t
 A30: green at 71427932
 A31: red at d2c61361: AssertionError: Lists differ: [('scripts/ios_lane.py', 312, 'sha1')] != []
 A31: green at 71427932
+A32: red at 06dbdb2: AssertionError: 1 != 0 : openssl pkcs12 failed with exit 1
+A32: green at ce15791
 ```
 
 - Three red lines are shortened where the failure printed more than a criterion needs: A8's set
@@ -140,3 +142,24 @@ A31: green at 71427932
   another name. No mutation coverage commit follows the green.
   The green commit `409e44c` carries the cure, and `git diff --quiet 409e44c HEAD` over scripts/ios_lane.py and scripts/tests/test_ios_lane.py reads rc 0.
 - The identity-match amendment (SPEC-352 R8 as amended). Its tests were committed alone at d2c61361, before the lane changed at 71427932, and each red and green was read by running `test_ios_lane.py` in a `git archive` of each commit. With the fixture's identity now the keychain's, every test that signs is red at d2c61361 on the refusal "the profile was not issued for the imported certificate", because the base computes a SHA-1 the fake tool no longer prints; A30 and A31 are new, and each red quoted above is its own assertion. The census's planted control, `test_the_digest_census_refuses_each_planted_spelling_of_a_weak_digest`, is green at both commits by design: it judges the census, not the lane.
+- The re-wrap's amendment (SPEC-352 R9 as amended). Its one criterion, A32, is new, so it takes one
+  red and one green line in the fence above. Its three tests were committed at 06dbdb2, before the
+  lane script changed at ce15791, and each red and green was read locally by running
+  `test_ios_lane.py` at each commit: `Ran 32 tests` with six failures at 06dbdb2, and `OK` at
+  ce15791. The red quoted above is
+  `test_a_legacy_certificate_re_wraps_with_both_bags_under_3des_and_a_sha1_mac`'s: the real openssl
+  reads the legacy bundle under `-legacy`, and the re-wrap then refuses.
+  `test_the_re_wrap_reads_its_input_from_a_private_file_removed_once_it_returns` is red at 06dbdb2 on
+  the same refusal, and
+  `test_a_failed_re_wrap_refuses_as_before_and_leaves_no_certificate_in_the_lane` is red at 06dbdb2
+  when the re-wrap names no `-in` file,
+  `AssertionError: Lists differ: [None] != [{'in the lane': True, 'name': 'certificat[68 chars]y']}]`,
+  its refusal line and its check that no `security` call ran already holding there.
+  The two tests that pinned the re-wrap's standard input, which decide no criterion of the SPEC,
+  are amended in the same red commit, each with no assertion removed.
+  `test_each_signing_tool_is_given_exactly_its_arguments` is red at 06dbdb2, the export's recorded
+  arguments giving `-out` where its exact list now gives `-in`, and
+  `test_the_re_wrap_is_given_exactly_what_the_certificate_read_wrote` is red at 06dbdb2 on both read
+  paths, the re-wrap's recorded input `[None]` against what the read wrote. Both are green at
+  ce15791, which changes no test.
+  The green commit `ce15791` carries the signing step's change, and `git diff --quiet ce15791 HEAD` over `scripts/ios_lane.py` and `scripts/tests/test_ios_lane.py` reads rc 0.

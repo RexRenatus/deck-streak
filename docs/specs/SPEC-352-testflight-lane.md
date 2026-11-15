@@ -116,6 +116,7 @@ R9. Signing: the certificate's password reaches `openssl pkcs12` on its standard
     comment says so.
     Amended: section 8, the first certificate read retries once under -legacy.
     Amended: section 8, the step prints the openssl version and calls it by its path.
+    Amended: section 8, the re-wrap reads the certificate from a private file.
 R10. Upload: only the upload step writes the key, as a mode `0600` file in a fresh mode `0700`
     directory under the runner's temporary directory, and removes that directory when the step
     ends, pass or fail. The step exports and uploads with `xcodebuild -exportArchive` and export
@@ -228,6 +229,7 @@ R22. Ruling 461: the internal lane also starts on a push to `dev`, filtered to t
 | A29 | with recording shims on `PATH`, the step prints the shim's version line exactly once, written out before the certificate read runs, with no credential part in the version call's arguments, standard input or environment; the read, the read under `-legacy` and the re-wrap run the binary the step found when it started, even when another `openssl` appears earlier on `PATH` after the version line; a failed version call refuses naming the tool and not its path; with no `openssl` on `PATH` the step refuses before any read with one fixed line | `test_ios_lane.py`, `test_the_openssl_version_is_printed_before_the_read_and_every_call_names_its_path` |
 | A30 | with a second identity listed first whose certificate the profile does not hold, signing reads `security find-certificate -a -Z` on the job keychain before `find-identity`, and the include file and the signing record carry the identity the keychain pairs with the profile's certificate | `test_ios_lane.py`, `test_the_identity_is_the_one_the_keychain_pairs_with_the_profiles_certificate` |
 | A31 | no `hashlib` call in the lane, its test or the fake tools' program names a digest outside the strong set the weak-hashing query reads, whether reached by the module, an alias or an imported name; each planted weak spelling is refused by name | `test_ios_lane.py`, `LaneDigests`, its census and its planted control |
+| A32 | with the real openssl and a legacy bundle made for the test, the re-wrap is given the certificate and its encrypted key in a mode `0600` file in the lane, named by `-in`; the file is gone when the next tool runs, and after a failed re-wrap, which still refuses with `openssl pkcs12 failed with exit 1` and runs no `security` call; and the bundle the step imports re-reads with the certificate and the key each under 3DES and a SHA-1 MAC | `test_ios_lane.py`, `test_a_legacy_certificate_re_wraps_with_both_bags_under_3des_and_a_sha1_mac`, `test_the_re_wrap_reads_its_input_from_a_private_file_removed_once_it_returns`, `test_a_failed_re_wrap_refuses_as_before_and_leaves_no_certificate_in_the_lane` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_the_internal_plan_refuses_any_event_or_ref_but_a_dispatch_on_dev
@@ -261,6 +263,7 @@ A28: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_a
 A29: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_the_openssl_version_is_printed_before_the_read_and_every_call_names_its_path
 A30: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_the_identity_is_the_one_the_keychain_pairs_with_the_profiles_certificate
 A31: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k LaneDigests
+A32: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_a_legacy_certificate_re_wraps_with_both_bags_under_3des_and_a_sha1_mac -k test_the_re_wrap_reads_its_input_from_a_private_file_removed_once_it_returns -k test_a_failed_re_wrap_refuses_as_before_and_leaves_no_certificate_in_the_lane
 ```
 
 Every criterion runs on Linux in the hygiene job's `python` stage, with no credential, no macOS
@@ -517,3 +520,45 @@ name; every other line of this SPEC stands:
   the fixture checkout's app spec names (SPEC-566 A1 and A2); their new reds are recorded in
   `docs/red-first/SPEC-566.md`. A20 is unchanged: the step that generates the app's project follows
   the copied range.
+
+### The re-wrap reads the certificate from a private file
+
+A lane run's signing step refused at the re-wrap after its certificate read under `-legacy` had
+succeeded, with `openssl pkcs12 failed with exit 1` (app job 132701148666 of run 43664240377): the
+step gave `openssl pkcs12 -export` what the read wrote on its standard input and named no `-in`,
+and the export reads the key and then the certificates from that one input, so the key's read
+spent it and the certificates' read found none. No earlier lane run reached the re-wrap with a
+real certificate, and the recording shims never parse what the re-wrap is given, so no test saw
+it. R9 now writes what the read wrote to a new file in the lane that only the runner's user may
+read or write, `certificate.pem`, names that file to the re-wrap by `-in` right after `-export`,
+and removes it when the re-wrap returns or fails, before any other tool runs.
+
+The re-wrap's other arguments are unchanged: the generated passphrase in and out, the certificate
+and the key each under `PBE-SHA1-3DES`, and the `sha1` MAC. So are the reads, a failed re-wrap's
+refusal, the import and every step after it; `clean` removes the lane as before.
+
+- A32 (R9 as amended) is new: with the real openssl and a legacy bundle made for the test, its
+  certificate under 40-bit RC2 and its key under 3DES as a keychain export packs one, the re-wrap
+  is given the certificate and its encrypted key in a mode `0600` file in the lane, named by
+  `-in`; the file is gone when the next tool runs, and after a failed re-wrap, which still refuses
+  with `openssl pkcs12 failed with exit 1` and runs no `security` call; and the bundle the step
+  imports re-reads with the certificate and the key each under 3DES and a SHA-1 MAC.
+- No criterion is amended. The two tests that pinned the re-wrap's standard input decide no
+  criterion of this SPEC, since the acceptance fence names neither, and both are amended in the
+  red commit with no assertion removed: the exact call list of
+  `test_each_signing_tool_is_given_exactly_its_arguments` now holds `-in` and the file's path right
+  after `-export`, every other argument still pinned; and
+  `test_the_re_wrap_is_given_exactly_what_the_certificate_read_wrote` now records, while the
+  re-wrap runs, the file its `-in` names in place of its standard input, and still holds the
+  re-wrap to exactly what the read that succeeded wrote. Their reds and greens are recorded in
+  `docs/red-first/SPEC-352.md`.
+
+| file | context | change |
+|---|---|---|
+| `scripts/ios_lane.py` | scripts | changed: the re-wrap's input is a private file named by `-in`, removed when the re-wrap returns or fails (R9 as amended) |
+| `scripts/tests/test_ios_lane.py` | tests | changed: A32 added, and the two tests that pinned the re-wrap's standard input amended to its file |
+| `docs/specs/SPEC-352-testflight-lane.md` | docs | changed: insert-only amendment |
+| `docs/red-first/SPEC-352.md` | docs | changed: A32's red and green lines and one bullet appended |
+| `changelog.d/testflight-rewrap-from-file.md` | docs | added |
+
+The amendment changes no workflow, no other tool call and no repository or environment setting.
