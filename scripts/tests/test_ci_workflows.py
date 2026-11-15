@@ -1375,6 +1375,569 @@ class CiToolsArePinnedAndJobsBounded(unittest.TestCase):
             self.assertEqual(engine_job_problems(workflow), expected, tool)
 
 
+# SPEC-428 section 11 (ADR-442's note): every tool a workflow installs outside the install action
+# names an exact version or is checked against a full digest (R11 to R16), and every action pin
+# carries its version comment, one commit per action (R17, R18). The helpers and the one class that
+# holds these rules live together in this block, so a later delivery's checks in this module edit
+# other lines.
+NVMRC = REPO / ".nvmrc"
+TOOLCHAIN = REPO / "rust-toolchain.toml"
+# An exact version: three dot-separated numbers and nothing else (R12, R14, R15).
+EXACT_VERSION = re.compile(r"\d+\.\d+\.\d+")
+# A full sha256 digest, as the environment a step sees holds it (R11).
+FULL_DIGEST = re.compile(r"[0-9a-f]{64}")
+# The route words (R11 to R13): the reader must find exactly as many commands as the file's own
+# lines name, a comment line dropped, so a command the reader misses reads as a problem.
+DOWNLOAD = re.compile(r"\b(?:curl|wget)\s")
+CARGO_INSTALL = re.compile(r"\bcargo\s+(?:\+\S+\s+)?install\s")
+PIP_INSTALL = re.compile(r"\bpip3?\s+install\s")
+# Where a download writes its file, and how a script checks a file against a digest (R11).
+DOWNLOAD_OUTPUT = re.compile(r"(?:^|\s)(?:-o|--output|-O|--output-document)\s+(\"[^\"]*\"|\S+)")
+DIGEST_CHECK = re.compile(
+    r"echo \"\$\{?([A-Z][A-Z0-9_]*)\}?  ([^\"\s]+)\" \| (?:sha256sum -c -|shasum -a 256 -c -)"
+)
+PIPED_TO_SHELL = re.compile(r"\|\s*(?:sudo\s+)?(?:ba|da|z)?sh\b")
+# A toolchain other than the one rust-toolchain.toml names (R15).
+OTHER_TOOLCHAIN = re.compile(
+    r"\brustup\s+(?:toolchain\s+install|default|update|install)\b|\bcargo\s+\+\S+"
+)
+# The routes with no rule of their own (R16), each refused by name.
+UNRULED_ROUTES = [
+    ("npm install -g", re.compile(r"\bnpm\s+(?:install|i|add)\b.*\s(?:-g|--global)\b")),
+    ("npx", re.compile(r"\bnpx\s")),
+    ("pnpm dlx", re.compile(r"\bpnpm\s+dlx\s")),
+    ("pipx", re.compile(r"\bpipx\s")),
+    ("uvx", re.compile(r"\buvx\s")),
+    ("uv tool", re.compile(r"\buv\s+tool\s")),
+    ("gem install", re.compile(r"\bgem\s+install\s")),
+    ("go install", re.compile(r"\bgo\s+install\s")),
+    ("brew install", re.compile(r"\bbrew\s+install\s")),
+]
+SETUP_NODE = "actions/setup-node"
+SETUP_NODE_USES = re.compile(r"(?i)^[ \t]*(?:- )?uses:[ \t]*actions/setup-node@")
+# An action reference as a workflow line spells it (R17): `read_workflow` drops comments, so the
+# version comment is read from the text: `uses:` after an optional `- `, the reference, and an
+# optional comment after it.
+USES_LINE = re.compile(r"(?m)^[ \t]*(?:- )?uses:[ \t]*([^\s#]+)(?:[ \t]+#[ \t]*([^\n]*?))?[ \t]*$")
+SHA_REF = re.compile(r"([\w.-]+/[\w.-]+)(?:/[\w.-]+)*@([0-9a-f]{40})")
+VERSION_COMMENT = re.compile(r"v?\d+\.\d+\.\d+")
+
+
+def script_commands(run):
+    """A step script's commands: its lines stripped, a line that ends in a backslash joined to the
+    next, with blank lines and comment lines dropped."""
+    commands, held = [], ""
+    for line in str(run or "").splitlines():
+        line = line.strip()
+        if line.endswith("\\"):
+            held += line[:-1] + " "
+            continue
+        command, held = (held + line).strip(), ""
+        if command and not command.startswith("#"):
+            commands.append(command)
+    if held.strip():
+        commands.append(held.strip())
+    return commands
+
+
+def spelled_lines(text, pattern):
+    """How many lines of a file's text match `pattern`, a comment line dropped: the census's
+    control on its reader."""
+    return sum(
+        1 for line in text.splitlines() if not line.strip().startswith("#") and pattern.search(line)
+    )
+
+
+def download_problems(command, env, checked):
+    """What a download gets wrong (R11): piped to a shell, writing no file, or writing a file the
+    same step does not check against a full digest held in the environment it sees."""
+    if PIPED_TO_SHELL.search(command):
+        return ["a download is piped to a shell"]
+    written = DOWNLOAD_OUTPUT.search(command)
+    if written is None:
+        return ["a download writes no file"]
+    path = written.group(1).strip('"')
+    digests = [str(env.get(variable, "")) for variable in checked.get(path, [])]
+    if not any(FULL_DIGEST.fullmatch(digest) for digest in digests):
+        return [f"{path} is downloaded and not checked against a digest"]
+    return []
+
+
+def cargo_install_problems(command):
+    """What a cargo install gets wrong (R12): not `--locked`, or no exact `--version` and no
+    `--git` source at a `--rev`; a `--branch` or a `--tag` names a moving target."""
+    words = [part for word in command.split() for part in word.split("=", 1)]
+    problems = []
+    if "--locked" not in words:
+        problems.append("cargo install is not --locked")
+    version = words[words.index("--version") + 1] if "--version" in words[:-1] else ""
+    at_rev = "--git" in words and "--rev" in words[:-1]
+    moving = "--branch" in words or "--tag" in words
+    if moving or not (EXACT_VERSION.fullmatch(version) or at_rev):
+        problems.append("cargo install names no exact version or revision")
+    return problems
+
+
+def step_route_problems(step, env, found):
+    """What one step's script gets wrong (R11 to R13, R15, R16), each route it runs counted in
+    `found`."""
+    commands = script_commands(step.get("run"))
+    checked = {}
+    for command in commands:
+        for check in DIGEST_CHECK.finditer(command):
+            checked.setdefault(check.group(2), []).append(check.group(1))
+    problems = []
+    for command in commands:
+        if DOWNLOAD.search(command):
+            found["downloads"] += 1
+            problems += download_problems(command, env, checked)
+        if CARGO_INSTALL.search(command):
+            found["cargo installs"] += 1
+            problems += cargo_install_problems(command)
+        if PIP_INSTALL.search(command):
+            found["pip installs"] += 1
+            if "--require-hashes" not in command.split():
+                problems.append("pip install requires no hashes")
+        other = OTHER_TOOLCHAIN.search(command)
+        if other:
+            problems.append(f"{other.group(0)} runs a toolchain rust-toolchain.toml does not name")
+        problems += [
+            f"{route} is an install route with no rule of its own"
+            for route, pattern in UNRULED_ROUTES
+            if pattern.search(command)
+        ]
+    return problems
+
+
+def install_route_problems(texts, nvmrc, toolchain):
+    """What the workflows get wrong about the tools they install outside the install action
+    (SPEC-428 R11 to R16), for {workflow file name: its text}, `.nvmrc`'s text and
+    `rust-toolchain.toml`'s text. A step sees its workflow's, its job's and its own `env`, the
+    later over the earlier, as the runner layers them. Returns the problems and the sites of each
+    counted route as {route: [(file, place)]}."""
+    problems = []
+    routes = {"downloads": [], "cargo installs": [], "pip installs": [], "setup-node steps": []}
+    for name, text in sorted(texts.items()):
+        workflow = read_workflow(text)
+        found = dict.fromkeys(routes, 0)
+        for job_name, job in (workflow.get("jobs") or {}).items():
+            for key in ("container", "services"):
+                if key in job:
+                    problems.append(f"{name}: {job_name}: a job {key} is a route with no rule")
+            for at, step in enumerate(job.get("steps") or []):
+                if not isinstance(step, dict):
+                    continue
+                where = f"{name}: {job_name}: step {at + 1}"
+                env = {**(workflow.get("env") or {}), **(job.get("env") or {})}
+                env.update(step.get("env") or {})
+                before = dict(found)
+                if str(step.get("uses", "")).lower().startswith("docker://"):
+                    problems.append(f"{where}: a docker action is an install route with no rule")
+                if action(step).lower() == SETUP_NODE:
+                    found["setup-node steps"] += 1
+                    given = step.get("with") if isinstance(step.get("with"), dict) else {}
+                    if given.get("node-version-file") != ".nvmrc" or "node-version" in given:
+                        problems.append(f"{where}: setup-node names a Node other than .nvmrc's")
+                problems += [f"{where}: {line}" for line in step_route_problems(step, env, found)]
+                for route in routes:
+                    routes[route] += [(name, where)] * (found[route] - before[route])
+        for route, pattern in (
+            ("downloads", DOWNLOAD),
+            ("cargo installs", CARGO_INSTALL),
+            ("pip installs", PIP_INSTALL),
+            ("setup-node steps", SETUP_NODE_USES),
+        ):
+            spelled = spelled_lines(text, pattern)
+            if spelled != found[route]:
+                problems.append(
+                    f"{name}: {spelled} lines name {route}, and the reader found {found[route]}"
+                )
+    node = nvmrc.strip()
+    if not EXACT_VERSION.fullmatch(node):
+        problems.append(f".nvmrc: {node} names no exact version")
+    channel = str((tomllib.loads(toolchain).get("toolchain") or {}).get("channel", ""))
+    if not EXACT_VERSION.fullmatch(channel):
+        problems.append(f"rust-toolchain.toml: the channel {channel} names no exact version")
+    return problems, routes
+
+
+def action_pin_problems(texts):
+    """What the workflows get wrong about the form of an action pin (SPEC-428 R17, R18), for
+    {workflow file name: its text}: a reference at a full commit sha whose line carries no version
+    comment, an action pinned at more than one commit across the files, and one commit of an action
+    carrying more than one comment. An action is its repository, in any letter case. A local call
+    (`LOCAL_CALL`) takes no comment and is counted apart; any other reference is R10's to refuse.
+    Returns the problems, the pinned references as (file, line, action) and the local calls as
+    (file, line)."""
+    problems, pinned, calls = [], [], []
+    commits, comments = {}, {}
+    for name, text in sorted(texts.items()):
+        for line in USES_LINE.finditer(text):
+            at = text.count("\n", 0, line.start()) + 1
+            ref = line.group(1).strip("'\"")
+            if LOCAL_CALL.fullmatch(ref):
+                calls.append((name, at))
+                continue
+            sha = SHA_REF.fullmatch(ref)
+            if sha is None:
+                continue
+            repository, commit, comment = sha.group(1).lower(), sha.group(2), line.group(2) or ""
+            pinned.append((name, at, repository))
+            commits.setdefault(repository, set()).add(commit)
+            comments.setdefault((repository, commit), set()).add(comment)
+    return problems, pinned, calls
+
+
+# The plants' anchors for the install routes, each a line the workflows hold exactly once in the
+# file it names. The gitleaks anchors are built when the test runs, from the file ci.yml
+# downloads gitleaks to, read from its text by this pattern.
+GITLEAKS_FILE = re.compile(r"-o (\S+) https://github.com/gitleaks/")
+BENCH_INSTALL = "cargo install --locked cargo-codspeed"
+SERVER_SOURCE = '--git "$fork" --rev "$rev"'
+
+
+class ToolsOutsideTheInstallActionArePinned(unittest.TestCase):
+    """SPEC-428 section 11: every tool a workflow installs outside the install action names an
+    exact version or is checked against a full digest, and every action pin carries its version
+    comment, one commit per action."""
+
+    def setUp(self):
+        self.texts = {path.name: workflow_file_text(path) for path in workflow_files(WORKFLOWS)}
+        self.nvmrc = NVMRC.read_text(encoding="utf-8")
+        self.toolchain = TOOLCHAIN.read_text(encoding="utf-8")
+
+    def plant_once(self, label, text, old, new):
+        """`text` with its one `old` replaced by `new`; a plant whose anchor is missing or repeated
+        changes nothing it can name, so it is refused before it is judged."""
+        self.assertEqual(text.count(old), 1, f"{label}: the plant's anchor is not in the text once")
+        return text.replace(old, new)
+
+    def plant_pattern(self, label, text, pattern, new):
+        """`text` with the one match of `pattern` replaced by `new`, refused unless it matches
+        once."""
+        planted, count = re.subn(pattern, new, text)
+        self.assertEqual(count, 1, f"{label}: the plant's pattern does not match the text once")
+        return planted
+
+    def line_of(self, text, needle):
+        """The line, counted from 1, of the one place `text` holds `needle`."""
+        self.assertEqual(text.count(needle), 1, f"{needle} is not in the text once")
+        return text.count("\n", 0, text.index(needle)) + 1
+
+    def gitleaks_file(self):
+        """The file ci.yml downloads gitleaks to, read from the workflow text, so that no plant
+        spells it; refused unless ci.yml names exactly one such download."""
+        found = GITLEAKS_FILE.findall(self.texts["ci.yml"])
+        self.assertEqual(len(found), 1, f"ci.yml downloads gitleaks {len(found)} times, not once")
+        return found[0]
+
+    def test_every_tool_outside_the_install_action_names_an_exact_version(self):
+        problems, routes = install_route_problems(self.texts, self.nvmrc, self.toolchain)
+        self.assertEqual(problems, [])
+        for route in ("downloads", "cargo installs", "pip installs", "setup-node steps"):
+            examined(route, routes[route])
+
+    def test_each_planted_install_route_defect_is_refused_by_its_own_line(self):
+        control, routes = install_route_problems(self.texts, self.nvmrc, self.toolchain)
+        self.assertEqual(control, [], f"the control reads {control[:1]}")
+        hygiene = "ci.yml: hygiene: step 5:"
+        bench = "ci.yml: bench-rust-build: step 7:"
+        server = "release.yml: release: step 6:"
+        gitleaks = self.gitleaks_file()
+        other = self.plant_once("another file", gitleaks, "gitleaks.tgz", "other.tgz")
+        gitleaks_check = f'echo "$GITLEAKS_SHA256  {gitleaks}" | sha256sum -c -'
+        gitleaks_fetch = f"curl -fsSL -o {gitleaks} "
+        unchecked = f"{hygiene} {gitleaks} is downloaded and not checked against a digest"
+        cargo_moving = "cargo install names no exact version or revision"
+        node = "setup-node names a Node other than .nvmrc's"
+        other_toolchain = "runs a toolchain rust-toolchain.toml does not name"
+        downloads = sum(1 for name, _where in routes["downloads"] if name == "ci.yml")
+        plants = [
+            (
+                "a download with no check",
+                "ci.yml",
+                gitleaks_check,
+                f"ls -l {gitleaks}",
+                [unchecked],
+            ),
+            (
+                "a check of another file",
+                "ci.yml",
+                gitleaks_check,
+                f'echo "$GITLEAKS_SHA256  {other}" | sha256sum -c -',
+                [unchecked],
+            ),
+            (
+                "a digest the environment does not hold",
+                "ci.yml",
+                gitleaks_check,
+                f'echo "$GITLEAKS_DIGEST  {gitleaks}" | sha256sum -c -',
+                [unchecked],
+            ),
+            (
+                "a download piped to a shell",
+                "ci.yml",
+                gitleaks_fetch,
+                f"curl -fsSL https://get.example.invalid | sh && {gitleaks_fetch}",
+                [f"{hygiene} a download is piped to a shell"],
+            ),
+            (
+                "a download that writes no file",
+                "ci.yml",
+                gitleaks_fetch,
+                "curl -fsSL ",
+                [f"{hygiene} a download writes no file"],
+            ),
+            (
+                "an accepted --output",
+                "ci.yml",
+                f"-o {gitleaks} ",
+                f"--output {gitleaks} ",
+                [],
+            ),
+            (
+                "a cargo install that is not locked",
+                "ci.yml",
+                BENCH_INSTALL,
+                "cargo install cargo-codspeed",
+                [f"{bench} cargo install is not --locked"],
+            ),
+            (
+                "a version with an operator",
+                "ci.yml",
+                "cargo-codspeed --version ",
+                "cargo-codspeed --version ^",
+                [f"{bench} {cargo_moving}"],
+            ),
+            (
+                "a toolchain on the cargo command line",
+                "ci.yml",
+                BENCH_INSTALL,
+                "cargo +nightly install --locked cargo-codspeed",
+                [f"{bench} cargo +nightly {other_toolchain}"],
+            ),
+            (
+                "a git source with no revision",
+                "release.yml",
+                SERVER_SOURCE,
+                '--git "$fork"',
+                [f"{server} {cargo_moving}"],
+            ),
+            (
+                "a git source on a branch",
+                "release.yml",
+                SERVER_SOURCE,
+                f"{SERVER_SOURCE} --branch main",
+                [f"{server} {cargo_moving}"],
+            ),
+            (
+                "a pip install with no hashes",
+                "coverage.yml",
+                "pip install --require-hashes ",
+                "pip install ",
+                ["coverage.yml: coverage-python: step 8: pip install requires no hashes"],
+            ),
+            (
+                "a node-version input",
+                "fsrs7-measure.yml",
+                "          node-version-file: .nvmrc\n",
+                "          node-version: 24\n",
+                [f"fsrs7-measure.yml: measure: step 5: {node}"],
+            ),
+            (
+                "a node-version beside the file",
+                "fsrs7-measure.yml",
+                "          node-version-file: .nvmrc\n",
+                "          node-version-file: .nvmrc\n          node-version: 24\n",
+                [f"fsrs7-measure.yml: measure: step 5: {node}"],
+            ),
+            (
+                "a toolchain set by rustup",
+                "engine-measure.yml",
+                "run: rustup show\n",
+                "run: rustup default nightly\n",
+                [f"engine-measure.yml: measure: step 2: rustup default {other_toolchain}"],
+            ),
+            (
+                "an npx route",
+                "rust-cache.yml",
+                "run: rustup show\n",
+                "run: npx some-tool\n",
+                ["rust-cache.yml: warm: step 3: npx is an install route with no rule of its own"],
+            ),
+            (
+                "a container image",
+                "ci.yml",
+                BASE_IS_DEV,
+                f"{BASE_IS_DEV}    container: alpine\n",
+                ["ci.yml: base-is-dev: a job container is a route with no rule"],
+            ),
+            (
+                "a download the reader does not see",
+                "ci.yml",
+                BASE_IS_DEV,
+                f"{BASE_IS_DEV}    env:\n      FETCH: curl -fsSL https://get.example.invalid\n",
+                [f"ci.yml: {downloads + 1} lines name downloads, and the reader found {downloads}"],
+            ),
+        ]
+        for label, name, old, new, expected in examined("install route plants", plants):
+            plant = {**self.texts, name: self.plant_once(label, self.texts[name], old, new)}
+            self.assertEqual(
+                install_route_problems(plant, self.nvmrc, self.toolchain)[0], expected, label
+            )
+        for label, name, pattern, new, expected in examined(
+            "install route pattern plants",
+            [
+                (
+                    "a digest one character short",
+                    "ci.yml",
+                    r"(GITLEAKS_SHA256: [0-9a-f]{63})[0-9a-f]",
+                    r"\1",
+                    [unchecked],
+                ),
+                (
+                    "a cargo install with no version",
+                    "ci.yml",
+                    r"cargo-codspeed --version \S+",
+                    "cargo-codspeed",
+                    [f"{bench} {cargo_moving}"],
+                ),
+            ],
+        ):
+            plant = {**self.texts, name: self.plant_pattern(label, self.texts[name], pattern, new)}
+            self.assertEqual(
+                install_route_problems(plant, self.nvmrc, self.toolchain)[0], expected, label
+            )
+        copy = self.plant_once(
+            "a .yaml copy",
+            self.texts["coverage.yml"],
+            "pip install --require-hashes ",
+            "pip install ",
+        )
+        copied = {**self.texts, "copy.yaml": copy}
+        self.assertEqual(
+            install_route_problems(copied, self.nvmrc, self.toolchain)[0],
+            ["copy.yaml: coverage-python: step 8: pip install requires no hashes"],
+        )
+        exact = self.nvmrc.strip()
+        for value in (exact.split(".")[0], ".".join(exact.split(".")[:2]), "lts/*", f"v{exact}"):
+            self.assertEqual(
+                install_route_problems(self.texts, f"{value}\n", self.toolchain)[0],
+                [f".nvmrc: {value} names no exact version"],
+                value,
+            )
+        channel = tomllib.loads(self.toolchain)["toolchain"]["channel"]
+        for value in ("stable", ".".join(channel.split(".")[:2])):
+            planted = self.plant_pattern(
+                value, self.toolchain, r'channel = "[^"]*"', f'channel = "{value}"'
+            )
+            self.assertEqual(
+                install_route_problems(self.texts, self.nvmrc, planted)[0],
+                [f"rust-toolchain.toml: the channel {value} names no exact version"],
+                value,
+            )
+
+    def test_every_action_pin_carries_its_version_one_commit_per_action(self):
+        problems, pinned, calls = action_pin_problems(self.texts)
+        self.assertEqual(problems, [])
+        examined("pinned action references", pinned)
+        examined("actions", sorted({repository for _name, _at, repository in pinned}))
+        examined("local calls", calls)
+        read = sum(len(marked_uses(read_workflow(text))) for text in self.texts.values())
+        self.assertEqual(len(pinned) + len(calls), read)
+
+    def test_each_planted_action_pin_defect_is_refused_by_its_own_line(self):
+        control = action_pin_problems(self.texts)[0]
+        self.assertEqual(control, [], f"the control reads {control[:1]}")
+        review = "uses: actions/dependency-review-action@"
+        provenance = "uses: actions/attest-build-provenance@"
+        checkout = "uses: actions/checkout@"
+        two_comments = "actions/checkout carries 2 version comments at one commit"
+        two_commits = "actions/checkout is pinned at 2 commits, not one"
+        plants = [
+            (
+                "a comment removed",
+                "dependency-review.yml",
+                rf"({review}[0-9a-f]{{40}})[ \t]+#[^\n]*",
+                r"\1",
+                review,
+                ["actions/dependency-review-action"],
+                [],
+            ),
+            (
+                "a major version only",
+                "release.yml",
+                rf"({provenance}[0-9a-f]{{40}})[ \t]+#[^\n]*",
+                r"\1 # v7",
+                provenance,
+                ["actions/attest-build-provenance"],
+                [],
+            ),
+            (
+                "a branch name",
+                "changelog.yml",
+                rf"({checkout}[0-9a-f]{{40}})[ \t]+#[^\n]*",
+                r"\1 # main",
+                checkout,
+                ["actions/checkout"],
+                [two_comments],
+            ),
+            (
+                "a second commit",
+                "engine-measure.yml",
+                rf"({checkout})[0-9a-f]{{40}}",
+                r"\g<1>" + "0" * 40,
+                None,
+                [],
+                [two_commits],
+            ),
+            (
+                "a second commit in another letter case",
+                "engine-measure.yml",
+                rf"{checkout}[0-9a-f]{{40}}",
+                "uses: Actions/Checkout@" + "0" * 40,
+                None,
+                [],
+                [two_commits],
+            ),
+            (
+                "a second comment without its v",
+                "fsrs7-measure.yml",
+                rf"({checkout}[0-9a-f]{{40}}[ \t]+#[ \t]*)v",
+                r"\1",
+                None,
+                [],
+                [two_comments],
+            ),
+        ]
+        for label, name, pattern, new, needle, uncommented, rest in examined(
+            "action pin plants", plants
+        ):
+            planted = self.plant_pattern(label, self.texts[name], pattern, new)
+            lines = [
+                f"{name}: line {self.line_of(planted, needle)}: {repository} names no version in "
+                "its comment"
+                for repository in uncommented
+            ]
+            self.assertEqual(
+                action_pin_problems({**self.texts, name: planted})[0], lines + rest, label
+            )
+        copy = self.plant_pattern(
+            "a .yaml copy",
+            self.texts["dependency-review.yml"],
+            rf"({review}[0-9a-f]{{40}})[ \t]+#[^\n]*",
+            r"\1",
+        )
+        self.assertEqual(
+            action_pin_problems({**self.texts, "copy.yaml": copy})[0],
+            [
+                f"copy.yaml: line {self.line_of(copy, review)}: actions/dependency-review-action "
+                "names no version in its comment",
+                "actions/dependency-review-action carries 2 version comments at one commit",
+            ],
+        )
+
+
 class TheAppleBuildRunsFromOneBody(unittest.TestCase):
     """SPEC-344: one job body, xcframework.yml, called by a change caller and a tag caller."""
 

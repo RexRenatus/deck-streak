@@ -283,3 +283,87 @@ The cures over the rebuild base, and why each test line moved:
   anchors on `base-is-dev` as the base now spells it. Each moved line is disclosed in
   `docs/red-first/SPEC-428.md`.
 - **The rows.** Each anchor is read again from the cured text, once in its file.
+
+## 11. Amendment: the install routes outside the install action, and the form of an action pin
+
+Insert-only: every earlier byte is kept in order. It answers #860 and #861. Noticing a newer
+release of a pinned tool (#863) is not answered here.
+
+### 11.1 Measured at the amendment's base
+
+- **The routes outside the install action.** The 18 workflow files hold 27 downloads in 9 files,
+  each written to a file and checked in its own step against a 64-hex digest in the environment the
+  step sees; 2 cargo installs, each `--locked`, one at an exact `--version` and one a git source at
+  a `--rev`; 1 pip install with `--require-hashes`; and 12 setup-node steps in 6 files, each
+  reading `node-version-file: .nvmrc`. `rust-toolchain.toml` names the channel `1.99.1`, and no
+  workflow line installs or selects another toolchain. No workflow runs a global npm install, npx,
+  pnpm dlx, pipx, uv tools, gem, a bare go install or brew, and no job runs a container or service
+  image.
+- **Node.** `.nvmrc` holds `24`, a major only, so setup-node takes whichever release of it the
+  runner holds: job 128965020951 of run 42557050660 logged `Resolved .nvmrc as 24`, then set up
+  24.22.2.
+- **The action pins.** The workflow files hold 188 `uses` values: 184 at a full commit sha, each
+  with a trailing `# vX.Y.Z` comment, and 4 local calls of `xcframework.yml`. The 184 name 10
+  action repositories, each at one commit with one comment.
+
+### 11.2 Requirements
+
+R11. Every download a step's script makes writes a file, and the same step checks that file
+     against a full sha256 digest held in the environment the step sees (its own, its job's or its
+     workflow's); a download piped to a shell is refused.
+R12. Every cargo install is `--locked` and names an exact `--version`, or a `--git` source at a
+     `--rev`; a `--branch` or a `--tag` is refused.
+R13. Every pip install requires hashes.
+R14. Node is installed only from `.nvmrc`, which names an exact version: 24.22.2, the release CI
+     set up before the pin, so no job's Node changes under it (ADR-442 D4).
+R15. The Rust toolchain is the exact channel `rust-toolchain.toml` names, and no workflow line
+     installs or selects another (`rustup toolchain install`, `rustup default`, `rustup update`,
+     `rustup install` or `cargo +<name>`).
+R16. A route with no rule of its own is refused by name: a global npm install, npx, pnpm dlx, pipx,
+     uvx, uv tool, gem install, a bare go install, brew install, a job's container or services,
+     and a docker action.
+R17. Every action pinned by a full commit sha carries its version, three numbers after an optional
+     `v`, as a trailing comment on its line; a local call takes none.
+R18. Each action repository, read in any letter case, is pinned at one commit with one version
+     comment across every workflow file.
+
+Not held by these rules: the runner image and the packages its own package manager installs (the
+`llvm-18` package, the browsers' system packages), the minor version of the image's Xcode, and what
+an action fetches inside itself. Each is named here so a later rule can take it.
+
+### 11.3 Acceptance criteria
+
+- A8. Over the live tree, R11 to R16 hold: `install_route_problems` reads no problem, and it
+  examines at least one download, cargo install, pip install and setup-node step, each count equal
+  to the lines of the file's own text that name the route.
+- A9. Each planted defect of R11 to R16 is refused by its own line after the unplanted control
+  reads clean, and the accepted forms (`shasum -a 256 -c -`, `--output`, a `--git` source at a
+  `--rev`) read clean.
+- A10. Over the live tree, R17 and R18 hold, and the references the text census reads equal in
+  number the ones the workflow reader reads.
+- A11. Each planted defect of R17 and R18 is refused by its own line after the unplanted control
+  reads clean, and the four local calls take no comment.
+
+All four are read red and green from CI's `hygiene` job, which runs `scripts/tests`, in the class
+`ToolsOutsideTheInstallActionArePinned`.
+
+### 11.4 Mutation rows
+
+Rows S42830 to S42847 join section 9's band: `.nvmrc`'s exact release (killed by A8); the digest's
+width, the checked file, the pipe refusal, `--locked`, the version matched whole, `--branch`,
+`--require-hashes`, the `node-version` refusal, the channel, the `npx` member, the job container
+and the reader's line control (killed by A9); and the comment's three numbers, the comment
+required, one commit per action, one comment per commit and the letter case (killed by A11).
+
+### 11.5 Rows appended to the section 4 manifest
+
+| path | part | change |
+|---|---|---|
+| `.nvmrc` | CI | changed: names Node's exact release (R14) |
+| `scripts/tests/test_ci_workflows.py` | CI tests | changed: the block of R11 to R18 and the class `ToolsOutsideTheInstallActionArePinned` (A8 to A11), after `CiToolsArePinnedAndJobsBounded` and before `TheAppleBuildRunsFromOneBody` |
+| `scripts/mutation-rows.d/S42800-S42899.json` | CI tests | changed: rows S42830 to S42847 appended (section 11.4) |
+| `docs/specs/SPEC-428-every-install-action-tool-names-an-exact-version-every-job-that-runs-steps-sets-its-own-timeout-and-zizmor-reads-the-github-directory.md` | docs | changed: this section appended |
+| `docs/decisions/ADR-442-ci-tools-are-pinned-to-the-versions-ci-installs-today-every-job-that-runs-steps-is-timed-and-zizmor-reads-the-github-directory.md` | docs | changed: a second note after its last line |
+| `docs/schematics/ci-tool-pins-and-job-timeouts.md` | docs | changed: section 7, the checks of this section |
+| `docs/red-first/SPEC-428.md` | docs | changed: a section for A8 to A11 |
+| `changelog.d/ci-install-routes-428.md` | docs | added: the fragment |
