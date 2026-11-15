@@ -54,3 +54,25 @@ headless mode; Playwright drives no Firefox or WebKit build but the ones it inst
 
 NOT APPLICABLE, TLA+, Lean and Kani. The change is a measurement test, its configuration, a
 workflow of its own and documents; no product actor, state, step or engine path gains or changes.
+
+## 7. Amendment: Chromium's full build opens one connection from the card frame on six cards' click step, an accepted residual (#941)
+
+The measurement reads one thing outside every control it judges. In Chromium's full build, the
+`chromium-full` project, the card frame's click step reads one TCP connection and no request for six
+cards: `nav-self`, `nav-top`, `nav-blank`, `nav-blank-area`, `nav-blank-svg` and `download` (run
+42542817356, `measure` job 128921292916, whose log prints each reading as R3 asks). Every other
+card-frame step of that project reads nothing, `nav-show-new`'s click included, and the headless
+shell, WebKit and Firefox read nothing at any card-frame step of the same run.
+
+- What is opened: one connection to the card link's own origin, the TCP listener's, as the click starts. No request is read on it, so no path, field or byte of the card, the review or the page reaches that origin, and the follow is still refused: the reference frame's click reads the card's path, and the card frame's reads none.
+- What it is: the browser's own preconnect. Chromium's net log records a preconnect to the card link's URL starting as each of those clicks starts, no URL request on the connection, and its socket group keyed same-site, under the site the page and the listener share (run 42560861366, `measure` job 128976741152; run 42580267183, `measure` job 129037052776).
+- What was tried, in two measurement-only runs on a pull request closed unmerged (#1342): a switch naming the anchor-interaction feature read the same six connections, and the browser reported no such feature (job 128976741152); one switch turning eleven candidate features for link prediction, preloading and preconnect off together read them too (job 129037052776). That run read no feature state, its control project reading neither of two known states, so the switch was read from the browser's own command line, which held it.
+- Why no frame cure is taken: each cure that would stop the connection narrows a gate, and no rule of the frame governs a connection the browser opens ahead of a request; ADR-672's amendment records each, and the owner chose to accept the connection as a residual.
+- The rule it keeps: R3 and R6 stand. The reading is printed and recorded, never judged; no card, frame, step, control, project, assertion, census entry or UNOBSERVABLE entry changes; and section 5's last unit holds, since this record is no declaration.
+- It adds no criterion: A1 and A2 stand as section 3 states them.
+
+| path | part | change |
+|---|---|---|
+| `docs/specs/SPEC-650-the-web-card-suites-planted-links-are-measured-for-a-speculative-connection-in-a-stock-build-of-each-engine.md` | docs | changed: this section appended |
+| `docs/decisions/ADR-672-a-measurement-workflow-reads-the-planted-links-in-a-stock-build-of-each-engine-beside-the-card-suite-and-outside-its-job.md` | docs | changed: one amendment appended |
+| `changelog.d/card-speculative-residual-941.md` | docs | added |
