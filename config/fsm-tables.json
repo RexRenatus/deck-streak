@@ -1,0 +1,148 @@
+{
+  "rules": {
+    "FSM-TABLE": {"level": "warn", "listed": []},
+    "FSM-REACH": {"level": "warn", "listed": []},
+    "FSM-DEAD-END": {"level": "warn", "listed": []},
+    "FSM-TERMINAL": {"level": "warn", "listed": []},
+    "FSM-DETERMINISTIC": {"level": "warn", "listed": []}
+  },
+  "tables": [
+    {
+      "file": "crates/coordination/src/recompute/mod.rs",
+      "enum": "Phase",
+      "initial": ["RollupAndScore"],
+      "terminal": ["Awards"],
+      "moves": [
+        {"from": "RollupAndScore", "to": "BaseXp", "on": "evaluate"},
+        {"from": "BaseXp", "to": "StreaksAndGovernor", "on": "evaluate"},
+        {"from": "StreaksAndGovernor", "to": "DaySteps", "on": "evaluate"},
+        {"from": "DaySteps", "to": "DerivedBonuses", "on": "evaluate"},
+        {"from": "DerivedBonuses", "to": "CoinMint", "on": "evaluate"},
+        {"from": "CoinMint", "to": "Awards", "on": "evaluate"}
+      ]
+    },
+    {
+      "file": "crates/quests/src/chest_store.rs",
+      "enum": "ChestState",
+      "initial": ["Sealed", "Vaulted"],
+      "terminal": ["Resolved"],
+      "moves": [
+        {"from": "Sealed", "to": "Opened", "on": "mark_opened"},
+        {"from": "Vaulted", "to": "Opened", "on": "mark_opened"},
+        {"from": "Opened", "to": "Resolved", "on": "mark_resolved"},
+        {"from": "Opened", "to": "Resolved", "on": "settle_choice"},
+        {"from": "Sealed", "to": "Resolved", "on": "sweep_resolve"},
+        {"from": "Vaulted", "to": "Resolved", "on": "sweep_resolve"},
+        {"from": "Opened", "to": "Resolved", "on": "sweep_resolve"}
+      ]
+    },
+    {
+      "file": "crates/ingest/src/skip.rs",
+      "enum": "SkipState",
+      "initial": ["Pending"],
+      "terminal": ["Applied", "Failed"],
+      "moves": [
+        {"from": "Pending", "to": "Applied", "on": "settle_applied_on"},
+        {"from": "Pending", "to": "Failed", "on": "settle_failed"}
+      ]
+    },
+    {
+      "file": "crates/curriculum/src/progress.rs",
+      "enum": "BandStep",
+      "initial": ["FirstSighting", "BandUp", "Unchanged"],
+      "terminal": ["FirstSighting", "BandUp", "Unchanged"],
+      "moves": [],
+      "no_moves": "the outcome of one comparison of a stored band with a current one"
+    },
+    {
+      "file": "crates/daemon/src/lifecycle.rs",
+      "enum": "NotifyState",
+      "initial": ["Ready", "Watchdog", "Stopping"],
+      "terminal": ["Ready", "Watchdog", "Stopping"],
+      "moves": [],
+      "no_moves": "a datagram, never a held value"
+    },
+    {
+      "file": "crates/daemon/src/wiring.rs",
+      "enum": "Step",
+      "initial": [
+        "Rescore",
+        "Settings",
+        "Credentials",
+        "Scope",
+        "History",
+        "Sync",
+        "Obligations",
+        "GateProbe",
+        "GateRecord",
+        "WindowRead",
+        "WindowBase",
+        "Recompute"
+      ],
+      "terminal": [
+        "Rescore",
+        "Settings",
+        "Credentials",
+        "Scope",
+        "History",
+        "Sync",
+        "Obligations",
+        "GateProbe",
+        "GateRecord",
+        "WindowRead",
+        "WindowBase",
+        "Recompute"
+      ],
+      "moves": [],
+      "no_moves": "the label of the sync step whose failure refuses it, built when it fails"
+    },
+    {
+      "file": "crates/identity/src/passkeys.rs",
+      "enum": "State",
+      "initial": ["Registration", "SignIn"],
+      "terminal": ["Registration", "SignIn"],
+      "moves": [],
+      "no_moves": "a ceremony's kind, fixed at its insert"
+    },
+    {
+      "file": "crates/ingest/src/gate.rs",
+      "enum": "AnchorState",
+      "initial": ["Missing", "Unreadable", "Present"],
+      "terminal": ["Missing", "Unreadable", "Present"],
+      "moves": [],
+      "no_moves": "how one read found the gate's anchor"
+    },
+    {
+      "file": "crates/ingest/src/sync_runs.rs",
+      "enum": "RunStatus",
+      "initial": ["Ok", "Error", "Skipped"],
+      "terminal": ["Ok", "Error", "Skipped"],
+      "moves": [],
+      "no_moves": "inserted with its run's row and never updated"
+    },
+    {
+      "file": "crates/insights/src/registry.rs",
+      "enum": "State",
+      "initial": ["Live", "Inert"],
+      "terminal": ["Live", "Inert"],
+      "moves": [],
+      "no_moves": "a row's setting in the source"
+    },
+    {
+      "file": "crates/readings/src/state.rs",
+      "enum": "TopicState",
+      "initial": ["Ready", "NoNewCards", "CouldNotTell", "Paused", "Failed", "AiRouteAbsent"],
+      "terminal": ["Ready", "NoNewCards", "CouldNotTell", "Paused", "Failed", "AiRouteAbsent"],
+      "moves": [],
+      "no_moves": "a topic's outcome for a study day, overwritten by a later run that day"
+    },
+    {
+      "file": "crates/bot/src/poll.rs",
+      "enum": "Step",
+      "initial": ["Done", "Again", "Stop"],
+      "terminal": ["Done", "Again", "Stop"],
+      "moves": [],
+      "no_moves": "the outcome of one start request"
+    }
+  ]
+}
