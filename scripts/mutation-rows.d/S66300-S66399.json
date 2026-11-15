@@ -1,0 +1,70 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S66300-AN-UNLISTED-FINDING-WARNS",
+        "scripts/tests/test_workflow_lint.py",
+        "        if key not in listed:\n",
+        "        if key in listed:\n",
+        "a finding no listing holds prints its warning line (SPEC-663 R4)",
+        "test_workflow_lint.TheWorkflowsAreLintedByThePinnedActionlintAtWarn.test_a_saved_finding_warns_unless_it_is_listed"
+      ],
+      [
+        "S66301-AN-EXIT-PAST-ONE-IS-VOID",
+        "scripts/tests/test_workflow_lint.py",
+        "    if code not in (\"0\", \"1\"):\n",
+        "    if code not in (\"0\", \"1\", \"2\"):\n",
+        "an actionlint exit other than 0 or 1 reads VOID (SPEC-663 R3)",
+        "test_workflow_lint.TheWorkflowsAreLintedByThePinnedActionlintAtWarn.test_an_unread_saved_output_is_void"
+      ],
+      [
+        "S66302-A-CLEAN-EXIT-HOLDS-NO-FINDING",
+        "scripts/tests/test_workflow_lint.py",
+        "    if code == \"0\" and found:\n",
+        "    if code == \"0\" and not found:\n",
+        "an exit of 0 reads only beside no finding (SPEC-663 R3)",
+        "test_workflow_lint.TheWorkflowsAreLintedByThePinnedActionlintAtWarn.test_a_clean_saved_output_reads_no_finding"
+      ],
+      [
+        "S66303-TWO-VERSIONS-ARE-A-SITE",
+        "scripts/tests/test_workflow_lint.py",
+        "        if len(versions) > 1 or len(routes) > 1:\n",
+        "        if len(versions) > 2 or len(routes) > 1:\n",
+        "one tool at two versions across the gate jobs is a parity site (SPEC-663 R8)",
+        "test_workflow_lint.EveryGateJobInstallsOneToolSet.test_two_jobs_that_install_one_tool_at_two_versions_are_a_site"
+      ],
+      [
+        "S66304-TWO-ROUTES-ARE-A-SITE",
+        "scripts/tests/test_workflow_lint.py",
+        "        if len(versions) > 1 or len(routes) > 1:\n",
+        "        if len(versions) > 1 or len(routes) > 2:\n",
+        "one tool by two routes across the gate jobs is a parity site (SPEC-663 R8)",
+        "test_workflow_lint.EveryGateJobInstallsOneToolSet.test_two_jobs_that_install_one_tool_by_two_routes_are_a_site"
+      ],
+      [
+        "S66305-THE-RUN-KEEPS-THE-LINTERS-OFF",
+        ".github/workflows/ci.yml",
+        "actionlint -shellcheck= -pyflakes= -format '{{json .}}'",
+        "actionlint -format '{{json .}}'",
+        "the workflow-lint job runs the one actionlint command (SPEC-663 R1)",
+        "test_workflow_lint.TheWorkflowsAreLintedByThePinnedActionlintAtWarn.test_the_workflow_lint_job_runs_the_one_actionlint_command"
+      ],
+      [
+        "S66306-A-DOWNLOAD-TAKES-ITS-OWN-CHECK",
+        "scripts/tests/test_workflow_lint.py",
+        "                tool = checks.get(unquoted(download.group(1)), \"unchecked\")\n",
+        "                tool = next(iter(sorted(checks.values())), \"unchecked\")\n",
+        "a checked download takes the tool of the check that names its saved file (SPEC-663 R8)",
+        "test_workflow_lint.EveryGateJobInstallsOneToolSet.test_one_job_that_downloads_two_tools_names_each_by_its_check_and_holds_no_site"
+      ],
+      [
+        "S66307-ONE-JOB-HOLDS-NO-SITE",
+        "scripts/tests/test_workflow_lint.py",
+        "        if len({(name, job_id) for _version, _route, name, job_id in uses}) < 2:\n",
+        "        if len({(name, job_id) for _version, _route, name, job_id in uses}) < 1:\n",
+        "a tool held two ways inside one gate job is never a parity site (SPEC-663 R8)",
+        "test_workflow_lint.EveryGateJobInstallsOneToolSet.test_one_job_that_downloads_two_tools_names_each_by_its_check_and_holds_no_site"
+      ]
+    ]
+  }
+}

@@ -1,0 +1,28 @@
+name: ci
+on:
+  pull_request:
+    branches: [dev]
+permissions:
+  contents: read
+jobs:
+  a:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - env:
+          BETA_SHA256: 0000000000000000000000000000000000000000000000000000000000000000
+          ALPHA_SHA256: 0000000000000000000000000000000000000000000000000000000000000000
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/beta.tgz" https://github.com/planted/beta/releases/download/2.0.0/beta.tgz
+          echo "$BETA_SHA256  $RUNNER_TEMP/beta.tgz" | sha256sum -c -
+          curl -fsSL -o "$RUNNER_TEMP/alpha.tgz" https://github.com/planted/alpha/releases/download/1.0.0/alpha.tgz
+          echo "$ALPHA_SHA256  $RUNNER_TEMP/alpha.tgz" | sha256sum -c -
+      - uses: taiki-e/install-action@0000000000000000000000000000000000000000
+        with:
+          tool: beta@2.0.1
+  ci:
+    needs: [a]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - run: echo ok
