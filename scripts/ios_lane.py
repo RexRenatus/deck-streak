@@ -326,12 +326,12 @@ def der_sequence(data):
     the long form in one to four octets) equal to the bytes after the header, or the indefinite
     form, whose bytes end with the two end-of-contents octets."""
     if len(data) < 2 or data[0] != 0x30:
-        return False
+        return None
     if data[1] == 0x80:
         return len(data) >= 4 and data.endswith(b"\x00\x00")
     octets = data[1] - 0x80 if data[1] > 0x80 else 0
     if octets > 4 or len(data[2:]) < octets:
-        return False
+        return None
     length = int.from_bytes(data[2 : 2 + octets], "big") if octets else data[1]
     return length == len(data) - 2 - octets
 

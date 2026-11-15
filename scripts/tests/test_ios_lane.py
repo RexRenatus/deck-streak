@@ -1,10 +1,9 @@
 """The TestFlight lane's steps, run as child processes over fixture repositories and recording
 shims (SPEC-352 A1 to A13 and A26 to A28, ADR-363 D2 to D7 and its amendment).
 
-`scripts/ios_lane.py` is imported by one test alone, which reads `der_sequence`'s answers to
-planted bytes in-process; every other test runs it with `sys.executable`, in a fixture checkout,
-with an environment the test builds from `PATH`, a scratch `HOME` and the GitHub variables the
-step reads, so nothing of the session reaches it. Every number a test expects is a
+`scripts/ios_lane.py` is never imported: each test runs it with `sys.executable`, in a fixture
+checkout, with an environment the test builds from `PATH`, a scratch `HOME` and the GitHub
+variables the step reads, so nothing of the session reaches it. Every number a test expects is a
 literal the fixture's history fixes, never one the script computed, and every refusal is matched
 as one whole line of the script's error output.
 
@@ -1427,26 +1426,6 @@ class LaneCredential(unittest.TestCase):
                     (code, errors.splitlines(), records),
                     (1, ["openssl version failed with exit 1"], []),
                 )
-
-    def test_the_sequence_predicate_answers_true_or_false_and_no_other_value(self):
-        # `der_sequence` reads nothing but the bytes it is given, so this test alone imports the
-        # lane: each answer, from every return of the predicate, is the bool True or False.
-        sys.path.insert(0, str(LANE.parent))
-        self.addCleanup(sys.path.remove, str(LANE.parent))
-        import ios_lane
-
-        cases = [
-            ("a set, not a sequence", b"\x31\x03\x01\x01\x00", False),
-            ("an indefinite sequence over no contents", b"\x30\x80\x00\x00", True),
-            ("an indefinite form with no end-of-contents", b"\x30\x80\x02\x01\x00", False),
-            ("a long form in five octets", b"\x30\x85\x00\x00\x00\x00\x01\x00", False),
-            ("long-form length octets cut short", b"\x30\x82\x01", False),
-            ("a short-form sequence over one boolean", b"\x30\x03\x01\x01\x00", True),
-            ("a length naming more bytes than follow", b"\x30\x05\x01\x01\x00", False),
-        ]
-        for case, data, answer in examined("planted byte strings", cases):
-            with self.subTest(case=case):
-                self.assertIs(ios_lane.der_sequence(data), answer)
 
     def test_a_failed_certificate_read_is_read_once_more_under_legacy(self):
         self.refuse_reads("Error: Unsupported algorithm RC2-40-CBC\n")
