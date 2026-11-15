@@ -1,0 +1,60 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S47700-THE-NIGHT-WINDOW-STARTS-AT-MIDNIGHT",
+        "coordination",
+        "src/progression/badge_context.rs",
+        "            state.day,\n            0,\n            rule.rollover_hour().get(),",
+        "            state.day,\n            1,\n            rule.rollover_hour().get(),",
+        "badges_steps::every_window_edge_day_awards_exactly_the_badges_its_local_hours_earn_once",
+        "the night window starts at local midnight, included, so 50 answers from midnight earn Night Owl; started an hour later the window misses them (SPEC-477 A1, ADR-494 D2)"
+      ],
+      [
+        "S47701-THE-NIGHT-WINDOW-ENDS-BEFORE-THE-ROLLOVER",
+        "coordination",
+        "src/progression/badge_context.rs",
+        "            0,\n            rule.rollover_hour().get(),\n        ),",
+        "            0,\n            rule.rollover_hour().get() + 1,\n        ),",
+        "badges_steps::every_window_edge_day_awards_exactly_the_badges_its_local_hours_earn_once",
+        "the night window ends at the rollover hour, not included, so 50 answers from the rollover on the evaluated date earn Early Bird and not Night Owl (SPEC-477 A1, ADR-494 D2)"
+      ],
+      [
+        "S47702-THE-EARLY-WINDOW-STARTS-AT-THE-ROLLOVER",
+        "coordination",
+        "src/progression/badge_context.rs",
+        "            rule.rollover_hour().get(),\n            EARLY_BIRD_END_HOUR,",
+        "            rule.rollover_hour().get() + 1,\n            EARLY_BIRD_END_HOUR,",
+        "badges_steps::every_window_edge_day_awards_exactly_the_badges_its_local_hours_earn_once",
+        "the early window starts at the rollover hour, included, so 50 answers from the rollover earn Early Bird (SPEC-477 A1, ADR-494 D2)"
+      ],
+      [
+        "S47703-THE-EARLY-WINDOW-ENDS-BEFORE-SEVEN",
+        "coordination",
+        "src/progression/badge_context.rs",
+        "            EARLY_BIRD_END_HOUR,\n        ),",
+        "            EARLY_BIRD_END_HOUR + 1,\n        ),",
+        "badges_steps::every_window_edge_day_awards_exactly_the_badges_its_local_hours_earn_once",
+        "the early window ends at hour 7, not included, so 50 answers from seven o'clock earn no Early Bird (SPEC-477 A1, ADR-494 D2)"
+      ],
+      [
+        "S47704-THE-NIGHT-WINDOW-READS-THE-CONFIGURED-RULE",
+        "coordination",
+        "src/progression/badge_context.rs",
+        "        night_owl: count_in_local_hours(\n            state.reviews,\n            rule,",
+        "        night_owl: count_in_local_hours(\n            state.reviews,\n            StudyDayRule::default(),",
+        "badges_steps::every_window_edge_day_awards_exactly_the_badges_its_local_hours_earn_once",
+        "the night window reads the day's configured rule, its offset and its rollover, so under another offset 50 answers after local midnight still earn Night Owl (SPEC-477 A1, ADR-494 D2)"
+      ],
+      [
+        "S47705-THE-EARLY-WINDOW-READS-THE-CONFIGURED-RULE",
+        "coordination",
+        "src/progression/badge_context.rs",
+        "        early_bird: count_in_local_hours(\n            state.reviews,\n            rule,",
+        "        early_bird: count_in_local_hours(\n            state.reviews,\n            StudyDayRule::default(),",
+        "badges_steps::every_window_edge_day_awards_exactly_the_badges_its_local_hours_earn_once",
+        "the early window reads the day's configured rule, so under another offset 50 answers from the local rollover still earn Early Bird (SPEC-477 A1, ADR-494 D2)"
+      ]
+    ]
+  }
+}

@@ -747,6 +747,234 @@ async fn every_evaluated_day_awards_exactly_the_badges_its_context_earns_once() 
     assert_eq!(examined, derived, "members x evaluations x passes");
 }
 
+// --- THE WINDOW'S EDGES (SPEC-477 A1, ADR-494 D2) ------------------------------------------------
+
+/// The window-edge members' study-day rules, as (rollover hour, UTC offset in minutes): the
+/// default first, then rollover 4 at UTC+1 and rollover 5 at UTC-5:30.
+const EDGE_RULES: [(u8, i16); 3] = [(4, 0), (4, 60), (5, -330)];
+
+/// The answers a window-edge member places: the threshold of both hour windows, spelt here.
+const EDGE_ANSWERS: u64 = 50;
+
+/// The hour window a window-edge member's answers lie in, read from the edge table alone.
+#[derive(Clone, Copy, Debug)]
+enum Window {
+    /// Neither window: the answers are ordinary ones.
+    Neither,
+    /// The night window, from local midnight up to the rollover hour.
+    Night,
+    /// The early window, from the rollover hour up to hour 7.
+    Early,
+}
+
+/// The side of its edge a window-edge member's answers lie on.
+#[derive(Clone, Copy, Debug)]
+enum Side {
+    /// Ending at the millisecond before the edge.
+    Before,
+    /// Starting at the edge's own millisecond.
+    After,
+}
+
+/// One window-edge member: a study-day rule, an edge in local milliseconds from the local midnight
+/// that opens the evaluated date D, the side its answers lie on, and the window they lie in.
+#[derive(Clone, Debug)]
+struct EdgeMember {
+    label: String,
+    pair: (u8, i16),
+    rule: StudyDayRule,
+    edge: i64,
+    side: Side,
+    window: Window,
+}
+
+/// The 18 window-edge members: each rule of `EDGE_RULES` by the six edges of ADR-494 D2's table.
+fn window_members() -> Vec<EdgeMember> {
+    let mut members = Vec::new();
+    for (index, (rollover, offset)) in EDGE_RULES.into_iter().enumerate() {
+        let rule = if index == 0 {
+            StudyDayRule::default()
+        } else {
+            StudyDayRule::new(
+                deck_streak_kernel::Hour::new(rollover).expect("a rollover hour"),
+                deck_streak_kernel::UtcOffset::from_minutes(offset).expect("an offset"),
+            )
+        };
+        let r = i64::from(rollover);
+        let edges = [
+            (24, Side::Before, Window::Neither),
+            (24, Side::After, Window::Night),
+            (24 + r, Side::Before, Window::Night),
+            (r, Side::After, Window::Early),
+            (7, Side::Before, Window::Early),
+            (7, Side::After, Window::Neither),
+        ];
+        for (hour, side, window) in edges {
+            let from = match side {
+                Side::Before => "before",
+                Side::After => "from",
+            };
+            let date = if hour >= 24 { "D+1" } else { "D" };
+            members.push(EdgeMember {
+                label: format!(
+                    "rollover {rollover} at {offset} min: {from} {:02}:00 on {date}",
+                    hour % 24
+                ),
+                pair: (rollover, offset),
+                rule,
+                edge: hour * support::HOUR_MS,
+                side,
+                window,
+            });
+        }
+    }
+    members
+}
+
+/// The instant of local millisecond `local`, counted from the local midnight that opens the
+/// evaluated date D, at the member's offset.
+fn edge_instant(member: &EdgeMember, local: i64) -> i64 {
+    D0 * support::DAY_MS + local - i64::from(member.pair.1) * 60_000
+}
+
+/// The member's day: its 50 answers one second apart on its side of its edge, each a young
+/// first answer of a card of its own in deck 1, and no other answer.
+fn edge_data(member: &EdgeMember) -> CollectionData {
+    let mut reviews = Vec::new();
+    let mut cards = Vec::new();
+    for i in 0..EDGE_ANSWERS {
+        let i = i64::try_from(i).expect("an index");
+        let local = match member.side {
+            Side::After => member.edge + i * 1_000,
+            Side::Before => member.edge - 1 - i * 1_000,
+        };
+        let id = 1_000 + i;
+        reviews.push(answer(edge_instant(member, local), id, 3, 5, 9_000));
+        cards.push(card(id, 1));
+    }
+    collection(reviews, cards)
+}
+
+/// The class rule's profile a member is equivalent to: 50 answers in its window, or 50 ordinary
+/// answers when it lies in neither.
+fn equivalent(member: &EdgeMember) -> Profile {
+    let mut profile = baseline(member.label.clone());
+    profile.young = 0;
+    match member.window {
+        Window::Neither => profile.young = EDGE_ANSWERS,
+        Window::Night => profile.night = EDGE_ANSWERS,
+        Window::Early => profile.early = EDGE_ANSWERS,
+    }
+    profile
+}
+
+/// Judges `member` evaluated as `evaluation`, twice, in a database of its own, under the member's
+/// rule; answers the evaluated days it judged.
+async fn judge_window(member: &EdgeMember, evaluation: Evaluation) -> usize {
+    let profile = equivalent(member);
+    let scratch = scratch().await;
+    let db = &scratch.db;
+    seed_rollups(db, &rollups_of(&profile)).await;
+    if profile.streak > 0 || profile.comeback {
+        seed_streak(db, profile.streak, profile.comeback, D0).await;
+    }
+    let data = edge_data(member);
+    let step = BadgesStep::new(Courses::default());
+    let rollover = i64::from(member.pair.0);
+    // The current evaluation reads the evaluated day's last millisecond, at or after every answer;
+    // any other reads noon of D+1, the day after.
+    let (local, today) = match evaluation {
+        Evaluation::Current => ((24 + rollover) * support::HOUR_MS - 1, D0),
+        _ => (36 * support::HOUR_MS, D0 + 1),
+    };
+    let now = edge_instant(member, local);
+    let label = format!("{} ({evaluation:?})", member.label);
+    let expected: BTreeSet<String> = earns(&profile).into_iter().map(str::to_owned).collect();
+    let mut judged = 0;
+    for pass in 1..=PASSES {
+        let facts = deck_streak_coordination::recompute::RecomputeFacts::new(
+            &data,
+            member.rule,
+            UtcMillis::from_epoch_millis(now),
+            Some(DIGEST),
+        )
+        .with_base_reviews(0);
+        let evaluated = deck_streak_coordination::recompute::DayEvaluation {
+            day: day(D0),
+            evaluation,
+            facts: &facts,
+        };
+        let mut write = db.write().await.expect("a write");
+        deck_streak_coordination::recompute::DayStep::evaluate(&step, &evaluated, &mut write)
+            .await
+            .expect("the step evaluates");
+        write.commit().await.expect("the day commits");
+        let recorder = Recorder::default();
+        offer_badges(&recorder, db, UtcMillis::from_epoch_millis(now), day(today))
+            .await
+            .expect("the offers run");
+        let rows = badges(db).await;
+        let awarded: BTreeSet<String> = rows.iter().map(|row| row.0.clone()).collect();
+        assert_eq!(awarded, expected, "{label}, pass {pass}: the awarded set");
+        assert!(
+            rows.iter().all(|row| row.1 == 0 && row.2 == D0 && row.3),
+            "{label}, pass {pass}: {rows:?}"
+        );
+        let raised: Vec<String> = if pass == 1 {
+            expected
+                .iter()
+                .map(|key| format!("badge:{key}:0"))
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let mut keys = recorder.keys();
+        keys.sort();
+        assert_eq!(
+            keys, raised,
+            "{label}, pass {pass}: the celebrations raised"
+        );
+        judged += 1;
+    }
+    judged
+}
+
+/// THE WINDOW'S EDGES: a day of 50 answers at each edge of the night and early windows, under each
+/// of three study-day rules, awards exactly the badges its answers' window earns, once.
+#[tokio::test]
+async fn every_window_edge_day_awards_exactly_the_badges_its_local_hours_earn_once() {
+    assert_eq!(
+        (
+            StudyDayRule::default().rollover_hour().get(),
+            StudyDayRule::default().utc_offset().minutes()
+        ),
+        (4, 0),
+        "the default rule is rollover 4 at offset 0"
+    );
+    let members = window_members();
+    assert_eq!(members.len(), 18, "three rules by six edges");
+    // The edges are a class only if each window's badge is earned by a member and missed by
+    // another.
+    for key in ["night_owl", "early_bird"] {
+        let earned = members
+            .iter()
+            .filter(|member| earns(&equivalent(member)).contains(key))
+            .count();
+        assert!(
+            earned > 0 && earned < members.len(),
+            "{key} is earned by {earned} window member(s)"
+        );
+    }
+    let mut examined = 0;
+    for member in &members {
+        for evaluation in EVALUATIONS {
+            examined += judge_window(member, evaluation).await;
+        }
+    }
+    println!("examined {examined} evaluated day(s)");
+    assert_eq!(examined, 72, "18 members x 2 evaluations x 2 passes");
+}
+
 /// The fold reports the badge step under its name, `progression.badges`, in phase 7.
 #[test]
 fn the_badge_step_is_named_progression_badges() {
