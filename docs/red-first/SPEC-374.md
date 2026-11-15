@@ -68,3 +68,19 @@ A14: green at f45d729d58665cc9ee2140c2e63492f817c5f6aa
 ```
 
 A8 and A15 are CI-only: their green is read from CI's run of the push-2 head, at the seat's CIWATCH.
+
+Part three: a build of either audience is live. A23's test,
+`test_a23_an_app_store_eligible_build_that_outlives_the_internal_one_is_live`, was committed first,
+against the check as part two left it, and was red at that commit, `32ada50`, in its first three
+cases, each by assertion; the other three hold the new choice's validity test, expiry test and
+strict comparison, and pass at both commits. A23's red is quoted from the run of its fenced command
+at that commit.
+
+```red-first
+A23: red at 32ada50d7e74e8650985ad6bbe303f133d32c4f5: AssertionError: 'healthy: internal build 3 expires 2030-03-20T12:00:00Z, more than 7 days away' not found in ['newest live build 2: uploaded 2029-12-01T00:00:00Z, expires 2030-01-13T12:00:00Z', 'due: internal build 2 expires 2030-01-13T12:00:00Z, within 7 days; dispatched testflight-internal.yml on dev']
+```
+```red-first
+A23: green at ea90e98619179831ddb2c79fa34c6103363bd376
+```
+
+The green commit `ea90e98` carries the check's change, and `git diff --quiet ea90e98 HEAD` over `scripts/testflight_age.py` and `scripts/tests/test_testflight_age.py` reads rc 0.
