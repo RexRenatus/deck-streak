@@ -141,6 +141,11 @@ elif tool == "security" and args[0] == "delete-keychain":
     Path(args[-1]).unlink()
 elif tool == "security" and args[0] == "import":
     entry["imported"] = Path(args[1]).is_file()
+    # The fixture's refused imports, beside its refused reads: each import takes the next one's
+    # text as its standard error and exits 1, until none is left.
+    if fixture.get("refused imports"):
+        err = fixture["refused imports"].pop(0)
+        (shims / "fixture.json").write_text(json.dumps(fixture))
 elif tool == "security" and args[0] == "list-keychains" and "-s" not in args:
     out = f'    "{fixture["login"]}"\\n'
 elif tool == "security" and args[0] == "find-certificate":
@@ -621,7 +626,10 @@ class LaneCredential(unittest.TestCase):
             "profile name": f"Profile {uuid.uuid4().hex}",
             "profile uuid": str(uuid.uuid4()).upper(),
         }
-        self.certificate = os.urandom(512)
+        # The certificate is a synthetic DER sequence, a header over a random body, so every sign
+        # names its shape `der-sequence`; it holds no signing material.
+        body = os.urandom(508)
+        self.certificate = b"\x30\x82" + len(body).to_bytes(2, "big") + body
         self.developer_certificate = os.urandom(256)
         # The identity as the keychain names it: a SHA-1 only the fake `security` prints, paired
         # with the SHA-256 of the profile's certificate, so the test computes no SHA-1 itself.
@@ -750,6 +758,13 @@ class LaneCredential(unittest.TestCase):
         as openssl's standard error; the re-wrap and every other tool behave as before."""
         fixture = json.loads((self.shims / "fixture.json").read_text(encoding="utf-8"))
         fixture["refused reads"] = list(errors)
+        (self.shims / "fixture.json").write_text(json.dumps(fixture), encoding="utf-8")
+
+    def refuse_imports(self, *errors):
+        """Make the next `len(errors)` keychain imports exit 1, each with its text from `errors` as
+        the keychain's standard error; every other tool behaves as before."""
+        fixture = json.loads((self.shims / "fixture.json").read_text(encoding="utf-8"))
+        fixture["refused imports"] = list(errors)
         (self.shims / "fixture.json").write_text(json.dumps(fixture), encoding="utf-8")
 
     def reads(self, records):
@@ -1095,11 +1110,11 @@ class LaneCredential(unittest.TestCase):
                 "-passout",
                 f"pass:{passphrase}",
                 "-certpbe",
-                "PBE-SHA1-3DES",
+                "AES-256-CBC",
                 "-keypbe",
-                "PBE-SHA1-3DES",
+                "AES-256-CBC",
                 "-macalg",
-                "sha1",
+                "sha256",
             ],
             ["security", "create-keychain", "-p", keychain_password, keychain],
             ["security", "set-keychain-settings", "-lut", "21600", keychain],
@@ -1137,10 +1152,142 @@ class LaneCredential(unittest.TestCase):
         called = [[r["tool"], *r["args"]] for r in examined("signing calls", records)]
         self.assertEqual(called[:-1], expected[:-1])
         self.assertEqual(called[-1][:2], expected[-1])
+        # No re-wrap argument names a SHA-1 based algorithm.
+        (rewrap,) = [call for call in called if "-export" in call]
+        self.assertEqual([word for word in rewrap if "sha1" in word.lower()], [])
         code, _, errors, records, _ = self.step("upload-to-testflight", ("KEY", "KEYID", "ISSUER"))
         self.assertEqual(code, 0, errors)
         key = Path(self.one(records, "xcodebuild", "-exportArchive")["key"]["path"])
         self.assertEqual((key.parent.parent, key.parent.name[:4]), (self.lane, "key-"))
+
+    def test_a_refused_keychain_import_is_imported_once_more_under_the_compatibility_form(self):
+        """RED-FIRST: when the keychain refuses the first import, the step names the refused form, makes
+        the job keychain anew, re-wraps once under the compatibility form and imports once more; a
+        second refusal refuses naming both forms, and nothing runs after it."""
+        marker = uuid.uuid4().hex
+        refused = f"security: SecKeychainItemImport: {marker}\n"
+        pbes2 = ["-certpbe", "AES-256-CBC", "-keypbe", "AES-256-CBC", "-macalg", "sha256"]
+        compat = ["-certpbe", "PBE-SHA1-3DES", "-keypbe", "PBE-SHA1-3DES", "-macalg", "sha1"]
+        failed = "keychain import failed: form pbes2; importing once more under form sha1-compat"
+        # Every tool the step runs, by its first argument (each openssl call as a read or the
+        # re-wrap), up to the second import: the job keychain made anew between the two.
+        through = [
+            "read",
+            "re-wrap",
+            "create-keychain",
+            "set-keychain-settings",
+            "unlock-keychain",
+            "import",
+            "delete-keychain",
+            "create-keychain",
+            "set-keychain-settings",
+            "unlock-keychain",
+            "re-wrap",
+            "import",
+        ]
+        after = [
+            "set-key-partition-list",
+            "list-keychains",
+            "list-keychains",
+            "find-certificate",
+            "find-identity",
+            "archive",
+        ]
+        cases = [
+            (
+                "one refused import",
+                [refused],
+                0,
+                through + after,
+                [failed, "keychain import under form sha1-compat: ok"],
+            ),
+            ("two refused imports", [refused, refused], 1, through, [failed]),
+        ]
+        keychain = str(self.lane / "lane.keychain-db")
+        for case, texts, exit_code, ran, said in examined("refused imports", cases):
+            with self.subTest(case=case):
+                self.step("clean")
+                self.refuse_imports(*texts)
+                code, printed, errors, records, _ = self.step(
+                    "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+                )
+                imports = [r for r in records if r["args"][:1] == ["import"]]
+                self.assertEqual(
+                    len(imports), 2, f"the keychain was offered {len(imports)} import(s)"
+                )
+                tools = [
+                    ("re-wrap" if "-export" in r["args"] else "read")
+                    if r["tool"] == "openssl"
+                    else r["args"][0]
+                    for r in records
+                ]
+                self.assertEqual(tools, ran)
+                rewraps = [r["args"][-6:] for r in records if "-export" in r["args"]]
+                self.assertEqual(rewraps, [pbes2, compat])
+                self.assertEqual([r["imported"] for r in imports], [True, True])
+                password = self.masks(printed)[5]
+                made = [
+                    r["args"]
+                    for r in records
+                    if r["args"][0] in ("create-keychain", "unlock-keychain")
+                ]
+                self.assertEqual(
+                    made,
+                    [
+                        ["create-keychain", "-p", password, keychain],
+                        ["unlock-keychain", "-p", password, keychain],
+                    ]
+                    * 2,
+                )
+                self.assertEqual(
+                    self.one(records, "security", "delete-keychain")["args"],
+                    ["delete-keychain", keychain],
+                )
+                self.assertEqual(
+                    [line for line in printed.splitlines() if line.startswith("keychain import")],
+                    said,
+                )
+                self.assertEqual(code, exit_code, errors)
+                if exit_code:
+                    self.assertEqual(
+                        errors.splitlines(),
+                        ["security import failed: form pbes2, form sha1-compat"],
+                    )
+                    self.assertFalse((self.checkout / INCLUDE).exists())
+                else:
+                    self.assertTrue((self.checkout / INCLUDE).exists())
+                self.assertNotIn(marker, printed)
+                self.assertNotIn(marker, errors)
+
+    def test_each_keychain_import_line_is_written_out_before_the_next_tool_runs(self):
+        # The refused import's line reaches the step's output before the job keychain is deleted,
+        # and the accepted import's line before the partition list is set, so a log shows each
+        # line beside the tool it is about.
+        refused = f"security: SecKeychainItemImport: {uuid.uuid4().hex}\n"
+        failed = b"keychain import failed: form pbes2; importing once more under form sha1-compat\n"
+        first = b"keychain import under form pbes2: ok\n"
+        again = b"keychain import under form sha1-compat: ok\n"
+        cases = [
+            ("the first import", [], [(first, "set-key-partition-list")]),
+            (
+                "the import once more",
+                [refused],
+                [(failed, "delete-keychain"), (again, "set-key-partition-list")],
+            ),
+        ]
+        for case, texts, lines in examined("keychain import paths", cases):
+            with self.subTest(case=case):
+                self.step("clean")
+                self.refuse_imports(*texts)
+                code, printed, errors, records, _ = self.step(
+                    "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+                )
+                self.assertEqual(code, 0, errors)
+                written = printed.encode("utf-8")
+                self.assertEqual(
+                    [self.one(records, "security", tool)["stdout_size"] for _, tool in lines],
+                    [written.index(line) + len(line) for line, _ in lines],
+                )
 
     def test_the_profile_is_installed_where_xcode_reads_it_and_cleaned_up_alone(self):
         profiles = self.home / "Library/Developer/Xcode/UserData/Provisioning Profiles"
@@ -1172,12 +1319,113 @@ class LaneCredential(unittest.TestCase):
         (self.shims / "fixture.json").write_text(json.dumps(fixture), encoding="utf-8")
         self.sign()
         self.step("upload-to-testflight", ("KEY", "KEYID", "ISSUER"))
+        # The step's own fixed lines name no value and come from no build tool, so they are set
+        # aside: the certificate's shape line and the keychain import's line.
+        own = {"certificate shape: class der-sequence", "keychain import under form pbes2: ok"}
         for out, _, _ in examined("steps", self.runs):
-            lines = out.splitlines()
+            lines = [line for line in out.splitlines() if line not in own]
             self.assertEqual(lines[-2:], ["warning: <redacted>", "error: <redacted>"])
             self.assertEqual(
                 [line[:12] for line in lines[:-2]], ["::add-mask::"] * (len(lines) - 2)
             )
+
+    def test_the_certificate_shape_is_printed_as_one_fixed_class_before_the_first_read(self):
+        """RED-FIRST: before the version call and the certificate read, the step prints one line naming
+        the decoded certificate's shape by one class of a closed set, and nothing of the certificate."""
+        marker = uuid.uuid4().hex
+        body = marker.encode("utf-8") + os.urandom(200)
+        armour = "CERTIFICATE-----"
+        pem = f"\n  -----BEGIN {armour}\n{marker}\n-----END {armour}\n"
+        twice = f"MIIB{marker}\n{base64_text(os.urandom(189))}\n"
+        # Each planted certificate as the secret's decoded bytes: a DER sequence in both length
+        # forms, PEM armour after whitespace, base64 text (the secret encoded twice) and a body led
+        # by a NUL, which no other class takes.
+        cases = [
+            ("a definite DER sequence", "der-sequence", b"\x30\x81" + bytes([len(body)]) + body),
+            ("an indefinite DER sequence", "der-sequence", b"\x30\x80" + body + b"\x00\x00"),
+            ("PEM armour", "pem-armour", pem.encode("utf-8")),
+            ("base64 text", "base64-text", twice.encode("utf-8")),
+            ("a NUL-led body", "other", b"\x00" + body),
+        ]
+        for case, name, certificate in examined("certificate shapes", cases):
+            with self.subTest(case=case):
+                self.step("clean")
+                self.values["CERTIFICATE"] = base64_text(certificate)
+                code, printed, errors, records, _ = self.step(
+                    "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+                )
+                expected = f"certificate shape: class {name}"
+                shapes = [
+                    line for line in printed.splitlines() if line.startswith("certificate shape:")
+                ]
+                self.assertEqual(
+                    shapes,
+                    [expected],
+                    f"the certificate's shape was printed {len(shapes)} time(s), not once",
+                )
+                self.assertEqual(code, 0, errors)
+                written = printed.encode("utf-8")
+                after = written.index(f"{expected}\n".encode("utf-8")) + len(expected) + 1
+                version = (self.shims / "version.jsonl").read_text(encoding="utf-8").splitlines()
+                self.assertGreaterEqual(json.loads(version[-1])["stdout_size"], after)
+                self.assertGreaterEqual(self.reads(records)[0]["stdout_size"], after)
+                self.assertNotIn(marker, printed)
+                self.assertNotIn(marker, errors)
+
+    def test_a_certificate_that_does_not_decode_is_refused_after_its_class_before_any_tool(self):
+        """RED-FIRST: a placed certificate that does not decode from base64 prints the class `other`,
+        then refuses with one fixed line before any tool runs."""
+        marker = uuid.uuid4().hex
+        # A PEM text placed in place of its base64: its 62 characters of the base64 alphabet leave
+        # the last group of four two short, so the lenient decode refuses its padding.
+        armour = "CERTIFICATE-----"
+        self.values["CERTIFICATE"] = f"-----BEGIN {armour}\n{marker}\n-----END {armour}\n"
+        code, printed, errors, records, _ = self.step(
+            "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+        )
+        self.assertEqual(
+            [line for line in printed.splitlines() if not line.startswith("::add-mask::")],
+            ["certificate shape: class other"],
+        )
+        self.assertEqual(
+            (code, errors.splitlines()), (1, ["the certificate does not decode from base64"])
+        )
+        self.assertEqual(records, [])
+        self.assertFalse((self.shims / "version.jsonl").exists())
+        self.assertFalse(self.lane.exists())
+        self.assertNotIn(marker, printed)
+        self.assertNotIn(marker, errors)
+
+    def test_the_certificate_shape_holds_at_each_length_and_alphabet_edge(self):
+        # Each planted certificate as the secret's decoded bytes, at an edge of the length octets
+        # or of the base64 test. The version call is made to fail, so each sign stops on its one
+        # refusal right after the shape line, before any read.
+        cases = [
+            ("an empty sequence", "der-sequence", b"\x30\x00"),
+            ("a short-form sequence over one boolean", "der-sequence", b"\x30\x03\x01\x01\x00"),
+            ("a one-octet long form over no contents", "der-sequence", b"\x30\x81\x00"),
+            ("an indefinite sequence over no contents", "der-sequence", b"\x30\x80\x00\x00"),
+            ("an indefinite form with no end-of-contents", "other", b"\x30\x80\x02\x01\x00"),
+            ("a long form in five octets", "other", b"\x30\x85\x00\x00\x00\x00\x01\x00"),
+            ("a set, not a sequence", "other", b"\x31\x03\x01\x01\x00"),
+            ("base64 letters short of a group of four", "other", b"MIIBCgK"),
+            ("four octets outside the base64 alphabet", "other", b"\x01\x02\x03\x04"),
+        ]
+        (self.shims / "fail-version").touch()
+        for case, name, certificate in examined("certificate shape edges", cases):
+            with self.subTest(case=case):
+                self.values["CERTIFICATE"] = base64_text(certificate)
+                code, printed, errors, records, _ = self.step(
+                    "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+                )
+                self.assertEqual(
+                    [line for line in printed.splitlines() if not line.startswith("::add-mask::")],
+                    [f"certificate shape: class {name}"],
+                )
+                self.assertEqual(
+                    (code, errors.splitlines(), records),
+                    (1, ["openssl version failed with exit 1"], []),
+                )
 
     def test_a_failed_certificate_read_is_read_once_more_under_legacy(self):
         self.refuse_reads("Error: Unsupported algorithm RC2-40-CBC\n")
@@ -1222,17 +1470,24 @@ class LaneCredential(unittest.TestCase):
     def test_each_failed_certificate_read_prints_one_class_and_nothing_of_openssl(self):
         marker = uuid.uuid4().hex
         # Each text also holds the words of every class after its own, so the order of the tests
-        # is what picks its class; the first three match only when case is ignored.
+        # is what picks its class; the first three match only when case is ignored, as do the
+        # next two.
         cases = [
             (
                 "wrong-password",
-                f"Mac verify failure\n{marker}: unsupported, unknown option\n",
+                f"Mac verify failure\n{marker}: unsupported, unknown option\ncan't open, asn1\n",
             ),
             (
                 "legacy-algorithm",
-                f"Error outputting keys and certificates\n{marker}: Unsupported; bad option\n",
+                f"Error outputting keys and certificates\n{marker}: Unsupported; bad option\n"
+                "unable to load, asn1\n",
             ),
-            ("option-refused", f"pkcs12: Unrecognized flag legacy\n{marker}\n"),
+            (
+                "option-refused",
+                f"pkcs12: Unrecognized flag legacy\n{marker}\ncould not read, asn1\n",
+            ),
+            ("could-not-read", f"pkcs12: Could not read {marker}\nASN1 decoding\n"),
+            ("asn1-decode", f"pkcs12: {marker}: error in ASN1 encoding routines\n"),
             ("unrecognised", f"pkcs12: {marker}: the input could not be read\n"),
         ]
         for name, text in examined("refused reads", cases):
@@ -1244,7 +1499,10 @@ class LaneCredential(unittest.TestCase):
                 )
                 self.assertEqual(
                     [line for line in printed.splitlines() if not line.startswith("::add-mask::")],
-                    [f"pkcs12 read failed: class {name}; reading once more with -legacy"],
+                    [
+                        "certificate shape: class der-sequence",
+                        f"pkcs12 read failed: class {name}; reading once more with -legacy",
+                    ],
                 )
                 self.assertEqual(
                     errors.splitlines(),
@@ -1271,7 +1529,10 @@ class LaneCredential(unittest.TestCase):
         self.assertEqual([r for r in records if r["tool"] == "security"], [])
         self.assertEqual(
             [line for line in printed.splitlines() if not line.startswith("::add-mask::")],
-            ["pkcs12 read failed: class wrong-password; reading once more with -legacy"],
+            [
+                "certificate shape: class der-sequence",
+                "pkcs12 read failed: class wrong-password; reading once more with -legacy",
+            ],
         )
         self.assertFalse((self.checkout / INCLUDE).exists())
 

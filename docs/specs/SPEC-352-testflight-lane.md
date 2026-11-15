@@ -116,6 +116,7 @@ R9. Signing: the certificate's password reaches `openssl pkcs12` on its standard
     comment says so.
     Amended: section 8, the first certificate read retries once under -legacy.
     Amended: section 8, the step prints the openssl version and calls it by its path.
+    Amended: SPEC-692, the certificate's shape, two more read classes and the PBES2 re-wrap.
 R10. Upload: only the upload step writes the key, as a mode `0600` file in a fresh mode `0700`
     directory under the runner's temporary directory, and removes that directory when the step
     ends, pass or fail. The step exports and uploads with `xcodebuild -exportArchive` and export
@@ -137,6 +138,7 @@ R13. The log publishes no private value. The identity's name, the profile's name
     replaced. No step traces its commands, and the lane uploads no artifact.
     Amended: section 8, the first certificate read retries once under -legacy.
     Amended: section 8, the step prints the openssl version and calls it by its path.
+    Amended: SPEC-692, the certificate's shape, two more read classes and the PBES2 re-wrap.
 R14. Only the `app` job of the two lane files reads a secret, and only in its preflight, signing and
     upload steps, each reading exactly the parts it uses, in that step's own `env` under a neutral
     role-word variable name, never at the workflow's or the job's level and never in a `run` text.
@@ -517,3 +519,16 @@ name; every other line of this SPEC stands:
   the fixture checkout's app spec names (SPEC-566 A1 and A2); their new reds are recorded in
   `docs/red-first/SPEC-566.md`. A20 is unchanged: the step that generates the app's project follows
   the copied range.
+
+### SPEC-692: the certificate's shape, two more read classes, and the PBES2 re-wrap
+
+SPEC-692 (ADR-711) amends R9 and R13; every other line of this SPEC stands.
+
+- R13: before the version call the step prints one line naming the decoded certificate's shape
+  (SPEC-692 R1 and R2).
+- Section 8's read classes gain `could-not-read` and `asn1-decode`, after `option-refused`
+  (SPEC-692 R3); the class rule's order and its privacy are otherwise unchanged.
+- R9: the re-wrap takes the PBES2 form first, and the SHA-1 based compatibility form once, only
+  after the keychain refuses the first (SPEC-692 R4).
+- The amended criteria's new reds are recorded in `docs/red-first/SPEC-692.md`; no assertion is
+  removed.

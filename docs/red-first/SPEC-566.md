@@ -29,3 +29,12 @@ the row's replacement, reading its killer fail and restoring the file by its sha
 S56612 are read by name in CI's mutation-rows job. The app-project criterion's green is CI's
 reading at this pull request's second push. `git diff --quiet 6bad448 HEAD -- scripts/tests/test_testflight_workflows.py .github/workflows`
 exits 0: no workflow test and no lane file changed after the green commit 6bad448.
+
+The first internal lane run after this delivery landed, run 43594481191, read by job and step
+name in each of its four attempts:
+
+- Run 43594481191, attempt 1: job harness 132446938968 failed in its step 11 and job release-and-app 132446938921 was cancelled in its step 12 after 53.3 min, so job verdict 132470172080 failed and job app 132470202446 was skipped: no step of the app job ran.
+- Run 43594481191, attempt 2: job harness 132472822665 passed; job release-and-app 132472822658 was cancelled in its step 18 after 59.9 min with its 89 finished cases passed, so job verdict 132500517234 failed and job app 132500545732 was skipped.
+- Run 43594481191, attempt 3: job release-and-app 132501181468 failed in its step 18 after 69 min 10 s, `test_a12_the_review_survives_the_sidebar` failing on the iPad alone, so job verdict 132520487241 failed and job app 132520534785 was skipped.
+- Run 43594481191, attempt 4: job release-and-app 132524127323 passed in 78 min 33 s and job verdict 132546475563 passed.
+- Run 43594481191, attempt 4, job app 132546500010 (16 s): steps 1 to 9 passed, "the credential, by presence" among them finding every credential placed; "the app, unsigned" was skipped; "the archive, signed" failed at the provisioning profile's parse, before any certificate read; "the upload" was skipped; steps 13 and 14 passed. Nothing was signed or uploaded.

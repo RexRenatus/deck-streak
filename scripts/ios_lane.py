@@ -37,6 +37,13 @@ A build tool's full output goes to a file under the lane, and a step prints only
 error and warning lines, each private value redacted (R13). A failed certificate read prints one
 line naming its class, from a closed set, and nothing of openssl's own output. A refusal is one
 line on standard error and exit 1, and writes no output.
+
+Before the first read, `sign` prints the decoded certificate's shape by one class of a closed set,
+and nothing of the certificate; a placed text that does not decode from base64 is refused after
+its class, before any tool runs (SPEC-692 R1 and R2).
+
+The re-wrap takes the PBES2 form first, and the SHA-1 based compatibility form once, only after the
+keychain refuses the first (SPEC-692 R4).
 """
 
 import argparse
@@ -88,11 +95,27 @@ DIGESTS = re.compile(r"SHA-256 hash: ([0-9A-F]{64})\s+SHA-1 hash: ([0-9A-F]{40})
 IDENTITY = re.compile(r"\) ([0-9A-F]{40}) \"")
 # The closed set a failed certificate read is named by: each class with the words of openssl's
 # standard error that choose it, tested case-blind in this order; any other error is
-# `unrecognised` (SPEC-352 R13 as amended).
+# `unrecognised` (SPEC-352 R13 as amended; SPEC-692 R3).
 READ_FAILURES = (
     ("wrong-password", ("invalid password", "mac verify")),
     ("legacy-algorithm", ("unsupported",)),
     ("option-refused", ("unknown option", "unrecognized flag", "bad option")),
+    ("could-not-read", ("could not read", "can't open", "unable to load")),
+    ("asn1-decode", ("asn1",)),
+)
+# The shapes a decoded certificate is named by before its first read, tested in this order: an
+# ASN.1 SEQUENCE whose length octets are well formed and cover exactly the bytes after them, or
+# its indefinite form closed by end-of-contents; PEM armour; base64 text again; anything else.
+SHAPES = ("der-sequence", "pem-armour", "base64-text", "other")
+# Base64 text once ASCII whitespace is removed: its alphabet, then at most two pad characters; a
+# length that is a multiple of four is checked beside it, so the text is strict base64.
+BASE64_TEXT = re.compile(rb"[A-Za-z0-9+/]+={0,2}")
+# The two forms a re-wrap takes, in the order the keychain is offered them: PBES2 with AES-256
+# and a SHA-256 MAC, then, once and only after the keychain refuses it, the SHA-1 based
+# compatibility form.
+FORMS = (
+    ("pbes2", ("-certpbe", "AES-256-CBC", "-keypbe", "AES-256-CBC", "-macalg", "sha256")),
+    ("sha1-compat", ("-certpbe", "PBE-SHA1-3DES", "-keypbe", "PBE-SHA1-3DES", "-macalg", "sha1")),
 )
 
 
@@ -298,6 +321,87 @@ def read_certificate(openssl, original, passphrase):
     return legacy.stdout
 
 
+def der_sequence(data):
+    """Whether `data` is one ASN.1 SEQUENCE: its tag, then a definite length (the short form, or
+    the long form in one to four octets) equal to the bytes after the header, or the indefinite
+    form, whose bytes end with the two end-of-contents octets."""
+    if len(data) < 2 or data[0] != 0x30:
+        return None
+    if data[1] == 0x80:
+        return len(data) >= 4 and data.endswith(b"\x00\x00")
+    octets = data[1] - 0x80 if data[1] > 0x80 else 0
+    if octets > 4 or len(data[2:]) < octets:
+        return None
+    length = int.from_bytes(data[2 : 2 + octets], "big") if octets else data[1]
+    return length == len(data) - 2 - octets
+
+
+def certificate_shape(data):
+    """The first class of `SHAPES` the decoded certificate `data` meets, tested in that order
+    (SPEC-692 R1). Nothing of `data` is printed, logged, written to a file or put in a refusal."""
+    text = b"".join(data.split())
+    meets = {
+        "der-sequence": der_sequence(data),
+        "pem-armour": data.lstrip().startswith(b"-----BEGIN"),
+        "base64-text": len(text) % 4 == 0 and BASE64_TEXT.fullmatch(text) is not None,
+        "other": True,
+    }
+    return next(shape for shape in SHAPES if meets[shape])
+
+
+def rewrap(openssl, bundle, passphrase, pem, protection):
+    """Re-wrap what the certificate read wrote out, `pem`, into `bundle` under the run-time
+    passphrase, its key and certificate protected and its MAC made as `protection`, one form of
+    `FORMS`, names (SPEC-692 R4)."""
+    tool(
+        openssl,
+        "pkcs12",
+        "-export",
+        "-out",
+        str(bundle),
+        "-passin",
+        f"pass:{passphrase}",
+        "-passout",
+        f"pass:{passphrase}",
+        *protection,
+        stdin=pem,
+    )
+
+
+def job_keychain(keychain, password):
+    """Create the job keychain under the generated password, set its lock settings and unlock
+    it."""
+    tool("security", "create-keychain", "-p", password, keychain)
+    tool("security", "set-keychain-settings", "-lut", "21600", keychain)
+    tool("security", "unlock-keychain", "-p", password, keychain)
+
+
+def offered(bundle, keychain, passphrase):
+    """Offer the re-wrapped bundle to the job keychain as a non-extractable import codesign may
+    use, with no credential part in the environment, and return whether the keychain took it.
+    The keychain's output is kept in memory and never printed, logged, written to a file or put
+    in a refusal (SPEC-692 R4)."""
+    done = subprocess.run(
+        [
+            "security",
+            "import",
+            str(bundle),
+            "-k",
+            keychain,
+            "-P",
+            passphrase,
+            "-f",
+            "pkcs12",
+            "-x",
+            "-T",
+            "/usr/bin/codesign",
+        ],
+        env=without_credential(),
+        capture_output=True,
+    )
+    return done.returncode == 0
+
+
 def sign():
     """Check the profile, import the certificate into a job keychain, install the profile, write
     the include file and archive the app (SPEC-352 R8, R9, R13)."""
@@ -320,49 +424,44 @@ def sign():
         raise Refused("the profile's app id is the placeholder, whose first label is invalid")
     if openssl is None:
         raise Refused("no openssl is on the PATH")
+    # The certificate is decoded once and named by its shape before any tool runs (SPEC-692 R1);
+    # a placed text the decode refuses takes the class `other`, then the one refusal (R2).
+    try:
+        certificate = base64.b64decode(os.environ["CERTIFICATE"])
+    except ValueError:
+        certificate = None
+    shape = "other" if certificate is None else certificate_shape(certificate)
+    print(f"certificate shape: class {shape}", flush=True)
+    if certificate is None:
+        raise Refused("the certificate does not decode from base64")
     print(tool(openssl, "version"), end="", flush=True)
     lane = make_lane()
     original = lane / "original.p12"
-    write_private(original, base64.b64decode(os.environ["CERTIFICATE"]))
+    write_private(original, certificate)
     pem = read_certificate(openssl, original, passphrase)
     original.unlink()
     bundle = lane / "certificate.p12"
-    tool(
-        openssl,
-        "pkcs12",
-        "-export",
-        "-out",
-        str(bundle),
-        "-passin",
-        f"pass:{passphrase}",
-        "-passout",
-        f"pass:{passphrase}",
-        "-certpbe",
-        "PBE-SHA1-3DES",
-        "-keypbe",
-        "PBE-SHA1-3DES",
-        "-macalg",
-        "sha1",
-        stdin=pem,
-    )
     keychain = str(lane / "lane.keychain-db")
-    tool("security", "create-keychain", "-p", keychain_password, keychain)
-    tool("security", "set-keychain-settings", "-lut", "21600", keychain)
-    tool("security", "unlock-keychain", "-p", keychain_password, keychain)
-    tool(
-        "security",
-        "import",
-        str(bundle),
-        "-k",
-        keychain,
-        "-P",
-        passphrase,
-        "-f",
-        "pkcs12",
-        "-x",
-        "-T",
-        "/usr/bin/codesign",
-    )
+    (first, protection), (second, compatibility) = FORMS
+    rewrap(openssl, bundle, passphrase, pem, protection)
+    job_keychain(keychain, keychain_password)
+    if offered(bundle, keychain, passphrase):
+        accepted = first
+    else:
+        # The one retry (SPEC-692 R4): the refused form named, the job keychain made anew, the
+        # bundle re-wrapped once under the compatibility form and offered once more, never a third
+        # time.
+        print(
+            f"keychain import failed: form {first}; importing once more under form {second}",
+            flush=True,
+        )
+        tool("security", "delete-keychain", keychain)
+        job_keychain(keychain, keychain_password)
+        rewrap(openssl, bundle, passphrase, pem, compatibility)
+        if not offered(bundle, keychain, passphrase):
+            raise Refused(f"security import failed: form {first}, form {second}")
+        accepted = second
+    print(f"keychain import under form {accepted}: ok", flush=True)
     bundle.unlink()
     tool(
         "security",
