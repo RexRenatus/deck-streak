@@ -26,3 +26,4 @@ SPEC-352's amended criteria A27
 red at f0aef5a for the absent shape line and green at 2f67452; no assertion was removed.
 A3's test is A27's test, red again at 09efa60 for its two new cases and green at a1a280d.
 The green commit `5ce236d` carries the signing step's change, and `git diff --quiet 5ce236d HEAD` over `scripts/ios_lane.py` and `scripts/tests/test_ios_lane.py` reads rc 0.
+The commits after that green commit add mutation killers to `scripts/tests/test_ios_lane.py` and behaviour-neutral edits to `scripts/ios_lane.py`, so at the final head that diff reads rc 1; no criterion test changed after it.
