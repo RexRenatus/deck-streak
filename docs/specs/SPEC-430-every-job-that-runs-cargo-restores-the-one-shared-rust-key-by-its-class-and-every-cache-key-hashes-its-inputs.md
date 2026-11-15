@@ -245,6 +245,9 @@ expected refusals.
 | `docs/schematics/ci-jobs-and-caches.md` | 1 | changed: one insert-only section after its last line |
 | `docs/red-first/SPEC-430.md` | 1 | added |
 | `changelog.d/cache-shape-430.md` | 1 | added |
+| `docs/specs/SPEC-430-every-job-that-runs-cargo-restores-the-one-shared-rust-key-by-its-class-and-every-cache-key-hashes-its-inputs.md` | #871 | changed, insert-only: section 10 after section 9, and these three rows after the table's last row |
+| `docs/decisions/ADR-444-the-cache-shape-is-four-checks-in-the-workflow-tests-each-cargo-job-classed-by-what-it-builds-and-where-it-runs.md` | #871 | changed, insert-only: D14 and its chosen-against after the last section |
+| `changelog.d/cache-protocol-871.md` | #871 | added |
 
 No workflow file changes. The module's own censuses read the new code: its file-read census
 (`WorkflowFilesAreReadAsBytes`) and its import census find no new site, because every read goes through the loader;
@@ -425,3 +428,53 @@ test that fails on any change to it.
 
 ADR-444. SPEC-038 (R1, R2, R12), SPEC-191 (R9), ADR-055, ADR-191, and the schematic
 `docs/schematics/ci-jobs-and-caches.md`.
+
+## 10. Amendment for #871: the cache's restore and save protocol takes no model
+
+- **Issue:** #871. **Decided by:** ADR-444 D14, appended with this section. Sections 1 to 9 stand as written.
+- **Read at:** the `dev` tip this section's pull request is cut from; every `path:line` and count in this section
+  is read at that tip.
+
+### 10.1 The protocol, measured
+
+The four workflow files that hold a cache step hold 18 `actions/cache/restore` steps and 5 `actions/cache/save`
+steps (`ci.yml` 10 and 4, `coverage.yml` 3 and 0, `mutation-weekly.yml` 3 and 0, `rust-cache.yml` 2 and 1).
+
+| key | saved by (file:line, job, guard) | restored by |
+|---|---|---|
+| the shared Rust key | `ci.yml:85` `rust`, on a push to `dev` or `main` that missed it; `rust-cache.yml:95` `warm`, on a scheduled or dispatched run whose lookup missed | 13 steps: `ci.yml` `rust`, `engine`, `hygiene`, `mutation-rust`, `mutation-rows` and `web-engine`; `coverage.yml` `coverage-rust` and `coverage-python`; `mutation-weekly.yml` `rust`, `rows` and `rehearsal`; `rust-cache.yml` `warm`, its lookup and its restore |
+| the release key | `ci.yml:213` `release`, on a push to `dev` or `main` that missed it | `ci.yml:190` `release` |
+| the pnpm store | `ci.yml:284` `web`, the same push guard | `ci.yml` `web` and `mutation-web-shard`; `coverage.yml` `coverage-web` |
+| the browser | `ci.yml:274` `web`, the same push guard | `ci.yml:265` `web` |
+
+Every Rust entry the repository's cache list held when this section was written sat in `dev`'s scope: none in a
+pull request's scope, none in two scopes, and no key twice in one scope.
+
+### 10.2 The properties, and what holds each
+
+| property | held by |
+|---|---|
+| P1. No pull request run saves a Rust key. | `OnlyAPushSavesACache.test_a_cache_is_saved_only_by_a_push_to_dev_or_main`, whose scenarios hold a pull request into `dev`, one into `main` and a fork's, and `TheCachesHoldTheirShape.test_only_the_warm_job_or_a_push_to_dev_or_main_saves_the_rust_key`; and the cache service, which scopes any entry a pull request's run saves to that pull request's merge ref, which no other ref restores |
+| P2. A restore reads only entries saved on its own ref, on its pull request's base branch or on the default branch. | the cache service's access rule; with P1 and P7, every Rust entry a run restores was saved by a push to `dev` or `main` or by the warm job |
+| P3. A Rust save writes only the key its own job's restore computed; in `ci.yml` it runs after the job's stages, with the workspace's own artifacts cleaned first. | R6's writer census, `scheduled_save_problems` for the warm job, and `OnlyAPushSavesACache.test_the_rust_cache_is_keyed_on_the_toolchain_pin_and_the_lockfile` |
+| P4. No save runs after an exact hit. | `save_problems`, whose scenarios hold a push to `dev` that hit its key exactly, and `scheduled_save_problems`, a run whose lookup hit |
+| P5. One job saves each Rust key in a run of `ci.yml`. | `OnlyAPushSavesACache.test_the_rust_cache_is_keyed_on_the_toolchain_pin_and_the_lockfile`, which refuses a key saved by two jobs |
+| P6. Two saves of one key in one scope cannot both land. | the cache service: an entry's contents never change once saved, so the later save is refused, and the save action reports the refusal as a warning, not a failed step |
+| P7. No run started by a pull request runs in a branch's scope. | `test_no_workflow_uses_a_self_hosted_runner_or_a_privileged_trigger`, which refuses `pull_request_target` in every workflow |
+
+### 10.3 Why no model
+
+The store's entries never change once saved, every key is a function of the tree's toolchain pin and lock file,
+and no save's guard reads the store except through its own job's restore result, which can only stop a save. So
+each property above holds step by step, in every order of runs. An interleaving decides only which of two writers
+of one key lands first, and both wrote the dependency artifacts of the same lock file, which cargo reuses only
+where its fingerprints match. A model would restate the cache service's rules as its own assumptions, and its
+covers could name no workflow file, because a cover names code. FORMAL: NOT APPLICABLE (surface present;
+declined by ADR-444 D14; writers `ci.yml` `rust` and `release` and `rust-cache.yml` `warm`; readers the 18
+restores; ordering none that a property depends on; guards the push guard and the lookup guard, each judged step
+by step by the module's scenario reader).
+
+### 10.4 What this amendment does NOT cover
+
+- It changes no workflow, no test and no row (#871).
+- It changes no cache's size, eviction, storage limit or scope (#370).

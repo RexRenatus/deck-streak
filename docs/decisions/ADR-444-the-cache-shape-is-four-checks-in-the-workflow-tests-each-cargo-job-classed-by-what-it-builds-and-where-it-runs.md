@@ -441,3 +441,24 @@ hold R18, killed by A14 (`test_a_first_build_guarded_by_the_restores_conditions_
 
 SPEC-430 states the requirements, the criteria and the census. SPEC-038 (R1, R2, R12), SPEC-191
 (R9), ADR-055 and ADR-191 decided the cache this rule holds. Issues: #15, #207, #370.
+
+## D14. The cache's restore and save protocol takes no model (#871)
+
+SPEC-430 section 10 measures the protocol at the `dev` tip it is cut from: 18 restores, 5 saves, two writers of the shared
+Rust key (`ci.yml` `rust` on a push to `dev` or `main` that missed it, `rust-cache.yml` `warm` on a run whose
+lookup missed) and one of the release key. It names seven properties and what holds each: five are held by the
+workflow tests, each save step judged by the module's scenario reader, and two by the cache service's own rules (a
+restore reads only its own ref's, its base branch's and the default branch's entries; an entry never changes once
+saved). Every entry is immutable and every guard reads the store only through its own job's restore result, so
+each property holds in every order of runs, and no interleaving model is written: FORMAL is not applicable by
+surface, the surface present and declined here.
+
+## D14, chosen against
+
+- Chosen: the record of the measurement and of what holds each property, because every property holds step by step and a model would decide no case that a test or a service rule does not.
+- A TLA+ model of the store over two pushes, two pull requests and the warm job: rejected, because its only reachable violation needs the service's scope rule switched off, so it would check its own assumption, and its covers could name no workflow file.
+- A model whose covers name the scenario reader in the workflow tests: rejected, because that reader is a pure predicate over one step at a time, which the tests already judge over every save step of every workflow.
+
+What would make D14 wrong: a save whose guard reads the store other than through its own restore, a key that names
+a run-unique part, a workflow that runs a pull request's code in a branch's scope, or a save action that replaces an
+existing entry. Each of them adds an ordering that a model would be owed for.
