@@ -1,0 +1,17 @@
+{
+  "crates/alpha/Cargo.toml": "[package]\nname = \"alpha\"\nedition = \"2021\"\n\n[dependencies]\nname = \"not-the-package\"\n",
+  "crates/alpha/src/lib.rs": null,
+  "crates/alpha/tests/under.rs": null,
+  "crates/alpha/tests/over.rs": null,
+  "crates/alpha/tests/within.rs": null,
+  "crates/alpha/tests/faster.rs": null,
+  "crates/alpha/tests/untimed.rs": null,
+  "crates/beta/Cargo.toml": "[package]\nname = \"beta-crate\"\nedition = \"2021\"\n",
+  "crates/beta/src/lib.rs": null,
+  "scripts/tests/test_planted.py": null,
+  "scripts/tests/fixtures/suite-times/planted.py.fixture": null,
+  "web/app/src/lib/planted.test.ts": null,
+  "web/app/tests/planted.spec.ts": null,
+  "ios/PlantedTests/PlantedTests.swift": null,
+  "ios/PlantedKit/Tests/PlantedKitTests/PlantedKitTests.swift": null
+}

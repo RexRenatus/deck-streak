@@ -1,0 +1,12 @@
+{
+  "_": "The suite-time census's planted listing: one entry per planted case, read by its own tests only.",
+  "margin": {"ratio": 1.0, "floor_seconds": 30.0},
+  "suites": [
+    {"runner": "nextest", "suite": "alpha::under", "bound_seconds": 10.0, "job": "planted", "reason": "planted: under its bound"},
+    {"runner": "nextest", "suite": "alpha::over", "bound_seconds": 10.0, "job": "planted", "reason": "planted: over its bound past the margin"},
+    {"runner": "nextest", "suite": "alpha::within", "bound_seconds": 10.0, "job": "planted", "reason": "planted: over its bound within the margin"},
+    {"runner": "nextest", "suite": "alpha::faster", "bound_seconds": 100.0, "job": "planted", "reason": "planted: faster than its bound"},
+    {"runner": "nextest", "suite": "alpha::untimed", "bound_seconds": 3.0, "job": "planted", "reason": "planted: no time recorded"},
+    {"runner": "nextest", "suite": "alpha::removed", "bound_seconds": 5.0, "job": "planted", "reason": "planted: names no current suite"}
+  ]
+}

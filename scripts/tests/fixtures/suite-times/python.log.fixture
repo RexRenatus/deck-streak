@@ -1,0 +1,12 @@
+....
+----------------------------------------------------------------------
+Ran 4 tests in 1.250s
+
+OK
+module: scripts/tests/test_planted.py ran 4 test(s), OK
+..
+----------------------------------------------------------------------
+Ran 2 tests in 9.000s
+
+OK
+module: scripts/tests/test_mismatch.py ran 3 test(s), OK

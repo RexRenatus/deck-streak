@@ -1,0 +1,5 @@
+{
+  "_": "Each test suite's recorded bound (SPEC-669, ADR-692). An entry names a suite by its runner and unit, its bound in seconds as one CI job recorded it, that job's id, its margin when it differs from the default, and its reason. Only a delivery changes an entry.",
+  "margin": {"ratio": 1.0, "floor_seconds": 30.0},
+  "suites": []
+}
