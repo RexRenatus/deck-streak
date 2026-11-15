@@ -1,0 +1,20 @@
+<!-- A planted component for scripts/tests/test_web_literal_text.py (SPEC-653 A3), kept out of
+  every web tool and every *.svelte glob by its .fixture suffix. A line the census must report
+  carries a planted comment; a form it must pass carries an accepted one. -->
+<script lang="ts">
+  import { m } from '#lib/paraglide/messages.js';
+  import { telegram } from '#lib/telegram.svelte.js';
+  let { deck }: { deck: string } = $props();
+  window.alert('Saved to deck A // B'); // planted: the browser's alert, a literal holding slashes
+  window.confirm("Delete this deck?"); // planted: the browser's confirmation
+  window.prompt('Name the deck'); // planted: the browser's prompt
+  telegram.webApp.showAlert('Sync finished'); // planted: the Mini App's alert
+  telegram.webApp.showConfirm(`Sign out of ${deck}?`); // planted: the Mini App's confirmation
+  window.alert(m.saved()); // accepted: a catalog message
+  // window.alert('Commented out'); accepted: a line comment is not a call
+  /* window.alert('Also commented out'); */ // accepted: a block comment is not a call
+  window.alert('42'); // accepted: no letter
+  confirm('upload'); // accepted: a function of the component's own, not a dialog
+</script>
+
+<button onclick={() => window.alert('Copied')}>{m.copy()}</button> <!-- planted: in markup -->

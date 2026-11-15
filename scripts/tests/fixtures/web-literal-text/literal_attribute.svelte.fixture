@@ -1,0 +1,21 @@
+<!-- A planted component for scripts/tests/test_web_literal_text.py (SPEC-653 A2), kept out of
+  every web tool and every *.svelte glob by its .fixture suffix. A line the census must report
+  carries a planted comment; a form it must pass carries an accepted one. -->
+<script lang="ts">
+  import { m } from '#lib/paraglide/messages.js';
+  let { done }: { done: number } = $props();
+</script>
+
+<img src="/deck.png" alt="Your deck" /> <!-- planted: alt -->
+<p aria-description="What it measures">{m.score()}</p> <!-- planted: aria-description -->
+<button aria-label="Close">×</button> <!-- planted: aria-label -->
+<div role="textbox" aria-placeholder="Type a word"></div> <!-- planted: aria-placeholder -->
+<section aria-roledescription="Flashcard"></section> <!-- planted: aria-roledescription -->
+<div role="meter" aria-valuetext="{done} of 5 done"></div> <!-- planted: aria-valuetext -->
+<option label="Front" value="front"></option> <!-- planted: label -->
+<input placeholder='Search decks' /> <!-- planted: placeholder, in single quotes -->
+<abbr title="Due in 3 > 2 days">{m.due()}</abbr> <!-- planted: title, holding a quoted sign -->
+<button aria-label={m.close()} title="{m.close()}">×</button> <!-- accepted: catalog messages -->
+<img src="/a.png" alt="" class="mt-1 text-sm" id="deck-image" /> <!-- accepted: an empty alt -->
+<input placeholder="42" data-label="Deck name" /> <!-- accepted: no letter, an unlisted name -->
+<span title="DeckStreak">{m.brand()}</span> <!-- accepted: a name alone -->

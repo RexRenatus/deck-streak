@@ -1,0 +1,21 @@
+<!-- A planted component for scripts/tests/test_web_literal_text.py (SPEC-653 A4), kept out of
+  every web tool and every *.svelte glob by its .fixture suffix. Every text here is drawn from a
+  catalog or is not user-facing, so the census reports no site; each form carries an accepted one. -->
+<script lang="ts">
+  import { m } from '#lib/paraglide/messages.js';
+  let { count, open }: { count: number; open: boolean } = $props();
+  const heading = 'A script string is code, not markup'; // accepted: a script block is not markup
+</script>
+
+<!-- A comment in words is not markup either; accepted: a comment -->
+<h1>{m.home_title()}</h1> <!-- accepted: a message drawn from a catalog -->
+<p>{m.cards_due({ count })}</p> <!-- accepted: a message with an argument -->
+<p>{m.count({ n: count }) + m.unit()}</p> <!-- accepted: braces nested in an expression -->
+{#if open}<span>{m.open()}</span>{:else}<span>{m.closed()}</span>{/if} <!-- accepted: blocks -->
+<span>{count}&nbsp;&middot;&nbsp;{m.cards()}</span> <!-- accepted: references and a symbol -->
+<span>42 %</span> <!-- accepted: a number and a sign -->
+<span>Anki</span> <span>DeckStreak</span> <span>Telegram</span> <!-- accepted: names alone -->
+<p>{String(count) === '}' ? m.brace() : m.other()}</p> <!-- accepted: a quoted brace -->
+<style>
+  h1 { font-weight: bold; } /* accepted: a style block is not markup */
+</style>
