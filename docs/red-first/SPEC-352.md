@@ -73,6 +73,8 @@ A31: red at d2c61361: AssertionError: Lists differ: [('scripts/ios_lane.py', 312
 A31: green at 71427932
 A32: red at 06dbdb2: AssertionError: 1 != 0 : openssl pkcs12 failed with exit 1
 A32: green at ce15791
+A33: red at 88bad39: AssertionError: 0 != 1 : the archive's command line names 0 identities
+A33: green at f89e6c0
 ```
 
 - Three red lines are shortened where the failure printed more than a criterion needs: A8's set
@@ -163,3 +165,20 @@ A32: green at ce15791
   paths, the re-wrap's recorded input `[None]` against what the read wrote. Both are green at
   ce15791, which changes no test.
   The green commit `ce15791` carries the signing step's change, and `git diff --quiet ce15791 HEAD` over `scripts/ios_lane.py` and `scripts/tests/test_ios_lane.py` reads rc 0.
+- The archive identity's amendment (SPEC-352 R9 as amended). Its one criterion, A33, is new, so it
+  takes one red and one green line in the fence above. Its test and the two amended pins were
+  committed at 88bad39, before the lane script changed at f89e6c0, and each red and green was read
+  locally by running `test_ios_lane.py` at each commit: `Ran 33 tests` with two failures at
+  88bad39, and `OK` at f89e6c0. The red quoted above is
+  `test_the_archive_names_the_paired_identity_and_never_the_other_one`'s: on A30's fixture the
+  archive's command line names no identity.
+  The two pins in A9's test,
+  `test_signing_imports_the_certificate_non_extractable_into_a_job_keychain`, that the change
+  meets by construction are amended in the same red commit, each with no assertion removed. That
+  test is red at 88bad39 on its exact argument list, which now ends with the identity's element,
+  `Second list contains 1 additional elements.`, and green at f89e6c0. Its guard over the six
+  signing settings comes after that list's assertion, so it was read alone in a scratch copy of
+  the test with the list's assertion set aside: red at 88bad39 on `CODE_SIGN_IDENTITY`, where the
+  archive's command line names no identity and the guard now expects the include's, and green at
+  f89e6c0, which changes no test.
+  The green commit `f89e6c0` carries the archive's change, and `git diff --quiet f89e6c0 HEAD` over `scripts/ios_lane.py` and `scripts/tests/test_ios_lane.py` reads rc 0.

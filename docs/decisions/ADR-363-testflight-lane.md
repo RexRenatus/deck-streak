@@ -348,3 +348,24 @@ amends R9 and R13; D3's signing path and D6's private log otherwise stand.
   dev already holds (#1050). D9's "rendered when the lane moves to the
   app's scheme (#625)" is superseded by ADR-584 D7: the move renders no sync setting (#634). D1,
   D2, D4 to D7 and the signing they decide are unchanged.
+
+### The archive names the paired identity on its command line
+
+A lane run's archive stopped with `No signing certificate "iOS Development" found` after the
+profile check had passed (app job 132790002039 of run 43687834537): XcodeGen's preset for an iOS
+application gives the app target `CODE_SIGN_IDENTITY: iPhone Developer`, and a target-level
+setting outranks the project-level include through which D3's signing settings reach the build.
+SPEC-352 section 8 amends R9; D3's manual signing, its job keychain and its include file
+otherwise stand.
+
+- One `CODE_SIGN_IDENTITY` build setting on the archive's command line — chosen, because a build
+  setting there outranks every level: the include's identity reaches the app target past the
+  preset with no change to the app's project spec or to any local build, and the include still
+  carries the app id, the team, the manual style, the identity and the profile to every native
+  target.
+- An `ios/**` edit — rejected, because a `settingPresets` option or a target-level setting in
+  `ios/app.yml` would take the full Apple pull request run and move every local build's identity.
+- The other signing settings on the command line too — rejected, because they reach the native
+  targets through the include alone, and a package target refuses a manually named profile, which
+  D3 keeps in the project-level include: no other signing setting goes on any command line, the
+  profile least of all.

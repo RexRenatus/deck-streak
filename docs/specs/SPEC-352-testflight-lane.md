@@ -117,6 +117,7 @@ R9. Signing: the certificate's password reaches `openssl pkcs12` on its standard
     Amended: section 8, the first certificate read retries once under -legacy.
     Amended: section 8, the step prints the openssl version and calls it by its path.
     Amended: section 8, the re-wrap reads the certificate from a private file.
+    Amended: section 8, the archive names the paired identity on its command line.
 R10. Upload: only the upload step writes the key, as a mode `0600` file in a fresh mode `0700`
     directory under the runner's temporary directory, and removes that directory when the step
     ends, pass or fail. The step exports and uploads with `xcodebuild -exportArchive` and export
@@ -230,6 +231,7 @@ R22. Ruling 461: the internal lane also starts on a push to `dev`, filtered to t
 | A30 | with a second identity listed first whose certificate the profile does not hold, signing reads `security find-certificate -a -Z` on the job keychain before `find-identity`, and the include file and the signing record carry the identity the keychain pairs with the profile's certificate | `test_ios_lane.py`, `test_the_identity_is_the_one_the_keychain_pairs_with_the_profiles_certificate` |
 | A31 | no `hashlib` call in the lane, its test or the fake tools' program names a digest outside the strong set the weak-hashing query reads, whether reached by the module, an alias or an imported name; each planted weak spelling is refused by name | `test_ios_lane.py`, `LaneDigests`, its census and its planted control |
 | A32 | with the real openssl and a legacy bundle made for the test, the re-wrap is given the certificate and its encrypted key in a mode `0600` file in the lane, named by `-in`; the file is gone when the next tool runs, and after a failed re-wrap, which still refuses with `openssl pkcs12 failed with exit 1` and runs no `security` call; and the bundle the step imports re-reads with the certificate and the key each under 3DES and a SHA-1 MAC | `test_ios_lane.py`, `test_a_legacy_certificate_re_wraps_with_both_bags_under_3des_and_a_sha1_mac`, `test_the_re_wrap_reads_its_input_from_a_private_file_removed_once_it_returns`, `test_a_failed_re_wrap_refuses_as_before_and_leaves_no_certificate_in_the_lane` |
+| A33 | with a second identity listed first whose certificate the profile does not hold, the archive's command line names one `CODE_SIGN_IDENTITY` build setting, the identity the keychain pairs with the profile's certificate, equal to the include file's and the signing record's, and never the other identity | `test_ios_lane.py`, `test_the_archive_names_the_paired_identity_and_never_the_other_one` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_the_internal_plan_refuses_any_event_or_ref_but_a_dispatch_on_dev
@@ -264,6 +266,7 @@ A29: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_t
 A30: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_the_identity_is_the_one_the_keychain_pairs_with_the_profiles_certificate
 A31: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k LaneDigests
 A32: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_a_legacy_certificate_re_wraps_with_both_bags_under_3des_and_a_sha1_mac -k test_the_re_wrap_reads_its_input_from_a_private_file_removed_once_it_returns -k test_a_failed_re_wrap_refuses_as_before_and_leaves_no_certificate_in_the_lane
+A33: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_the_archive_names_the_paired_identity_and_never_the_other_one
 ```
 
 Every criterion runs on Linux in the hygiene job's `python` stage, with no credential, no macOS
@@ -562,3 +565,47 @@ refusal, the import and every step after it; `clean` removes the lane as before.
 | `changelog.d/testflight-rewrap-from-file.md` | docs | added |
 
 The amendment changes no workflow, no other tool call and no repository or environment setting.
+
+### The archive names the paired identity on its command line
+
+A lane run's signing step stopped at the archive after the certificate read under `-legacy` and
+the profile check had passed: `xcodebuild archive` exited 65 with `No signing certificate "iOS
+Development" found`, and the upload step was skipped (app job 132790002039 of run 43687834537).
+The app's project spec names `Config/App.xcconfig` at the project level alone and sets no
+`settingPresets` option, so XcodeGen's preset for an iOS application gives the app target
+`CODE_SIGN_IDENTITY: iPhone Developer`. A target-level setting outranks the project-level
+xcconfig that the include file joins last, so the identity the include names never reached the
+app target, and the recording shims resolve no build setting, so no test could see it.
+
+R9 as amended adds one clause to its include sentence: the archive's command line also names the
+identity, as one `CODE_SIGN_IDENTITY` build setting after the build number, the version and the
+lane, with the value the include file names, since a build setting on the command line outranks
+every level. The include file is unchanged, and the app id, the team, the manual style, the
+identity and the profile still reach every native target through it. No other signing setting
+goes on any command line, the profile least of all, which a package target refuses (ADR-363 D3).
+The app's project spec, the workflows and every other tool call are unchanged.
+
+- A33 (R9 as amended) is new: with a second identity listed first whose certificate the profile
+  does not hold, the archive's command line names one `CODE_SIGN_IDENTITY` build setting, the
+  identity the keychain pairs with the profile's certificate, equal to the include file's and the
+  signing record's, and never the other identity.
+- No criterion is amended. A9's test,
+  `test_signing_imports_the_certificate_non_extractable_into_a_job_keychain`, holds two pins that
+  the change meets by construction, and both are amended in the red commit with no test, subtest
+  or assertion removed: the archive's exact argument list gains the one `CODE_SIGN_IDENTITY`
+  element after the lane, its value the fixture's identity; and the guard over the six signing
+  settings now expects exactly one `CODE_SIGN_IDENTITY` element on the archive's command line,
+  equal to the include file's value, with the five others still absent and the examined count
+  kept. Their reds and greens are recorded in `docs/red-first/SPEC-352.md`.
+
+| file | context | change |
+|---|---|---|
+| `scripts/ios_lane.py` | scripts | changed: the archive's command line names the paired identity as one build setting (R9 as amended) |
+| `scripts/tests/test_ios_lane.py` | tests | changed: A33 added, and the two pins in A9's test amended to the identity's one element |
+| `docs/specs/SPEC-352-testflight-lane.md` | docs | changed: insert-only amendment |
+| `docs/decisions/ADR-363-testflight-lane.md` | docs | changed: insert-only amendment |
+| `docs/red-first/SPEC-352.md` | docs | changed: A33's red and green lines and one bullet appended |
+| `changelog.d/testflight-archive-identity.md` | docs | added |
+
+The amendment changes no workflow, no file under `ios/`, no other tool call and no repository or
+environment setting.

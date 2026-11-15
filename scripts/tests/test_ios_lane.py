@@ -63,7 +63,8 @@ ROLES = (
 # two named arguments, and nowhere else.
 SECRET_VALUES = ("KEY", "CERTIFICATE", "PASSWORD", "PROFILE")
 IDENTIFIERS = ("team", "team name", "app id", "profile name", "profile uuid")
-# The signing settings the include file carries, which no command line may carry instead.
+# The signing settings the include file carries, which no command line may carry instead; the
+# signed archive's command line also carries one, CODE_SIGN_IDENTITY, with the include's value.
 SIGNING_SETTINGS = (
     "DS_APP_ID",
     "DEVELOPMENT_TEAM",
@@ -881,6 +882,7 @@ class LaneCredential(unittest.TestCase):
                 "CURRENT_PROJECT_VERSION=7",
                 "MARKETING_VERSION=1.2.3",
                 "DS_LANE=internal",
+                f"CODE_SIGN_IDENTITY={self.identity}",
             ],
         )
         self.assertEqual([n for n in archive["lane_files"] if n.endswith(".p12")], [])
@@ -896,8 +898,10 @@ class LaneCredential(unittest.TestCase):
                 "PROVISIONING_PROFILE_SPECIFIER": self.ids["profile uuid"],
             },
         )
+        expected = {"CODE_SIGN_IDENTITY": [f"CODE_SIGN_IDENTITY={include['CODE_SIGN_IDENTITY']}"]}
         for setting in examined("signing settings", SIGNING_SETTINGS):
-            self.assertEqual([a for a in archive["args"] if a.startswith(f"{setting}=")], [])
+            named = [a for a in archive["args"] if a.startswith(f"{setting}=")]
+            self.assertEqual(named, expected.get(setting, []), setting)
 
     def test_the_identity_is_the_one_the_keychain_pairs_with_the_profiles_certificate(self):
         # A second identity, listed first, whose certificate the profile does not hold.
@@ -915,6 +919,28 @@ class LaneCredential(unittest.TestCase):
         self.assertEqual(include["CODE_SIGN_IDENTITY"], self.identity)
         signing = json.loads((self.lane / "signing.json").read_text(encoding="utf-8"))
         self.assertEqual(signing["identity"], self.identity)
+
+    def test_the_archive_names_the_paired_identity_and_never_the_other_one(self):
+        # SPEC-352 A33 (R9 as amended): on A30's fixture, a second identity listed first whose
+        # certificate the profile does not hold, the archive's command line names the identity the
+        # keychain pairs with the profile's certificate, the include's and the signing record's,
+        # and never the other one.
+        other = (uuid.uuid4().hex + uuid.uuid4().hex[:8]).upper()
+        fixture = json.loads((self.shims / "fixture.json").read_text(encoding="utf-8"))
+        fixture["identities"].insert(0, [other, fixture["identities"][0][1]])
+        fixture["certificates"].insert(0, [(uuid.uuid4().hex * 2).upper(), other])
+        (self.shims / "fixture.json").write_text(json.dumps(fixture), encoding="utf-8")
+        _, records = self.sign()
+        archive = self.one(records, "xcodebuild", "archive")
+        setting = "CODE_SIGN_IDENTITY="
+        named = [a[len(setting) :] for a in archive["args"] if a.startswith(setting)]
+        self.assertEqual(len(named), 1, f"the archive's command line names {len(named)} identities")
+        self.assertEqual(named, [self.identity])
+        include = xcconfig((self.checkout / INCLUDE).read_text(encoding="utf-8"))
+        self.assertEqual(named, [include["CODE_SIGN_IDENTITY"]])
+        signing = json.loads((self.lane / "signing.json").read_text(encoding="utf-8"))
+        self.assertEqual(named, [signing["identity"]])
+        self.assertNotIn(other, " ".join(archive["args"]))
 
     def test_the_upload_key_lives_in_one_private_file_for_the_upload_step_only(self):
         self.sign()
