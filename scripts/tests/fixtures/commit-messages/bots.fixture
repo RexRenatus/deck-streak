@@ -1,0 +1,10 @@
+== bot-bump 1 planted[bot]
+Bump planted-crate to its next release
+
+Signed-off-by: planted[bot] <planted@example.invalid>
+
+== bot-build 1 planted[bot]
+build(deps): bump planted-crate to its next release
+
+== person 1 planted-person
+docs(census): read a person's commit

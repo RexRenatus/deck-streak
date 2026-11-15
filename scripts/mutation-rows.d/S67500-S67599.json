@@ -1,0 +1,230 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S67500-OTHER-TYPE-UNREAD",
+        "scripts/tests/test_commit_messages.py",
+        "        elif found.group(\"type\").lower() not in TYPES:",
+        "        elif False:",
+        "a subject of a type off the list is no longer a site (SPEC-675 R5)",
+        "test_commit_messages.PlantedSubjects.test_a_house_type_subject_is_clean_and_every_other_subject_is_a_site"
+      ],
+      [
+        "S67501-NO-TYPE-UNREAD",
+        "scripts/tests/test_commit_messages.py",
+        "            sites.append((\"no-type\", \"-\"))",
+        "            pass",
+        "a subject that is no Conventional Commit is no longer a site (SPEC-675 R4)",
+        "test_commit_messages.PlantedSubjects.test_a_house_type_subject_is_clean_and_every_other_subject_is_a_site"
+      ],
+      [
+        "S67502-LENGTH-UNREAD",
+        "scripts/tests/test_commit_messages.py",
+        "        if len(subject) > LIMIT:",
+        "        if False:",
+        "a subject over the bound is no longer a site (SPEC-675 R6)",
+        "test_commit_messages.PlantedSubjects.test_a_house_type_subject_is_clean_and_every_other_subject_is_a_site"
+      ],
+      [
+        "S67503-LIMIT-WIDENED",
+        "scripts/tests/test_commit_messages.py",
+        "LIMIT = 72",
+        "LIMIT = 100",
+        "the subject bound moves past 72 characters (SPEC-675 R6)",
+        "test_commit_messages.PlantedSubjects.test_a_house_type_subject_is_clean_and_every_other_subject_is_a_site"
+      ],
+      [
+        "S67504-SCOPE-UNREAD",
+        "scripts/tests/test_commit_messages.py",
+        "(?:\\((?P<scope>[^()\\s][^()]*)\\))?",
+        "",
+        "a scoped subject no longer reads as Conventional (SPEC-675 R4)",
+        "test_commit_messages.PlantedSubjects.test_a_house_type_subject_is_clean_and_every_other_subject_is_a_site"
+      ],
+      [
+        "S67505-BANG-UNREAD",
+        "scripts/tests/test_commit_messages.py",
+        ")?!?: ",
+        ")?: ",
+        "a subject with the breaking mark no longer reads as Conventional (SPEC-675 R4)",
+        "test_commit_messages.PlantedSubjects.test_a_house_type_subject_is_clean_and_every_other_subject_is_a_site"
+      ],
+      [
+        "S67506-CASE-READ",
+        "scripts/tests/test_commit_messages.py",
+        ".lower() not in TYPES",
+        " not in TYPES",
+        "a type in capitals is read as another type (SPEC-675 R4)",
+        "test_commit_messages.PlantedSubjects.test_a_house_type_subject_is_clean_and_every_other_subject_is_a_site"
+      ],
+      [
+        "S67507-MERGE-ARM-UNREAD",
+        "scripts/tests/test_commit_messages.py",
+        "    if parents >= 2 and any(form.fullmatch(subject) for form in TOOL_MERGES):",
+        "    if False:",
+        "a merge subject a tool wrote is judged (SPEC-675 R7)",
+        "test_commit_messages.PlantedToolSubjects.test_merges_and_reverts_a_tool_wrote_are_counted_and_every_other_subject_is_judged"
+      ],
+      [
+        "S67508-MERGE-PARENTS-UNREAD",
+        "scripts/tests/test_commit_messages.py",
+        "parents >= 2 and ",
+        "",
+        "a merge subject on one parent is taken as a tool's (SPEC-675 R7)",
+        "test_commit_messages.PlantedToolSubjects.test_merges_and_reverts_a_tool_wrote_are_counted_and_every_other_subject_is_judged"
+      ],
+      [
+        "S67509-REVERT-ARM-UNREAD",
+        "scripts/tests/test_commit_messages.py",
+        "    elif REVERT.fullmatch(subject) and REVERTS.search(message):",
+        "    elif False:",
+        "a revert subject git wrote is judged (SPEC-675 R8)",
+        "test_commit_messages.PlantedToolSubjects.test_merges_and_reverts_a_tool_wrote_are_counted_and_every_other_subject_is_judged"
+      ],
+      [
+        "S67510-REVERT-BODY-UNREAD",
+        "scripts/tests/test_commit_messages.py",
+        " and REVERTS.search(message)",
+        "",
+        "a revert subject with no body line is taken as git's (SPEC-675 R8)",
+        "test_commit_messages.PlantedToolSubjects.test_merges_and_reverts_a_tool_wrote_are_counted_and_every_other_subject_is_judged"
+      ],
+      [
+        "S67511-ATTRIBUTION-COUNTED",
+        "scripts/tests/test_commit_messages.py",
+        "            sites.append((\"attribution-trailer\", key.lower()))",
+        "            counted.append(key)",
+        "an attribution trailer is counted and not refused (SPEC-675 R10)",
+        "test_commit_messages.PlantedTrailers.test_an_attribution_key_in_gits_block_is_a_site_and_every_other_key_is_counted"
+      ],
+      [
+        "S67512-SIGN-OFF-ADMITTED",
+        "scripts/tests/test_commit_messages.py",
+        "frozenset({\"co-authored-by\", \"signed-off-by\"})",
+        "frozenset({\"co-authored-by\"})",
+        "a sign-off trailer is no longer a site (SPEC-675 R10)",
+        "test_commit_messages.PlantedTrailers.test_an_attribution_key_in_gits_block_is_a_site_and_every_other_key_is_counted"
+      ],
+      [
+        "S67513-BLOCK-RULE-UNREAD",
+        "scripts/tests/test_commit_messages.py",
+        "    if trailers and (others == 0 or (written and 4 * trailers >= trailers + others)):",
+        "    if trailers:",
+        "a last paragraph of prose with one trailer reads as a block (SPEC-675 R9)",
+        "test_commit_messages.PlantedTrailers.test_an_attribution_key_in_gits_block_is_a_site_and_every_other_key_is_counted"
+      ],
+      [
+        "S67514-QUARTER-RULE-UNREAD",
+        "scripts/tests/test_commit_messages.py",
+        "(written and 4 * trailers >= trailers + others)",
+        "False",
+        "a sign-off under prose no longer reads as a block (SPEC-675 R9)",
+        "test_commit_messages.PlantedTrailers.test_an_attribution_key_in_gits_block_is_a_site_and_every_other_key_is_counted"
+      ],
+      [
+        "S67515-DIVIDER-UNREAD",
+        "scripts/tests/test_commit_messages.py",
+        "    kept = lines[: cut[0]] if cut else lines",
+        "    kept = lines",
+        "a trailer after the divider line is read (SPEC-675 R9)",
+        "test_commit_messages.PlantedTrailers.test_an_attribution_key_in_gits_block_is_a_site_and_every_other_key_is_counted"
+      ],
+      [
+        "S67516-STALE-ADMITTED",
+        "scripts/tests/test_commit_messages.py",
+        "            refused.append(stale)",
+        "            pass",
+        "a stale entry no longer fails at warn (SPEC-675 R12)",
+        "test_commit_messages.PlantedVerdict.test_the_level_decides_whether_an_unlisted_site_fails_and_a_stale_entry_always_does"
+      ],
+      [
+        "S67517-FAIL-ADMITS",
+        "scripts/tests/test_commit_messages.py",
+        "            if level == \"fail\":",
+        "            if False:",
+        "an unlisted site no longer fails at fail (SPEC-675 R11)",
+        "test_commit_messages.PlantedVerdict.test_the_level_decides_whether_an_unlisted_site_fails_and_a_stale_entry_always_does"
+      ],
+      [
+        "S67518-LISTED-SITE-WARNS",
+        "scripts/tests/test_commit_messages.py",
+        "        if site not in names:",
+        "        if True:",
+        "a listed site prints a warning (SPEC-675 R11)",
+        "test_commit_messages.PlantedVerdict.test_the_level_decides_whether_an_unlisted_site_fails_and_a_stale_entry_always_does"
+      ],
+      [
+        "S67519-READ-BY-ID-DROPPED",
+        "scripts/tests/test_commit_messages.py",
+        "[*population, *lookups]",
+        "population",
+        "a listed site read by its id reads as stale (SPEC-675 R12)",
+        "test_commit_messages.PlantedVerdict.test_the_level_decides_whether_an_unlisted_site_fails_and_a_stale_entry_always_does"
+      ],
+      [
+        "S67520-EMPTY-ADMITTED",
+        "scripts/tests/test_commit_messages.py",
+        "    population = examined(\"commit(s)\", population)",
+        "    population = list(population)",
+        "an empty population is no longer refused (SPEC-675 R1)",
+        "test_commit_messages.PlantedVerdict.test_an_empty_population_is_void"
+      ],
+      [
+        "S67521-LEVEL-FAIL",
+        "scripts/tests/test_commit_messages.py",
+        "LEVEL = \"warn\"",
+        "LEVEL = \"fail\"",
+        "the census starts at fail (SPEC-675 R14)",
+        "test_commit_messages.PlantedVerdict.test_the_level_decides_whether_an_unlisted_site_fails_and_a_stale_entry_always_does"
+      ],
+      [
+        "S67522-FOLD-UNREAD",
+        "scripts/tests/test_commit_messages.py",
+        "        if line[:1] in (\" \", \"\\t\") and folding:",
+        "        if False:",
+        "a folded trailer value breaks the block (SPEC-675 R9)",
+        "test_commit_messages.PlantedTrailers.test_an_attribution_key_in_gits_block_is_a_site_and_every_other_key_is_counted"
+      ],
+      [
+        "S67523-RELEASE-TYPE-DROPPED",
+        "scripts/tests/test_commit_messages.py",
+        "        \"release\",\n",
+        "",
+        "the release title's type is off the list (SPEC-675 R4)",
+        "test_commit_messages.PlantedSubjects.test_a_house_type_subject_is_clean_and_every_other_subject_is_a_site"
+      ],
+      [
+        "S67524-SPACED-KEY-UNREAD",
+        "scripts/tests/test_commit_messages.py",
+        "[ \\t]*:",
+        ":",
+        "a trailer with a space before its colon is not read (SPEC-675 R9)",
+        "test_commit_messages.PlantedTrailers.test_an_attribution_key_in_gits_block_is_a_site_and_every_other_key_is_counted"
+      ],
+      [
+        "S67525-SHALLOW-UNREAD",
+        "scripts/tests/test_commit_messages.py",
+        "    if shallow.strip() != \"false\":",
+        "    if False:",
+        "a shallow checkout is no longer VOID (SPEC-675 R3)",
+        "test_commit_messages.PlantedRange.test_the_log_reader_splits_each_record_and_an_unreadable_range_is_void"
+      ],
+      [
+        "S67526-FIRST-PARENT-UNREAD",
+        "scripts/tests/test_commit_messages.py",
+        "    if first_parent != 0:",
+        "    if False:",
+        "a head with no first parent is no longer VOID (SPEC-675 R3)",
+        "test_commit_messages.PlantedRange.test_the_log_reader_splits_each_record_and_an_unreadable_range_is_void"
+      ],
+      [
+        "S67527-PARENTS-UNCOUNTED",
+        "scripts/tests/test_commit_messages.py",
+        "len(parents.split())",
+        "1",
+        "every commit reads as one parent's (SPEC-675 R2)",
+        "test_commit_messages.PlantedRange.test_the_log_reader_splits_each_record_and_an_unreadable_range_is_void"
+      ]
+    ]
+  }
+}
