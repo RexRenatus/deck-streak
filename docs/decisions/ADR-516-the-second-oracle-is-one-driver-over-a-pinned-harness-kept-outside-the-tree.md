@@ -124,6 +124,24 @@ Chosen against:
 - **No per-collection phase.** Under a 1 microsecond tick a second collection opened in the same call could take the
   first one's clock ids, a regime no earlier run exercised.
 
+## D8. One engine pin, held by a test, and what it was chosen against
+
+The engine pin is written in four files: the root manifest's engine patch (the `rev` of its `anki` line), the
+driver's `ENGINE_COMMIT`, the runbook's pin and the stand-in harness's `PINNED`. The manifest is the one source. A
+test in `tools/parity-oracle/test_goldens.py` reads the other three as text and fails, naming the file, when one of
+them names another commit or does not name one exactly once, so a pin move that leaves a copy behind is red in
+public CI before any run. Planted copies prove it can fail: a manifest with another rev fails all three files, and
+an oracle file with another pin, with none or with two fails alone.
+
+Chosen against:
+- **The driver reading the manifest.** The driver's bytes are every engine golden's `generator_sha256`, so any edit
+  to it stales every golden until a sandboxed run writes them again, and a pin read at run time would follow a
+  manifest edit with no test seeing the move.
+- **One shared constant the three files import.** The runbook is prose, the stand-in is a standalone fixture, and
+  making the driver import the constant is the same driver edit.
+- **Leaving the tie to the run.** The driver compares the harness's engine with its pin only inside a run, and no
+  test reads the runbook's pin; a stale copy would show late or never.
+
 ## Consequences
 
 - The run that writes the goldens pins the harness in the driver and commits the goldens, the census digests and the
@@ -133,6 +151,7 @@ Chosen against:
   and the registry's bytes the explicit mods.
 - A run after the first writes goldens only after its non-writing passes and the semantic gate read as the rule
   fixed before it.
+- An engine pin move that leaves the driver, the runbook or the stand-in behind is red in public CI before any run.
 
 ## Confirmation
 
@@ -142,6 +161,8 @@ SPEC-498's acceptance fence: the three Python test files beside `test_generate.p
 A14 in the same fence (the shared-GUID test in `test_anki_registry.py`, the UTC test in `test_anki_driver.py` and
 the run-clock test in `test_goldens.py`) confirms D7's input half; A15's run record confirms the read before the
 write.
+
+A16 in the same fence (the three pin tests in `test_goldens.py`) confirms D8.
 
 ## What would make this wrong
 

@@ -32,6 +32,7 @@ flowchart LR
 | driver to output | strict goldens and the census digests | closed keys; no golden holding a stock line; writes only in the output folder |
 | golden to Rust | typed cases | `mismatches` reports each case that differs; the fixture with one wrong output proves it can fail |
 | tree to workflows | nothing | no workspace member, lock package or workflow reaches the harness |
+| manifest to oracle | the engine pin | the driver's `ENGINE_COMMIT`, the runbook's pin and the stand-in's `PINNED` each equal the manifest's engine `rev`, named once; else `test_goldens.py` fails naming the file (ADR-516 D8) |
 
 **The two roles.**
 

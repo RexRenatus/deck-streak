@@ -697,6 +697,34 @@ def planted_engine(**changes):
     return golden
 
 
+#: SPEC-498 R20: the three oracle files that copy the root manifest's engine pin, each with the
+#: form that finds it: the driver's `ENGINE_COMMIT`, the runbook's pin and the stand-in's `PINNED`.
+ORACLE_PINS = (
+    (
+        "tools/parity-oracle/anki/generate.py",
+        re.compile(r'^ENGINE_COMMIT = "([0-9a-f]{40})"$', re.MULTILINE),
+    ),
+    ("tools/parity-oracle/anki/RUNBOOK.md", re.compile(r"at the pin `([0-9a-f]{40})`")),
+    (
+        "tools/parity-oracle/anki/fixtures/stand_in_harness.py",
+        re.compile(r'^PINNED = "([0-9a-f]{40})"$', re.MULTILINE),
+    ),
+)
+
+
+def oracle_engine_pins(root):
+    """Each ORACLE_PINS path, mapped to the list of every engine pin its form finds in that file
+    under root."""
+    return {}
+
+
+def pin_faults(commit, pins):
+    """Why the oracle files' pins are not the manifest's engine pin, in ORACLE_PINS order: the
+    manifest pins none, or a file does not name its pin exactly once, or names another; nothing
+    for a file that agrees."""
+    return []
+
+
 class EngineGoldensAreCurrent(unittest.TestCase):
     """SPEC-498 R12 to R17: the engine's goldens, each held against a planted golden first."""
 
@@ -887,6 +915,72 @@ class EngineGoldensAreCurrent(unittest.TestCase):
                 ("engine", ANKI_GENERATOR, path.stem),
             )
             self.assertEqual(path.read_text(encoding="utf-8"), anki_generate.render(golden))
+
+
+class TheOraclePinsAreTheManifestPin(unittest.TestCase):
+    """SPEC-498 R20: the driver, the runbook and the stand-in name the manifest's engine pin, once each."""
+
+    def planted_root(self, changes=()):
+        """A planted tree in a temporary directory, removed when the test ends: the root manifest
+        and the three oracle files copied from ROOT, each at its own relative path, then each
+        (path, text) of changes written over its copy."""
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        root = Path(scratch.name)
+        for path in ("Cargo.toml", *(path for path, _ in ORACLE_PINS)):
+            (root / path).parent.mkdir(parents=True, exist_ok=True)
+            (root / path).write_text((ROOT / path).read_text(encoding="utf-8"), encoding="utf-8")
+        for path, text in changes:
+            (root / path).write_text(text, encoding="utf-8")
+        return root
+
+    def test_every_oracle_engine_pin_is_the_manifest_engine_pin(self):
+        commit = pinned_engine((ROOT / "Cargo.toml").read_text(encoding="utf-8"))
+        self.assertIsNotNone(commit)
+        pins = oracle_engine_pins(ROOT)
+        examined("oracle engine pin file(s)", pins)
+        self.assertEqual(sorted(pins), sorted(path for path, _ in ORACLE_PINS))
+        self.assertEqual(pin_faults(commit, pins), [])
+
+    def test_a_manifest_with_another_engine_pin_is_caught(self):
+        manifest = (ROOT / "Cargo.toml").read_text(encoding="utf-8")
+        commit = pinned_engine(manifest)
+        other = "b" * 40
+        root = self.planted_root(
+            (("Cargo.toml", manifest.replace(f'rev = "{commit}"', f'rev = "{other}"')),)
+        )
+        self.assertEqual(pinned_engine((root / "Cargo.toml").read_text(encoding="utf-8")), other)
+        self.assertEqual(
+            pin_faults(other, oracle_engine_pins(root)),
+            [f"{path} pins {commit}, not the manifest's {other}" for path, _ in ORACLE_PINS],
+        )
+
+    def test_an_oracle_file_with_another_pin_or_not_one_is_caught(self):
+        commit = pinned_engine((ROOT / "Cargo.toml").read_text(encoding="utf-8"))
+        other = "c" * 40
+        for path, form in examined("oracle pin form(s)", ORACLE_PINS):
+            text = (ROOT / path).read_text(encoding="utf-8")
+            plants = (
+                (
+                    "another",
+                    text.replace(commit, other),
+                    f"{path} pins {other}, not the manifest's {commit}",
+                ),
+                (
+                    "none",
+                    text.replace(commit, "z" * 40),
+                    f"{path} names the engine pin 0 time(s), not once",
+                ),
+                (
+                    "two",
+                    f"{text}\n{form.search(text).group(0)}\n",
+                    f"{path} names the engine pin 2 time(s), not once",
+                ),
+            )
+            for plant, planted, fault in plants:
+                with self.subTest(path=path, plant=plant):
+                    root = self.planted_root(((path, planted),))
+                    self.assertEqual(pin_faults(commit, oracle_engine_pins(root)), [fault])
 
 
 def day_token_examples(readme):
