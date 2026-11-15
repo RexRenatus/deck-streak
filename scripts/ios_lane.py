@@ -417,7 +417,15 @@ def sign():
         f"PROVISIONING_PROFILE_SPECIFIER = {profile['UUID']}\n",
         encoding="utf-8",
     )
-    xcodebuild(private, "archive", *build, "-archivePath", str(lane / "app.xcarchive"), *numbers())
+    xcodebuild(
+        private,
+        "archive",
+        *build,
+        "-archivePath",
+        str(lane / "app.xcarchive"),
+        *numbers(),
+        f"CODE_SIGN_IDENTITY={matched[0]}",
+    )
 
 
 def upload():
