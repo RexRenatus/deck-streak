@@ -5,5 +5,19 @@
 # nothing on the tests still running: `terminate = "immediate"` ends them, where the default waits
 # for each to finish. A slow test a mutant has already failed never runs to its end, which keeps
 # every leg inside its bound.
+# Every run of the default profile writes its JUnit results to target/nextest/default/junit.xml,
+# which CI uploads (SPEC-038 R21). A failing test runs once more, and a test that passes on that
+# retry still fails the run: its JUnit entry is a flaky failure, so a flake is seen and never
+# admitted (R22).
+[profile.default]
+retries = 1
+flaky-result = "fail"
+
+[profile.default.junit]
+path = "junit.xml"
+
 [profile.mutants]
 fail-fast = { max-fail = 1, terminate = "immediate" }
+# Every custom profile inherits the default one, so this one sets its own retries: a mutant's
+# failing test runs once and is never retried (R22).
+retries = 0

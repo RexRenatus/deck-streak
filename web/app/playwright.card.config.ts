@@ -6,13 +6,17 @@ import { defineConfig, devices } from '@playwright/test';
 
 const port = Number(process.env.CARD_PORT ?? 4175);
 
+// CI names a file here, and the run then writes its JUnit results to it beside the list
+// reporter (SPEC-038 R21). Unset, as on a builder's machine, the list reporter stays alone.
+const JUNIT = process.env.PLAYWRIGHT_JUNIT_OUTPUT_FILE;
+
 export default defineConfig({
   testDir: 'tests-card',
   forbidOnly: !!process.env.CI,
   workers: 1,
   fullyParallel: false,
   timeout: 60_000,
-  reporter: 'list',
+  reporter: JUNIT ? [['list'], ['junit', { outputFile: JUNIT }]] : 'list',
   use: { baseURL: `http://127.0.0.1:${port}` },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },

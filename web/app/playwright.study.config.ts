@@ -7,6 +7,10 @@ import { defineConfig, devices } from '@playwright/test';
 // tests' 4173, the engine's 4174 and the card's 4175; `strictPort` refuses a taken one.
 const port = Number(process.env.STUDY_PORT ?? 4176);
 
+// CI names a file here, and the run then writes its JUnit results to it beside the list
+// reporter (SPEC-038 R21). Unset, as on a builder's machine, the list reporter stays alone.
+const JUNIT = process.env.PLAYWRIGHT_JUNIT_OUTPUT_FILE;
+
 export default defineConfig({
   testDir: 'tests-study',
   forbidOnly: !!process.env.CI,
@@ -14,7 +18,7 @@ export default defineConfig({
   workers: 1,
   fullyParallel: false,
   timeout: 120_000,
-  reporter: 'list',
+  reporter: JUNIT ? [['list'], ['junit', { outputFile: JUNIT }]] : 'list',
   use: { baseURL: `http://127.0.0.1:${port}` },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
