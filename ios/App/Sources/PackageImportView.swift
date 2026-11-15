@@ -39,7 +39,7 @@ struct PackageImportOffer: View {
     var body: some View {
         if importer.listIsEmpty {
             VStack(spacing: 16) {
-                Text("No decks yet. Import an Anki deck package from Files.")
+                Text("No cards yet. Import an Anki deck package from Files.")
                     .foregroundStyle(Color.tideMuted)
                 Button("Import a deck") { importer.showingImporter = true }
                     .accessibilityIdentifier("import-deck")

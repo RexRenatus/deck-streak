@@ -59,6 +59,22 @@ final class PackageImportFlowTests: XCTestCase {
             "the empty deck list shows the import offer import-deck, ready to tap")
     }
 
+    /// Beside the default deck a fresh install lists, the offer's words say that no card is held
+    /// yet, and never that no deck is (SPEC-681 R7).
+    @MainActor
+    func testTheOfferReadsTrueBesideTheDefaultDeck() throws {
+        let app = try launched(planting: nil)
+        let row = app.staticTexts["deck-row-Default"].firstMatch
+        let ending = NSPredicate(format: "label ENDSWITH %@", "from Files.")
+        let sentence = app.staticTexts.matching(ending).firstMatch
+        let button = app.buttons["import-deck"]
+        _ = reading(until: true) { row.exists && sentence.exists && button.exists }
+        XCTAssertEqual(
+            [label(of: row), label(of: sentence), label(of: button)],
+            ["Default", "No cards yet. Import an Anki deck package from Files.", "Import a deck"],
+            "beside the default deck's row the offer reads that no card is held yet")
+    }
+
     // MARK: - Steps
 
     /// The app, launched on a fresh, empty collection directory, and given a planted file to
