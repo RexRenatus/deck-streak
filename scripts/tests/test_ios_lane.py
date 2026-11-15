@@ -981,7 +981,6 @@ class LaneCredential(unittest.TestCase):
                 "signingCertificate": self.identity,
                 "signingStyle": "manual",
                 "teamID": self.ids["team"],
-                "testFlightInternalTestingOnly": True,
             },
         )
         self.assertFalse(Path(key["path"]).parent.exists())
@@ -991,6 +990,28 @@ class LaneCredential(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertFalse(Path(failed).parent.exists())
         self.assertEqual(list(self.lane.glob("key-*")), [])
+
+    def test_the_export_options_carry_no_internal_testing_only_key(self):
+        # SPEC-352 A34 (R10 as amended): the options the upload step writes for the export hold no
+        # internal-only testing key, nor any other value in its place, and the seven other options
+        # keep exactly the values A10's test pins.
+        self.sign()
+        code, _, errors, records, _ = self.step("upload-to-testflight", ("KEY", "KEYID", "ISSUER"))
+        self.assertEqual(code, 0, errors)
+        options = self.one(records, "xcodebuild", "-exportArchive")["export options"]
+        self.assertNotIn("testFlightInternalTestingOnly", sorted(options))
+        self.assertEqual(
+            options,
+            {
+                "destination": "upload",
+                "manageAppVersionAndBuildNumber": False,
+                "method": "app-store-connect",
+                "provisioningProfiles": {self.ids["app id"]: self.ids["profile uuid"]},
+                "signingCertificate": self.identity,
+                "signingStyle": "manual",
+                "teamID": self.ids["team"],
+            },
+        )
 
     def test_no_secret_value_reaches_a_childs_argv_or_environment_or_the_log(self):
         self.sign()
