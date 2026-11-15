@@ -7,8 +7,8 @@ import { describe, expect, it } from 'vitest';
 // the tdd probe does not resolve, so this test proves its coverage instead, as
 // planted-coverage.test.ts does for the card suite: the suite names a test for each step of the
 // review loop, each test in a persistent profile of its own, seeded through the built Worker's own
-// `seed` operation; it audits both study screens; it runs in Chromium and WebKit over the staged
-// build; and `test:study` runs it.
+// `seed` operation; it audits both study screens; it runs in Chromium, WebKit and Firefox over the
+// staged build; and `test:study` runs it.
 const APP = fileURLToPath(new URL('../../..', import.meta.url));
 const SUITE = join(APP, 'tests-study');
 const SPEC = join(SUITE, 'study.spec.ts');
@@ -68,12 +68,13 @@ describe('the study suite', () => {
     expect(audit.match(/new AxeBuilder\(/g) ?? []).toHaveLength(2);
     expect(audit).toMatch(/toHaveURL\(\/\\\/study\\\/review\$\/\)/);
 
-    // Chromium and WebKit, one worker, over the staged build on the study port
+    // Chromium, WebKit and Firefox, one worker, over the staged build on the study port
     const config = read(CONFIG);
     expect(config).toMatch(/testDir:\s*'tests-study'/);
     expect([...config.matchAll(/devices\['(Desktop \w+)'\]/g)].map((match) => match[1])).toEqual([
       'Desktop Chrome',
-      'Desktop Safari'
+      'Desktop Safari',
+      'Desktop Firefox'
     ]);
     expect(config).toMatch(/workers:\s*1,/);
     expect(config).toMatch(/process\.env\.STUDY_PORT\s*\?\?\s*4176/);

@@ -62,12 +62,12 @@ async function seen(request: APIRequestContext): Promise<string[]> {
 }
 
 /** The sync server's account for `browserName`'s project, which playwright.engine.config.ts made
- * for the run: Chromium's the first, WebKit's the second, named as the config names it. */
+ * for the run: Chromium's the first, WebKit's the second, Firefox's the third, as the config names it. */
 function account(browserName: PlaywrightWorkerOptions['browserName']): { user: string; password: string } {
   const user = process.env.ENGINE_SYNC_USER;
   const password = process.env.ENGINE_SYNC_PASSWORD;
   if (!user || !password) throw new Error('playwright.engine.config.ts makes the sync account');
-  return { user: browserName === 'webkit' ? `${user}-webkit` : user, password };
+  return { user: browserName === 'chromium' ? user : `${user}-${browserName}`, password };
 }
 
 /** Starts the page's Worker client and opens its collection. */

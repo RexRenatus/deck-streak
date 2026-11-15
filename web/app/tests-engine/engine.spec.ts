@@ -1,7 +1,7 @@
 // The web engine in the browsers (SPEC-338 R9, R11): the module scripts/web-engine-build.sh wrote,
-// in its dedicated Worker over OPFS, driven through the harness page in Chromium and WebKit. Each
-// test runs in a persistent profile of its own, as a user's browser has; an empty path is a fresh
-// temporary profile. The measurement tests print one `ENGINE-REPORT` line each for section 7.
+// in its dedicated Worker over OPFS, driven through the harness page in Chromium, WebKit and Firefox.
+// Each test runs in a persistent profile of its own, as a user's browser has; an empty path is a
+// fresh temporary profile. The measurement tests print one `ENGINE-REPORT` line each for section 7.
 import {
   expect,
   test,
