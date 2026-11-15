@@ -357,11 +357,14 @@ private func scriptedCards() -> [Scripted] {
         "let tries = 0; const go = () => { tries += 1; location.assign('\(a.under("script-nav"))/1');"
             + " if (tries < 5) { setTimeout(go, 200); } }; setTimeout(go, 0);"
     })
-    // L12's `form-action` holds the form as well, as predicted in section 8.
+    // L12's `form-action` holds the form as well, as predicted in section 8. The form is tried up
+    // to five times, as `script-nav` assigns its location, so one try that fails before it is sent
+    // leaves its reference another try that reaches (SPEC-644 R1).
     cards.append(scripted("script-form", held: [.L3, .L5, .L12], alone: nil, .path) { a in
         "const form = document.createElement('form'); form.method = 'post';"
             + " form.action = '\(a.under("script-form"))/1'; document.body.appendChild(form);"
-            + " setTimeout(() => form.submit(), 0);"
+            + " let tries = 0; const go = () => { tries += 1; form.submit();"
+            + " if (tries < 5) { setTimeout(go, 200); } }; setTimeout(go, 0);"
     })
     // L5 holds the window as well as L6, measured on both simulators: its reference without L6
     // created no window, removing L6 alone opened nothing, and SPEC-349's `nav-blank` creates one
