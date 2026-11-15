@@ -1,0 +1,47 @@
+{
+  "rules": {
+    "FSM-CHECK-LIST": {
+      "level": "warn",
+      "pairs": [
+        {"table": "sync_runs", "column": "status", "enum": "RunStatus", "file": "crates/ingest/src/sync_runs.rs", "spelling": {"fn": "as_str"}},
+        {"table": "chests", "column": "state", "enum": "ChestState", "file": "crates/quests/src/chest_store.rs", "spelling": {"fn": "name"}},
+        {"table": "skip_days", "column": "state", "enum": "SkipState", "file": "crates/ingest/src/skip.rs", "spelling": "snake_case"},
+        {"table": "reading_topic_days", "column": "state", "enum": "TopicState", "file": "crates/readings/src/state.rs", "spelling": {"fn": "name"}},
+        {"table": "cron_fires", "column": "last_outcome", "enum": "Outcome", "file": "crates/coordination/src/ledger.rs", "spelling": {"fn": "as_str"}},
+        {"table": "reading_runs", "column": "outcome", "enum": "RunOutcome", "file": "crates/readings/src/state.rs", "spelling": {"fn": "name"}},
+        {"table": "agent_runs", "column": "verdict", "enum": "Verdict", "file": "crates/agent/src/verdict.rs", "spelling": {"fn": "name"}}
+      ],
+      "unpaired": [
+        {"table": "notification_queue", "column": "state", "why": "its store writes the state as SQL literals in crates/notifications/src/ledger.rs, and no enum spells it"},
+        {"table": "inbox_captures", "column": "state", "why": "no enum spells it"}
+      ]
+    },
+    "FSM-WILDCARD": {
+      "level": "warn",
+      "listed": [
+        {"path": "crates/readings/src/state.rs", "enum": "TopicState", "fn": "class"},
+        {"path": "crates/readings/src/state.rs", "enum": "TopicState", "fn": "reason"}
+      ]
+    },
+    "FSM-UNREACHABLE": {
+      "level": "warn",
+      "listed": []
+    },
+    "FSM-UNCOVERED": {
+      "level": "warn",
+      "listed": [
+        {"path": "crates/curriculum/src/progress.rs", "enum": "BandStep"},
+        {"path": "crates/daemon/src/lifecycle.rs", "enum": "NotifyState"},
+        {"path": "crates/daemon/src/wiring.rs", "enum": "Step"},
+        {"path": "crates/ingest/src/gate.rs", "enum": "AnchorState"},
+        {"path": "crates/ingest/src/skip.rs", "enum": "SkipState"},
+        {"path": "crates/ingest/src/sync_runs.rs", "enum": "RunStatus"},
+        {"path": "crates/quests/src/chest_store.rs", "enum": "ChestState"},
+        {"path": "crates/readings/src/state.rs", "enum": "TopicState"},
+        {"path": "crates/insights/src/registry.rs", "enum": "State"},
+        {"path": "crates/identity/src/passkeys.rs", "enum": "State"},
+        {"path": "crates/bot/src/poll.rs", "enum": "Step"}
+      ]
+    }
+  }
+}
