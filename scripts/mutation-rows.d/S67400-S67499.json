@@ -1,0 +1,142 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S67400-AN-OPEN-PULL-REQUEST-KEEPS-ITS-HEAD",
+        "scripts/tests/test_stale_branches.py",
+        "        if name not in heads and name not in KEPT and not protected and committed < cutoff",
+        "        if name not in KEPT and not protected and committed < cutoff",
+        "R2: a branch an open pull request of this repository names is not stale; without it that branch is counted (SPEC-674)",
+        "test_stale_branches.PlantedListsAreJudged.test_a_branch_an_open_pull_request_names_is_not_stale"
+      ],
+      [
+        "S67401-THE-WINDOW-EDGE-IS-INSIDE",
+        "scripts/tests/test_stale_branches.py",
+        "        if name not in heads and name not in KEPT and not protected and committed < cutoff",
+        "        if name not in heads and name not in KEPT and not protected and committed <= cutoff",
+        "R2: a commit exactly at the window's edge is inside it; without it that branch is counted (SPEC-674)",
+        "test_stale_branches.PlantedListsAreJudged.test_a_branch_with_a_commit_inside_the_window_is_not_stale"
+      ],
+      [
+        "S67402-THE-WINDOW-LOOKS-BACK",
+        "scripts/tests/test_stale_branches.py",
+        "    cutoff = lists.read_at - window_days * DAY",
+        "    cutoff = lists.read_at + window_days * DAY",
+        "R2: the window ends at the read stamp; without it a recent branch is counted (SPEC-674)",
+        "test_stale_branches.PlantedListsAreJudged.test_a_branch_with_a_commit_inside_the_window_is_not_stale"
+      ],
+      [
+        "S67403-A-FORKS-PULL-REQUEST-KEEPS-NO-BRANCH",
+        "scripts/tests/test_stale_branches.py",
+        "    heads = {head for head, repository in lists.pulls if repository == lists.repository}",
+        "    heads = {head for head, repository in lists.pulls}",
+        "R2: only a pull request whose head repository is this one keeps a branch; without it a fork's keeps one (SPEC-674)",
+        "test_stale_branches.PlantedListsAreJudged.test_a_branch_past_the_window_with_no_open_pull_request_is_stale"
+      ],
+      [
+        "S67404-KEPT-IS-NOT-COUNTED",
+        "scripts/tests/test_stale_branches.py",
+        "        if name not in heads and name not in KEPT and not protected and committed < cutoff",
+        "        if name not in heads and not protected and committed < cutoff",
+        "R3: a branch KEPT names is not counted; without it the release branch is counted (SPEC-674)",
+        "test_stale_branches.PlantedListsAreJudged.test_the_kept_and_protected_branches_are_not_counted"
+      ],
+      [
+        "S67405-A-PROTECTED-BRANCH-IS-NOT-COUNTED",
+        "scripts/tests/test_stale_branches.py",
+        "        if name not in heads and name not in KEPT and not protected and committed < cutoff",
+        "        if name not in heads and name not in KEPT and committed < cutoff",
+        "R3: a protected branch is not counted; without it that branch is counted (SPEC-674)",
+        "test_stale_branches.PlantedListsAreJudged.test_the_kept_and_protected_branches_are_not_counted"
+      ],
+      [
+        "S67406-KEPT-HOLDS-THE-RELEASE-BRANCH",
+        "scripts/tests/test_stale_branches.py",
+        "KEPT = (\"dev\", \"main\")",
+        "KEPT = (\"dev\",)",
+        "R3: KEPT names the release branch; without it that branch is counted (SPEC-674)",
+        "test_stale_branches.PlantedListsAreJudged.test_the_kept_and_protected_branches_are_not_counted"
+      ],
+      [
+        "S67407-PROTECTED-READS-TRUE",
+        "scripts/tests/test_stale_branches.py",
+        "            protected[rest[0]] = rest[1] == \"true\"",
+        "            protected[rest[0]] = rest[1] == \"false\"",
+        "R4: a protected line reads true as protected; without it the protection is inverted (SPEC-674)",
+        "test_stale_branches.PlantedListsAreJudged.test_the_kept_and_protected_branches_are_not_counted"
+      ],
+      [
+        "S67408-THE-STAMP-IS-READ",
+        "scripts/tests/test_stale_branches.py",
+        "            stamps.append(int(rest[0]))",
+        "            stamps.append(0)",
+        "R4: the read stamp is the list's own; without it no branch is past the window (SPEC-674)",
+        "test_stale_branches.PlantedListsAreJudged.test_a_branch_past_the_window_with_no_open_pull_request_is_stale"
+      ],
+      [
+        "S67409-DISAGREEING-READS-ARE-REFUSED",
+        "scripts/tests/test_stale_branches.py",
+        "    unmatched = sorted(set(protected) ^ set(committed))",
+        "    unmatched = []",
+        "R4: two branch reads that disagree are refused; without it the reader passes them (SPEC-674)",
+        "test_stale_branches.PlantedListsAreJudged.test_lists_whose_branch_reads_disagree_are_refused"
+      ],
+      [
+        "S67410-AN-EMPTY-LIST-IS-VOID",
+        "scripts/tests/test_stale_branches.py",
+        "    examined(\"branch(es)\", sorted(lists.branches))",
+        "    sorted(lists.branches)",
+        "R5: a list with no branch is refused; without it an empty list passes (SPEC-674)",
+        "test_stale_branches.PlantedListsAreJudged.test_an_empty_list_is_void"
+      ],
+      [
+        "S67411-A-COUNT-PAST-THE-RECORD-PASSES-AT-WARN",
+        "scripts/tests/test_stale_branches.py",
+        "        return level == \"warn\", line",
+        "        return False, line",
+        "R6: a count past the record passes at warn; without it warn fails (SPEC-674)",
+        "test_stale_branches.PlantedListsAreJudged.test_a_count_past_the_record_is_a_site_at_warn_and_fails_at_fail"
+      ],
+      [
+        "S67412-A-COUNT-PAST-THE-RECORD-FAILS-AT-FAIL",
+        "scripts/tests/test_stale_branches.py",
+        "        return level == \"warn\", line",
+        "        return True, line",
+        "R6: a count past the record fails at fail; without it fail passes (SPEC-674)",
+        "test_stale_branches.PlantedListsAreJudged.test_a_count_past_the_record_is_a_site_at_warn_and_fails_at_fail"
+      ],
+      [
+        "S67413-A-COUNT-AT-THE-RECORD-IS-NO-SITE",
+        "scripts/tests/test_stale_branches.py",
+        "    if count > recorded:",
+        "    if count >= recorded:",
+        "R6: a count equal to the record is no site; without it the record's own count warns (SPEC-674)",
+        "test_stale_branches.PlantedListsAreJudged.test_a_count_at_the_record_passes_with_its_line"
+      ],
+      [
+        "S67414-A-RECORD-ABOVE-THE-COUNT-FAILS-AT-WARN",
+        "scripts/tests/test_stale_branches.py",
+        "    if count < recorded:",
+        "    if count < recorded and level == \"fail\":",
+        "R7: a record above the count fails at warn; without it warn passes it (SPEC-674)",
+        "test_stale_branches.PlantedListsAreJudged.test_a_record_above_the_count_fails_at_warn_as_at_fail"
+      ],
+      [
+        "S67415-THE-LEVEL-STARTS-AT-WARN",
+        "scripts/tests/test_stale_branches.py",
+        "LEVEL = \"warn\"",
+        "LEVEL = \"fail\"",
+        "R6: the level starts at warn; without it the census starts at fail (SPEC-674)",
+        "test_stale_branches.PlantedListsAreJudged.test_the_census_starts_at_warn_over_ninety_days"
+      ],
+      [
+        "S67416-THE-WINDOW-IS-NINETY-DAYS",
+        "scripts/tests/test_stale_branches.py",
+        "WINDOW_DAYS = 90",
+        "WINDOW_DAYS = 91",
+        "R2: the window is 90 days; without it the window moves (SPEC-674)",
+        "test_stale_branches.PlantedListsAreJudged.test_the_census_starts_at_warn_over_ninety_days"
+      ]
+    ]
+  }
+}
