@@ -75,6 +75,8 @@ A32: red at 06dbdb2: AssertionError: 1 != 0 : openssl pkcs12 failed with exit 1
 A32: green at ce15791
 A33: red at 88bad39: AssertionError: 0 != 1 : the archive's command line names 0 identities
 A33: green at f89e6c0
+A34: red at 7f2ba31: AssertionError: 'testFlightInternalTestingOnly' unexpectedly found in ['destination', 'manageAppVersionAndBuildNumber', 'method', 'provisioningProfiles', 'signingCertificate', 'signingStyle', 'teamID', 'testFlightInternalTestingOnly']
+A34: green at 5457904
 ```
 
 - Three red lines are shortened where the failure printed more than a criterion needs: A8's set
@@ -182,3 +184,17 @@ A33: green at f89e6c0
   archive's command line names no identity and the guard now expects the include's, and green at
   f89e6c0, which changes no test.
   The green commit `f89e6c0` carries the archive's change, and `git diff --quiet f89e6c0 HEAD` over `scripts/ios_lane.py` and `scripts/tests/test_ios_lane.py` reads rc 0.
+- The external export's amendment (SPEC-352 R10 as amended). Its one criterion, A34, is new, so
+  it takes one red and one green line in the fence above. Its test and the amended pin were
+  committed at 7f2ba31, before the lane script changed at 5457904, and each red and green was read
+  locally by running `test_ios_lane.py` at each commit: `Ran 34 tests` with two failures at
+  7f2ba31, and `OK` at 5457904. The red quoted above is
+  `test_the_export_options_carry_no_internal_testing_only_key`'s: the export options still hold
+  the internal-only key.
+  The export-options pin in A10's test,
+  `test_the_upload_key_lives_in_one_private_file_for_the_upload_step_only`, that the change meets
+  by construction is amended in the same red commit, with no assertion removed: the internal-only
+  key leaves its expected options. That test is red at 7f2ba31 on that pin, the options the export
+  reads still ending `'testFlightInternalTestingOnly': True}`, and green at 5457904, which
+  changes no test.
+  The green commit `5457904` carries the export options' change, and `git diff --quiet 5457904 HEAD` over `scripts/ios_lane.py` and `scripts/tests/test_ios_lane.py` reads rc 0.

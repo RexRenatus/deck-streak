@@ -124,6 +124,7 @@ R10. Upload: only the upload step writes the key, as a mode `0600` file in a fre
     options it writes under the runner's temporary directory: method `app-store-connect`, manual
     signing, destination `upload`, the build number left as the plan set it, and internal testing
     only. Its `run` names `upload-to-testflight`.
+    Amended: section 8, the export options no longer limit the build to internal testing.
 R11. An `always()` step removes the key directory, the installed profile, the include file and the
     job keychain wherever any remains, restores the keychain search list, and succeeds when there
     is nothing to remove.
@@ -232,6 +233,7 @@ R22. Ruling 461: the internal lane also starts on a push to `dev`, filtered to t
 | A31 | no `hashlib` call in the lane, its test or the fake tools' program names a digest outside the strong set the weak-hashing query reads, whether reached by the module, an alias or an imported name; each planted weak spelling is refused by name | `test_ios_lane.py`, `LaneDigests`, its census and its planted control |
 | A32 | with the real openssl and a legacy bundle made for the test, the re-wrap is given the certificate and its encrypted key in a mode `0600` file in the lane, named by `-in`; the file is gone when the next tool runs, and after a failed re-wrap, which still refuses with `openssl pkcs12 failed with exit 1` and runs no `security` call; and the bundle the step imports re-reads with the certificate and the key each under 3DES and a SHA-1 MAC | `test_ios_lane.py`, `test_a_legacy_certificate_re_wraps_with_both_bags_under_3des_and_a_sha1_mac`, `test_the_re_wrap_reads_its_input_from_a_private_file_removed_once_it_returns`, `test_a_failed_re_wrap_refuses_as_before_and_leaves_no_certificate_in_the_lane` |
 | A33 | with a second identity listed first whose certificate the profile does not hold, the archive's command line names one `CODE_SIGN_IDENTITY` build setting, the identity the keychain pairs with the profile's certificate, equal to the include file's and the signing record's, and never the other identity | `test_ios_lane.py`, `test_the_archive_names_the_paired_identity_and_never_the_other_one` |
+| A34 | after signing, the export options the upload step writes, as `xcodebuild -exportArchive` reads them, hold no `testFlightInternalTestingOnly` key and equal the seven other options exactly: method `app-store-connect`, destination `upload`, manual signing with the profile, the identity and the team, and the build number left as the plan set it | `test_ios_lane.py`, `test_the_export_options_carry_no_internal_testing_only_key` |
 
 ```acceptance
 A1: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_the_internal_plan_refuses_any_event_or_ref_but_a_dispatch_on_dev
@@ -267,6 +269,7 @@ A30: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_t
 A31: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k LaneDigests
 A32: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_a_legacy_certificate_re_wraps_with_both_bags_under_3des_and_a_sha1_mac -k test_the_re_wrap_reads_its_input_from_a_private_file_removed_once_it_returns -k test_a_failed_re_wrap_refuses_as_before_and_leaves_no_certificate_in_the_lane
 A33: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_the_archive_names_the_paired_identity_and_never_the_other_one
+A34: python3 -m unittest discover -s scripts/tests -p test_ios_lane.py -k test_the_export_options_carry_no_internal_testing_only_key
 ```
 
 Every criterion runs on Linux in the hygiene job's `python` stage, with no credential, no macOS
@@ -606,6 +609,42 @@ The app's project spec, the workflows and every other tool call are unchanged.
 | `docs/decisions/ADR-363-testflight-lane.md` | docs | changed: insert-only amendment |
 | `docs/red-first/SPEC-352.md` | docs | changed: A33's red and green lines and one bullet appended |
 | `changelog.d/testflight-archive-identity.md` | docs | added |
+
+The amendment changes no workflow, no file under `ios/`, no other tool call and no repository or
+environment setting.
+
+### The export options no longer limit the build to internal testing
+
+R10's export options held TestFlight's internal-only testing option set true
+(`testFlightInternalTestingOnly`), so every build the lane uploaded was limited to internal
+testing. The project drops that option from the lane's export.
+
+R10 as amended: the export options are method `app-store-connect`, manual signing, destination
+`upload` and the build number left as the plan set it, with no internal-only testing option and
+no other value in its place. R10's text above stays as written; this amendment drops its last
+clause, internal testing only. Section 5 stands as written: the lane opens no external testing
+group, no public link and no App Store submission, and the upload's key stays the Developer-role
+key of ADR-363 D4. The key's private file and directory, the export's arguments and the seven
+other options are unchanged.
+
+- A34 (R10 as amended) is new: after signing, the export options the upload step writes, as
+  `xcodebuild -exportArchive` reads them, hold no `testFlightInternalTestingOnly` key and equal
+  the seven other options exactly.
+- No criterion is amended. A10's test,
+  `test_the_upload_key_lives_in_one_private_file_for_the_upload_step_only`, holds the
+  export-options pin that the change meets by construction, and it is amended in the red commit
+  with no test, subtest or assertion removed: the internal-only key leaves its expected options,
+  and the seven other options keep their values. Its red and green are recorded in
+  `docs/red-first/SPEC-352.md`.
+
+| file | context | change |
+|---|---|---|
+| `scripts/ios_lane.py` | scripts | changed: the export options drop the internal-only testing option (R10 as amended) |
+| `scripts/tests/test_ios_lane.py` | tests | changed: A34 added, and A10's export-options pin amended to the seven other options |
+| `docs/specs/SPEC-352-testflight-lane.md` | docs | changed: insert-only amendment |
+| `docs/decisions/ADR-363-testflight-lane.md` | docs | changed: insert-only amendment |
+| `docs/red-first/SPEC-352.md` | docs | changed: A34's red and green lines and one bullet appended |
+| `changelog.d/testflight-external-export.md` | docs | added |
 
 The amendment changes no workflow, no file under `ios/`, no other tool call and no repository or
 environment setting.
