@@ -27,6 +27,12 @@
       "test_dynamic_imports_check"
     ]
   },
+  "scripts/formal_ci.py": {
+    "dir": "scripts/tests",
+    "modules": [
+      "test_formal_ci"
+    ]
+  },
   "scripts/ios_icon.py": {
     "dir": "scripts/tests",
     "modules": [
