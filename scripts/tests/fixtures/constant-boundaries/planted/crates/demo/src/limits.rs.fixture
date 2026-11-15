@@ -1,0 +1,40 @@
+//! Planted: three comparisons against named constants, one against a literal and one undecided.
+
+pub const MAX_ITEMS: usize = 8;
+pub const MIN_ITEMS: usize = 2;
+pub const SOFT_CAP: usize = 6;
+
+pub enum Tier {
+    GOLD,
+    SILVER,
+}
+
+pub fn fits(count: usize) -> bool {
+    count <= MAX_ITEMS
+}
+
+pub fn enough(count: usize) -> bool {
+    count >= MIN_ITEMS
+}
+
+pub fn roomy(count: usize) -> bool {
+    // A comment is not code: count < SOFT_CAP
+    count < SOFT_CAP
+}
+
+pub fn empty(count: usize) -> bool {
+    count == 0
+}
+
+pub fn top(tier: Tier) -> bool {
+    tier == Tier::GOLD
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn three_items_are_roomy() {
+        let count = 3;
+        assert!(count < super::SOFT_CAP);
+    }
+}

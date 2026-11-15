@@ -1,0 +1,4 @@
+#[test]
+fn nothing_ships_beside_this_test() {
+    assert!(demo::MAX_ITEMS > 0);
+}

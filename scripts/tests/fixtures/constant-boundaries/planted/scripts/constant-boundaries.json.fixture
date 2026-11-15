@@ -1,0 +1,56 @@
+{
+  "_": [
+    "Planted register: six keys name a test below, at and above the constant, six name one at it."
+  ],
+  "boundary_tests": {
+    "crates/demo/src/limits.rs <= MAX_ITEMS #1": {
+      "below": "crates/demo/tests/limits.rs::seven_items_fit",
+      "at": "crates/demo/tests/limits.rs::eight_items_fit",
+      "above": "crates/demo/tests/limits.rs::nine_items_do_not_fit"
+    },
+    "crates/demo/src/limits.rs >= MIN_ITEMS #1": {
+      "at": "crates/demo/tests/limits.rs::two_items_are_enough"
+    },
+    "ios/App/Limits.swift > Limits.maxCards #1": {
+      "below": "ios/AppTests/LimitsTests.swift::testOneUnderTheLimitIsNotOver",
+      "at": "ios/AppTests/LimitsTests.swift::testTheLimitIsNotOver",
+      "above": "ios/AppTests/LimitsTests.swift::testOneOverTheLimitIsOver"
+    },
+    "ios/App/Limits.swift >= Limits.minCards #1": {
+      "at": "ios/AppTests/LimitsTests.swift::testTheMinimumIsEnough"
+    },
+    "scripts/demo-limits.sh > MAX_JOBS #1": {
+      "below": "scripts/tests/test_demo_limits.py::test_three_jobs_pass",
+      "at": "scripts/tests/test_demo_limits.py::test_four_jobs_pass",
+      "above": "scripts/tests/test_demo_limits.py::test_five_jobs_are_refused"
+    },
+    "scripts/demo-limits.sh < MIN_FREE #1": {
+      "at": "scripts/tests/test_demo_limits.py::test_two_free_pass"
+    },
+    "scripts/demo_limits.py >= MAX_RETRIES #1": {
+      "below": "scripts/tests/test_demo_limits.py::test_two_attempts_are_not_exhausted",
+      "at": "scripts/tests/test_demo_limits.py::test_three_attempts_are_exhausted",
+      "above": "scripts/tests/test_demo_limits.py::test_four_attempts_are_exhausted"
+    },
+    "scripts/demo_limits.py > MIN_DELAY #1": {
+      "at": "scripts/tests/test_demo_limits.py::test_the_minimum_delay_is_not_waited"
+    },
+    "web/app/src/lib/demo/Badge.svelte >= MIN_QUERY #1": {
+      "below": "web/app/src/lib/demo/limits.test.ts::a badge one under the query minimum hides search",
+      "at": "web/app/src/lib/demo/limits.test.ts::a badge at the query minimum shows search",
+      "above": "web/app/src/lib/demo/limits.test.ts::a badge one over the query minimum shows search"
+    },
+    "web/app/src/lib/demo/Badge.svelte <= SOFT_WIDTH #1": {
+      "at": "web/app/src/lib/demo/limits.test.ts::a badge at the soft width is narrow"
+    },
+    "web/app/src/lib/demo/limits.ts > PAGE_SIZE #1": {
+      "below": "web/app/src/lib/demo/limits.test.ts::one under the page size is not full",
+      "at": "web/app/src/lib/demo/limits.test.ts::the page size is not full",
+      "above": "web/app/src/lib/demo/limits.test.ts::one over the page size is full"
+    },
+    "web/app/src/lib/demo/limits.ts >= MIN_QUERY #1": {
+      "at": "web/app/src/lib/demo/limits.test.ts::the shortest query is searchable"
+    }
+  },
+  "listed": {}
+}

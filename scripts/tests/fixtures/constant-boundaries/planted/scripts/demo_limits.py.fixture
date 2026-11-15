@@ -1,0 +1,25 @@
+"""Planted: three comparisons against named constants, one against a literal and one undecided."""
+
+MAX_RETRIES = 3
+MIN_DELAY = 1
+SOFT_LIMIT = 5
+
+
+def exhausted(attempts):
+    return attempts >= MAX_RETRIES
+
+
+def waited(delay):
+    return delay > MIN_DELAY
+
+
+def busy(jobs):
+    return jobs != SOFT_LIMIT
+
+
+def idle(jobs):
+    return jobs == 0
+
+
+def late(hour):
+    return hour > CUTOFF_HOUR

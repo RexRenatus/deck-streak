@@ -1,0 +1,26 @@
+use demo::{enough, fits, MAX_ITEMS, MIN_ITEMS, SOFT_CAP};
+
+#[test]
+fn seven_items_fit() {
+    assert!(fits(MAX_ITEMS - 1));
+}
+
+#[test]
+fn eight_items_fit() {
+    assert!(fits(MAX_ITEMS));
+}
+
+#[test]
+fn nine_items_do_not_fit() {
+    assert!(!fits(MAX_ITEMS + 1));
+}
+
+#[test]
+fn two_items_are_enough() {
+    assert!(enough(MIN_ITEMS));
+}
+
+#[test]
+fn the_soft_cap_is_above_one() {
+    assert!(SOFT_CAP > 1);
+}
