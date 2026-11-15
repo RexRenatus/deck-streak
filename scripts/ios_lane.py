@@ -441,7 +441,6 @@ def upload():
         "signingCertificate": signing["identity"],
         "signingStyle": "manual",
         "teamID": signing["team"],
-        "testFlightInternalTestingOnly": True,
     }
     (lane / "export-options.plist").write_bytes(plistlib.dumps(options))
     private = (*signing["private"], os.environ["KEYID"], os.environ["ISSUER"])

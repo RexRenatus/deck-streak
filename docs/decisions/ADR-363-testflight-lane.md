@@ -369,3 +369,21 @@ otherwise stand.
   targets through the include alone, and a package target refuses a manually named profile, which
   D3 keeps in the project-level include: no other signing setting goes on any command line, the
   profile least of all.
+
+### The export options no longer limit the build to internal testing
+
+D4 wrote the export options with internal testing only, so every build the lane uploaded was
+limited to internal testing. SPEC-352 section 8 amends R10: the export drops TestFlight's
+internal-only testing option, and no other value takes its place. That clause of D4 is
+superseded, and the rest of D4 stands: the platform's own export and upload, the Developer-role
+key for one step, and its `0600` file in a fresh `0700` directory. The lane still manages no
+testers, and it opens no external testing group, no public link and no App Store submission.
+
+- The option left out of the export options — chosen, because a build the lane uploads is then no
+  longer limited to internal testing, while the key, its role, its file and the export's
+  arguments stay as D4 chose them.
+- The option kept and set true — rejected, because it limits every build the lane uploads to
+  internal testing, the limit this amendment removes.
+- The option written as false — rejected, because the amended export carries no internal-only
+  option at all: nothing is written in its place, and the options stay the seven that A10's test
+  pins.
