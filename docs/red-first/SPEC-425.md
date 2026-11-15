@@ -40,3 +40,26 @@ The flag's effect was measured once and never committed. With `return m.sync_sta
 ERRORS` at f8f41858, with the flag off, and `1 ERRORS` at 3e53179d, with the flag on:
 `Fallthrough case in switch.`, code 7029, on that case. The file was restored from git after each
 reading.
+
+## Amendment for #852 (section 10)
+
+Section 10's SPEC, ADR and schematic text was committed first (f884d00e). The tests of A4 and
+A5 were committed next and alone (2c781f27), with the frame arm, its table, its plants and near
+misses, and the edits that make SPEC-407's A1 and A4 read the name `sandbox`, over a host whose
+frame carries no `sandbox`. The host's frame and the harness's W1 variant follow (686fbb70);
+that commit changes no assertion.
+
+```text
+A4: pnpm exec vitest run web/app/src/lib/card/card-sinks.test.ts -t "shipped code holds no iframe without a sandbox attribute"
+A5: pnpm exec vitest run web/app/src/lib/card/frame-host.test.ts -t "the host's one frame is sandboxed with no token, as the card frame is"
+```
+
+```red-first
+A4: red at 2c781f27: card-sinks.test.ts: expected { …(1) } to deeply equal {}
+A5: red at 2c781f27: frame-host.test.ts: expected null to be '' // Object.is equality
+A4: green at 686fbb70
+A5: green at 686fbb70
+```
+
+SPEC-407's A1 and A4, changed by section 10, read their names without `sandbox` at 2c781f27 and
+green at 686fbb70; their lines in `docs/red-first/SPEC-407.md` stay as written.

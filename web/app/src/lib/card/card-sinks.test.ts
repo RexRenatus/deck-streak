@@ -212,3 +212,68 @@ describe('no shipped code runs text as code, leaks the opener, posts to any orig
     examined('shipped source files under src', files);
   });
 });
+
+/** SPEC-425 section 10, R7 and R8 (#852): an `iframe` tag whose own tag names no `sandbox`
+ * attribute. The tag runs from `<iframe` to the nearest `>`, and its quoted values and `{...}`
+ * expressions are blanked before the attribute is looked for, so a value that names the word is no
+ * attribute, and a tag the census misreads, or a spelling it cannot read as the attribute, reads as
+ * a hit, never as a miss. */
+function framesWithoutSandbox(text: string): number {
+  let count = 0;
+  for (const found of text.matchAll(/<iframe\b/gi)) {
+    const end = text.indexOf('>', found.index);
+    const tag = text.slice(found.index, end < 0 ? text.length : end);
+    const names = tag.replace(/"[^"]*(?:"|$)|'[^']*(?:'|$)|`[^`]*(?:`|$)|\{[^{}]*(?:\}|$)/g, ' ');
+    if (!/\ssandbox(?![\w-])/i.test(names)) count += 1;
+  }
+  return count;
+}
+
+/** SPEC-425 section 10: the frame arm, in a table of its own read by the same matcher. */
+const FRAME_SHAPES: Readonly<Record<string, Arm>> = {
+  'iframe without sandbox': framesWithoutSandbox
+};
+
+// SPEC-425 section 10, R7 to R10, A4 (#852). Every frame the shipped code writes as a tag carries a
+// `sandbox` attribute: the arm is held at none over the walk the other tests read, with no expected
+// site and no allow-list, and each assertion comes before its examined() call.
+describe('every frame the shipped code writes is sandboxed', () => {
+  it('shipped code holds no iframe without a sandbox attribute', () => {
+    const files = sources(SRC);
+    const census: Record<string, Record<string, number>> = {};
+    for (const file of files) {
+      const found = sinksIn(readFileSync(join(APP, file), 'utf8'), FRAME_SHAPES);
+      if (Object.keys(found).length > 0) census[file] = found;
+    }
+
+    // R8: each plant reads the arm once, and each near miss reads none
+    const planted = [
+      '<iframe srcdoc={card}></iframe>',
+      '<IFRAME SRC="https://cards.example/"></IFRAME>',
+      '<body><iframe title="The card" srcdoc="<p>a</p>"></iframe></body>',
+      '<iframe title="no sandbox" srcdoc={card}>',
+      '<iframe data-sandbox="" srcdoc={card}>',
+      '<iframe sandboxed srcdoc={card}>',
+      '<iframe {sandbox} srcdoc={card}>',
+      '<iframe title="a > b" sandbox="" srcdoc={card}>'
+    ];
+    const nearMisses = [
+      '<iframe sandbox={FRAME_SANDBOX} {title} srcdoc={framed.srcdoc} data-card-refused={framed.refused}></iframe>',
+      '<iframe sandbox="" title="The card" srcdoc="<p>a</p>"></iframe>',
+      '<iframe title="The card" sandbox srcdoc="<p>a</p>">',
+      '<IFRAME SANDBOX SRCDOC="x"></IFRAME>',
+      'iframe{display:block;border:0;width:100%;height:100%}',
+      "host.body.querySelector('iframe')"
+    ];
+    for (const text of planted) {
+      expect(sinksIn(text, FRAME_SHAPES), text).toEqual({ 'iframe without sandbox': 1 });
+    }
+    for (const text of nearMisses) expect(sinksIn(text, FRAME_SHAPES), text).toEqual({});
+    expect(sinksIn(planted.join('\n'), FRAME_SHAPES)).toEqual({ 'iframe without sandbox': planted.length });
+
+    expect(census).toEqual({});
+    examined('shipped source files under src', files);
+    examined('planted frames', planted);
+    examined('frame near misses', nearMisses);
+  });
+});

@@ -79,11 +79,11 @@ flowchart LR
 
 ## 3. Web channels
 
-The card frame is `<iframe sandbox="" srcdoc="...">`, and its document is the host: a head carrying the host policy, and a body that is one frame, with no sandbox attribute of its own, whose `srcdoc` is the card document (`frameHost`, SPEC-407, ADR-421). The card document inherits the host's policy and the page's, and the host's frame inherits the sandbox's flags. The layers:
+The card frame is `<iframe sandbox="" srcdoc="...">`, and its document is the host: a head carrying the host policy, and a body that is one frame, sandboxed as the card frame is (SPEC-425 section 10), whose `srcdoc` is the card document (`frameHost`, SPEC-407, ADR-421). The card document inherits the host's policy and the page's, and it carries the sandbox's flags both from its own frame's attribute and from the host. The layers:
 
 | layer | what it is | where it is set |
 |---|---|---|
-| W1 | the sandbox with no token: an opaque origin, no script, no forms, no popups, no top navigation, no downloads, no plugins | `CardFrame.svelte` |
+| W1 | the sandbox with no token: an opaque origin, no script, no forms, no popups, no top navigation, no downloads, no plugins | `policy.js` `FRAME_SANDBOX`, set on the card frame by `CardFrame.svelte` and on the host's frame by `frameHost` |
 | W2 | the frame policy, at two points: the host policy `img-src data:; script-src 'none'; object-src 'none'; base-uri 'none'`, which the card document inherits from its host, so it is in force from the card document's creation, before its first byte is parsed; and a `Content-Security-Policy` meta element placed first in the card document's head: `default-src 'none'; img-src data:; media-src data:; font-src data:; style-src 'unsafe-inline'; form-action 'none'; base-uri 'none'` | `policy.js` `HOST_POLICY`, written by `frameHost`, and `FRAME_POLICY`, written by `frameDocument` |
 | W3 | the strip: the card's `link`, `meta`, `base` and `template` elements removed (a `template` can declare a shadow root whose `link` the inert parse never sees, and with no script a card has no use for one), the `srcset` attribute removed from every element that carries one (an image-set candidate is fetched from what that attribute lists, and the element's `src` still shows its image), the `target` attribute removed from every element that carries one (a link's follow is then the frame's own navigation, for which WebKit's click handler starts no preconnect), `x-dns-prefetch-control` off, and a re-parse of the composed document that refuses the card if any of those elements came back or any element, the root included, carries a `srcset` or a `target` | `frame-document.ts` |
 | W4 | the page's `frame-src 'none'`: a frame's own navigation, including one the frame starts itself, is checked against the embedding page's `frame-src`. A `srcdoc` document is not fetched, so the card frame itself still renders | `sveltekit.config.js`, from `policy.js` `PAGE_FRAME_SRC` |
@@ -1049,3 +1049,26 @@ web view as one string and builds no host, so this path has no counterpart there
 Rebuilt onto `dev` at `0ef74a05`: the host's refusal is now named `host-readback`, and the
 status region reads `frameCard`'s reason (SPEC-505, ADR-523), so the quiet status in the diagram
 above is the state at `83846ea3`. The path of the carriage return is unchanged.
+
+## 15. W1 at two points (SPEC-425 section 10, ADR-421 D8)
+
+Kind: component, of the sandbox layer. Read at DeckStreak `dev` 0756b82f. W1 is one value,
+`FRAME_SANDBOX` (`web/app/src/lib/card/policy.js:18`), set on the card frame
+(`web/app/src/lib/card/CardFrame.svelte:19`) and on the host's one frame
+(`web/app/src/lib/card/frame-host.ts:46`). The card document's flags are its own frame's and those
+it takes from the host, which are the card frame's, so it carries every flag at both points. The
+harness's W1 variant takes both points off, so its host is the one it built before.
+
+```mermaid
+flowchart TD
+  value["FRAME_SANDBOX, empty: policy.js"]
+  outer["the card frame: CardFrame.svelte"]
+  inner["the host's frame: frameHost"]
+  card["the card document: every sandboxing flag"]
+  w1off["the W1 variant: both points off, no sandbox anywhere"]
+  value --> outer
+  value --> inner
+  outer --> card
+  inner --> card
+  value -.-> w1off
+```

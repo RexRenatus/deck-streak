@@ -1,5 +1,5 @@
 import { frameDocument, type FrameDocument } from './frame-document';
-import { HOST_POLICY } from './policy.js';
+import { FRAME_SANDBOX, HOST_POLICY } from './policy.js';
 
 // SPEC-407 R1 to R3; ADR-421 D1, D2, D4. The card frame's host: the document `CardFrame` sets on
 // its frame, whose head carries the host policy and whose body is one frame holding the frame
@@ -38,12 +38,12 @@ export function hosted(host: string): string | null {
 
 /**
  * The host for a frame document: the policy meta (none for an empty policy), the style, and one
- * frame. A host whose head, frame document or title does not read back as written is refused, so a
- * card that escaped its attribute shows nothing rather than itself.
+ * frame, sandboxed as the card frame is (SPEC-425 section 10). A host whose head, frame document
+ * or title does not read back as written is refused, so an escaped card shows nothing, not itself.
  */
 export function frameHost(card: string, title: string, policy: string = HOST_POLICY): FrameDocument {
   const meta = policy === '' ? '' : `<meta http-equiv="Content-Security-Policy" content="${policy}">`;
-  const host = `<!doctype html><html><head>${meta}${HOST_STYLE}</head><body><iframe title="${attribute(title)}" srcdoc="${attribute(card)}"></iframe></body></html>`;
+  const host = `<!doctype html><html><head>${meta}${HOST_STYLE}</head><body><iframe sandbox="${FRAME_SANDBOX}" title="${attribute(title)}" srcdoc="${attribute(card)}"></iframe></body></html>`;
   const again = parse(host);
   const kept =
     again.head.innerHTML === meta + HOST_STYLE &&

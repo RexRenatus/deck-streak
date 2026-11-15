@@ -71,6 +71,14 @@ const hostOf = (doc: string, policy?: string): string => {
   return hosted.srcdoc;
 };
 
+/** W1's second point, the host's frame's own sandbox (SPEC-425 section 10), taken off for the W1
+ * variant, so W1 off leaves no sandbox anywhere and its host is the one it built before. */
+const withoutHostSandbox = (built: string): string => {
+  const sandboxed = `<iframe sandbox="${FRAME_SANDBOX}" `;
+  if (!built.includes(sandboxed)) throw new Error(`the host's frame carries no sandbox for the card ${id}`);
+  return built.replace(sandboxed, '<iframe ');
+};
+
 if (page === 'index.html' || off === 'W4') {
   // the shipped frame; with frame-src off, only the page header differs (vite.card.config.ts)
   mount(CardFrame, { target: host, props: { html: card.html, css: card.css, title: 'The card' } });
@@ -80,7 +88,7 @@ if (page === 'index.html' || off === 'W4') {
   const shipped = frameDocument(card.html, card.css).srcdoc ?? '';
   if (off !== null && off !== 'W1') element.setAttribute('sandbox', FRAME_SANDBOX);
   if (page === 'open.html') element.srcdoc = composed('', card.css, card.html);
-  else if (off === 'W1') element.srcdoc = hostOf(shipped);
+  else if (off === 'W1') element.srcdoc = withoutHostSandbox(hostOf(shipped));
   else if (off === 'W2') element.srcdoc = hostOf(shipped.replace(policyMeta(FRAME_POLICY), ''), '');
   else if (off === 'W3') element.srcdoc = hostOf(composed(policyMeta(FRAME_POLICY), card.css, card.html));
   else if (off === 'W3meta') element.srcdoc = hostOf(composed('', card.css, card.html));

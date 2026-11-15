@@ -50,8 +50,8 @@ describe('the card frame', () => {
     expect(frame.getAttribute('sandbox')).toBe('');
   });
 
-  // SPEC-407 R1; ADR-421 D2. The frame's document is a host: its one frame, with no sandbox of its
-  // own, holds the frame document, so the frame document inherits the host's policy at creation.
+  // SPEC-407 R1; ADR-421 D2, D8; SPEC-425 section 10. The frame's document is a host: its one frame,
+  // sandboxed as the card frame is, holds the frame document, which inherits the host's policy.
   it("the card frame's document is the host, whose one frame holds the frame document", () => {
     const shown = render(CardFrame, { html: CARD, css: CSS, title: 'The card' });
     const [frame] = [...shown.container.querySelectorAll('iframe')];
@@ -63,7 +63,7 @@ describe('the card frame', () => {
     );
     expect(inner).toHaveLength(1);
     expect(inner[0].tagName).toBe('IFRAME');
-    expect(inner[0].getAttributeNames().sort()).toEqual(['srcdoc', 'title']);
+    expect(inner[0].getAttributeNames().sort()).toEqual(['sandbox', 'srcdoc', 'title']);
     expect(inner[0].getAttribute('title')).toBe('The card');
     expect(inner[0].getAttribute('srcdoc')?.startsWith(OPENING)).toBe(true);
     expect(cardDocument(frame)).toBe(inner[0].getAttribute('srcdoc'));

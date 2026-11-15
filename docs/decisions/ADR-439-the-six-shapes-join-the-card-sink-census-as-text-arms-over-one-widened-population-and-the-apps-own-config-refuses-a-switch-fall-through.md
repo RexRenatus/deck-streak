@@ -278,3 +278,20 @@ error 7029, and restores the file from git.
   reaches the page).
 - The schematic `docs/schematics/web-sink-census.md` draws the walk, the arms and the type check's
   chain before and after.
+
+## Amendment for #852
+
+### D9. The frame arm joins the census in a table of its own, at none
+
+D6 kept the iframe-without-`sandbox` arm out until its one site was triaged. The site is the host's
+frame (`web/app/src/lib/card/frame-host.ts:46` at dev `0756b82f`), and ADR-421's D8 gives it the
+card frame's sandbox, so the arm holds at none with no expected site and no allow-list, by D2's
+rule. The arm reads an `iframe` tag from `<iframe` to the nearest `>`, blanks its quoted values and
+`{...}` expressions, and looks for a `sandbox` attribute name; a misread tag, a value naming the
+word, a longer name holding it and a spelling it cannot read as the attribute each read as a hit,
+by SPEC-425 R3's rule. It sits in a third table, `FRAME_SHAPES`, under a test of its own, so A1's
+name, its six arms and its fence line stay as written. D5's kill criteria hold it as a new arm. No
+row is added, by D7's reason: the plants are the arm's kill proof.
+
+Chosen against:
+- The arm as a seventh entry of `ZERO_SHAPES`: rejected because A1's test name, its fence line and R1's six would then each read wrong.
