@@ -302,3 +302,79 @@ fn privacy_json_declares_every_store_table_once_with_the_ports_erase_mode() {
         "the planted inventory"
     );
 }
+
+/// The media tables' rows of the two media tests: two files, one name bound to the first and three
+/// pins, so each table holds a count of its own. The first file's hash is 32 zero bytes.
+const MEDIA_ROWS: &str = "
+INSERT INTO media_file (hash, size, kind, state, synced, added_ms, last_seen_ms)
+  VALUES (zeroblob(32), 3, 0, 0, 0, 0, 0), (CAST(hex(zeroblob(16)) AS BLOB), 5, 0, 0, 0, 0, 0);
+INSERT INTO media_name (name, hash, origin, bound_ms, unbound)
+  VALUES ('MARKERMEDIANAME.png', zeroblob(32), 1, 0, 0);
+INSERT INTO media_pin (hash, reason, until_ms)
+  VALUES (zeroblob(32), 1, 0), (zeroblob(32), 2, 0), (CAST(hex(zeroblob(16)) AS BLOB), 1, 0);
+";
+
+/// Each media table and the rows [`MEDIA_ROWS`] gives it.
+const MEDIA_COUNTS: [(&str, usize); 3] = [("media_file", 2), ("media_name", 1), ("media_pin", 3)];
+
+/// Pins the export's three media statements and their keys: each media table is exported from
+/// its own rows, so the counts read 2, 1 and 3, and the name is exported as written with its
+/// hash as lowercase hex.
+#[test]
+fn the_export_writes_each_media_table_from_its_own_rows() {
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let path = dir.path().join("media-export.store");
+    let mut findings = Vec::new();
+    if let Err(why) = base_store(&path, SERVER) {
+        findings.push(why);
+    }
+    if let Err(error) = raw(&path).execute_batch(MEDIA_ROWS) {
+        findings.push(format!("the media rows were refused: {error}"));
+    }
+    let store = Store::open(&path, SERVER).expect("the store reopens");
+    let export = store.export().expect("the export runs");
+    for (table, held) in examined("media table(s)", MEDIA_COUNTS.to_vec()) {
+        let exported = export["tables"][table].as_array().map(Vec::len);
+        if exported != Some(held) {
+            findings.push(format!("{table}: exported {exported:?} rows, holds {held}"));
+        }
+    }
+    let name = &export["tables"]["media_name"][0];
+    if name["name"] != Value::String("MARKERMEDIANAME.png".to_owned())
+        || name["hash"] != Value::String("00".repeat(32))
+    {
+        findings.push(format!("the media name was exported as {name}"));
+    }
+    assert_eq!(findings, Vec::<String>::new(), "the media export");
+}
+
+/// Pins the erase's three media deletes and their order: with foreign keys enforced, the names
+/// and the pins are deleted before the files they name, and every media table is empty after.
+#[test]
+fn the_server_erase_empties_the_media_tables_names_and_pins_first() {
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let path = dir.path().join("media-erase.store");
+    let mut findings = Vec::new();
+    if let Err(why) = base_store(&path, SERVER) {
+        findings.push(why);
+    }
+    if let Err(error) = raw(&path).execute_batch(MEDIA_ROWS) {
+        findings.push(format!("the media rows were refused: {error}"));
+    }
+    let mut store = Store::open(&path, SERVER).expect("the store reopens");
+    let enforced = store.settings().map(|settings| settings.foreign_keys);
+    if enforced.as_ref().ok() != Some(&true) {
+        findings.push(format!("the store's foreign keys read {enforced:?}"));
+    }
+    if let Err(error) = store.erase() {
+        findings.push(format!("the erase failed: {error}"));
+    }
+    drop(store);
+    for (table, _) in examined("media table(s)", MEDIA_COUNTS.to_vec()) {
+        let left = rows(&path, table);
+        if left != 0 {
+            findings.push(format!("{table}: {left} row(s) left"));
+        }
+    }
+    assert_eq!(findings, Vec::<String>::new(), "the media erase");
+}

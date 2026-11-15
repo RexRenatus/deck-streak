@@ -516,3 +516,141 @@ fn the_steps_staging_and_the_staging_sync_read_line_by_line_as_written() {
         SYNC.len()
     );
 }
+
+/// The `media_file` row of `hash`: its size, kind, state, synced flag, added time and last-seen
+/// time.
+fn file_row(db: &Path, hash: &MediaHash) -> (i64, i64, i64, i64, i64, i64) {
+    raw(db)
+        .query_row(
+            "SELECT size, kind, state, synced, added_ms, last_seen_ms FROM media_file WHERE hash = ?1",
+            [hash.as_bytes().as_slice()],
+            |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                    row.get(5)?,
+                ))
+            },
+        )
+        .expect("the file row is read")
+}
+
+/// The `media_name` row of `name`: its hash, origin, bound time and unbound flag.
+fn name_row(db: &Path, name: &str) -> (Vec<u8>, i64, i64, i64) {
+    raw(db)
+        .query_row(
+            "SELECT hash, origin, bound_ms, unbound FROM media_name WHERE name = ?1",
+            [name],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+        )
+        .expect("the name row is read")
+}
+
+/// Pins the inserts of `MEDIA_FILE_PUT` and `MEDIA_NAME_BIND` column for column: a put commits a
+/// present, unsynced, unclassified file row of its size, added and last seen at its time, and a
+/// live name row bound by a put to that file at its time.
+#[test]
+fn a_put_writes_its_file_row_and_its_name_row_column_for_column() {
+    let folder = folder();
+    let media = open(&folder.db, &folder.root);
+    let hash = media
+        .put("columns.png", BYTES, NOW_MS)
+        .expect("the file is put");
+    let size = i64::try_from(BYTES.len()).expect("a short length");
+    assert_eq!(
+        file_row(&folder.db, &hash),
+        (size, 0, 0, 0, NOW_MS, NOW_MS),
+        "the file row"
+    );
+    assert_eq!(
+        name_row(&folder.db, "columns.png"),
+        (hash.as_bytes().to_vec(), 1, NOW_MS, 0),
+        "the name row"
+    );
+}
+
+/// Pins the update of `MEDIA_FILE_PUT`: a file whose row holds a wrong size is quarantined by its
+/// read, and a second put of its bytes turns the row present again at the bytes' size and the
+/// second put's time, keeping the time it was first added.
+#[test]
+fn a_second_put_turns_a_quarantined_file_present_at_its_size_and_time() {
+    let folder = folder();
+    let media = open(&folder.db, &folder.root);
+    let hash = media
+        .put("again.png", BYTES, NOW_MS)
+        .expect("the file is put");
+    raw(&folder.db)
+        .execute(
+            "UPDATE media_file SET size = 1 WHERE hash = ?1",
+            [hash.as_bytes().as_slice()],
+        )
+        .expect("a wrong size is planted");
+    assert_eq!(media.reader().read("again.png", LIMIT), None);
+    assert_eq!(state(&folder.db, &hash), 1, "the read quarantines the file");
+    media
+        .put("again.png", BYTES, NOW_MS + 1)
+        .expect("the file is put again");
+    let size = i64::try_from(BYTES.len()).expect("a short length");
+    assert_eq!(
+        file_row(&folder.db, &hash),
+        (size, 0, 0, 0, NOW_MS, NOW_MS + 1),
+        "the file row after the second put"
+    );
+    assert_eq!(
+        media.reader().read("again.png", LIMIT),
+        Some(BYTES.to_vec())
+    );
+}
+
+/// Pins the update of `MEDIA_NAME_BIND`: a name unbound under another origin and put again with
+/// other bytes is bound to the new file, by a put, at the new time, and is live again.
+#[test]
+fn a_name_put_again_is_bound_live_to_its_new_file_at_its_new_time() {
+    let folder = folder();
+    let media = open(&folder.db, &folder.root);
+    media
+        .put("rebound.png", b"the first file", NOW_MS)
+        .expect("the first file is put");
+    raw(&folder.db)
+        .execute(
+            "UPDATE media_name SET origin = 3, unbound = 1 WHERE name = 'rebound.png'",
+            [],
+        )
+        .expect("the name is unbound under another origin");
+    let second = media
+        .put("rebound.png", b"the second file", NOW_MS + 1)
+        .expect("the second file is put");
+    assert_eq!(
+        name_row(&folder.db, "rebound.png"),
+        (second.as_bytes().to_vec(), 1, NOW_MS + 1, 0),
+        "the name row after the second put"
+    );
+    assert_eq!(
+        media.reader().read("rebound.png", LIMIT),
+        Some(b"the second file".to_vec())
+    );
+}
+
+/// The crate root, as the compiler reads it.
+const CRATE_ROOT: &str = include_str!("../src/lib.rs");
+
+/// A source-text guard: the crate root declares the media store's two modules among the others,
+/// holds the `k_put` harness module under `cfg(kani)` alone, and re-exports the blob folder's and
+/// the media store's names, as one block. The rows of SPEC-601 A12 mutate these lines, a change no
+/// behaviour test can see: each mutant builds, and no test build compiles the harness module.
+#[test]
+fn the_crate_root_declares_the_media_stores_modules_and_names_as_written() {
+    assert!(
+        CRATE_ROOT.contains(
+            "\n\npub mod blob;\npub mod data_rights;\npub mod error;\npub mod media_store;\n\
+             pub mod migrate;\npub mod read;\npub mod sql;\npub mod store;\n\n#[cfg(kani)]\n\
+             mod kani_proofs;\n\npub use blob::{BlobError, BlobStore, FsBlobStore};\n\
+             pub use error::StoreError;\npub use media_store::{CasReader, MediaError, MediaStore};\n"
+        ),
+        "the crate root declares its modules, the harness module under cfg(kani) and the media \
+         store's names, with no attribute among them"
+    );
+}

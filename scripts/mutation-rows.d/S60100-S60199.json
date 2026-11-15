@@ -1,0 +1,699 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S60100-DECLARED-MEDIA-FILE-ERASED-BY-DELETE",
+        "collection",
+        "src/data_rights.rs",
+        "(\"media_file\", Erase::Delete),",
+        "(\"media_file\", Erase::Anonymise),",
+        "data_rights::privacy_json_declares_every_store_table_once_with_the_ports_erase_mode",
+        "the media files' table is declared erased by deletion, as the privacy inventory names it; declared anonymised, the inventory's delete disagrees with the port (SPEC-601 A10)"
+      ],
+      [
+        "S60101-DECLARED-MEDIA-NAME-ERASED-BY-DELETE",
+        "collection",
+        "src/data_rights.rs",
+        "(\"media_name\", Erase::Delete),",
+        "(\"media_name\", Erase::Anonymise),",
+        "data_rights::privacy_json_declares_every_store_table_once_with_the_ports_erase_mode",
+        "the media names' table is declared erased by deletion; declared anonymised, the inventory's delete disagrees with the port (SPEC-601 A10)"
+      ],
+      [
+        "S60102-DECLARED-MEDIA-PIN-ERASED-BY-DELETE",
+        "collection",
+        "src/data_rights.rs",
+        "(\"media_pin\", Erase::Delete),",
+        "(\"media_pin\", Erase::Anonymise),",
+        "data_rights::privacy_json_declares_every_store_table_once_with_the_ports_erase_mode",
+        "the media pins' table is declared erased by deletion; declared anonymised, the inventory's delete disagrees with the port (SPEC-601 A10)"
+      ],
+      [
+        "S60103-DECLARED-HOLDS-MEDIA-FILE",
+        "collection",
+        "src/data_rights.rs",
+        "(\"media_file\", Erase::Delete),",
+        "",
+        "data_rights::privacy_json_declares_every_store_table_once_with_the_ports_erase_mode",
+        "the port declares the media files' table; left out, a table the migrations create is neither declared nor exempt (SPEC-601 A10)"
+      ],
+      [
+        "S60104-DECLARED-HOLDS-MEDIA-NAME",
+        "collection",
+        "src/data_rights.rs",
+        "(\"media_name\", Erase::Delete),",
+        "",
+        "data_rights::privacy_json_declares_every_store_table_once_with_the_ports_erase_mode",
+        "the port declares the media names' table; left out, a table the migrations create is neither declared nor exempt (SPEC-601 A10)"
+      ],
+      [
+        "S60105-DECLARED-HOLDS-MEDIA-PIN",
+        "collection",
+        "src/data_rights.rs",
+        "(\"media_pin\", Erase::Delete),",
+        "",
+        "data_rights::privacy_json_declares_every_store_table_once_with_the_ports_erase_mode",
+        "the port declares the media pins' table; left out, a table the migrations create is neither declared nor exempt (SPEC-601 A10)"
+      ],
+      [
+        "S60106-ERASE-MEDIA-NAMES-DELETES-EVERY-NAME",
+        "collection",
+        "src/data_rights.rs",
+        "\"DELETE FROM media_name\"",
+        "\"DELETE FROM media_name WHERE 0\"",
+        "data_rights::the_server_erase_empties_the_media_tables_names_and_pins_first",
+        "the erase deletes every media name; deleting none, the names keep their file and the files' delete is refused (SPEC-601 A10)"
+      ],
+      [
+        "S60107-ERASE-MEDIA-PINS-DELETES-EVERY-PIN",
+        "collection",
+        "src/data_rights.rs",
+        "\"DELETE FROM media_pin\"",
+        "\"DELETE FROM media_pin WHERE 0\"",
+        "data_rights::the_server_erase_empties_the_media_tables_names_and_pins_first",
+        "the erase deletes every media pin; deleting none, the pins keep their file and the files' delete is refused (SPEC-601 A10)"
+      ],
+      [
+        "S60108-ERASE-MEDIA-FILES-DELETES-EVERY-FILE-ROW",
+        "collection",
+        "src/data_rights.rs",
+        "\"DELETE FROM media_file\"",
+        "\"DELETE FROM media_file WHERE 0\"",
+        "data_rights::the_server_erase_empties_the_media_tables_names_and_pins_first",
+        "the erase deletes every media file's row; deleting none, two file rows stay (SPEC-601 A10)"
+      ],
+      [
+        "S60109-ERASES-HOLD-TWENTY-ONE-STATEMENTS",
+        "collection",
+        "src/data_rights.rs",
+        "const ERASES: [&str; 21] = [\n    ERASE_CLIENT_RECORDS,",
+        "const ERASES: [&str; 20] = [",
+        "data_rights::the_server_erase_empties_every_table_through_the_gate_and_closes_it",
+        "the server's erase runs twenty-one deletes; with twenty, the client record's row stays (SPEC-601 A10)"
+      ],
+      [
+        "S60110-ERASES-RUN-THE-NAMES-DELETE",
+        "collection",
+        "src/data_rights.rs",
+        "ERASE_MEDIA_NAMES,",
+        "ERASE_MEDIA_PINS,",
+        "data_rights::the_server_erase_empties_the_media_tables_names_and_pins_first",
+        "the erase runs the media names' delete; with the pins' delete in its place, the names stay and the files' delete is refused (SPEC-601 A10)"
+      ],
+      [
+        "S60111-ERASES-RUN-THE-PINS-DELETE",
+        "collection",
+        "src/data_rights.rs",
+        "ERASE_MEDIA_PINS,",
+        "ERASE_MEDIA_NAMES,",
+        "data_rights::the_server_erase_empties_the_media_tables_names_and_pins_first",
+        "the erase runs the media pins' delete; with the names' delete in its place, the pins stay and the files' delete is refused (SPEC-601 A10)"
+      ],
+      [
+        "S60112-ERASES-RUN-THE-FILES-DELETE",
+        "collection",
+        "src/data_rights.rs",
+        "ERASE_MEDIA_FILES,",
+        "ERASE_MEDIA_PINS,",
+        "data_rights::the_server_erase_empties_the_media_tables_names_and_pins_first",
+        "the erase runs the media files' delete; with the pins' delete in its place, the file rows stay (SPEC-601 A10)"
+      ],
+      [
+        "S60113-ERASES-DELETE-NAMES-AND-PINS-BEFORE-FILES",
+        "collection",
+        "src/data_rights.rs",
+        "ERASE_MEDIA_NAMES,\n    ERASE_MEDIA_PINS,\n    ERASE_MEDIA_FILES,",
+        "ERASE_MEDIA_FILES,\n    ERASE_MEDIA_NAMES,\n    ERASE_MEDIA_PINS,",
+        "data_rights::the_server_erase_empties_the_media_tables_names_and_pins_first",
+        "the erase deletes the names and pins before the files they name; files first, the enforced foreign keys refuse the erase (SPEC-601 A10)"
+      ],
+      [
+        "S60114-EXPORT-MEDIA-FILE-READS-EVERY-ROW",
+        "collection",
+        "src/data_rights.rs",
+        "\"SELECT * FROM media_file\"",
+        "\"SELECT * FROM media_file WHERE 0\"",
+        "data_rights::the_export_writes_each_media_table_from_its_own_rows",
+        "the export reads every media file's row; reading none, the export holds no file (SPEC-601 A10)"
+      ],
+      [
+        "S60115-EXPORT-MEDIA-NAME-READS-EVERY-ROW",
+        "collection",
+        "src/data_rights.rs",
+        "\"SELECT * FROM media_name\"",
+        "\"SELECT * FROM media_name WHERE 0\"",
+        "data_rights::the_export_writes_each_media_table_from_its_own_rows",
+        "the export reads every media name; reading none, the export holds no name (SPEC-601 A10)"
+      ],
+      [
+        "S60116-EXPORT-MEDIA-PIN-READS-EVERY-ROW",
+        "collection",
+        "src/data_rights.rs",
+        "\"SELECT * FROM media_pin\"",
+        "\"SELECT * FROM media_pin WHERE 0\"",
+        "data_rights::the_export_writes_each_media_table_from_its_own_rows",
+        "the export reads every media pin; reading none, the export holds no pin (SPEC-601 A10)"
+      ],
+      [
+        "S60117-EXPORTS-HOLD-TWENTY-TWO-TABLES",
+        "collection",
+        "src/data_rights.rs",
+        "const EXPORTS: [(&str, &str); 22] = [\n    (\"store_meta\", EXPORT_STORE_META),",
+        "const EXPORTS: [(&str, &str); 21] = [",
+        "data_rights::the_export_writes_every_declared_table_as_json",
+        "the export writes twenty-two tables; with twenty-one, the store's record is not exported (SPEC-601 A10)"
+      ],
+      [
+        "S60118-EXPORTS-MEDIA-FILE-FROM-ITS-OWN-TABLE",
+        "collection",
+        "src/data_rights.rs",
+        "(\"media_file\", EXPORT_MEDIA_FILE),",
+        "(\"media_file\", EXPORT_MEDIA_PIN),",
+        "data_rights::the_export_writes_each_media_table_from_its_own_rows",
+        "the export's media files are the file rows; read from the pins, two files read as three (SPEC-601 A10)"
+      ],
+      [
+        "S60119-EXPORTS-MEDIA-NAME-FROM-ITS-OWN-TABLE",
+        "collection",
+        "src/data_rights.rs",
+        "(\"media_name\", EXPORT_MEDIA_NAME),",
+        "(\"media_name\", EXPORT_MEDIA_FILE),",
+        "data_rights::the_export_writes_each_media_table_from_its_own_rows",
+        "the export's media names are the name rows; read from the files, one name reads as two (SPEC-601 A10)"
+      ],
+      [
+        "S60120-EXPORTS-MEDIA-PIN-FROM-ITS-OWN-TABLE",
+        "collection",
+        "src/data_rights.rs",
+        "(\"media_pin\", EXPORT_MEDIA_PIN),",
+        "(\"media_pin\", EXPORT_MEDIA_NAME),",
+        "data_rights::the_export_writes_each_media_table_from_its_own_rows",
+        "the export's media pins are the pin rows; read from the names, three pins read as one (SPEC-601 A10)"
+      ],
+      [
+        "S60121-FIRST-MIGRATION-IS-VERSION-ONE",
+        "collection",
+        "src/migrate.rs",
+        "MIGRATIONS: &[Migration] = &[\n    Migration {\n        version: 1,",
+        "MIGRATIONS: &[Migration] = &[\n    Migration {\n        version: 0,",
+        "opener::migrations_run_from_an_empty_file_to_head_under_user_version",
+        "the base migration is version 1; as 0 a new file skips it and its name is not its file's (SPEC-601 A10)"
+      ],
+      [
+        "S60122-FIRST-MIGRATION-IS-COLLECTION-BASE",
+        "collection",
+        "src/migrate.rs",
+        "description: \"collection_base\",",
+        "description: \"collection\",",
+        "opener::migrations_run_from_an_empty_file_to_head_under_user_version",
+        "the base migration is named as its file is; renamed, the embedded list is not the migrations folder (SPEC-601 A10)"
+      ],
+      [
+        "S60123-FIRST-MIGRATION-READS-ITS-FILE",
+        "collection",
+        "src/migrate.rs",
+        "sql: include_str!(\"../migrations/000001_collection_base.sql\"),\n    },",
+        "sql: include_str!(\"../migrations/000002_media_store.sql\"),\n    },",
+        "opener::migrations_run_from_an_empty_file_to_head_under_user_version",
+        "the base migration embeds its own file; embedding the media file, its text is not its file's and a new store does not open (SPEC-601 A10)"
+      ],
+      [
+        "S60124-MEDIA-MIGRATION-IS-VERSION-TWO",
+        "collection",
+        "src/migrate.rs",
+        "    Migration {\n        version: 2,",
+        "    Migration {\n        version: 3,",
+        "opener::migrations_run_from_an_empty_file_to_head_under_user_version",
+        "the media migration is version 2; as 3 the versions are not 1 to head (SPEC-601 A10)"
+      ],
+      [
+        "S60125-MEDIA-MIGRATION-IS-MEDIA-STORE",
+        "collection",
+        "src/migrate.rs",
+        "description: \"media_store\",",
+        "description: \"media\",",
+        "opener::migrations_run_from_an_empty_file_to_head_under_user_version",
+        "the media migration is named as its file is; renamed, the embedded list is not the migrations folder (SPEC-601 A10)"
+      ],
+      [
+        "S60126-MEDIA-MIGRATION-READS-ITS-FILE",
+        "collection",
+        "src/migrate.rs",
+        "sql: include_str!(\"../migrations/000002_media_store.sql\"),\n    },\n];",
+        "sql: include_str!(\"../migrations/000001_collection_base.sql\"),\n    },\n];",
+        "opener::migrations_run_from_an_empty_file_to_head_under_user_version",
+        "the media migration embeds its own file; embedding the base file, its text is not its file's and a new store does not open (SPEC-601 A10)"
+      ],
+      [
+        "S60127-MEDIA-MIGRATION-IS-EMBEDDED",
+        "collection",
+        "src/migrate.rs",
+        "    },\n    Migration {\n        version: 2,\n        description: \"media_store\",\n        sql: include_str!(\"../migrations/000002_media_store.sql\"),\n    },\n];",
+        "    },\n];",
+        "opener::migrations_run_from_an_empty_file_to_head_under_user_version",
+        "the media migration is embedded; left out, one migration stands for two files and the versions stop short of head (SPEC-601 A10)"
+      ],
+      [
+        "S60128-HEAD-IS-TWO",
+        "collection",
+        "src/migrate.rs",
+        "pub const HEAD: i64 = 2;",
+        "pub const HEAD: i64 = 1;",
+        "opener::migrations_run_from_an_empty_file_to_head_under_user_version",
+        "head is the media migration's version 2; as 1 the versions 1 and 2 are not 1 to head (SPEC-601 A10)"
+      ],
+      [
+        "S60129-FILE-STATE-READS-THE-STATE",
+        "collection",
+        "src/sql.rs",
+        "\"SELECT state FROM media_file WHERE hash = ?1\"",
+        "\"SELECT 1 FROM media_file WHERE hash = ?1\"",
+        "media_store::a_file_without_its_row_is_deleted_at_the_next_open",
+        "the open reads a file's state; read as 1, a present file is deleted as an orphan (SPEC-601 A10)"
+      ],
+      [
+        "S60130-FILE-STATE-READS-ITS-OWN-ROW",
+        "collection",
+        "src/sql.rs",
+        "FROM media_file WHERE hash = ?1\";",
+        "FROM media_file WHERE hash <> ?1\";",
+        "media_store::a_file_without_its_row_is_deleted_at_the_next_open",
+        "the open reads the state of the file's own row; read from another row, the orphan is kept (SPEC-601 A10)"
+      ],
+      [
+        "S60131-FILE-PUT-WRITES-PRESENT",
+        "collection",
+        "src/sql.rs",
+        "MEDIA_FILE_PUT: &str = \"INSERT INTO media_file \\\n     (hash, size, kind, state, synced, added_ms, last_seen_ms) VALUES (?1, ?2, ?3, 0",
+        "MEDIA_FILE_PUT: &str = \"INSERT INTO media_file \\\n     (hash, size, kind, state, synced, added_ms, last_seen_ms) VALUES (?1, ?2, ?3, 1",
+        "media_store::a_put_writes_its_file_row_and_its_name_row_column_for_column",
+        "a put writes its file's row present; written wanted, the row's state is 1 (SPEC-601 A11)"
+      ],
+      [
+        "S60132-FILE-PUT-WRITES-UNSYNCED",
+        "collection",
+        "src/sql.rs",
+        "?3, 0, 0, ?4, ?4)",
+        "?3, 0, 1, ?4, ?4)",
+        "media_store::a_put_writes_its_file_row_and_its_name_row_column_for_column",
+        "a put writes its file's row not yet synced; written synced, the row's flag is 1 (SPEC-601 A11)"
+      ],
+      [
+        "S60133-FILE-PUT-WRITES-ITS-HASH",
+        "collection",
+        "src/sql.rs",
+        "VALUES (?1, ?2, ?3, 0, 0",
+        "VALUES (zeroblob(32), ?2, ?3, 0, 0",
+        "media_store::a_put_writes_its_file_row_and_its_name_row_column_for_column",
+        "a put writes its file's row under its hash; under 32 zero bytes, the name's file has no row and the bind is refused (SPEC-601 A11)"
+      ],
+      [
+        "S60134-FILE-PUT-WRITES-ITS-SIZE",
+        "collection",
+        "src/sql.rs",
+        "(?1, ?2, ?3, 0, 0",
+        "(?1, 0, ?3, 0, 0",
+        "media_store::a_put_writes_its_file_row_and_its_name_row_column_for_column",
+        "a put writes its file's size; written 0, the row's size is not the bytes' length (SPEC-601 A11)"
+      ],
+      [
+        "S60135-FILE-PUT-WRITES-ITS-KIND",
+        "collection",
+        "src/sql.rs",
+        "?2, ?3, 0, 0, ?4",
+        "?2, 4, 0, 0, ?4",
+        "media_store::a_put_writes_its_file_row_and_its_name_row_column_for_column",
+        "a put writes the kind it is given; written 4, the row's kind is not the unclassified 0 (SPEC-601 A11)"
+      ],
+      [
+        "S60136-FILE-PUT-WRITES-ITS-ADDED-TIME",
+        "collection",
+        "src/sql.rs",
+        "0, 0, ?4, ?4)",
+        "0, 0, 0, ?4)",
+        "media_store::a_put_writes_its_file_row_and_its_name_row_column_for_column",
+        "a put writes its time as the file's added time; written 0, the row's added time is not the put's (SPEC-601 A11)"
+      ],
+      [
+        "S60137-FILE-PUT-WRITES-ITS-SEEN-TIME",
+        "collection",
+        "src/sql.rs",
+        "?4, ?4)",
+        "?4, 0)",
+        "media_store::a_put_writes_its_file_row_and_its_name_row_column_for_column",
+        "a put writes its time as the file's last-seen time; written 0, the row's last-seen time is not the put's (SPEC-601 A11)"
+      ],
+      [
+        "S60138-FILE-PUT-AGAIN-TAKES-THE-SIZE",
+        "collection",
+        "src/sql.rs",
+        "DO UPDATE SET size = excluded.size,",
+        "DO UPDATE SET size = size,",
+        "media_store::a_second_put_turns_a_quarantined_file_present_at_its_size_and_time",
+        "a second put writes the bytes' size over the row's; keeping the row's, a wrong size stays and the file reads nothing (SPEC-601 A11)"
+      ],
+      [
+        "S60139-FILE-PUT-AGAIN-TURNS-PRESENT",
+        "collection",
+        "src/sql.rs",
+        "excluded.size, state = 0,",
+        "excluded.size, state = state,",
+        "media_store::a_second_put_turns_a_quarantined_file_present_at_its_size_and_time",
+        "a second put turns a quarantined file's row present; keeping its state, the file stays wanted (SPEC-601 A11)"
+      ],
+      [
+        "S60140-FILE-PUT-AGAIN-TAKES-THE-TIME",
+        "collection",
+        "src/sql.rs",
+        "last_seen_ms = excluded.last_seen_ms\";",
+        "last_seen_ms = last_seen_ms\";",
+        "media_store::a_second_put_turns_a_quarantined_file_present_at_its_size_and_time",
+        "a second put writes its time as the file's last-seen time; keeping the row's, the time is the first put's (SPEC-601 A11)"
+      ],
+      [
+        "S60141-NAME-BIND-WRITES-A-PUTS-ORIGIN",
+        "collection",
+        "src/sql.rs",
+        "MEDIA_NAME_BIND: &str = \"INSERT INTO media_name (name, hash, origin, bound_ms, unbound) \\\n     VALUES (?1, ?2, ?3",
+        "MEDIA_NAME_BIND: &str = \"INSERT INTO media_name (name, hash, origin, bound_ms, unbound) \\\n     VALUES (?1, ?2, 2",
+        "media_store::a_put_writes_its_file_row_and_its_name_row_column_for_column",
+        "a put binds its name with the origin it is given; written 2, the name's origin is not a put's 1 (SPEC-601 A11)"
+      ],
+      [
+        "S60142-NAME-BIND-WRITES-ITS-NAME",
+        "collection",
+        "src/sql.rs",
+        "VALUES (?1, ?2, ?3, ?4, 0)",
+        "VALUES ('x', ?2, ?3, ?4, 0)",
+        "media_store::a_put_writes_its_file_row_and_its_name_row_column_for_column",
+        "a put binds the name it is given; bound as x, the put's name has no row (SPEC-601 A11)"
+      ],
+      [
+        "S60143-NAME-BIND-WRITES-ITS-FILE",
+        "collection",
+        "src/sql.rs",
+        "(?1, ?2, ?3, ?4, 0)",
+        "(?1, zeroblob(32), ?3, ?4, 0)",
+        "media_store::a_put_writes_its_file_row_and_its_name_row_column_for_column",
+        "a put binds its name to its file's hash; bound to 32 zero bytes, the name names no file and the bind is refused (SPEC-601 A11)"
+      ],
+      [
+        "S60144-NAME-BIND-WRITES-ITS-TIME",
+        "collection",
+        "src/sql.rs",
+        "?3, ?4, 0) ON",
+        "?3, ?4 - 1, 0) ON",
+        "media_store::a_put_writes_its_file_row_and_its_name_row_column_for_column",
+        "a put binds its name at its time; a millisecond early, the name's time is not the put's (SPEC-601 A11)"
+      ],
+      [
+        "S60145-NAME-BIND-WRITES-LIVE",
+        "collection",
+        "src/sql.rs",
+        "?4, 0) ON CONFLICT",
+        "?4, 1) ON CONFLICT",
+        "media_store::a_put_writes_its_file_row_and_its_name_row_column_for_column",
+        "a put binds its name live; written unbound, the name's flag is 1 (SPEC-601 A11)"
+      ],
+      [
+        "S60146-NAME-REBIND-TAKES-THE-NEW-FILE",
+        "collection",
+        "src/sql.rs",
+        "DO UPDATE SET hash = excluded.hash,",
+        "DO UPDATE SET hash = hash,",
+        "media_store::a_name_put_again_is_bound_live_to_its_new_file_at_its_new_time",
+        "a name put again is bound to the new file; keeping its hash, it reads the first file (SPEC-601 A11)"
+      ],
+      [
+        "S60147-NAME-REBIND-TAKES-THE-ORIGIN",
+        "collection",
+        "src/sql.rs",
+        "origin = excluded.origin,",
+        "origin = origin,",
+        "media_store::a_name_put_again_is_bound_live_to_its_new_file_at_its_new_time",
+        "a name put again takes the put's origin; keeping its own, the planted origin 3 stays (SPEC-601 A11)"
+      ],
+      [
+        "S60148-NAME-REBIND-TAKES-THE-NEW-TIME",
+        "collection",
+        "src/sql.rs",
+        "bound_ms = excluded.bound_ms,",
+        "bound_ms = bound_ms,",
+        "media_store::a_name_put_again_is_bound_live_to_its_new_file_at_its_new_time",
+        "a name put again takes the new put's time; keeping its own, the time is the first put's (SPEC-601 A11)"
+      ],
+      [
+        "S60149-NAME-REBIND-IS-LIVE-AGAIN",
+        "collection",
+        "src/sql.rs",
+        "bound_ms = excluded.bound_ms, unbound = 0\";",
+        "bound_ms = excluded.bound_ms, unbound = unbound\";",
+        "media_store::a_name_put_again_is_bound_live_to_its_new_file_at_its_new_time",
+        "a name put again is live again; keeping its flag, the unbound name reads nothing (SPEC-601 A11)"
+      ],
+      [
+        "S60150-NAME-READ-READS-THE-STATE",
+        "collection",
+        "src/sql.rs",
+        "MEDIA_NAME_READ: &str = \"SELECT f.hash, f.size, f.state",
+        "MEDIA_NAME_READ: &str = \"SELECT f.hash, f.size, 0",
+        "media_store::an_unbound_or_tombstoned_name_reads_nothing",
+        "a read by name reads the file's state; read as 0, a tombstoned file reads its bytes (SPEC-601 A10)"
+      ],
+      [
+        "S60151-NAME-READ-READS-THE-SIZE",
+        "collection",
+        "src/sql.rs",
+        "f.size, f.state FROM",
+        "f.size + 1, f.state FROM",
+        "media_store::an_unbound_or_tombstoned_name_reads_nothing",
+        "a read by name reads the file's size; one more, a live file's length disagrees and it is quarantined (SPEC-601 A10)"
+      ],
+      [
+        "S60152-NAME-READ-JOINS-ITS-FILE",
+        "collection",
+        "src/sql.rs",
+        "ON f.hash = n.hash",
+        "ON f.hash <> n.hash",
+        "media_store::an_unbound_or_tombstoned_name_reads_nothing",
+        "a read by name joins the name's own file; joined to another, a live name reads nothing (SPEC-601 A10)"
+      ],
+      [
+        "S60153-NAME-READ-READS-ITS-NAME",
+        "collection",
+        "src/sql.rs",
+        "WHERE n.name = ?1 AND",
+        "WHERE n.name <> ?1 AND",
+        "media_store::an_unbound_or_tombstoned_name_reads_nothing",
+        "a read by name reads that name's row; read from another, a live name reads nothing (SPEC-601 A10)"
+      ],
+      [
+        "S60154-NAME-READ-READS-LIVE-NAMES",
+        "collection",
+        "src/sql.rs",
+        "AND n.unbound = 0\";",
+        "AND n.unbound >= 0\";",
+        "media_store::an_unbound_or_tombstoned_name_reads_nothing",
+        "a read by name reads a live name only; widened, an unbound name reads its bytes (SPEC-601 A10)"
+      ],
+      [
+        "S60155-QUARANTINE-SETS-THE-STATE-GIVEN",
+        "collection",
+        "src/sql.rs",
+        "SET state = ?2 WHERE hash = ?1",
+        "SET state = ?2 + 1 WHERE hash = ?1",
+        "media_store::a_size_mismatch_quarantines_the_file_and_reports_it_wanted",
+        "a quarantine sets the state it is given, wanted; one more, the row reads tombstoned (SPEC-601 A10)"
+      ],
+      [
+        "S60156-QUARANTINE-SETS-ITS-OWN-ROW",
+        "collection",
+        "src/sql.rs",
+        "SET state = ?2 WHERE hash = ?1",
+        "SET state = ?2 WHERE hash <> ?1",
+        "media_store::a_size_mismatch_quarantines_the_file_and_reports_it_wanted",
+        "a quarantine sets its own file's row; set on the others, the file's row stays present (SPEC-601 A10)"
+      ],
+      [
+        "S60157-REGISTERS-MEDIA-FILE-STATE",
+        "collection",
+        "src/sql.rs",
+        "registered!(MEDIA_FILE_STATE),",
+        "",
+        "statement_census::every_sql_text_of_the_crate_is_a_registered_statement",
+        "the register lists MEDIA_FILE_STATE; left out, the census refuses a statement the register lacks (SPEC-601 A10)"
+      ],
+      [
+        "S60158-REGISTERS-MEDIA-FILE-PUT",
+        "collection",
+        "src/sql.rs",
+        "registered!(MEDIA_FILE_PUT),",
+        "",
+        "statement_census::every_sql_text_of_the_crate_is_a_registered_statement",
+        "the register lists MEDIA_FILE_PUT; left out, the census refuses a statement the register lacks (SPEC-601 A10)"
+      ],
+      [
+        "S60159-REGISTERS-MEDIA-NAME-BIND",
+        "collection",
+        "src/sql.rs",
+        "registered!(MEDIA_NAME_BIND),",
+        "",
+        "statement_census::every_sql_text_of_the_crate_is_a_registered_statement",
+        "the register lists MEDIA_NAME_BIND; left out, the census refuses a statement the register lacks (SPEC-601 A10)"
+      ],
+      [
+        "S60160-REGISTERS-MEDIA-NAME-READ",
+        "collection",
+        "src/sql.rs",
+        "registered!(MEDIA_NAME_READ),",
+        "",
+        "statement_census::every_sql_text_of_the_crate_is_a_registered_statement",
+        "the register lists MEDIA_NAME_READ; left out, the census refuses a statement the register lacks (SPEC-601 A10)"
+      ],
+      [
+        "S60161-REGISTERS-MEDIA-FILE-QUARANTINE",
+        "collection",
+        "src/sql.rs",
+        "registered!(MEDIA_FILE_QUARANTINE),",
+        "",
+        "statement_census::every_sql_text_of_the_crate_is_a_registered_statement",
+        "the register lists MEDIA_FILE_QUARANTINE; left out, the census refuses a statement the register lacks (SPEC-601 A10)"
+      ],
+      [
+        "S60162-REGISTERS-ERASE-MEDIA-NAMES",
+        "collection",
+        "src/sql.rs",
+        "registered!(data_rights::ERASE_MEDIA_NAMES),",
+        "",
+        "statement_census::every_sql_text_of_the_crate_is_a_registered_statement",
+        "the register lists ERASE_MEDIA_NAMES; left out, the census refuses a statement the register lacks (SPEC-601 A10)"
+      ],
+      [
+        "S60163-REGISTERS-ERASE-MEDIA-PINS",
+        "collection",
+        "src/sql.rs",
+        "registered!(data_rights::ERASE_MEDIA_PINS),",
+        "",
+        "statement_census::every_sql_text_of_the_crate_is_a_registered_statement",
+        "the register lists ERASE_MEDIA_PINS; left out, the census refuses a statement the register lacks (SPEC-601 A10)"
+      ],
+      [
+        "S60164-REGISTERS-ERASE-MEDIA-FILES",
+        "collection",
+        "src/sql.rs",
+        "registered!(data_rights::ERASE_MEDIA_FILES),",
+        "",
+        "statement_census::every_sql_text_of_the_crate_is_a_registered_statement",
+        "the register lists ERASE_MEDIA_FILES; left out, the census refuses a statement the register lacks (SPEC-601 A10)"
+      ],
+      [
+        "S60165-REGISTERS-EXPORT-MEDIA-FILE",
+        "collection",
+        "src/sql.rs",
+        "registered!(data_rights::EXPORT_MEDIA_FILE),",
+        "",
+        "statement_census::every_sql_text_of_the_crate_is_a_registered_statement",
+        "the register lists EXPORT_MEDIA_FILE; left out, the census refuses a statement the register lacks (SPEC-601 A10)"
+      ],
+      [
+        "S60166-REGISTERS-EXPORT-MEDIA-NAME",
+        "collection",
+        "src/sql.rs",
+        "registered!(data_rights::EXPORT_MEDIA_NAME),",
+        "",
+        "statement_census::every_sql_text_of_the_crate_is_a_registered_statement",
+        "the register lists EXPORT_MEDIA_NAME; left out, the census refuses a statement the register lacks (SPEC-601 A10)"
+      ],
+      [
+        "S60167-REGISTERS-EXPORT-MEDIA-PIN",
+        "collection",
+        "src/sql.rs",
+        "registered!(data_rights::EXPORT_MEDIA_PIN),",
+        "",
+        "statement_census::every_sql_text_of_the_crate_is_a_registered_statement",
+        "the register lists EXPORT_MEDIA_PIN; left out, the census refuses a statement the register lacks (SPEC-601 A10)"
+      ],
+      [
+        "S60168-COLLECTION-ROOT-DECLARES-BLOB",
+        "collection",
+        "src/lib.rs",
+        "pub mod blob;",
+        "#[doc(hidden)]\npub mod blob;",
+        "media_store::the_crate_root_declares_the_media_stores_modules_and_names_as_written",
+        "the crate root declares the blob module bare; the killer is a source-text guard, since the mutant builds and no behaviour test reads the declaration (SPEC-601 A12)"
+      ],
+      [
+        "S60169-COLLECTION-ROOT-DECLARES-MEDIA-STORE",
+        "collection",
+        "src/lib.rs",
+        "pub mod media_store;",
+        "#[doc(hidden)]\npub mod media_store;",
+        "media_store::the_crate_root_declares_the_media_stores_modules_and_names_as_written",
+        "the crate root declares the media store module bare; the killer is a source-text guard, since the mutant builds and no behaviour test reads the declaration (SPEC-601 A12)"
+      ],
+      [
+        "S60170-COLLECTION-ROOT-HOLDS-THE-HARNESS-UNDER-KANI",
+        "collection",
+        "src/lib.rs",
+        "#[cfg(kani)]\nmod kani_proofs;",
+        "#[cfg(any())]\nmod kani_proofs;",
+        "media_store::the_crate_root_declares_the_media_stores_modules_and_names_as_written",
+        "the crate root holds the put harness module under cfg(kani); under a cfg nothing sets, the verifier never reads it; the killer is a source-text guard, since the mutant builds and no behaviour test reads the declaration (SPEC-601 A12)"
+      ],
+      [
+        "S60171-COLLECTION-ROOT-EXPORTS-THE-BLOB-NAMES",
+        "collection",
+        "src/lib.rs",
+        "pub use blob::{BlobError, BlobStore, FsBlobStore};",
+        "#[doc(hidden)]\npub use blob::{BlobError, BlobStore, FsBlobStore};",
+        "media_store::the_crate_root_declares_the_media_stores_modules_and_names_as_written",
+        "the crate root re-exports the blob folder's names bare; the killer is a source-text guard, since the mutant builds and no behaviour test reads the declaration (SPEC-601 A12)"
+      ],
+      [
+        "S60172-COLLECTION-ROOT-EXPORTS-THE-MEDIA-STORE-NAMES",
+        "collection",
+        "src/lib.rs",
+        "pub use media_store::{CasReader, MediaError, MediaStore};",
+        "#[doc(hidden)]\npub use media_store::{CasReader, MediaError, MediaStore};",
+        "media_store::the_crate_root_declares_the_media_stores_modules_and_names_as_written",
+        "the crate root re-exports the media store's names bare; the killer is a source-text guard, since the mutant builds and no behaviour test reads the declaration (SPEC-601 A12)"
+      ],
+      [
+        "S60173-MEDIA-ROOT-DECLARES-REWRITE",
+        "media",
+        "src/lib.rs",
+        "pub mod rewrite;",
+        "#[doc(hidden)]\npub mod rewrite;",
+        "rewrite::the_crate_root_declares_and_re_exports_the_rewrite_as_written",
+        "the crate root declares the rewrite module bare; the killer is a source-text guard, since the mutant builds and no behaviour test reads the declaration (SPEC-601 A12)"
+      ],
+      [
+        "S60174-MEDIA-ROOT-EXPORTS-REWRITE",
+        "media",
+        "src/lib.rs",
+        "pub use rewrite::rewrite;",
+        "#[doc(hidden)]\npub use rewrite::rewrite;",
+        "rewrite::the_crate_root_declares_and_re_exports_the_rewrite_as_written",
+        "the crate root re-exports the rewrite bare; the killer is a source-text guard, since the mutant builds and no behaviour test reads the declaration (SPEC-601 A12)"
+      ],
+      [
+        "S60175-FFI-ROOT-DECLARES-STORE-MEDIA",
+        "ffi",
+        "src/lib.rs",
+        "pub mod store_media;",
+        "#[doc(hidden)]\npub mod store_media;",
+        "store_media::the_crate_root_declares_the_store_media_module_as_written",
+        "the crate root declares the store media module bare; the killer is a source-text guard, since the mutant builds and no behaviour test reads the declaration (SPEC-601 A12)"
+      ],
+      [
+        "S60176-WEB-ENGINE-ROOT-DECLARES-HANDED",
+        "web-engine",
+        "src/lib.rs",
+        "pub mod handed;",
+        "#[doc(hidden)]\npub mod handed;",
+        "handed::the_crate_root_declares_the_handed_module_as_written",
+        "the crate root declares the handed module bare; the killer is a source-text guard, since the mutant builds and no behaviour test reads the declaration (SPEC-601 A12)"
+      ]
+    ]
+  }
+}
