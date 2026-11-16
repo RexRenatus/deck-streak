@@ -30,5 +30,6 @@ reference to look something up, and explanation to understand why.
 - [Product requirements](PRD.md)
 - [Architecture](../ARCHITECTURE.md)
 - [Architecture decisions](decisions/)
+- [Signed rulings](rulings/): the owner's 28 signed rulings, each kept as written
 - [Specifications](specs/)
 - [Schematics](schematics/)
