@@ -339,3 +339,51 @@ amends R9 and R13; D3's signing path and D6's private log otherwise stand.
   `-legacy`, which the next run shows; the owner then re-exports the bundle in a form that openssl
   reads, as "What would make this wrong" already says, with no design change.
 - The identity match (SPEC-352 R8 as amended): D3's manual signing now matches the profile's developer certificates to the job keychain's identities by the SHA-256 that `security find-certificate -Z` prints beside each identity's SHA-1, and hands signing the SHA-1 Apple's tools print; the lane computes no SHA-1 of its own, and a profile not issued for the imported certificate is still refused. Rejected: `usedforsecurity=False` on the SHA-1, because the weak-hashing query does not model that argument and still reads the call; a SHA-1 computed by another tool, because it moves the same hash out of the query's sight; a changed name or a dismissed alert, because either leaves the hash in place; and the identity's common name for the match, because a name can match more than one identity in the search list.
+
+- SPEC-566 (ADR-584): the lanes archive, export and upload the app. D3's last clause, "the archive
+  builds the scheme `Harness`'s `Harness` target alone", is superseded by ADR-584 D2: the archive
+  builds the scheme the app's project spec names, through the include the app's settings name last.
+  D8's last bullet, "Leaving them to the app shell — rejected, because the lane's first upload is the
+  harness", is superseded: the lanes now upload the app (ADR-584 D2), whose own catalog and icon set
+  dev already holds (#1050). D9's "rendered when the lane moves to the
+  app's scheme (#625)" is superseded by ADR-584 D7: the move renders no sync setting (#634). D1,
+  D2, D4 to D7 and the signing they decide are unchanged.
+
+### The archive names the paired identity on its command line
+
+A lane run's archive stopped with `No signing certificate "iOS Development" found` after the
+profile check had passed (app job 132790002039 of run 43687834537): XcodeGen's preset for an iOS
+application gives the app target `CODE_SIGN_IDENTITY: iPhone Developer`, and a target-level
+setting outranks the project-level include through which D3's signing settings reach the build.
+SPEC-352 section 8 amends R9; D3's manual signing, its job keychain and its include file
+otherwise stand.
+
+- One `CODE_SIGN_IDENTITY` build setting on the archive's command line — chosen, because a build
+  setting there outranks every level: the include's identity reaches the app target past the
+  preset with no change to the app's project spec or to any local build, and the include still
+  carries the app id, the team, the manual style, the identity and the profile to every native
+  target.
+- An `ios/**` edit — rejected, because a `settingPresets` option or a target-level setting in
+  `ios/app.yml` would take the full Apple pull request run and move every local build's identity.
+- The other signing settings on the command line too — rejected, because they reach the native
+  targets through the include alone, and a package target refuses a manually named profile, which
+  D3 keeps in the project-level include: no other signing setting goes on any command line, the
+  profile least of all.
+
+### The export options no longer limit the build to internal testing
+
+D4 wrote the export options with internal testing only, so every build the lane uploaded was
+limited to internal testing. SPEC-352 section 8 amends R10: the export drops TestFlight's
+internal-only testing option, and no other value takes its place. That clause of D4 is
+superseded, and the rest of D4 stands: the platform's own export and upload, the Developer-role
+key for one step, and its `0600` file in a fresh `0700` directory. The lane still manages no
+testers, and it opens no external testing group, no public link and no App Store submission.
+
+- The option left out of the export options — chosen, because a build the lane uploads is then no
+  longer limited to internal testing, while the key, its role, its file and the export's
+  arguments stay as D4 chose them.
+- The option kept and set true — rejected, because it limits every build the lane uploads to
+  internal testing, the limit this amendment removes.
+- The option written as false — rejected, because the amended export carries no internal-only
+  option at all: nothing is written in its place, and the options stay the seven that A10's test
+  pins.

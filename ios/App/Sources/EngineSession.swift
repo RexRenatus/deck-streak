@@ -4,7 +4,8 @@ import HarnessWire
 
 /// The engine calls the app makes, by the pairs the adapter's allow-list holds (SPEC-336,
 /// SPEC-347 R1, R7, R8, SPEC-348 R1). The adapter refuses any other pair before the engine sees
-/// it. An answer is not one of them: it goes through the adapter's answer door (SPEC-365 R12).
+/// it. An answer is not one of them: it goes through the adapter's answer door (SPEC-365 R12). The
+/// deck package import is one call, its package read under the adapter's bound (SPEC-681 R2, R3).
 enum EngineCall {
     static let openCollection: (service: UInt32, method: UInt32) = (3, 0)
     static let deckNames: (service: UInt32, method: UInt32) = (7, 13)
@@ -12,6 +13,7 @@ enum EngineCall {
     static let queuedCards: (service: UInt32, method: UInt32) = (13, 3)
     static let describeNextStates: (service: UInt32, method: UInt32) = (13, 24)
     static let syncLogin: (service: UInt32, method: UInt32) = (1, 3)
+    static let importPackage: (service: UInt32, method: UInt32) = (39, 2)
 }
 
 /// Why the app could not do what it was asked, as the sentence it shows: for a refusal of the
@@ -65,7 +67,7 @@ struct CardInfoSection: Equatable, Sendable {
 /// (SPEC-347 R7, R8). The actor serialises the calls; the engine itself is `Sendable` because the
 /// adapter's Rust side is `Send + Sync`. The voice choices live here too, beside the collection
 /// and never inside it, because the engine's types stop at this file (SPEC-348 R6, R14).
-actor EngineSession: SyncEngine, DataEngine {
+actor EngineSession: SyncEngine, DataEngine, PackageImportEngine {
     /// The engine's red flag, read once from the adapter, so the app holds no copy of the
     /// core's rule (SPEC-358 R3, ADR-369 O4).
     nonisolated let red = redFlag()
@@ -111,6 +113,28 @@ actor EngineSession: SyncEngine, DataEngine {
             call(EngineCall.deckNames, Requests.deckNames(includeFiltered: true))
         )
         .map { Deck(id: $0.id, name: $0.name) }
+    }
+
+    /// Whether the deck list is empty (SPEC-681 R6): asked to leave out its default deck while that
+    /// deck holds no card, the engine names no deck. A fresh collection's list shows the default
+    /// deck alone, with no card in it, so it reads as empty.
+    func deckListIsEmpty() throws -> Bool {
+        try Responses.deckNames(
+            call(EngineCall.deckNames, PackageImportRequest.skippingEmptyDefault)
+        )
+        .isEmpty
+    }
+
+    /// Imports a picked deck package's notes and cards into the open collection through the one
+    /// allowed call (SPEC-681 R2): the file is copied into the temporary folder, the copy's path is
+    /// the request, and the copy is removed after the call. A package the adapter refuses throws
+    /// its words, and nothing was written (R5).
+    func importPackage(from picked: URL) throws {
+        let copy = try PackageImportRequest.copy(picked)
+        defer { _ = try? FileManager.default.removeItem(at: copy) }
+        _ = try call(
+            EngineCall.importPackage,
+            PackageImportRequest.bytes(path: copy.path(percentEncoded: false)))
     }
 
     /// Makes `deck` the current deck (7,22), so the queue is its own (SPEC-348 R9).

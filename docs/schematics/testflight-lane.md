@@ -163,3 +163,61 @@ discarded when the job ends.
 The class vocabulary is closed. openssl's standard error is never printed, logged, written to a
 file or put in a refusal, whole or in part; the re-wrap and every other tool call keep their
 arguments (SPEC-352 R9 and R13 as section 8 amends them, ADR-363's amendment).
+
+## SPEC-566: the app the lanes build
+
+Read at `4e600dbb7565bd7cd6becb8f1c724b5e502c3d4a`. SPEC-566 and ADR-584 move both lanes from the
+harness to the app. The job graph above stands: the `app` job gains one step after its step 2, and
+steps 4 and 5 build the app instead of the harness. Every other step, the credential's path and a
+run's outcomes are unchanged.
+
+### Before: the scheme is the lane script's own literal
+
+```mermaid
+flowchart LR
+  B1["scripts/ios_lane.py:73-82 the harness's tuple"] --> B2["step 2: ios/project.yml generated"]
+  B2 --> B3["sign: archive -project ios/Harness.xcodeproj -scheme Harness"]
+  B2 --> B4["build-unsigned: the same tuple, signing off"]
+  B3 --> B5["upload-to-testflight: export and upload app.xcarchive"]
+```
+
+### After: the scheme is the app spec's `name`
+
+```mermaid
+flowchart LR
+  S0["ios/app.yml: name DeckStreak, scheme DeckStreak"] --> S1["step 2b: the app's project, generated"]
+  S0 --> S2["ios_lane.py app(): the top-level name, else refused"]
+  S1 --> S4["ios/DeckStreak.xcodeproj"]
+  S2 --> S5["sign: archive -project ios/DeckStreak.xcodeproj -scheme DeckStreak"]
+  S2 --> S6["build-unsigned: the same project and scheme, signing off"]
+  S4 --> S5
+  S4 --> S6
+  S5 --> S7["upload-to-testflight: export and upload app.xcarchive, unchanged"]
+```
+
+The app's asset catalog and its brand icon set stand as dev holds them (#1050), and no step writes the
+app's icon. The harness's icon is still written by the lanes' and the harness job's step "the app icon, written".
+
+### The `app` job's steps, after
+
+| step | what it does | what proves it | rows |
+|---|---|---|---|
+| 1 checkout | unchanged | SPEC-352 A20 | S35205 |
+| 2 place, write the harness's icon, generate the harness's project | unchanged, copied from the harness job | SPEC-352 A20 | none new |
+| 2b the app's project, generated | `xcodegen generate --spec ios/app.yml` | `test_testflight_workflows.py` in CI (SPEC-566 section 3); the first internal run after the land, by step name | S56611, S56612 |
+| 3 preflight | unchanged | SPEC-352's preflight criterion | none new |
+| 4 build-unsigned | builds `app()`: the spec's project and scheme, signing off | SPEC-566 A2, A3, A4 | S56602, S56603, S56604, S56605 |
+| 5 sign | reads `app()` before any tool, then archives it with the lane's include | SPEC-566 A1, A3, A4 | S56601, S56603, S56604 |
+| 6 upload-to-testflight | exports and uploads the archive, unchanged | SPEC-352 A10; the first signed internal run, by step name | none new |
+| 7 clean, 8 summary | unchanged | SPEC-352 A12, A13 | none new |
+
+### Reds, by step
+
+| criterion | step | red at the base | where it is read |
+|---|---|---|---|
+| A1 | 5 | the archive's list names `ios/Harness.xcodeproj` and `Harness`, not the fixture spec's | Linux |
+| A2 | 4 | the build's list names the harness's project and scheme | Linux |
+| A3 | 4, 5 | the tree's spec yields the harness's project, not `ios/DeckStreak.xcodeproj` | Linux |
+| A4 | 4, 5 | a spec that names no project is not refused: the build runs | Linux |
+| the app-project criterion | 2b | no lane step generates the app's project | CI, by name |
+| A8 | 2 | not red: the harness's control, unchanged | Linux |

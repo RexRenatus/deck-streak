@@ -1,0 +1,141 @@
+{
+  "tables": {
+    "MUTATIONS": [
+      [
+        "S68100-THE-CORE-TABLE-HOLDS-NINETEEN-ORDINARY-ROWS",
+        "engine-core",
+        "src/table.rs",
+        "pub const ORDINARY: [Ordinary; 19] = [",
+        "pub const ORDINARY: [Ordinary; 20] = [\n    Ordinary {\n        service: 39,\n        method: 0,\n        name: \"BackendImportExportService.ImportCollectionPackage\",\n        native: true,\n        web: false,\n    },",
+        "table::every_pair_is_admitted_held_or_refused_by_its_transport",
+        "the ordinary rows are nineteen, the package import the last; a twentieth admitting the collection package import natively would let the native client replace its whole collection, and the Native column would admit a pair its list does not hold (SPEC-681 R3)"
+      ],
+      [
+        "S68101-THE-IMPORT-ROW-OPENS-AS-THE-PACKAGE-IMPORT",
+        "engine-core",
+        "src/table.rs",
+        "    Ordinary {\n        service: 39,\n        method: 2,\n        name: \"ImportExportService.ImportAnkiPackage\",\n",
+        "    Ordinary {\n        service: 27,\n        method: 14,\n        name: \"CardRenderingService.HtmlToTextLine\",\n",
+        "table::every_pair_is_admitted_held_or_refused_by_its_transport",
+        "the last ordinary row opens as the package import; opened as a copy of the rendering row, the Native column loses the import pair, and the package import is one ordinary pair admitted on the Native column alone (SPEC-681 R3)"
+      ],
+      [
+        "S68102-THE-IMPORT-ROW-IS-SERVICE-THIRTY-NINE",
+        "engine-core",
+        "src/table.rs",
+        "        service: 39,\n        method: 2,\n",
+        "        service: 40,\n        method: 2,\n",
+        "table::every_pair_is_admitted_held_or_refused_by_its_transport",
+        "the import row names service 39; as service 40 the Native column admits another service and refuses the import, and the package import is one ordinary pair admitted on the Native column alone (SPEC-681 R3)"
+      ],
+      [
+        "S68103-THE-IMPORT-ROW-IS-METHOD-TWO",
+        "engine-core",
+        "src/table.rs",
+        "        method: 2,\n        name: \"ImportExportService.ImportAnkiPackage\",\n",
+        "        method: 3,\n        name: \"ImportExportService.ImportAnkiPackage\",\n",
+        "table::every_pair_is_admitted_held_or_refused_by_its_transport",
+        "the import row names method 2; as method 3 the Native column admits another method and refuses the import, and the package import is one ordinary pair admitted on the Native column alone (SPEC-681 R3)"
+      ],
+      [
+        "S68104-THE-IMPORT-ROW-NAMES-THE-PACKAGE-IMPORT",
+        "engine-core",
+        "src/table.rs",
+        "        name: \"ImportExportService.ImportAnkiPackage\",\n        native: true,\n",
+        "        name: \"ImportExportService.ExportAnkiPackage\",\n        native: true,\n",
+        "data_screen_pairs::the_data_screens_add_no_engine_pair",
+        "the import row is named for the package import; named for the package export, the table's rows no longer equal the list that pins them by name (SPEC-681 R3)"
+      ],
+      [
+        "S68105-THE-IMPORT-ROW-RUNS-NATIVELY",
+        "engine-core",
+        "src/table.rs",
+        "        name: \"ImportExportService.ImportAnkiPackage\",\n        native: true,\n        web: false,\n",
+        "        name: \"ImportExportService.ImportAnkiPackage\",\n        native: false,\n        web: false,\n",
+        "table::every_pair_is_admitted_held_or_refused_by_its_transport",
+        "the import row runs on the Native column; with native false the app could not import a package, and the package import is one ordinary pair admitted on the Native column alone (SPEC-681 R3)"
+      ],
+      [
+        "S68106-THE-IMPORT-ROW-STAYS-OFF-THE-WEB",
+        "engine-core",
+        "src/table.rs",
+        "        native: true,\n        web: false,\n    },\n];",
+        "        native: true,\n        web: true,\n    },\n];",
+        "table::every_pair_is_admitted_held_or_refused_by_its_transport",
+        "the import row stays off the Web column; with web true the web client would admit a package import, and the package import is one ordinary pair admitted on the Native column alone (SPEC-681 R3)"
+      ],
+      [
+        "S68107-THE-IMPORT-ROW-CLOSES-NATIVE-ONLY",
+        "engine-core",
+        "src/table.rs",
+        "        native: true,\n        web: false,\n    },\n];\n\n/// ",
+        "        native: false,\n        web: true,\n    },\n];\n\n/// ",
+        "table::every_pair_is_admitted_held_or_refused_by_its_transport",
+        "the ordinary table closes on the import row, native and not web; closed with the two swapped, the Web column admits the import and the Native column refuses it, and the package import is one ordinary pair admitted on the Native column alone (SPEC-681 R3)"
+      ],
+      [
+        "S68108-THE-ALLOW-LIST-HOLDS-THIRTEEN-CALLS",
+        "ffi",
+        "src/allow_list.rs",
+        "pub const ALLOW_LIST: [Call; 13] = [",
+        "pub const ALLOW_LIST: [Call; 14] = [\n    Call {\n        service: 39,\n        method: 0,\n        name: \"BackendImportExportService.ImportCollectionPackage\",\n    },",
+        "review_pairs::the_allow_list_carries_the_review_pairs",
+        "the native allow-list holds thirteen calls, the package import the last; a fourteenth admitting the collection package import would let the app replace its whole collection (SPEC-681 R3)"
+      ],
+      [
+        "S68109-THE-ALLOWED-IMPORT-OPENS-AS-THE-PACKAGE-IMPORT",
+        "ffi",
+        "src/allow_list.rs",
+        "    Call {\n        service: 39,\n        method: 2,\n        name: \"ImportExportService.ImportAnkiPackage\",\n",
+        "    Call {\n        service: 39,\n        method: 0,\n        name: \"BackendImportExportService.ImportCollectionPackage\",\n",
+        "package_import::the_import_pair_is_admitted_on_the_native_column",
+        "the last allowed call opens as the package import; opened as the collection package import, the adapter refuses the import pair (SPEC-681 R3)"
+      ],
+      [
+        "S68110-THE-ALLOWED-IMPORT-IS-SERVICE-THIRTY-NINE",
+        "ffi",
+        "src/allow_list.rs",
+        "        service: 39,\n        method: 2,\n",
+        "        service: 40,\n        method: 2,\n",
+        "package_import::the_import_pair_is_admitted_on_the_native_column",
+        "the allowed import names service 39; as service 40 the adapter refuses the import pair (SPEC-681 R3)"
+      ],
+      [
+        "S68111-THE-ALLOWED-IMPORT-IS-METHOD-TWO",
+        "ffi",
+        "src/allow_list.rs",
+        "        method: 2,\n        name: \"ImportExportService.ImportAnkiPackage\",\n",
+        "        method: 3,\n        name: \"ImportExportService.ImportAnkiPackage\",\n",
+        "package_import::the_import_pair_is_admitted_on_the_native_column",
+        "the allowed import names method 2; as method 3 the adapter refuses the import pair (SPEC-681 R3)"
+      ],
+      [
+        "S68112-THE-ALLOWED-IMPORT-NAMES-THE-PACKAGE-IMPORT",
+        "ffi",
+        "src/allow_list.rs",
+        "        name: \"ImportExportService.ImportAnkiPackage\",\n    },\n];",
+        "        name: \"ImportExportService.ExportAnkiPackage\",\n    },\n];",
+        "package_import::the_import_pair_is_admitted_on_the_native_column",
+        "the allowed import is named for the package import; named for the package export, the adapter admits the pair under the wrong name (SPEC-681 R3)"
+      ],
+      [
+        "S68113-THE-ALLOW-LIST-CLOSES-ON-THE-IMPORT",
+        "ffi",
+        "src/allow_list.rs",
+        "        service: 39,\n        method: 2,\n        name: \"ImportExportService.ImportAnkiPackage\",\n    },\n];",
+        "        service: 5,\n        method: 4,\n        name: \"CardsService.SetFlag\",\n    },\n];",
+        "review_pairs::the_allow_list_carries_the_review_pairs",
+        "the allow-list closes on the package import; closed on a copy of the flag call, the list lacks the import pair its pinned list holds (SPEC-681 R3)"
+      ],
+      [
+        "S68114-THE-PACKAGE-BOUND-MODULE-IS-PUBLIC",
+        "ffi",
+        "src/lib.rs",
+        "pub mod package_bound;\n",
+        "#[doc(hidden)]\npub mod package_bound;\n",
+        "package_import::the_crate_root_declares_the_package_bound_module_publicly",
+        "the crate root declares the package bound module public and bare (SPEC-681 R4). The killer is a source-text guard, since the mutant builds and no behaviour test reads the declaration"
+      ]
+    ]
+  }
+}

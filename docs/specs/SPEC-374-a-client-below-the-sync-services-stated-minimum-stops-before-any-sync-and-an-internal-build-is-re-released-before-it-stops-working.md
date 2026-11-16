@@ -284,6 +284,7 @@ reads the app's builds, newest upload first, with `curl` taking its authorizatio
 R16. It decides on the newest build that is valid, unexpired and for internal testing only: healthy
 when its expiration is more than the lead, 7 days, after now; otherwise due. No such build is due
 (`no internal build is live`). A newer build still processing is reported and dispatches nothing.
+Amended: section 12, a build of either audience is live.
 
 R17. The lead covers the schedule's interval (7 days against one day), so a build that would stop
 working before the next scheduled run is reported by this one.
@@ -386,6 +387,7 @@ Part two delivers section 7 as it is written: R13 to R21, decided by A8 to A15. 
 | A13 | A due build on an unmoved `dev` is reported and not dispatched | `scripts/tests/test_testflight_age.py` |
 | A14 | No credential part reaches a child's argv or environment, or the log | `scripts/tests/test_testflight_age.py` |
 | A15 | The lead covers the schedule's interval | `scripts/tests/test_ci_workflows.py`, in CI |
+| A23 | A valid, unexpired `APP_STORE_ELIGIBLE` build is the live build when it expires later than the newest live internal build, or when no internal build is live | `scripts/tests/test_testflight_age.py` |
 
 ```acceptance
 A8: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_a8_the_rerelease_check_runs_scheduled_with_admitted_reads_only
@@ -396,4 +398,15 @@ A12: python3 -m unittest discover -s scripts/tests -p test_testflight_age.py -k 
 A13: python3 -m unittest discover -s scripts/tests -p test_testflight_age.py -k test_a13_a_due_build_on_an_unmoved_dev_is_not_dispatched
 A14: python3 -m unittest discover -s scripts/tests -p test_testflight_age.py -k test_a14_no_credential_part_reaches_a_child_or_the_log
 A15: python3 -m unittest discover -s scripts/tests -p test_ci_workflows.py -k test_a15_the_rerelease_lead_covers_the_schedule_interval
+A23: python3 -m unittest discover -s scripts/tests -p test_testflight_age.py -k test_a23_an_app_store_eligible_build_that_outlives_the_internal_one_is_live
 ```
+
+## 12. Amendments, part three: a build of either audience is live
+
+Part three lets the check take a live lane build of either audience. The lane's export no longer limits its builds to internal testing, so the builds it uploads carry the `APP_STORE_ELIGIBLE` audience. A check that took only an `INTERNAL_ONLY` build as live would keep deciding on the last internal build: healthy until that build came within the lead, then a dispatch of the internal lane at every run, and after it another dispatch or a failure on an unmoved `dev`.
+
+- R16 as amended: the newest valid, unexpired build of each audience, by upload, is a candidate, one for internal testing only (`INTERNAL_ONLY`) and one `APP_STORE_ELIGIBLE`, and the candidate that expires later is the build decided on; on a tie the internal one stays, and a lone candidate is decided on alone. The verdict is R16's: healthy when that build's expiration is more than the lead, 7 days, after now; otherwise due. With no candidate the run is due as `no internal build is live`, as before. A listing with no `APP_STORE_ELIGIBLE` build is decided exactly as before.
+- R16's own text in section 7, section 1's internal-build bullet, R15 and R17 to R21 stand as written: the read, the lead, the dispatch, the failures, the summary and every printed line, `no internal build is live` included, are unchanged.
+- A23 decides the amendment, in section 11's table and fence, by `test_a23_an_app_store_eligible_build_that_outlives_the_internal_one_is_live`: six cases, three red before the change, and three that hold its validity test, its expiry test and its strict comparison.
+- No criterion is amended: every A9 to A14 test and every edge test keeps its assertions and fixtures, and row S37422 keeps its find text and its kill by A10's test.
+- Files: `scripts/testflight_age.py`, `scripts/tests/test_testflight_age.py`, `docs/specs/SPEC-374-a-client-below-the-sync-services-stated-minimum-stops-before-any-sync-and-an-internal-build-is-re-released-before-it-stops-working.md`, `docs/red-first/SPEC-374.md`, `changelog.d/testflight-rerelease-audience.md` (new).

@@ -44,7 +44,7 @@ struct ShellView: View {
 
 /// The collection's decks by name, in the order the engine gives them (R7); a row is chosen as
 /// its deck, id and name. A refusal shows its sentence in place of the list. The toolbar carries
-/// the one account button (R6).
+/// the one account button (R6), and the list carries the deck package import (SPEC-681 R1, R6).
 struct DeckListView: View {
     @Bindable var model: AppModel
 
@@ -60,6 +60,7 @@ struct DeckListView: View {
                 }
                 .accessibilityIdentifier("deck-list")
                 .scrollContentBackground(.hidden)
+                .modifier(PackageImportControls(model: model, importer: model.packageImport))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
