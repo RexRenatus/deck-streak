@@ -162,3 +162,46 @@ jobs. The trial is this change's own pull request run with both variables on, re
 6. The steady state, `DS_MINI` on and `DS_MINI_LONG` off, in which the hosted long jobs link a
    framework the self-hosted runner built, gets its own read by job name before `DS_MINI` stays
    on.
+
+## 8. Amendment: the long jobs also reach the runner on dev
+
+R2's and R3's routes now read with a third clause. The long expression also reaches the five
+labels `self-hosted`, `macOS`, `ARM64`, `ds-mini` and `ds-mini-sim` for a push or a workflow
+dispatch whose ref is `refs/heads/dev`, with `DS_MINI` and `DS_MINI_LONG` both on and an actor
+that is not `dependabot[bot]`. A tag push, a push to main or to any other ref, a dispatch on any
+other ref, a scheduled run and a fork's pull request keep both long jobs on `xcode-27`. So of the
+upload lanes only the internal lane's runs on dev reach the runner, and the release lane's and the
+tag's runs keep both long jobs hosted: the hosted upload lanes narrow to those two.
+
+The callers of the workflow file, each with its events and refs:
+
+- `apple-on-change.yml` runs it for a pull request into dev, on its opened, synchronize and
+  reopened types, in its job `apple`.
+- `apple-on-tag.yml` runs it for a push of a tag matching `v[0-9]+.[0-9]+.[0-9]+`.
+- `testflight-internal.yml` runs it in its job `framework` for a push to dev on its paths and for a
+  dispatch, which takes no branch filter; its runs on dev are the ones this amendment routes to the
+  runner.
+- `testflight-release.yml` runs it in its job `framework` for a push of a SemVer tag and for a
+  dispatch; its plan job refuses every ref that is not an annotated SemVer tag on main, and
+  `framework` needs the plan, so its call runs only at a tag's ref and keeps both long jobs
+  hosted.
+- The workflow file's own `workflow_dispatch` is a fifth route: a dispatch of the file itself on
+  dev reaches the runner under the new expression, with no secret and a read-only token.
+
+The two long jobs name no secret and no environment, and the internal lane's call of the file
+passes none; that lane's signing job alone holds its environment and its secrets, and stays on
+`xcode-27`.
+
+The criteria this amendment changes, each now read as stated here; the acceptance block above is
+unchanged, and no test is renamed.
+
+| criterion | what it decides now | test |
+|---|---|---|
+| A2 | `harness` and `release-and-app` hold the new long expression, the same in both, and over every scenario, with the scenario count and the routed counts asserted, reach the five labels only for this repository's pull request, a push to dev and a dispatch on dev, each with both variables on and a person as actor, `xcode-27` otherwise, a tag push, a push to main, a dispatch on another branch, a scheduled run and a fork's pull request among the hosted ones | `test_the_long_jobs_reach_the_runner_only_on_own_pull_requests_with_both_variables_on` |
+| A3 | planted copies of the long expression also without the ref clause and without the event clause are each refused by a scenario, beside the plants it already holds | `test_a_planted_long_route_is_refused_by_its_scenario` |
+| A4 | the jobs that hold each expression are exactly its own, the long one now being the new expression | `test_each_apple_expression_is_admitted_to_its_own_jobs_alone` |
+
+The change relaxes R3 and the routing criterion that held every push and dispatch hosted, and the
+red-first record names that relaxation as a weakening row in words. The paths this change touches
+are the workflow file, `scripts/tests/test_ci_workflows.py`, this SPEC, its ADR, its red-first
+record and one changelog fragment.

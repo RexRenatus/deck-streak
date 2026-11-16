@@ -65,13 +65,16 @@ SHORT_APPLE_JOBS = frozenset(
 # LONG_APPLE_RUNNER below (SPEC-688 R2).
 # The one `runs-on` value of the two long Apple jobs (SPEC-688 R2, R3): the self-hosted labels only
 # when DS_MINI and a second repository variable, DS_MINI_LONG, both read `on`, the actor is not
-# Dependabot and the event is a pull request whose head repository is this repository; the file's
-# admitted runner in every other case. A called workflow reads its caller's event, so every push,
-# dispatch and tag run an upload lane or the tag hands the file keeps both long jobs hosted.
+# Dependabot and the run is either a pull request whose head repository is this repository or a
+# push or a dispatch whose ref is the dev branch; the file's admitted runner in every other case.
+# A called workflow reads its caller's event and ref, so a tag run, a run on main, a schedule and a
+# fork's pull request keep both long jobs hosted.
 LONG_APPLE_RUNNER = (
     "${{ (vars.DS_MINI == 'on' && vars.DS_MINI_LONG == 'on' && "
-    "github.actor != 'dependabot[bot]' && github.event_name == 'pull_request' && "
-    "github.event.pull_request.head.repo.full_name == github.repository) && fromJSON("
+    "github.actor != 'dependabot[bot]' && ((github.event_name == 'pull_request' && "
+    "github.event.pull_request.head.repo.full_name == github.repository) || "
+    "((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && "
+    "github.ref == 'refs/heads/dev'))) && fromJSON("
     '\'["self-hosted","macOS","ARM64","ds-mini","ds-mini-sim"]\') || \'xcode-27\' }}'
 )
 # The two long jobs, by file and job: the jobs admitted to the long expression and to it alone.
@@ -1662,16 +1665,29 @@ def apple_route_scenarios():
     the self-hosted labels there), over every event a caller can hand xcframework.yml, a release tag
     push among them, every value of DS_MINI and of DS_MINI_LONG and both actors (SPEC-688 R1 to R3).
     The short route wants the labels as SPEC-621 states it, whatever DS_MINI_LONG reads; the long
-    route wants them only for this repository's own pull request with both variables on and an
-    actor that is not Dependabot. As in SPEC-621's scenarios, an unset variable is absent from the
+    route wants them for this repository's own pull request, a push to dev and a workflow dispatch
+    on dev, each with both variables on and an actor that is not Dependabot, and nowhere else: a
+    release tag push, a push to main, a dispatch on another branch, a fork's pull request and a
+    scheduled run stay hosted. As in SPEC-621's scenarios, an unset variable is absent from the
     context, and the pull request's head repository is in every context, null where there is none."""
     headless = {"github.event.pull_request.head.repo.full_name": None}
     events = (
-        ("a push to dev", {**push("refs/heads/dev"), **headless}, True, False),
+        ("a push to dev", {**push("refs/heads/dev"), **headless}, True, True),
+        ("a push to main", {**push("refs/heads/main"), **headless}, True, False),
         ("a release tag push", {**push("refs/tags/v1.2.3"), **headless}, True, False),
         (
             "a workflow dispatch",
             {**push("refs/heads/dev"), **headless, "github.event_name": "workflow_dispatch"},
+            True,
+            True,
+        ),
+        (
+            "a workflow dispatch on another branch",
+            {
+                **push("refs/heads/feat/probe"),
+                **headless,
+                "github.event_name": "workflow_dispatch",
+            },
             True,
             False,
         ),
@@ -1737,9 +1753,10 @@ def apple_route_problems(jobs):
 
 class EveryAppleJobReachesTheRunnerOnlyBehindItsVariables(unittest.TestCase):
     """SPEC-688: the verdict follows the short Apple jobs' route, and the two long jobs reach the
-    self-hosted labels only for this repository's own pull request with DS_MINI and DS_MINI_LONG
-    both on and an actor that is not Dependabot, so every push, dispatch and tag run keeps them on
-    the file's admitted runner; each expression is admitted to its own jobs alone."""
+    self-hosted labels only for this repository's own pull request, a push to dev and a dispatch on
+    dev, with DS_MINI and DS_MINI_LONG both on and an actor that is not Dependabot, so a tag run, a
+    run on main, a schedule and a fork's pull request keep them on the file's admitted runner; each
+    expression is admitted to its own jobs alone."""
 
     def test_the_verdict_holds_the_short_expression_and_routes_with_the_short_jobs(self):
         """SPEC-688 R1: the verdict's `runs-on` is the short jobs' expression byte for byte, and it
@@ -1758,26 +1775,32 @@ class EveryAppleJobReachesTheRunnerOnlyBehindItsVariables(unittest.TestCase):
 
     def test_the_long_jobs_reach_the_runner_only_on_own_pull_requests_with_both_variables_on(self):
         """SPEC-688 R2, R3: harness and release-and-app hold the long expression, the same in both,
-        and reach the self-hosted labels only for this repository's own pull request with both
-        variables on and a person as actor; in every other scenario they stay on the file's
-        admitted runner, so every push, dispatch and tag run keeps them hosted."""
+        and reach the self-hosted labels only for this repository's own pull request, a push to dev
+        and a dispatch on dev, with both variables on and a person as actor; in every other
+        scenario they stay on the file's admitted runner, so a tag run, a run on main, a dispatch on
+        another branch, a schedule and a fork's pull request keep them hosted."""
         jobs = load("xcframework.yml")["jobs"]
         self.assertEqual(jobs["harness"]["runs-on"], LONG_APPLE_RUNNER)
         self.assertEqual(jobs["release-and-app"]["runs-on"], jobs["harness"]["runs-on"])
         scenarios = examined("routing scenarios", apple_route_scenarios())
-        # Six events, four values of each variable and two actors. The short route wants the labels
-        # on four events, for two values of DS_MINI and one actor, whatever DS_MINI_LONG reads; the
-        # long route on one event, for two values of each variable and one actor.
-        self.assertEqual(len(scenarios), 192)
-        self.assertEqual(sum(short for _name, _context, short, _long in scenarios), 32)
+        # Eight events, four values of each variable and two actors. The short route wants the
+        # labels on six events, for two values of DS_MINI and one actor, whatever DS_MINI_LONG
+        # reads; the long route on three events, for two values of each variable and one actor.
+        self.assertEqual(len(scenarios), 256)
+        self.assertEqual(sum(short for _name, _context, short, _long in scenarios), 48)
+        long_names = [
+            f"{event}, DS_MINI {short_value}, DS_MINI_LONG {long_value}, a person"
+            for event in (
+                "a push to dev",
+                "a workflow dispatch",
+                "this repository's pull request into dev",
+            )
+            for short_value, long_value in (("on", "on"), ("on", "ON"), ("ON", "on"), ("ON", "ON"))
+        ]
+        self.assertEqual(len(long_names), 12)
         self.assertEqual(
             [name for name, _context, _short, long_routed in scenarios if long_routed],
-            [
-                "this repository's pull request into dev, DS_MINI on, DS_MINI_LONG on, a person",
-                "this repository's pull request into dev, DS_MINI on, DS_MINI_LONG ON, a person",
-                "this repository's pull request into dev, DS_MINI ON, DS_MINI_LONG on, a person",
-                "this repository's pull request into dev, DS_MINI ON, DS_MINI_LONG ON, a person",
-            ],
+            long_names,
         )
         admitted = ADMITTED_RUNNERS["xcframework.yml"]
         for job_id in examined("long Apple jobs", sorted(job for _name, job in LONG_APPLE_JOBS)):
@@ -1822,6 +1845,19 @@ class EveryAppleJobReachesTheRunnerOnlyBehindItsVariables(unittest.TestCase):
                 f"{long_hosted}",
             ),
             (
+                "without the ref clause",
+                (" && github.ref == 'refs/heads/dev'", ""),
+                f"a push to main, DS_MINI on, DS_MINI_LONG on, a person {long_hosted}",
+            ),
+            (
+                "without the event clause",
+                (
+                    "(github.event_name == 'push' || github.event_name == 'workflow_dispatch') && ",
+                    "",
+                ),
+                f"a run on a schedule, DS_MINI on, DS_MINI_LONG on, a person {long_hosted}",
+            ),
+            (
                 "another label list",
                 (',"ds-mini-sim"]', "]"),
                 f"{own}, DS_MINI on, DS_MINI_LONG on, a person resolves to the self-hosted labels, "
@@ -1845,7 +1881,7 @@ class EveryAppleJobReachesTheRunnerOnlyBehindItsVariables(unittest.TestCase):
                 refusals = apple_route_problems(planted)
                 for job_id in long_jobs:
                     self.assertIn(f"{job_id}: {refusal}", refusals)
-        self.assertEqual(len(plants), 6)
+        self.assertEqual(len(plants), 8)
 
     def test_each_apple_expression_is_admitted_to_its_own_jobs_alone(self):
         """SPEC-688 R4: the jobs holding each expression are exactly the jobs admitted to it, and
