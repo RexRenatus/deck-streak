@@ -377,24 +377,32 @@ def sign():
     pem = read_certificate(openssl, original, passphrase)
     original.unlink()
     bundle = lane / "certificate.p12"
-    tool(
-        openssl,
-        "pkcs12",
-        "-export",
-        "-out",
-        str(bundle),
-        "-passin",
-        f"pass:{passphrase}",
-        "-passout",
-        f"pass:{passphrase}",
-        "-certpbe",
-        "PBE-SHA1-3DES",
-        "-keypbe",
-        "PBE-SHA1-3DES",
-        "-macalg",
-        "sha1",
-        stdin=pem,
-    )
+    # The re-wrap reads the key and then the certificate from its input, and the first read
+    # spends standard input, so the input is a file only its owner may read, removed at once.
+    certificate = lane / "certificate.pem"
+    write_private(certificate, pem.encode())
+    try:
+        tool(
+            openssl,
+            "pkcs12",
+            "-export",
+            "-in",
+            str(certificate),
+            "-out",
+            str(bundle),
+            "-passin",
+            f"pass:{passphrase}",
+            "-passout",
+            f"pass:{passphrase}",
+            "-certpbe",
+            "PBE-SHA1-3DES",
+            "-keypbe",
+            "PBE-SHA1-3DES",
+            "-macalg",
+            "sha1",
+        )
+    finally:
+        certificate.unlink()
     keychain = str(lane / "lane.keychain-db")
     tool("security", "create-keychain", "-p", keychain_password, keychain)
     tool("security", "set-keychain-settings", "-lut", "21600", keychain)
@@ -459,7 +467,15 @@ def sign():
         f"PROVISIONING_PROFILE_SPECIFIER = {profile['UUID']}\n",
         encoding="utf-8",
     )
-    xcodebuild(private, "archive", *build, "-archivePath", str(lane / "app.xcarchive"), *numbers())
+    xcodebuild(
+        private,
+        "archive",
+        *build,
+        "-archivePath",
+        str(lane / "app.xcarchive"),
+        *numbers(),
+        f"CODE_SIGN_IDENTITY={matched[0]}",
+    )
 
 
 def upload():
@@ -475,7 +491,6 @@ def upload():
         "signingCertificate": signing["identity"],
         "signingStyle": "manual",
         "teamID": signing["team"],
-        "testFlightInternalTestingOnly": True,
     }
     (lane / "export-options.plist").write_bytes(plistlib.dumps(options))
     private = (*signing["private"], os.environ["KEYID"], os.environ["ISSUER"])

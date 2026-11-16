@@ -1,0 +1,14 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S70100-THE-DOCS-INDEX-COUNTS-SIGNED-RULINGS",
+        "docs/README.md",
+        "signed rulings, each kept as written",
+        "rulings, each kept as written",
+        "the documentation index states its count as signed rulings beside its link to the rulings folder; with the word dropped the line states no count, so the census reads none for that index (SPEC-701 R1, R2)",
+        "test_ruling_index.RulingIndexTest.test_each_index_states_the_count_of_signed_rulings"
+      ]
+    ]
+  }
+}

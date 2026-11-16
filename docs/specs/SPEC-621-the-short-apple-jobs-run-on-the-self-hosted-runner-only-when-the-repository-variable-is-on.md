@@ -102,3 +102,16 @@ view's host job to the same. Every other workflow's admission is kept.
   and cleared by unsetting the variable.
 - **A Dependabot run.** A Dependabot pull request comes from this repository, so the actor clause
   keeps it hosted; a planted copy without the clause is refused by A3.
+
+## 7. Amendment: SPEC-688 routes the verdict and the long jobs
+
+SPEC-688, decided by ADR-708, amends this SPEC insert-only. R3 now reads as SPEC-688 R1 to R3:
+`verdict` takes this SPEC's expression, and `harness` and `release-and-app` take one expression of
+their own that reaches the self-hosted labels only when `DS_MINI` and a second repository
+variable, `DS_MINI_LONG`, both read `on`, the actor is not `dependabot[bot]` and the event is a
+pull request whose head repository is this repository, and `xcode-27` otherwise. The criterion
+that the long jobs and the verdict resolve to `xcode-27` in every scenario is replaced by
+SPEC-688's routes, and its test is replaced in `scripts/tests/test_ci_workflows.py`; the class's
+other three tests stand, with the verdict among the jobs their short route reads.
+
+A2: superseded by SPEC-688's criteria; its acceptance command above, `-k test_the_long_apple_jobs_and_the_verdict_stay_hosted_on_every_event`, names the test SPEC-688 replaces.

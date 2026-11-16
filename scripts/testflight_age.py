@@ -229,6 +229,18 @@ def decide(builds, now, lines):
         ),
         None,
     )
+    eligible = next(
+        (
+            build
+            for build in builds
+            if build["state"] == "VALID"
+            and not build["expired"]
+            and build["audience"] == "APP_STORE_ELIGIBLE"
+        ),
+        None,
+    )
+    if eligible is not None and (live is None or eligible["expires"] > live["expires"]):
+        live = eligible
     if live is not None:
         lines.append(
             f"newest live build {live['number']}: uploaded {live['uploaded_text']}, "
