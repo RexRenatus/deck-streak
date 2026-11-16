@@ -843,6 +843,186 @@ class LaneCredential(unittest.TestCase):
                 self.assertFalse((self.checkout / INCLUDE).exists())
                 self.assertEqual(list(self.home.rglob("*.mobileprovision")), [])
 
+    def profile_line(self, shape, decoded=None, outside=0):
+        """The line the signing step prints first: the class `shape`, the `decoded` byte count (by
+        default what the stored text's base64 characters decode to, three bytes for each four, the
+        `=` pad none) and the count of the characters the test placed `outside` the alphabet
+        (SPEC-704 R1)."""
+        if decoded is None:
+            decoded = sum(character in BASE64 for character in self.values["PROFILE"]) * 3 // 4
+        return (
+            f"profile shape: class {shape}, {decoded} decoded bytes, {outside} stored characters"
+            " outside the base64 alphabet"
+        )
+
+    def test_profile_shape_der_xml_plist_is_named_and_the_step_goes_on(self):
+        """A DER sequence holding an XML property list, in the fixture's long form and in the
+        indefinite form, is named by its class before the parse, and the step goes on past the
+        parse; nothing of the value is printed (SPEC-704 R1, R3, R4)."""
+        marker = uuid.uuid4().hex
+        # A development profile: the step reads it, prints its masks and then refuses it.
+        development = plistlib.dumps(
+            {
+                "Entitlements": {
+                    "application-identifier": f"{self.ids['team']}.{self.ids['app id']}",
+                    "get-task-allow": True,
+                },
+                "Name": self.ids["profile name"],
+                "TeamIdentifier": [self.ids["team"]],
+                "TeamName": self.ids["team name"],
+                "UUID": self.ids["profile uuid"],
+            }
+        )
+        with self.subTest(case="the fixture's profile, in the long form"):
+            printed, _ = self.sign()
+            line = self.profile_line("der-xml-plist")
+            self.assertEqual(printed.splitlines().count(line), 1, "the profile line, once")
+            self.assertEqual(printed.splitlines()[0], line)
+            self.assertEqual(set(self.ids.values()) - set(self.masks(printed)), set())
+        with self.subTest(case="the indefinite form"):
+            blob = b"\x30\x80" + development + marker.encode()
+            self.values["PROFILE"] = base64_text(blob)
+            code, printed, errors, records, _ = self.step(
+                "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+            )
+            line = self.profile_line("der-xml-plist", len(blob))
+            self.assertEqual(printed.splitlines().count(line), 1, "the profile line, once")
+            self.assertEqual(printed.splitlines()[0], line)
+            self.assertEqual(self.masks(printed)[:5], [self.ids[name] for name in IDENTIFIERS])
+            self.assertEqual(
+                (code, errors, records),
+                (
+                    1,
+                    "the profile is a development profile, not an App Store distribution profile\n",
+                    [],
+                ),
+            )
+            self.assertNotIn(marker, printed + errors + json.dumps(records))
+
+    def test_profile_shape_der_no_plist_is_named_and_refused(self):
+        """A DER sequence holding no XML property list, in the short form, as two bytes and in the
+        long form with its one length octet, is named by its class and refused by it before any
+        tool runs; a stored character outside the base64 alphabet and whitespace is counted, a
+        line break is not, and nothing of the value is printed (SPEC-704 R1, R2, R4)."""
+        marker = uuid.uuid4().hex
+        short = b"\x30\x7f" + marker.encode() + bytes(range(0x80, 0xDE))
+        text = base64_text(short)
+        # The stored text wrapped at 64 characters, as a wrapped encoder writes it, and two
+        # characters outside the alphabet placed between its first characters.
+        wrapped = "\n".join(text[start : start + 64] for start in range(0, len(text), 64))
+        cases = [
+            ("the short form", short, f"{wrapped[:2]}!*{wrapped[2:]}\n", 2),
+            ("two bytes", b"\x30\x00", base64_text(b"\x30\x00"), 0),
+            ("the long form", b"\x30\x81\x00", base64_text(b"\x30\x81\x00"), 0),
+        ]
+        refusal = "the profile holds no XML property list: class der-no-plist"
+        for case, blob, stored, outside in examined("sequences with no property list", cases):
+            self.values["PROFILE"] = stored
+            code, printed, errors, records, _ = self.step(
+                "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+            )
+            with self.subTest(case=case, part="line"):
+                line = self.profile_line("der-no-plist", len(blob), outside)
+                self.assertEqual(printed.splitlines(), [line])
+            with self.subTest(case=case, part="refusal"):
+                self.assertEqual(errors.splitlines()[-1:], [refusal])
+                self.assertEqual((code, errors, records), (1, f"{refusal}\n", []))
+            self.assertNotIn(marker, printed + errors + json.dumps(records))
+
+    def test_profile_shape_base64_text_is_named_and_refused(self):
+        """Base64 text, as a profile encoded twice decodes to, with a line break of its own, is
+        named by its class and refused by it before any tool runs, and nothing of the value is
+        printed (SPEC-704 R1, R2, R4)."""
+        marker = uuid.uuid4().hex
+        blob = f"MIIB{marker}\n{base64_text(bytes(range(48)))}\n".encode()
+        self.values["PROFILE"] = base64_text(blob)
+        code, printed, errors, records, _ = self.step(
+            "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+        )
+        refusal = "the profile holds no XML property list: class base64-text"
+        with self.subTest(part="line"):
+            self.assertEqual(printed.splitlines(), [self.profile_line("base64-text", len(blob))])
+        with self.subTest(part="refusal"):
+            self.assertEqual(errors.splitlines()[-1:], [refusal])
+            self.assertEqual((code, errors, records), (1, f"{refusal}\n", []))
+        self.assertNotIn(marker, printed + errors + json.dumps(records))
+
+    def test_profile_shape_binary_plist_is_named_and_refused(self):
+        """A binary property list is named by its class and refused by it before any tool runs,
+        and nothing of the value is printed (SPEC-704 R1, R2, R4)."""
+        marker = uuid.uuid4().hex
+        blob = plistlib.dumps({"Name": marker}, fmt=plistlib.FMT_BINARY)
+        self.values["PROFILE"] = base64_text(blob)
+        code, printed, errors, records, _ = self.step(
+            "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+        )
+        refusal = "the profile holds no XML property list: class binary-plist"
+        with self.subTest(part="line"):
+            self.assertEqual(printed.splitlines(), [self.profile_line("binary-plist", len(blob))])
+        with self.subTest(part="refusal"):
+            self.assertEqual(errors.splitlines()[-1:], [refusal])
+            self.assertEqual((code, errors, records), (1, f"{refusal}\n", []))
+        self.assertNotIn(marker, printed + errors + json.dumps(records))
+
+    def test_profile_shape_xml_plist_is_named_and_the_step_goes_on(self):
+        """An XML property list with no DER wrapper is named by its class before the parse, and the
+        step goes on past the parse; nothing of the value is printed (SPEC-704 R1, R3, R4)."""
+        marker = uuid.uuid4().hex
+        # A development profile: the step reads it, prints its masks and then refuses it.
+        development = plistlib.dumps(
+            {
+                "Entitlements": {
+                    "application-identifier": f"{self.ids['team']}.{self.ids['app id']}",
+                    "get-task-allow": True,
+                },
+                "Name": self.ids["profile name"],
+                "TeamIdentifier": [self.ids["team"]],
+                "TeamName": self.ids["team name"],
+                "UUID": self.ids["profile uuid"],
+            }
+        )
+        blob = development + marker.encode()
+        self.values["PROFILE"] = base64_text(blob)
+        code, printed, errors, records, _ = self.step(
+            "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+        )
+        line = self.profile_line("xml-plist", len(blob))
+        self.assertEqual(printed.splitlines().count(line), 1, "the profile line, once")
+        self.assertEqual(printed.splitlines()[0], line)
+        self.assertEqual(self.masks(printed)[:5], [self.ids[name] for name in IDENTIFIERS])
+        self.assertEqual(
+            (code, errors, records),
+            (
+                1,
+                "the profile is a development profile, not an App Store distribution profile\n",
+                [],
+            ),
+        )
+        self.assertNotIn(marker, printed + errors + json.dumps(records))
+
+    def test_profile_shape_other_is_named_and_refused(self):
+        """Bytes no earlier class names, among them a SEQUENCE tag whose length's first octet is the
+        reserved 0xFF or names a length octet that is absent, are named other and refused before
+        any tool runs, and nothing of the value is printed (SPEC-704 R1, R2, R4)."""
+        marker = uuid.uuid4().hex
+        cases = [
+            ("no SEQUENCE tag", b"\x00" + marker.encode() + bytes(range(0x80, 0x90))),
+            ("a length octet absent", b"\x30\x81"),
+            ("the reserved first octet", b"\x30\xff" + bytes(127)),
+        ]
+        refusal = "the profile holds no XML property list: class other"
+        for case, blob in examined("other profiles", cases):
+            self.values["PROFILE"] = base64_text(blob)
+            code, printed, errors, records, _ = self.step(
+                "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+            )
+            with self.subTest(case=case, part="line"):
+                self.assertEqual(printed.splitlines(), [self.profile_line("other", len(blob))])
+            with self.subTest(case=case, part="refusal"):
+                self.assertEqual(errors.splitlines()[-1:], [refusal])
+                self.assertEqual((code, errors, records), (1, f"{refusal}\n", []))
+            self.assertNotIn(marker, printed + errors + json.dumps(records))
+
     def test_signing_imports_the_certificate_non_extractable_into_a_job_keychain(self):
         _, records = self.sign()
         keychain = str(self.lane / "lane.keychain-db")
@@ -1221,8 +1401,14 @@ class LaneCredential(unittest.TestCase):
         (self.shims / "fixture.json").write_text(json.dumps(fixture), encoding="utf-8")
         self.sign()
         self.step("upload-to-testflight", ("KEY", "KEYID", "ISSUER"))
-        for out, _, _ in examined("steps", self.runs):
+        for run, (out, _, _) in enumerate(examined("steps", self.runs)):
             lines = out.splitlines()
+            if run == 0:
+                # The signing step prints its profile line once and first: it is set aside here
+                # (SPEC-704 R1).
+                expected = self.profile_line("der-xml-plist")
+                self.assertEqual(lines.count(expected), 1, "the profile line, once")
+                self.assertEqual(lines.pop(0), expected)
             self.assertEqual(lines[-2:], ["warning: <redacted>", "error: <redacted>"])
             self.assertEqual(
                 [line[:12] for line in lines[:-2]], ["::add-mask::"] * (len(lines) - 2)
@@ -1293,7 +1479,10 @@ class LaneCredential(unittest.TestCase):
                 )
                 self.assertEqual(
                     [line for line in printed.splitlines() if not line.startswith("::add-mask::")],
-                    [f"pkcs12 read failed: class {name}; reading once more with -legacy"],
+                    [
+                        self.profile_line("der-xml-plist"),
+                        f"pkcs12 read failed: class {name}; reading once more with -legacy",
+                    ],
                 )
                 self.assertEqual(
                     errors.splitlines(),
@@ -1320,7 +1509,10 @@ class LaneCredential(unittest.TestCase):
         self.assertEqual([r for r in records if r["tool"] == "security"], [])
         self.assertEqual(
             [line for line in printed.splitlines() if not line.startswith("::add-mask::")],
-            ["pkcs12 read failed: class wrong-password; reading once more with -legacy"],
+            [
+                self.profile_line("der-xml-plist"),
+                "pkcs12 read failed: class wrong-password; reading once more with -legacy",
+            ],
         )
         self.assertFalse((self.checkout / INCLUDE).exists())
 
