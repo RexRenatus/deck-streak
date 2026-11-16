@@ -1,12 +1,11 @@
 import CardIsolation
 import SwiftUI
-import UIKit
 import WebKit
 
 /// The card, in the view the factory makes (SPEC-348 R9, R17, R18): a new view per face, awaited
 /// in a task keyed by the face's document, so a face is never loaded into a view that showed
-/// another and the factory's navigation gate stays one-shot. Its page zoom is the body text
-/// style's Dynamic Type scale. This file sets nothing on the view but that zoom; the factory
+/// another and the factory's navigation gate stays one-shot. Its page zoom is the factory's body
+/// text zoom (1 on macOS). This file sets nothing on the view but that zoom; the factory
 /// alone builds it. The view object is this view's own state, because it renders the model's
 /// document and holds none of the review's state.
 struct CardFaceView: View {
@@ -24,7 +23,7 @@ struct CardFaceView: View {
         .task(id: document) {
             do {
                 let made = try await CardWebViewFactory.makeCardWebView(html: document)
-                made.pageZoom = UIFontMetrics(forTextStyle: .body).scaledValue(for: 1)
+                made.pageZoom = CardWebViewFactory.bodyTextZoom
                 card = made
                 refusal = ""
             } catch {
@@ -37,7 +36,9 @@ struct CardFaceView: View {
     }
 }
 
-/// Hosts one factory view as it was made; a new view is a new host, so no view is reused.
+/// Hosts one factory view as it was made; a new view is a new host, so no view is reused. On
+/// macOS the host is AppKit's (SPEC-679).
+#if os(iOS)
 private struct CardHost: UIViewRepresentable {
     let card: WKWebView
 
@@ -47,3 +48,14 @@ private struct CardHost: UIViewRepresentable {
 
     func updateUIView(_ view: WKWebView, context: Context) {}
 }
+#else
+private struct CardHost: NSViewRepresentable {
+    let card: WKWebView
+
+    func makeNSView(context: Context) -> WKWebView {
+        card
+    }
+
+    func updateNSView(_ view: WKWebView, context: Context) {}
+}
+#endif

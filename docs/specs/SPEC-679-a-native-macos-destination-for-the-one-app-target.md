@@ -33,14 +33,14 @@ named here and by `git grep -n` over the tree, every exclude paired with a posit
 | site | path and line | class | macOS form |
 |---|---|---|---|
 | the card's web view host, a `UIViewRepresentable` | `ios/App/Sources/CardFaceView.swift:41` | needs a macOS counterpart | an `NSViewRepresentable` host of the same factory's view |
-| the card's page zoom from `UIFontMetrics` | `ios/App/Sources/CardFaceView.swift:27` | needs a macOS counterpart | a zoom of 1 at the Mac's 13 pt body text |
+| the card's page zoom from `UIFontMetrics` | `ios/App/Sources/CardFaceView.swift:27` | needs a macOS counterpart | a zoom of 1 at the Mac's 13 pt body text, which the card's web view factory states |
 | a VoiceOver announcement, `UIAccessibility.post` | `ios/App/Sources/CardRefusalWords.swift:31` | needs a macOS counterpart | an announcement both platforms post |
-| the VoiceOver state, `UIAccessibility.isVoiceOverRunning` | `ios/App/Sources/ReviewModel.swift:51` | needs a macOS counterpart | the workspace's VoiceOver state |
-| `import UIKit` | `ios/App/Sources/CardFaceView.swift:3`, `CardRefusalWords.swift:2`, `ReviewModel.swift:2` | needs a platform conditional | imported for iOS only |
-| the audio session, `AVAudioSession` | `ios/App/Sources/ClipPlayer.swift:35` | needs a platform conditional | iOS only: a Mac app sets no session |
+| the VoiceOver state, `UIAccessibility.isVoiceOverRunning` | `ios/App/Sources/ReviewModel.swift:51` | needs a macOS counterpart | the workspace's VoiceOver state, read in `AppModel.swift` and handed to the review as its default |
+| `import UIKit` | `ios/App/Sources/CardFaceView.swift:3`, `CardRefusalWords.swift:2`, `ReviewModel.swift:2` | needs a platform conditional | imported for iOS only where a UIKit name stays; `CardFaceView.swift` and `ReviewModel.swift` keep none |
+| the audio session, `AVAudioSession` | `ios/App/Sources/ClipPlayer.swift:35` | needs a platform conditional | iOS only: a Mac app sets no session; the conditional sits in `InstalledVoices.swift`, which the player calls |
 | `navigationBarTitleDisplayMode(.inline)` | `ios/App/Sources/CardHealthView.swift:31` | needs a platform conditional | iOS only |
 | the sync credential's keychain item | `ios/App/Sources/SyncCredentialStore.swift:38` | needs a platform conditional | the data protection keychain on macOS, so the same access class holds |
-| the app's one scene, a `WindowGroup` | `ios/App/Sources/DeckStreakApp.swift:14` | builds on macOS as it is | gains menus, a default window size and a settings window |
+| the app's one scene, a `WindowGroup` | `ios/App/Sources/DeckStreakApp.swift:14` | builds on macOS as it is | gains menus and a default window size with no platform conditional; its settings window comes in a later pull request |
 | the Info.plist's iOS keys: scenes, launch screen, orientations | `ios/App/Info.plist:31` to `:49` | builds on macOS as it is | read by iOS alone |
 | the window, motion and context-menu refusals | `ios/CardIsolation/Sources/CardIsolation/WindowRefusal.swift:62` | builds on macOS as it is, under `#if os(iOS)` | the Mac web view's own menu is held in section 9 |
 | inline video playback | `ios/CardIsolation/Sources/CardIsolation/CardWebViewFactory.swift:198` | builds on macOS as it is, under `#if os(iOS)` | none needed |
@@ -74,7 +74,7 @@ named here and by `git grep -n` over the tree, every exclude paired with a posit
 
 | id | criterion | decided by |
 |---|---|---|
-| A1 | R1, R2: ADR-342 holds exactly one section whose heading names macOS and SPEC-679, after every line it held at the base, and it names Mac Catalyst and a second target as rejected | `test_macos_destination_record.py` `test_adr_342_carries_one_macos_amendment` |
+| A1 | R1, R2: ADR-342 holds exactly one section whose heading names macOS and SPEC-679, after every line it held at the base, and it names Mac Catalyst, a second target and the iPad app run unchanged on a Mac as rejected | `test_macos_destination_record.py` `test_adr_342_carries_one_macos_amendment` |
 | A2 | R3: the amendment and this SPEC each name one minimum macOS version, and the two are equal | `test_macos_destination_record.py` `test_the_amendment_and_the_spec_name_one_minimum` |
 | A3 | R4: the amendment names body text at 13 pt, controls 28 pt high, and the Mac's menus and windows | `test_macos_destination_record.py` `test_the_amendment_states_the_mac_idiom` |
 | A4 | R5: the DeckStreak target keeps its iOS deployment target, read as a string or as the `iOS` key of a map, its device family `1,2`, its scheme and its two test targets | `test_macos_destination_record.py` `test_the_ios_destination_stands` |
@@ -144,7 +144,7 @@ checker runs.
 | A8 | `ios/app.yml`'s DeckStreak target declares `supportedDestinations` of iOS and macOS, with a macOS deployment target equal to this SPEC's minimum, and builds neither Mac Catalyst nor the iPad app on a Mac | the target's pull request |
 | A9 | `EnginePackage` declares macOS, the XCFramework holds a third slice, for macOS, next to the device and simulator ones, and the workflow's slice check and per-slice typecheck name all three | the target's pull request |
 | A10 | every section 1 site classed as needing a platform conditional or a macOS counterpart compiles for macOS in its macOS form, and the iOS build is unchanged | the target's pull request |
-| A11 | on macOS, body text is 13 pt and controls are 28 pt high; the review's actions sit in a menu with their keys; the decks and the review open in a resizable window with a default size; settings open in a settings window | the target's pull request |
+| A11 | on macOS, body text is 13 pt and controls are 28 pt high; the review's actions sit in a menu with their keys; the decks and the review open in a resizable window with a default size; settings open in a settings window | the target's pull request, and the settings window a later one |
 | A12 | on macOS, the card's web view holds every isolation layer the iOS view holds, its context menu included | the target's pull request |
 
 Its starting facts, each derived again at its own base: XcodeGen's `supportedDestinations` with
