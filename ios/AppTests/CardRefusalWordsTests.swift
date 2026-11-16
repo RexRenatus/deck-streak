@@ -1,7 +1,9 @@
 // SPEC-505 R7, R8, A4; ADR-523 D5. Each refusal the card view's factory can give reads a
 // DeckStreak sentence, never the error's Swift case name, and the card face announces the words it
 // shows to VoiceOver once. The announcement is handed a recording poster, so a test reads it.
+#if os(iOS)
 import UIKit
+#endif
 import XCTest
 
 @testable import DeckStreak
@@ -34,6 +36,7 @@ final class CardRefusalWordsTests: XCTestCase {
         XCTAssertEqual(problems(of: { String(describing: $0) }).count, refusals.count)
     }
 
+    #if os(iOS)
     func testARefusalIsAnnouncedOnceInTheWordsShown() {
         for refusal in CardRefusalWords.refusals {
             let shown = CardRefusalWords.text(of: refusal)
@@ -46,4 +49,5 @@ final class CardRefusalWordsTests: XCTestCase {
             XCTAssertEqual(posted.first?.1, shown, "\(refusal)")
         }
     }
+    #endif
 }

@@ -1,5 +1,26 @@
 import Observation
 
+#if os(iOS)
+import UIKit
+
+extension AppModel {
+    /// Whether VoiceOver runs, which a review reads before it plays a face's clips: UIKit's
+    /// state on iOS (SPEC-679).
+    @MainActor static func voiceOverRunning() -> Bool {
+        UIAccessibility.isVoiceOverRunning
+    }
+}
+#else
+import AppKit
+
+extension AppModel {
+    /// Whether VoiceOver runs: the workspace's state on macOS (SPEC-679).
+    @MainActor static func voiceOverRunning() -> Bool {
+        NSWorkspace.shared.isVoiceOverEnabled
+    }
+}
+#endif
+
 /// The shell's state, held in a model and never in a view's state, so a size-class change or a
 /// scene reconnect keeps it (SPEC-347 R6 to R8). It lives on the main actor and awaits the
 /// session, which makes every engine call off it. It keeps no deck name and no password of its

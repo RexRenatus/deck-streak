@@ -13,7 +13,7 @@ struct UndoControl: View {
             Task { await model.perform(.undo) }
         } label: {
             Label("Undo", systemImage: "arrow.uturn.backward")
-                .frame(minWidth: 44, minHeight: 44)
+                .frame(minWidth: 44, minHeight: ControlHeight.least)
         }
         .accessibilityIdentifier("undo")
         .accessibilityValue(undo.label)

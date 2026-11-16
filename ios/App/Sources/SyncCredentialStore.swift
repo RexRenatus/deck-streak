@@ -20,13 +20,16 @@ public struct SyncCredentialStore: Sendable {
     }
 
     /// The item's identity, which every call names: a generic password under this endpoint and
-    /// user that is not synchronized, so no call reaches a synchronized item of the same name.
+    /// user that is not synchronized, so no call reaches a synchronized item of the same name. On
+    /// macOS it is the data protection keychain's, so the access class the item sets holds
+    /// there too; iOS ignores the key (SPEC-679).
     private var query: [CFString: Any] {
         [
             kSecClass: kSecClassGenericPassword,
             kSecAttrService: service,
             kSecAttrAccount: account,
             kSecAttrSynchronizable: kCFBooleanFalse!,
+            kSecUseDataProtectionKeychain: true,
         ]
     }
 

@@ -1,5 +1,4 @@
 import CardIsolation
-import UIKit
 
 /// Why a card face shows no card, in DeckStreak's words (SPEC-505 R7, R8; ADR-523 D5): each refusal
 /// the card view's factory can give reads a sentence of the app's own, never the error's case name,
@@ -22,7 +21,12 @@ enum CardRefusalWords {
                 + "flag it."
         }
     }
+}
 
+#if os(iOS)
+import UIKit
+
+extension CardRefusalWords {
     /// Announces `text` to VoiceOver once through `post`, the system's announcement by default.
     @MainActor
     static func announce(
@@ -34,3 +38,15 @@ enum CardRefusalWords {
         post(.announcement, text)
     }
 }
+#else
+import Accessibility
+
+extension CardRefusalWords {
+    /// Announces `text` to VoiceOver once, as the iOS announcement does: the system's
+    /// announcement on macOS (SPEC-679).
+    @MainActor
+    static func announce(_ text: String) {
+        AccessibilityNotification.Announcement(text).post()
+    }
+}
+#endif

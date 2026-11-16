@@ -38,12 +38,13 @@ PINNED = re.compile(r"^[\w.-]+/[\w.-]+(?:/[\w.-]+)*@[0-9a-f]{40}$")
 LOCAL_CALL = re.compile(r"\$/\.github/workflows/([^/@\s]+)")
 STAGES = re.compile(r"^STAGES_ALL=\(([^)]*)\)", re.M)
 THIS_REPOSITORY = "RexRenatus/deck-streak"
-# The one workflow admitted to a runner that is not a pinned Ubuntu image, and the one runner it is
-# admitted to (SPEC-336, ADR-345 D4): the XCFramework job needs Apple's SDKs, which only a macOS
-# runner holds. The admission is by the workflow's file name, so the same runner under any other
-# name is refused, and this workflow on any other runner is refused. Three of its jobs are taken
-# out of the file's admission by file and job (SPEC-621, ADR-643): SHORT_APPLE_JOBS below.
-ADMITTED_RUNNERS = {"xcframework.yml": "xcode-27"}
+# The two workflows admitted to a runner that is not a pinned Ubuntu image, and the one runner each
+# is admitted to (SPEC-336, ADR-345 D4): the XCFramework job needs Apple's SDKs, which only a macOS
+# runner holds, and the macOS lane tests the app on a Mac (SPEC-679 section 9b). The admission is
+# by the workflow's file name, so the same runner under any other name is refused, and each of
+# these workflows on any other runner is refused. Three of xcframework.yml's jobs are taken out of
+# the file's admission by file and job (SPEC-621, ADR-643): SHORT_APPLE_JOBS below.
+ADMITTED_RUNNERS = {"xcframework.yml": "xcode-27", "macos-on-change.yml": "xcode-27"}
 # The one `runs-on` value of the three short Apple jobs (SPEC-621 R1, R2, R4, R5): the self-hosted
 # labels when the repository variable DS_MINI is `on`, the actor is not Dependabot, and the event is
 # a push, a dispatch or a pull request whose head repository is this repository; the file's
@@ -136,9 +137,9 @@ CACHE_BY_THEMSELVES = (
 def admitted_runner(name, job=None):
     """The pattern every runner of the workflow `name` must match: a pinned Ubuntu image (SPEC-002
     A9), or, for a job SHORT_APPLE_JOBS names by file and job, the expression SHORT_APPLE_RUNNER
-    exactly and nothing else (SPEC-621), or, for the one workflow ADMITTED_RUNNERS names, its one
-    runner exactly (SPEC-336 R9), or, for a job ADMITTED_JOB_RUNNERS names by file and job, its one
-    runner exactly (SPEC-352 R15).
+    exactly and nothing else (SPEC-621), or, for a workflow ADMITTED_RUNNERS names, its one runner
+    exactly (SPEC-336 R9, SPEC-679 section 9b), or, for a job ADMITTED_JOB_RUNNERS names by file
+    and job, its one runner exactly (SPEC-352 R15).
     `job` is the job whose own `runs-on` the runner is, or None for a value placed anywhere else,
     which only the file's own admission or the Ubuntu pattern can admit."""
     if (name, job) in SHORT_APPLE_JOBS:
@@ -800,6 +801,7 @@ class WorkflowsAreHardened(unittest.TestCase):
             [
                 ("apple-on-change.yml", "apple", body),
                 ("apple-on-tag.yml", "apple", body),
+                ("macos-on-change.yml", "framework", body),
                 ("testflight-internal.yml", "framework", body),
                 ("testflight-release.yml", "framework", body),
             ],
@@ -1220,6 +1222,7 @@ class CiToolsArePinnedAndJobsBounded(unittest.TestCase):
         for call in (
             ("apple-on-change.yml", "apple"),
             ("apple-on-tag.yml", "apple"),
+            ("macos-on-change.yml", "framework"),
             ("testflight-internal.yml", "framework"),
             ("testflight-release.yml", "framework"),
         ):
@@ -1937,21 +1940,23 @@ class TheAppHasOneRustStaticLibrary(unittest.TestCase):
         steps = load("xcframework.yml")["jobs"]["xcframework"]["steps"]
         names = [step.get("name") for step in steps]
         self.assertIn("the XCFramework holds one Rust library", names)
-        after = names.index("the XCFramework, device and simulator slices")
+        after = names.index("the XCFramework, device, simulator and macOS slices")
         self.assertEqual(names.index("the XCFramework holds one Rust library"), after + 1)
         device = "DeckStreakFFI.xcframework/ios-arm64/libdeck_streak_ffi.a"
         simulator = "DeckStreakFFI.xcframework/ios-arm64-simulator/libdeck_streak_ffi.a"
+        macos = "DeckStreakFFI.xcframework/macos-arm64/libdeck_streak_ffi.a"
         third = "DeckStreakFFI.xcframework/ios-arm64/libxp.a"
         other = "DeckStreakFFI.xcframework/ios-arm64-simulator/libother.a"
         failed = (1, {"one-library": "fail"})
         cases = [
             (
-                "the umbrella in each slice",
-                {device: "", simulator: ""},
+                "the umbrella in each of the three slices",
+                {device: "", simulator: "", macos: ""},
                 (0, {"one-library": "pass"}),
             ),
-            ("a third library", {device: "", simulator: "", third: ""}, failed),
-            ("another library in the simulator slice", {device: "", other: ""}, failed),
+            ("the device and simulator slices alone", {device: "", simulator: ""}, failed),
+            ("a third library", {device: "", simulator: "", macos: "", third: ""}, failed),
+            ("another library in the simulator slice", {device: "", other: "", macos: ""}, failed),
             ("a single slice", {device: ""}, failed),
         ]
         for case, plant, verdict in examined("planted XCFrameworks", cases):

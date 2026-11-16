@@ -28,7 +28,9 @@ struct CardHealthView: View {
             .scrollContentBackground(.hidden)
             .background(Color.tideBackground)
             .navigationTitle("Card info")
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Close") {
@@ -39,5 +41,17 @@ struct CardHealthView: View {
             }
         }
         .tint(Color.tideAccent)
+    }
+}
+
+/// The one least height of a control, which every control frame reads: 44 pt on iOS, the
+/// touch target SPEC-348 holds, and 28 pt on macOS, the Mac idiom's control (SPEC-679).
+enum ControlHeight {
+    static var least: CGFloat {
+        #if os(macOS)
+        return 28
+        #else
+        return 44
+        #endif
     }
 }

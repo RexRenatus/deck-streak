@@ -32,9 +32,7 @@ final class ClipPlayer: NSObject {
     /// Stops what plays and plays `clips` in order.
     func play(_ clips: [ReviewClip]) {
         stop()
-        try? AVAudioSession.sharedInstance().setCategory(
-            .playback, mode: .spokenAudio,
-            options: [.duckOthers, .interruptSpokenAudioAndMixWithOthers])
+        InstalledVoices.setSpokenAudioSession()
         queue = clips
         playNext()
     }
