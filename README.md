@@ -2,6 +2,9 @@
 
 <a href="docs/assets/deckstreak-hero-tide-light.gif"><img src="docs/assets/deckstreak-hero-poster-tide-light.png" width="960" height="360" alt="DeckStreak"></a>
 
+**DeckStreak is deprecated.** It is no longer maintained, and this repository is archived and
+read-only. Its successor is RexMind: [rexmind.app](https://rexmind.app).
+
 A spaced-repetition study game for the web, iPhone and iPad: XP, streaks, quests and a morning
 reading from a mentor per subject that primes the day's new cards. Rex, DeckStreak's own memory
 model, becomes its only scheduler before 1.0.
@@ -9,8 +12,8 @@ model, becomes its only scheduler before 1.0.
 Until then, the stock scheduler of the engine DeckStreak is built on schedules every review, and
 it is the yardstick Rex is measured against ([CHARTER.md](CHARTER.md), item 22).
 
-> Status: early development. The repository holds the architecture, the plan and the skeleton;
-> features land wave by wave (see [the plan](docs/specs/SPEC-001-campaign-prd-parity-and-waves.md)).
+> Status: deprecated and archived. The repository keeps the architecture, the plan and the code as
+> they stood when work stopped (see [the plan](docs/specs/SPEC-001-campaign-prd-parity-and-waves.md)).
 
 ## Table of Contents
 
