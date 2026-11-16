@@ -63,7 +63,8 @@ ROLES = (
 # two named arguments, and nowhere else.
 SECRET_VALUES = ("KEY", "CERTIFICATE", "PASSWORD", "PROFILE")
 IDENTIFIERS = ("team", "team name", "app id", "profile name", "profile uuid")
-# The signing settings the include file carries, which no command line may carry instead.
+# The signing settings the include file carries, which no command line may carry instead; the
+# signed archive's command line also carries one, CODE_SIGN_IDENTITY, with the include's value.
 SIGNING_SETTINGS = (
     "DS_APP_ID",
     "DEVELOPMENT_TEAM",
@@ -842,6 +843,186 @@ class LaneCredential(unittest.TestCase):
                 self.assertFalse((self.checkout / INCLUDE).exists())
                 self.assertEqual(list(self.home.rglob("*.mobileprovision")), [])
 
+    def profile_line(self, shape, decoded=None, outside=0):
+        """The line the signing step prints first: the class `shape`, the `decoded` byte count (by
+        default what the stored text's base64 characters decode to, three bytes for each four, the
+        `=` pad none) and the count of the characters the test placed `outside` the alphabet
+        (SPEC-704 R1)."""
+        if decoded is None:
+            decoded = sum(character in BASE64 for character in self.values["PROFILE"]) * 3 // 4
+        return (
+            f"profile shape: class {shape}, {decoded} decoded bytes, {outside} stored characters"
+            " outside the base64 alphabet"
+        )
+
+    def test_profile_shape_der_xml_plist_is_named_and_the_step_goes_on(self):
+        """A DER sequence holding an XML property list, in the fixture's long form and in the
+        indefinite form, is named by its class before the parse, and the step goes on past the
+        parse; nothing of the value is printed (SPEC-704 R1, R3, R4)."""
+        marker = uuid.uuid4().hex
+        # A development profile: the step reads it, prints its masks and then refuses it.
+        development = plistlib.dumps(
+            {
+                "Entitlements": {
+                    "application-identifier": f"{self.ids['team']}.{self.ids['app id']}",
+                    "get-task-allow": True,
+                },
+                "Name": self.ids["profile name"],
+                "TeamIdentifier": [self.ids["team"]],
+                "TeamName": self.ids["team name"],
+                "UUID": self.ids["profile uuid"],
+            }
+        )
+        with self.subTest(case="the fixture's profile, in the long form"):
+            printed, _ = self.sign()
+            line = self.profile_line("der-xml-plist")
+            self.assertEqual(printed.splitlines().count(line), 1, "the profile line, once")
+            self.assertEqual(printed.splitlines()[0], line)
+            self.assertEqual(set(self.ids.values()) - set(self.masks(printed)), set())
+        with self.subTest(case="the indefinite form"):
+            blob = b"\x30\x80" + development + marker.encode()
+            self.values["PROFILE"] = base64_text(blob)
+            code, printed, errors, records, _ = self.step(
+                "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+            )
+            line = self.profile_line("der-xml-plist", len(blob))
+            self.assertEqual(printed.splitlines().count(line), 1, "the profile line, once")
+            self.assertEqual(printed.splitlines()[0], line)
+            self.assertEqual(self.masks(printed)[:5], [self.ids[name] for name in IDENTIFIERS])
+            self.assertEqual(
+                (code, errors, records),
+                (
+                    1,
+                    "the profile is a development profile, not an App Store distribution profile\n",
+                    [],
+                ),
+            )
+            self.assertNotIn(marker, printed + errors + json.dumps(records))
+
+    def test_profile_shape_der_no_plist_is_named_and_refused(self):
+        """A DER sequence holding no XML property list, in the short form, as two bytes and in the
+        long form with its one length octet, is named by its class and refused by it before any
+        tool runs; a stored character outside the base64 alphabet and whitespace is counted, a
+        line break is not, and nothing of the value is printed (SPEC-704 R1, R2, R4)."""
+        marker = uuid.uuid4().hex
+        short = b"\x30\x7f" + marker.encode() + bytes(range(0x80, 0xDE))
+        text = base64_text(short)
+        # The stored text wrapped at 64 characters, as a wrapped encoder writes it, and two
+        # characters outside the alphabet placed between its first characters.
+        wrapped = "\n".join(text[start : start + 64] for start in range(0, len(text), 64))
+        cases = [
+            ("the short form", short, f"{wrapped[:2]}!*{wrapped[2:]}\n", 2),
+            ("two bytes", b"\x30\x00", base64_text(b"\x30\x00"), 0),
+            ("the long form", b"\x30\x81\x00", base64_text(b"\x30\x81\x00"), 0),
+        ]
+        refusal = "the profile holds no XML property list: class der-no-plist"
+        for case, blob, stored, outside in examined("sequences with no property list", cases):
+            self.values["PROFILE"] = stored
+            code, printed, errors, records, _ = self.step(
+                "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+            )
+            with self.subTest(case=case, part="line"):
+                line = self.profile_line("der-no-plist", len(blob), outside)
+                self.assertEqual(printed.splitlines(), [line])
+            with self.subTest(case=case, part="refusal"):
+                self.assertEqual(errors.splitlines()[-1:], [refusal])
+                self.assertEqual((code, errors, records), (1, f"{refusal}\n", []))
+            self.assertNotIn(marker, printed + errors + json.dumps(records))
+
+    def test_profile_shape_base64_text_is_named_and_refused(self):
+        """Base64 text, as a profile encoded twice decodes to, with a line break of its own, is
+        named by its class and refused by it before any tool runs, and nothing of the value is
+        printed (SPEC-704 R1, R2, R4)."""
+        marker = uuid.uuid4().hex
+        blob = f"MIIB{marker}\n{base64_text(bytes(range(48)))}\n".encode()
+        self.values["PROFILE"] = base64_text(blob)
+        code, printed, errors, records, _ = self.step(
+            "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+        )
+        refusal = "the profile holds no XML property list: class base64-text"
+        with self.subTest(part="line"):
+            self.assertEqual(printed.splitlines(), [self.profile_line("base64-text", len(blob))])
+        with self.subTest(part="refusal"):
+            self.assertEqual(errors.splitlines()[-1:], [refusal])
+            self.assertEqual((code, errors, records), (1, f"{refusal}\n", []))
+        self.assertNotIn(marker, printed + errors + json.dumps(records))
+
+    def test_profile_shape_binary_plist_is_named_and_refused(self):
+        """A binary property list is named by its class and refused by it before any tool runs,
+        and nothing of the value is printed (SPEC-704 R1, R2, R4)."""
+        marker = uuid.uuid4().hex
+        blob = plistlib.dumps({"Name": marker}, fmt=plistlib.FMT_BINARY)
+        self.values["PROFILE"] = base64_text(blob)
+        code, printed, errors, records, _ = self.step(
+            "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+        )
+        refusal = "the profile holds no XML property list: class binary-plist"
+        with self.subTest(part="line"):
+            self.assertEqual(printed.splitlines(), [self.profile_line("binary-plist", len(blob))])
+        with self.subTest(part="refusal"):
+            self.assertEqual(errors.splitlines()[-1:], [refusal])
+            self.assertEqual((code, errors, records), (1, f"{refusal}\n", []))
+        self.assertNotIn(marker, printed + errors + json.dumps(records))
+
+    def test_profile_shape_xml_plist_is_named_and_the_step_goes_on(self):
+        """An XML property list with no DER wrapper is named by its class before the parse, and the
+        step goes on past the parse; nothing of the value is printed (SPEC-704 R1, R3, R4)."""
+        marker = uuid.uuid4().hex
+        # A development profile: the step reads it, prints its masks and then refuses it.
+        development = plistlib.dumps(
+            {
+                "Entitlements": {
+                    "application-identifier": f"{self.ids['team']}.{self.ids['app id']}",
+                    "get-task-allow": True,
+                },
+                "Name": self.ids["profile name"],
+                "TeamIdentifier": [self.ids["team"]],
+                "TeamName": self.ids["team name"],
+                "UUID": self.ids["profile uuid"],
+            }
+        )
+        blob = development + marker.encode()
+        self.values["PROFILE"] = base64_text(blob)
+        code, printed, errors, records, _ = self.step(
+            "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+        )
+        line = self.profile_line("xml-plist", len(blob))
+        self.assertEqual(printed.splitlines().count(line), 1, "the profile line, once")
+        self.assertEqual(printed.splitlines()[0], line)
+        self.assertEqual(self.masks(printed)[:5], [self.ids[name] for name in IDENTIFIERS])
+        self.assertEqual(
+            (code, errors, records),
+            (
+                1,
+                "the profile is a development profile, not an App Store distribution profile\n",
+                [],
+            ),
+        )
+        self.assertNotIn(marker, printed + errors + json.dumps(records))
+
+    def test_profile_shape_other_is_named_and_refused(self):
+        """Bytes no earlier class names, among them a SEQUENCE tag whose length's first octet is the
+        reserved 0xFF or names a length octet that is absent, are named other and refused before
+        any tool runs, and nothing of the value is printed (SPEC-704 R1, R2, R4)."""
+        marker = uuid.uuid4().hex
+        cases = [
+            ("no SEQUENCE tag", b"\x00" + marker.encode() + bytes(range(0x80, 0x90))),
+            ("a length octet absent", b"\x30\x81"),
+            ("the reserved first octet", b"\x30\xff" + bytes(127)),
+        ]
+        refusal = "the profile holds no XML property list: class other"
+        for case, blob in examined("other profiles", cases):
+            self.values["PROFILE"] = base64_text(blob)
+            code, printed, errors, records, _ = self.step(
+                "sign", ("CERTIFICATE", "PASSWORD", "PROFILE")
+            )
+            with self.subTest(case=case, part="line"):
+                self.assertEqual(printed.splitlines(), [self.profile_line("other", len(blob))])
+            with self.subTest(case=case, part="refusal"):
+                self.assertEqual(errors.splitlines()[-1:], [refusal])
+                self.assertEqual((code, errors, records), (1, f"{refusal}\n", []))
+            self.assertNotIn(marker, printed + errors + json.dumps(records))
+
     def test_signing_imports_the_certificate_non_extractable_into_a_job_keychain(self):
         _, records = self.sign()
         keychain = str(self.lane / "lane.keychain-db")
@@ -881,6 +1062,7 @@ class LaneCredential(unittest.TestCase):
                 "CURRENT_PROJECT_VERSION=7",
                 "MARKETING_VERSION=1.2.3",
                 "DS_LANE=internal",
+                f"CODE_SIGN_IDENTITY={self.identity}",
             ],
         )
         self.assertEqual([n for n in archive["lane_files"] if n.endswith(".p12")], [])
@@ -896,8 +1078,10 @@ class LaneCredential(unittest.TestCase):
                 "PROVISIONING_PROFILE_SPECIFIER": self.ids["profile uuid"],
             },
         )
+        expected = {"CODE_SIGN_IDENTITY": [f"CODE_SIGN_IDENTITY={include['CODE_SIGN_IDENTITY']}"]}
         for setting in examined("signing settings", SIGNING_SETTINGS):
-            self.assertEqual([a for a in archive["args"] if a.startswith(f"{setting}=")], [])
+            named = [a for a in archive["args"] if a.startswith(f"{setting}=")]
+            self.assertEqual(named, expected.get(setting, []), setting)
 
     def test_the_identity_is_the_one_the_keychain_pairs_with_the_profiles_certificate(self):
         # A second identity, listed first, whose certificate the profile does not hold.
@@ -915,6 +1099,28 @@ class LaneCredential(unittest.TestCase):
         self.assertEqual(include["CODE_SIGN_IDENTITY"], self.identity)
         signing = json.loads((self.lane / "signing.json").read_text(encoding="utf-8"))
         self.assertEqual(signing["identity"], self.identity)
+
+    def test_the_archive_names_the_paired_identity_and_never_the_other_one(self):
+        # SPEC-352 A33 (R9 as amended): on A30's fixture, a second identity listed first whose
+        # certificate the profile does not hold, the archive's command line names the identity the
+        # keychain pairs with the profile's certificate, the include's and the signing record's,
+        # and never the other one.
+        other = (uuid.uuid4().hex + uuid.uuid4().hex[:8]).upper()
+        fixture = json.loads((self.shims / "fixture.json").read_text(encoding="utf-8"))
+        fixture["identities"].insert(0, [other, fixture["identities"][0][1]])
+        fixture["certificates"].insert(0, [(uuid.uuid4().hex * 2).upper(), other])
+        (self.shims / "fixture.json").write_text(json.dumps(fixture), encoding="utf-8")
+        _, records = self.sign()
+        archive = self.one(records, "xcodebuild", "archive")
+        setting = "CODE_SIGN_IDENTITY="
+        named = [a[len(setting) :] for a in archive["args"] if a.startswith(setting)]
+        self.assertEqual(len(named), 1, f"the archive's command line names {len(named)} identities")
+        self.assertEqual(named, [self.identity])
+        include = xcconfig((self.checkout / INCLUDE).read_text(encoding="utf-8"))
+        self.assertEqual(named, [include["CODE_SIGN_IDENTITY"]])
+        signing = json.loads((self.lane / "signing.json").read_text(encoding="utf-8"))
+        self.assertEqual(named, [signing["identity"]])
+        self.assertNotIn(other, " ".join(archive["args"]))
 
     def test_the_upload_key_lives_in_one_private_file_for_the_upload_step_only(self):
         self.sign()
@@ -955,7 +1161,6 @@ class LaneCredential(unittest.TestCase):
                 "signingCertificate": self.identity,
                 "signingStyle": "manual",
                 "teamID": self.ids["team"],
-                "testFlightInternalTestingOnly": True,
             },
         )
         self.assertFalse(Path(key["path"]).parent.exists())
@@ -965,6 +1170,28 @@ class LaneCredential(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertFalse(Path(failed).parent.exists())
         self.assertEqual(list(self.lane.glob("key-*")), [])
+
+    def test_the_export_options_carry_no_internal_testing_only_key(self):
+        # SPEC-352 A34 (R10 as amended): the options the upload step writes for the export hold no
+        # internal-only testing key, nor any other value in its place, and the seven other options
+        # keep exactly the values A10's test pins.
+        self.sign()
+        code, _, errors, records, _ = self.step("upload-to-testflight", ("KEY", "KEYID", "ISSUER"))
+        self.assertEqual(code, 0, errors)
+        options = self.one(records, "xcodebuild", "-exportArchive")["export options"]
+        self.assertNotIn("testFlightInternalTestingOnly", sorted(options))
+        self.assertEqual(
+            options,
+            {
+                "destination": "upload",
+                "manageAppVersionAndBuildNumber": False,
+                "method": "app-store-connect",
+                "provisioningProfiles": {self.ids["app id"]: self.ids["profile uuid"]},
+                "signingCertificate": self.identity,
+                "signingStyle": "manual",
+                "teamID": self.ids["team"],
+            },
+        )
 
     def test_no_secret_value_reaches_a_childs_argv_or_environment_or_the_log(self):
         self.sign()
@@ -1088,6 +1315,8 @@ class LaneCredential(unittest.TestCase):
                 "openssl",
                 "pkcs12",
                 "-export",
+                "-in",
+                str(self.lane / "certificate.pem"),
                 "-out",
                 bundle,
                 "-passin",
@@ -1172,8 +1401,14 @@ class LaneCredential(unittest.TestCase):
         (self.shims / "fixture.json").write_text(json.dumps(fixture), encoding="utf-8")
         self.sign()
         self.step("upload-to-testflight", ("KEY", "KEYID", "ISSUER"))
-        for out, _, _ in examined("steps", self.runs):
+        for run, (out, _, _) in enumerate(examined("steps", self.runs)):
             lines = out.splitlines()
+            if run == 0:
+                # The signing step prints its profile line once and first: it is set aside here
+                # (SPEC-704 R1).
+                expected = self.profile_line("der-xml-plist")
+                self.assertEqual(lines.count(expected), 1, "the profile line, once")
+                self.assertEqual(lines.pop(0), expected)
             self.assertEqual(lines[-2:], ["warning: <redacted>", "error: <redacted>"])
             self.assertEqual(
                 [line[:12] for line in lines[:-2]], ["::add-mask::"] * (len(lines) - 2)
@@ -1244,7 +1479,10 @@ class LaneCredential(unittest.TestCase):
                 )
                 self.assertEqual(
                     [line for line in printed.splitlines() if not line.startswith("::add-mask::")],
-                    [f"pkcs12 read failed: class {name}; reading once more with -legacy"],
+                    [
+                        self.profile_line("der-xml-plist"),
+                        f"pkcs12 read failed: class {name}; reading once more with -legacy",
+                    ],
                 )
                 self.assertEqual(
                     errors.splitlines(),
@@ -1271,18 +1509,24 @@ class LaneCredential(unittest.TestCase):
         self.assertEqual([r for r in records if r["tool"] == "security"], [])
         self.assertEqual(
             [line for line in printed.splitlines() if not line.startswith("::add-mask::")],
-            ["pkcs12 read failed: class wrong-password; reading once more with -legacy"],
+            [
+                self.profile_line("der-xml-plist"),
+                "pkcs12 read failed: class wrong-password; reading once more with -legacy",
+            ],
         )
         self.assertFalse((self.checkout / INCLUDE).exists())
 
     def hand_off(self):
         """Make the openssl stand-in also write, to `handoff.jsonl` beside the record, what each
-        read that succeeds wrote out and what the re-wrap was given on its standard input; return
-        that file. A read that fails exits before this write, so it writes nothing there."""
+        read that succeeds wrote out and what the re-wrap was given in the file its `-in` names,
+        read while the re-wrap runs, or null when it names none; return that file. A read that
+        fails exits before this write, so it writes nothing there."""
         suffix = (
             'if tool == "openssl":\n'
             '    side = "re-wrap input" if "-export" in args else "read output"\n'
-            '    given = stdin if "-export" in args else out\n'
+            "    given = out\n"
+            '    if "-export" in args:\n'
+            '        given = Path(value("-in")).read_text() if "-in" in args else None\n'
             '    with open(shims / "handoff.jsonl", "a", encoding="utf-8") as handoff:\n'
             '        handoff.write(json.dumps({side: given}) + "\\n")\n'
         )
@@ -1291,8 +1535,8 @@ class LaneCredential(unittest.TestCase):
         return self.shims / "handoff.jsonl"
 
     def test_the_re_wrap_is_given_exactly_what_the_certificate_read_wrote(self):
-        # The re-wrap's standard input is the output of the read that succeeded, whether that is
-        # the first read or the read under -legacy.
+        # The file the re-wrap's -in names holds the output of the read that succeeded, whether
+        # that is the first read or the read under -legacy.
         handoff = self.hand_off()
         paths = [
             ("the first read", []),
@@ -1429,6 +1673,237 @@ class LaneCredential(unittest.TestCase):
                     self.assertFalse(self.lane.exists())
                     self.assertFalse((self.checkout / INCLUDE).exists())
                     self.assertEqual(self.masks(printed), [])
+
+    def legacy_openssl(self):
+        """The real openssl, the first one on the test's own `PATH`, which the tests below run in
+        place of the shims' stand-in; with none there, the test fails."""
+        for folder in os.environ["PATH"].split(os.pathsep):
+            found = Path(folder, "openssl")
+            if found.is_file() and os.access(found, os.X_OK):
+                return str(found)
+        self.fail("no openssl is on the test's PATH")
+
+    def legacy_certificate(self, openssl):
+        """A legacy bundle as a keychain export packs one, made by `openssl` in the test's scratch
+        folder, which the test removes: a key and a self-signed certificate made for the test, the
+        certificate under 40-bit RC2 and the key under 3DES, with a password the test draws.
+        Return the bundle as the placed part's base64 text, and the password; no real credential
+        exists anywhere."""
+        folder = self.scratch / "legacy"
+        folder.mkdir()
+        key, certificate, bundle = (folder / name for name in ("key", "certificate", "bundle"))
+        password = uuid.uuid4().hex
+        commands = (
+            [
+                "req",
+                "-x509",
+                "-newkey",
+                "ec",
+                "-pkeyopt",
+                "ec_paramgen_curve:prime256v1",
+                "-nodes",
+                "-subj",
+                "/CN=fixture",
+                "-keyout",
+                str(key),
+                "-out",
+                str(certificate),
+            ],
+            [
+                "pkcs12",
+                "-export",
+                "-legacy",
+                "-certpbe",
+                "PBE-SHA1-RC2-40",
+                "-keypbe",
+                "PBE-SHA1-3DES",
+                "-inkey",
+                str(key),
+                "-in",
+                str(certificate),
+                "-out",
+                str(bundle),
+                "-passout",
+                f"pass:{password}",
+            ],
+        )
+        for command in commands:
+            made = subprocess.run(
+                [openssl, *command], capture_output=True, text=True, timeout=60, check=False
+            )
+            self.assertEqual(made.returncode, 0, f"openssl {command[0]}: {made.stderr}")
+        return base64_text(bundle.read_bytes()), password
+
+    def rewrap_tools(self, programs):
+        """A `PATH` whose first folder holds `programs`, each under its tool's name, and the
+        shims' `xcodebuild` and `security` where `programs` names neither; after it comes the
+        test's own `PATH`, so the step runs the real openssl unless `programs` names one."""
+        folder = self.scratch / "rewrap-tools"
+        folder.mkdir()
+        for name, program in {"xcodebuild": SHIM, "security": SHIM, **programs}.items():
+            tool = folder / name
+            tool.write_text(f"#!{sys.executable}\n{program}", encoding="utf-8")
+            tool.chmod(0o755)
+        return os.pathsep.join((str(folder), os.environ["PATH"]))
+
+    def rewrap_recorded(self, refuse):
+        """A `PATH` whose `openssl` hands every call to the real openssl, but first writes one line
+        to the returned file for each re-wrap: the file the re-wrap names by `-in`, as found when
+        it runs, or null for none. With `refuse`, it exits 1 in place of the re-wrap."""
+        given = self.scratch / "rewrap-given.jsonl"
+        program = (
+            "import json, os, sys\n"
+            "from pathlib import Path\n"
+            f"real, given, lane = {self.legacy_openssl()!r}, {str(given)!r}, {str(self.lane)!r}\n"
+            f"refuse, args = {refuse!r}, sys.argv[1:]\n"
+            "if '-export' in args:\n"
+            "    named = Path(args[args.index('-in') + 1]) if '-in' in args else None\n"
+            "    entry = None\n"
+            "    if named is not None and named.is_file():\n"
+            "        begin = '-' * 5 + 'BEGIN '\n"
+            "        lines = named.read_text(encoding='utf-8').splitlines()\n"
+            "        kinds = [t[11:-5].lower() for t in lines if t.startswith(begin)]\n"
+            "        entry = {\n"
+            "            'in the lane': named.parent == Path(lane),\n"
+            "            'name': named.name,\n"
+            "            'mode': named.stat().st_mode & 0o777,\n"
+            "            'blocks': sorted(kinds),\n"
+            "        }\n"
+            "    with open(given, 'a', encoding='utf-8') as record:\n"
+            "        record.write(json.dumps(entry) + '\\n')\n"
+            "    if refuse:\n"
+            "        sys.exit(1)\n"
+            "os.execv(real, [real, *args])\n"
+        )
+        return self.rewrap_tools({"openssl": program}), given
+
+    def rewrap_given(self, given):
+        """What the recording `openssl` wrote to `given`, one entry per re-wrap, and the one entry
+        a re-wrap from a private file in the lane writes: the certificate and its encrypted key,
+        in a file only its owner may read or write."""
+        lines = given.read_text(encoding="utf-8").splitlines() if given.exists() else []
+        private = {
+            "in the lane": True,
+            "name": "certificate.pem",
+            "mode": 0o600,
+            "blocks": ["certificate", "encrypted private key"],
+        }
+        return [json.loads(line) for line in lines], [private]
+
+    def rewrap_sign(self, path, part, password):
+        """Run the sign step as `step` does, with `path` as its `PATH`, `part` as the placed
+        certificate, `password` as its password and the fixture's profile, the run bounded by a
+        timeout; return its exit code, its output, its errors and the shims' records."""
+        stdout = self.scratch / f"stdout-{uuid.uuid4().hex}"
+        record = self.shims / "record.jsonl"
+        before = len(record.read_text(encoding="utf-8").splitlines()) if record.exists() else 0
+        environment = {
+            "PATH": path,
+            "HOME": str(self.home),
+            "LANG": "C.UTF-8",
+            "RUNNER_TEMP": str(self.temp),
+            "GITHUB_SHA": self.sha,
+            "NUMBER": "7",
+            "VERSION": "1",
+            "LANE": "internal",
+            "SHIMS": str(self.shims),
+            "SHIMSTDOUT": str(stdout),
+            "CERTIFICATE": part,
+            "PASSWORD": password,
+            "PROFILE": self.values["PROFILE"],
+        }
+        with open(stdout, "w", encoding="utf-8") as sink:
+            run = subprocess.run(
+                [sys.executable, str(LANE), "sign"],
+                cwd=self.checkout,
+                env=environment,
+                stdin=subprocess.DEVNULL,
+                stdout=sink,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=300,
+                check=False,
+            )
+        lines = record.read_text(encoding="utf-8").splitlines() if record.exists() else []
+        records = [json.loads(line) for line in lines[before:]]
+        return run.returncode, stdout.read_text(encoding="utf-8"), run.stderr, records
+
+    def test_a_legacy_certificate_re_wraps_with_both_bags_under_3des_and_a_sha1_mac(self):
+        """RED-FIRST: a legacy bundle, its certificate under 40-bit RC2 as a keychain export packs
+        it, is read once more under -legacy by the real openssl and re-wrapped, and the bundle the
+        step imports re-reads with the certificate and the key each under 3DES and a SHA-1 MAC."""
+        openssl = self.legacy_openssl()
+        part, password = self.legacy_certificate(openssl)
+        shim, copy = str(self.bin / "security"), self.scratch / "imported.p12"
+        # The step removes the bundle right after its import, so this `security` copies it first.
+        security = (
+            "import os, shutil, sys\n"
+            "if sys.argv[1:2] == ['import']:\n"
+            f"    shutil.copyfile(sys.argv[2], {str(copy)!r})\n"
+            f"os.execv({shim!r}, [{shim!r}, *sys.argv[1:]])\n"
+        )
+        path = self.rewrap_tools({"security": security})
+        code, printed, errors, records = self.rewrap_sign(path, part, password)
+        self.assertEqual(code, 0, errors)
+        self.assertEqual(
+            [line for line in printed.splitlines() if line.startswith("pkcs12 read")],
+            [
+                "pkcs12 read failed: class legacy-algorithm; reading once more with -legacy",
+                "pkcs12 read under -legacy: ok",
+            ],
+        )
+        imported = self.one(records, "security", "import")["args"]
+        passphrase = imported[imported.index("-P") + 1]
+        reread = [openssl, "pkcs12", "-info", "-noout", "-in", str(copy)]
+        info = subprocess.run(
+            [*reread, "-passin", f"pass:{passphrase}"],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+        self.assertEqual(info.returncode, 0, info.stderr)
+        heads = ("MAC:", "PKCS7 Encrypted data:", "Certificate bag", "Shrouded Keybag:")
+        lines = [*info.stdout.splitlines(), *info.stderr.splitlines()]
+        self.assertEqual(
+            [line.split(",")[0] for line in lines if line.startswith(heads)],
+            [
+                "MAC: sha1",
+                "PKCS7 Encrypted data: pbeWithSHA1And3-KeyTripleDES-CBC",
+                "Certificate bag",
+                "Shrouded Keybag: pbeWithSHA1And3-KeyTripleDES-CBC",
+            ],
+        )
+
+    def test_the_re_wrap_reads_its_input_from_a_private_file_removed_once_it_returns(self):
+        """RED-FIRST: the re-wrap is given what the certificate read wrote as a file in the lane
+        that only its owner may read or write, named by -in; once the re-wrap returns, that file
+        is gone before the next tool runs, and no file the step leaves in the lane holds
+        certificate text."""
+        part, password = self.legacy_certificate(self.legacy_openssl())
+        path, given = self.rewrap_recorded(refuse=False)
+        code, _, errors, records = self.rewrap_sign(path, part, password)
+        self.assertEqual(code, 0, errors)
+        found, private = self.rewrap_given(given)
+        self.assertEqual(found, private)
+        after = self.one(records, "security", "create-keychain")["lane_files"]
+        self.assertEqual(after, ["certificate.p12"])
+        begin = ("-" * 5 + "BEGIN ").encode("utf-8")
+        left = examined("lane entries", self.lane.rglob("*"))
+        self.assertEqual([p.name for p in left if p.is_file() and begin in p.read_bytes()], [])
+
+    def test_a_failed_re_wrap_refuses_as_before_and_leaves_no_certificate_in_the_lane(self):
+        """RED-FIRST: when the re-wrap fails, the step refuses with its one line and runs no
+        further tool, and the file the re-wrap was given is removed all the same, so the lane is
+        left empty."""
+        part, password = self.legacy_certificate(self.legacy_openssl())
+        path, given = self.rewrap_recorded(refuse=True)
+        code, _, errors, records = self.rewrap_sign(path, part, password)
+        self.assertEqual((code, errors.splitlines()), (1, ["openssl pkcs12 failed with exit 1"]))
+        self.assertEqual([r for r in records if r["tool"] == "security"], [])
+        found, private = self.rewrap_given(given)
+        self.assertEqual(found, private)
+        self.assertEqual(sorted(entry.name for entry in self.lane.iterdir()), [])
 
 
 if __name__ == "__main__":

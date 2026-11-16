@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "superseded by ADR-719"
 date: "2026-09-29"
 decision-makers: "@RexRenatus (owner), the DeckStreak architect"
 ---

@@ -1,0 +1,126 @@
+{
+  "tables": {
+    "SCRIPT_MUTATIONS": [
+      [
+        "S70400-THE-DER-XML-PLIST-ARM-NAMES-A-SEQUENCE-HOLDING-A-PLIST",
+        "scripts/ios_lane.py",
+        "        der and plist,",
+        "        False,",
+        "the der-xml-plist arm names a DER sequence that holds an XML property list; switched off, the fixture's profile reads der-no-plist (SPEC-704 R1)",
+        "test_ios_lane.LaneCredential.test_profile_shape_der_xml_plist_is_named_and_the_step_goes_on"
+      ],
+      [
+        "S70401-THE-DER-NO-PLIST-ARM-NAMES-A-SEQUENCE-HOLDING-NONE",
+        "scripts/ios_lane.py",
+        "        der,",
+        "        False,",
+        "the der-no-plist arm names a DER sequence that holds no XML property list; switched off, the short form reads other (SPEC-704 R1)",
+        "test_ios_lane.LaneCredential.test_profile_shape_der_no_plist_is_named_and_refused"
+      ],
+      [
+        "S70402-THE-BASE64-TEXT-ARM-NAMES-BASE64-TEXT",
+        "scripts/ios_lane.py",
+        "        re.fullmatch(rb\"[A-Za-z0-9+/= \\t\\n\\r\\f\\v]+\", blob) is not None,",
+        "        False,",
+        "the base64-text arm names decoded bytes that are base64 text; switched off, a profile encoded twice reads other (SPEC-704 R1)",
+        "test_ios_lane.LaneCredential.test_profile_shape_base64_text_is_named_and_refused"
+      ],
+      [
+        "S70403-THE-BINARY-PLIST-ARM-NAMES-ITS-MAGIC",
+        "scripts/ios_lane.py",
+        "        blob.startswith(b\"bplist00\"),",
+        "        False,",
+        "the binary-plist arm names bytes that open with the bplist00 magic; switched off, a binary property list reads other (SPEC-704 R1)",
+        "test_ios_lane.LaneCredential.test_profile_shape_binary_plist_is_named_and_refused"
+      ],
+      [
+        "S70404-THE-XML-PLIST-ARM-NAMES-A-BARE-PLIST",
+        "scripts/ios_lane.py",
+        "        plist,",
+        "        False,",
+        "the xml-plist arm names an XML property list with no DER wrapper; switched off, a bare property list reads other (SPEC-704 R1)",
+        "test_ios_lane.LaneCredential.test_profile_shape_xml_plist_is_named_and_the_step_goes_on"
+      ],
+      [
+        "S70405-THE-OTHER-ARM-NAMES-ANY-OTHER-BYTES",
+        "scripts/ios_lane.py",
+        "        True,",
+        "        False,",
+        "the other arm names any bytes no earlier class names; switched off, no class is named and the step fails before its refusal (SPEC-704 R1, R2)",
+        "test_ios_lane.LaneCredential.test_profile_shape_other_is_named_and_refused"
+      ],
+      [
+        "S70406-NO-PLIST-IS-REFUSED-NOT-AN-ATTRIBUTE-ERROR",
+        "scripts/ios_lane.py",
+        "    if found is None:",
+        "    if False:",
+        "a profile with no XML property list is refused by its class; without the refusal the parse fails with an AttributeError (SPEC-704 R2)",
+        "test_ios_lane.LaneCredential.test_profile_shape_der_no_plist_is_named_and_refused"
+      ],
+      [
+        "S70407-THE-LINE-COUNTS-STORED-CHARACTERS-OUTSIDE-THE-ALPHABET",
+        "scripts/ios_lane.py",
+        "    outside = len(re.findall(r\"[^A-Za-z0-9+/= \\t\\n\\r\\f\\v]\", os.environ[\"PROFILE\"]))",
+        "    outside = 0",
+        "the line counts the stored characters outside the base64 alphabet and whitespace; at a count of zero the two placed characters go uncounted (SPEC-704 R1)",
+        "test_ios_lane.LaneCredential.test_profile_shape_der_no_plist_is_named_and_refused"
+      ],
+      [
+        "S70408-THE-SHORT-FORM-READS-A-SEQUENCE",
+        "scripts/ios_lane.py",
+        "first <= 0x80 or (",
+        "first == 0x80 or (",
+        "a first length octet below 0x80, the short form, reads a DER sequence; without it the short form reads other (SPEC-704 R1)",
+        "test_ios_lane.LaneCredential.test_profile_shape_der_no_plist_is_named_and_refused"
+      ],
+      [
+        "S70409-THE-INDEFINITE-FORM-READS-A-SEQUENCE",
+        "scripts/ios_lane.py",
+        "first <= 0x80 or (",
+        "first < 0x80 or (",
+        "a first length octet of 0x80, the indefinite form, reads a DER sequence; without it the indefinite form reads xml-plist (SPEC-704 R1)",
+        "test_ios_lane.LaneCredential.test_profile_shape_der_xml_plist_is_named_and_the_step_goes_on"
+      ],
+      [
+        "S70410-THE-LONG-FORM-READS-A-SEQUENCE",
+        "scripts/ios_lane.py",
+        "0x80 < first < 0xFF",
+        "0x80 < first < 0x80",
+        "a first length octet from 0x81 to 0xFE, the long form, reads a DER sequence; without it the fixture's profile reads xml-plist (SPEC-704 R1)",
+        "test_ios_lane.LaneCredential.test_profile_shape_der_xml_plist_is_named_and_the_step_goes_on"
+      ],
+      [
+        "S70411-THE-LONG-FORM-NEEDS-ITS-LENGTH-OCTETS",
+        "scripts/ios_lane.py",
+        "len(blob) - 2 >= first - 0x80",
+        "True",
+        "the long form reads a DER sequence only with its length octets present; without the check a long form with its octet absent reads der-no-plist (SPEC-704 R1)",
+        "test_ios_lane.LaneCredential.test_profile_shape_other_is_named_and_refused"
+      ],
+      [
+        "S70412-THE-RESERVED-FIRST-OCTET-READS-NO-SEQUENCE",
+        "scripts/ios_lane.py",
+        "first < 0xFF and",
+        "first <= 0xFF and",
+        "a first length octet of 0xFF is reserved and reads no DER sequence; admitted, the reserved octet reads der-no-plist (SPEC-704 R1)",
+        "test_ios_lane.LaneCredential.test_profile_shape_other_is_named_and_refused"
+      ],
+      [
+        "S70413-THE-COUNT-SKIPS-WHITESPACE",
+        "scripts/ios_lane.py",
+        "r\"[^A-Za-z0-9+/= \\t\\n\\r\\f\\v]\"",
+        "r\"[^A-Za-z0-9+/=]\"",
+        "whitespace is not counted outside the alphabet, so a wrapped value's line breaks count 0; counted, the wrapped short form reads more than its two placed characters (SPEC-704 R1)",
+        "test_ios_lane.LaneCredential.test_profile_shape_der_no_plist_is_named_and_refused"
+      ],
+      [
+        "S70414-BASE64-TEXT-MAY-HOLD-WHITESPACE",
+        "scripts/ios_lane.py",
+        "rb\"[A-Za-z0-9+/= \\t\\n\\r\\f\\v]+\"",
+        "rb\"[A-Za-z0-9+/=]+\"",
+        "base64 text may hold whitespace; without it a profile encoded twice with a line break reads other (SPEC-704 R1)",
+        "test_ios_lane.LaneCredential.test_profile_shape_base64_text_is_named_and_refused"
+      ]
+    ]
+  }
+}
