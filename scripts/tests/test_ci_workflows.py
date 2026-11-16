@@ -59,10 +59,28 @@ SHORT_APPLE_RUNNER = (
 # The jobs admitted to that expression, by file and job, and to it alone; every other job of the
 # file stays on the file's admitted runner (SPEC-621 R3).
 SHORT_APPLE_JOBS = frozenset(
-    ("xcframework.yml", job) for job in ("xcframework", "harness-wire", "card-isolation")
+    ("xcframework.yml", job) for job in ("xcframework", "harness-wire", "card-isolation", "verdict")
 )
+# The verdict joins them, since it needs no Apple tool (SPEC-688 R1); the two long jobs take
+# LONG_APPLE_RUNNER below (SPEC-688 R2).
+# The one `runs-on` value of the two long Apple jobs (SPEC-688 R2, R3): the self-hosted labels only
+# when DS_MINI and a second repository variable, DS_MINI_LONG, both read `on`, the actor is not
+# Dependabot and the event is a pull request whose head repository is this repository; the file's
+# admitted runner in every other case. A called workflow reads its caller's event, so every push,
+# dispatch and tag run an upload lane or the tag hands the file keeps both long jobs hosted.
+LONG_APPLE_RUNNER = (
+    "${{ (vars.DS_MINI == 'on' && vars.DS_MINI_LONG == 'on' && "
+    "github.actor != 'dependabot[bot]' && github.event_name == 'pull_request' && "
+    "github.event.pull_request.head.repo.full_name == github.repository) && fromJSON("
+    '\'["self-hosted","macOS","ARM64","ds-mini","ds-mini-sim"]\') || \'xcode-27\' }}'
+)
+# The two long jobs, by file and job: the jobs admitted to the long expression and to it alone.
+LONG_APPLE_JOBS = frozenset(("xcframework.yml", job) for job in ("harness", "release-and-app"))
 # The labels a job of SHORT_APPLE_JOBS resolves to when it is routed to the self-hosted runner.
 SELF_HOSTED_LABELS = ["self-hosted", "macOS", "ARM64", "ds-mini"]
+# The labels a job of LONG_APPLE_JOBS resolves to when it is routed to the self-hosted runner: the
+# four above and the simulator label (SPEC-688 R2).
+LONG_RUNNER_LABELS = ["self-hosted", "macOS", "ARM64", "ds-mini", "ds-mini-sim"]
 # The jobs admitted to that runner by file and job (SPEC-352 R15, ADR-363): each TestFlight lane's
 # `app` job archives, signs and uploads the app, which only a macOS runner can. The lane's plan
 # job, a job of the same name in any other file, and the job on any other runner are refused.
@@ -125,6 +143,9 @@ def admitted_runner(name, job=None):
     which only the file's own admission or the Ubuntu pattern can admit."""
     if (name, job) in SHORT_APPLE_JOBS:
         return f"^{re.escape(SHORT_APPLE_RUNNER)}$"
+    # A job LONG_APPLE_JOBS names by file and job: the long expression exactly (SPEC-688 R4).
+    if (name, job) in LONG_APPLE_JOBS:
+        return f"^{re.escape(LONG_APPLE_RUNNER)}$"
     if name in ADMITTED_RUNNERS:
         return f"^{re.escape(ADMITTED_RUNNERS[name])}$"
     if (name, job) in ADMITTED_JOB_RUNNERS:
@@ -137,6 +158,9 @@ def apple_job_runner(job):
     SHORT_APPLE_JOBS names, and the file's admitted runner for every other job (SPEC-621 R3)."""
     if ("xcframework.yml", job) in SHORT_APPLE_JOBS:
         return SHORT_APPLE_RUNNER
+    # The two long jobs hold the long expression (SPEC-688 R2).
+    if ("xcframework.yml", job) in LONG_APPLE_JOBS:
+        return LONG_APPLE_RUNNER
     return ADMITTED_RUNNERS["xcframework.yml"]
 
 
@@ -1426,7 +1450,13 @@ class TheAppleBuildRunsFromOneBody(unittest.TestCase):
         # The routing expression of the three short jobs (SPEC-621) reads the pull request's head
         # repository, which is null on a push, a tag and a dispatch, so their `runs-on` lines are
         # the only reads of a pull request context the body may hold, one for each job it routes.
-        routed = [f"runs-on: {SHORT_APPLE_RUNNER}"] * len(SHORT_APPLE_JOBS)
+        # The verdict and the two long jobs read it too, each through its own route (SPEC-688 R1,
+        # R2), so the reads are every job's own `runs-on` line, in the body's order.
+        routed = [
+            f"runs-on: {apple_job_runner(job_id)}"
+            for job_id in callee["jobs"]
+            if apple_job_runner(job_id) != ADMITTED_RUNNERS["xcframework.yml"]
+        ]
         self.assertEqual(pull_request_reads(text), routed)
         plant = text.replace(
             "    steps:\n", '    steps:\n      - run: echo "${{ github.head_ref }}"\n', 1
@@ -1529,6 +1559,10 @@ class TheShortAppleJobsReachTheMiniOnlyBehindTheVariable(unittest.TestCase):
     self-hosted labels only for a push, a dispatch and this repository's own pull request with the
     variable on and an actor that is not Dependabot; the long jobs and the verdict never do."""
 
+    # SPEC-688 R1 moves the verdict onto this route, and the two long jobs take their own route
+    # behind a second variable (SPEC-688 R2, R3), held by the class after this one; these scenarios
+    # set no DS_MINI_LONG, so the long jobs stay hosted in each of them.
+
     def test_the_short_apple_jobs_reach_the_mini_only_on_this_repositorys_own_events_with_the_variable_on(
         self,
     ):
@@ -1545,17 +1579,6 @@ class TheShortAppleJobsReachTheMiniOnlyBehindTheVariable(unittest.TestCase):
                 wants = SELF_HOSTED_LABELS if routed else ADMITTED_RUNNERS["xcframework.yml"]
                 with self.subTest(job=job_id, scenario=scenario):
                     self.assertEqual(resolved_runner(jobs[job_id]["runs-on"], context), wants)
-
-    def test_the_long_apple_jobs_and_the_verdict_stay_hosted_on_every_event(self):
-        jobs = load("xcframework.yml")["jobs"]
-        others = sorted(job for job in jobs if ("xcframework.yml", job) not in SHORT_APPLE_JOBS)
-        self.assertEqual(others, ["harness", "release-and-app", "verdict"])
-        scenarios = examined("routing scenarios", short_apple_scenarios())
-        hosted = ADMITTED_RUNNERS["xcframework.yml"]
-        for job_id in examined("hosted Apple jobs", others):
-            for scenario, context, _routed in scenarios:
-                with self.subTest(job=job_id, scenario=scenario):
-                    self.assertEqual(resolved_runner(jobs[job_id]["runs-on"], context), hosted)
 
     def test_a_planted_route_is_refused_by_its_scenario(self):
         """Each planted expression, on a copy of the jobs, is refused by a scenario in which the
@@ -1632,6 +1655,229 @@ class TheShortAppleJobsReachTheMiniOnlyBehindTheVariable(unittest.TestCase):
                     AssertionError, "this reader models no such expression"
                 ):
                     evaluate(expression, {"vars.LABELS": '["self-hosted"]'})
+
+
+def apple_route_scenarios():
+    """Each (scenario, its github context, whether the short route and whether the long route reach
+    the self-hosted labels there), over every event a caller can hand xcframework.yml, a release tag
+    push among them, every value of DS_MINI and of DS_MINI_LONG and both actors (SPEC-688 R1 to R3).
+    The short route wants the labels as SPEC-621 states it, whatever DS_MINI_LONG reads; the long
+    route wants them only for this repository's own pull request with both variables on and an
+    actor that is not Dependabot. As in SPEC-621's scenarios, an unset variable is absent from the
+    context, and the pull request's head repository is in every context, null where there is none."""
+    headless = {"github.event.pull_request.head.repo.full_name": None}
+    events = (
+        ("a push to dev", {**push("refs/heads/dev"), **headless}, True, False),
+        ("a release tag push", {**push("refs/tags/v1.2.3"), **headless}, True, False),
+        (
+            "a workflow dispatch",
+            {**push("refs/heads/dev"), **headless, "github.event_name": "workflow_dispatch"},
+            True,
+            False,
+        ),
+        ("this repository's pull request into dev", pull_request("dev"), True, True),
+        (
+            "a fork's pull request into dev",
+            pull_request("dev", head_repository="someone/a-fork"),
+            False,
+            False,
+        ),
+        (
+            "a run on a schedule",
+            {**push("refs/heads/dev"), **headless, "github.event_name": "schedule"},
+            False,
+            False,
+        ),
+    )
+    settings = (("on", True), ("ON", True), (None, False), ("off", False))
+    people = (("a person", "someone", True), ("Dependabot", "dependabot[bot]", False))
+    scenarios = []
+    for event, context, short_event, long_event in events:
+        for short_value, short_on in settings:
+            for long_value, long_on in settings:
+                variables = {"vars.DS_MINI": short_value, "vars.DS_MINI_LONG": long_value}
+                present = {key: value for key, value in variables.items() if value is not None}
+                for who, actor, person in people:
+                    scenarios.append(
+                        (
+                            f"{event}, DS_MINI {short_value or 'unset'}, "
+                            f"DS_MINI_LONG {long_value or 'unset'}, {who}",
+                            {**context, **present, "github.actor": actor},
+                            short_event and short_on and person,
+                            long_event and short_on and long_on and person,
+                        )
+                    )
+    return scenarios
+
+
+def apple_route_problems(jobs):
+    """Every scenario in which a job of xcframework.yml runs elsewhere than SPEC-688 wants: a job
+    SHORT_APPLE_JOBS names on the self-hosted labels exactly when the short route sends it there, a
+    job LONG_APPLE_JOBS names exactly when the long route does, and every other job on the file's
+    admitted runner in every scenario (SPEC-688 R1 to R3)."""
+    admitted = ADMITTED_RUNNERS["xcframework.yml"]
+    scenarios = apple_route_scenarios()
+    problems = []
+    for job_id, job in jobs.items():
+        key = ("xcframework.yml", job_id)
+        for scenario, context, short_routed, long_routed in scenarios:
+            labelled = (key in SHORT_APPLE_JOBS and short_routed) or (
+                key in LONG_APPLE_JOBS and long_routed
+            )
+            labels = LONG_RUNNER_LABELS if key in LONG_APPLE_JOBS else SELF_HOSTED_LABELS
+            wanted = labels if labelled else admitted
+            got = resolved_runner(job.get("runs-on"), context)
+            if got != wanted:
+                problems.append(
+                    f"{job_id}: {scenario} resolves to {runner_words(got)}, "
+                    f"wants {runner_words(wanted)}"
+                )
+    return problems
+
+
+class EveryAppleJobReachesTheRunnerOnlyBehindItsVariables(unittest.TestCase):
+    """SPEC-688: the verdict follows the short Apple jobs' route, and the two long jobs reach the
+    self-hosted labels only for this repository's own pull request with DS_MINI and DS_MINI_LONG
+    both on and an actor that is not Dependabot, so every push, dispatch and tag run keeps them on
+    the file's admitted runner; each expression is admitted to its own jobs alone."""
+
+    def test_the_verdict_holds_the_short_expression_and_routes_with_the_short_jobs(self):
+        """SPEC-688 R1: the verdict's `runs-on` is the short jobs' expression byte for byte, and it
+        resolves as theirs in every scenario."""
+        jobs = load("xcframework.yml")["jobs"]
+        self.assertEqual(jobs["verdict"]["runs-on"], jobs["xcframework"]["runs-on"])
+        self.assertEqual(jobs["verdict"]["runs-on"], SHORT_APPLE_RUNNER)
+        admitted = ADMITTED_RUNNERS["xcframework.yml"]
+        scenarios = examined("routing scenarios", apple_route_scenarios())
+        for scenario, context, short_routed, _long_routed in scenarios:
+            wanted = SELF_HOSTED_LABELS if short_routed else admitted
+            with self.subTest(scenario=scenario):
+                verdict = resolved_runner(jobs["verdict"]["runs-on"], context)
+                self.assertEqual(verdict, wanted)
+                self.assertEqual(verdict, resolved_runner(jobs["xcframework"]["runs-on"], context))
+
+    def test_the_long_jobs_reach_the_runner_only_on_own_pull_requests_with_both_variables_on(self):
+        """SPEC-688 R2, R3: harness and release-and-app hold the long expression, the same in both,
+        and reach the self-hosted labels only for this repository's own pull request with both
+        variables on and a person as actor; in every other scenario they stay on the file's
+        admitted runner, so every push, dispatch and tag run keeps them hosted."""
+        jobs = load("xcframework.yml")["jobs"]
+        self.assertEqual(jobs["harness"]["runs-on"], LONG_APPLE_RUNNER)
+        self.assertEqual(jobs["release-and-app"]["runs-on"], jobs["harness"]["runs-on"])
+        scenarios = examined("routing scenarios", apple_route_scenarios())
+        # Six events, four values of each variable and two actors. The short route wants the labels
+        # on four events, for two values of DS_MINI and one actor, whatever DS_MINI_LONG reads; the
+        # long route on one event, for two values of each variable and one actor.
+        self.assertEqual(len(scenarios), 192)
+        self.assertEqual(sum(short for _name, _context, short, _long in scenarios), 32)
+        self.assertEqual(
+            [name for name, _context, _short, long_routed in scenarios if long_routed],
+            [
+                "this repository's pull request into dev, DS_MINI on, DS_MINI_LONG on, a person",
+                "this repository's pull request into dev, DS_MINI on, DS_MINI_LONG ON, a person",
+                "this repository's pull request into dev, DS_MINI ON, DS_MINI_LONG on, a person",
+                "this repository's pull request into dev, DS_MINI ON, DS_MINI_LONG ON, a person",
+            ],
+        )
+        admitted = ADMITTED_RUNNERS["xcframework.yml"]
+        for job_id in examined("long Apple jobs", sorted(job for _name, job in LONG_APPLE_JOBS)):
+            for scenario, context, _short, long_routed in scenarios:
+                wanted = LONG_RUNNER_LABELS if long_routed else admitted
+                with self.subTest(job=job_id, scenario=scenario):
+                    self.assertEqual(resolved_runner(jobs[job_id]["runs-on"], context), wanted)
+
+    def test_a_planted_long_route_is_refused_by_its_scenario(self):
+        """SPEC-688 R2, R3: each planted long expression, on a copy of the jobs, is refused by a
+        scenario in which the live expression routes as SPEC-688 wants."""
+        jobs = load("xcframework.yml")["jobs"]
+        # The control: the live jobs route as SPEC-688 wants in every scenario.
+        self.assertEqual(apple_route_problems(jobs), [])
+        live = jobs["harness"]["runs-on"]
+        own = "this repository's pull request into dev"
+        hosted = "resolves to the self-hosted labels, wants 'xcode-27'"
+        long_hosted = (
+            "resolves to ['self-hosted', 'macOS', 'ARM64', 'ds-mini', 'ds-mini-sim'], "
+            "wants 'xcode-27'"
+        )
+        plants = (
+            (
+                "without the DS_MINI clause",
+                ("vars.DS_MINI == 'on' && ", ""),
+                f"{own}, DS_MINI unset, DS_MINI_LONG on, a person {long_hosted}",
+            ),
+            (
+                "without the DS_MINI_LONG clause",
+                ("vars.DS_MINI_LONG == 'on' && ", ""),
+                f"{own}, DS_MINI on, DS_MINI_LONG unset, a person {long_hosted}",
+            ),
+            (
+                "without the Dependabot clause",
+                ("github.actor != 'dependabot[bot]' && ", ""),
+                f"{own}, DS_MINI on, DS_MINI_LONG on, Dependabot {long_hosted}",
+            ),
+            (
+                "without the same-repository clause",
+                (" && github.event.pull_request.head.repo.full_name == github.repository", ""),
+                f"a fork's pull request into dev, DS_MINI on, DS_MINI_LONG on, a person "
+                f"{long_hosted}",
+            ),
+            (
+                "another label list",
+                (',"ds-mini-sim"]', "]"),
+                f"{own}, DS_MINI on, DS_MINI_LONG on, a person resolves to the self-hosted labels, "
+                "wants ['self-hosted', 'macOS', 'ARM64', 'ds-mini', 'ds-mini-sim']",
+            ),
+            (
+                "the short expression in its place",
+                None,
+                f"a release tag push, DS_MINI on, DS_MINI_LONG on, a person {hosted}",
+            ),
+        )
+        long_jobs = sorted(job for _name, job in LONG_APPLE_JOBS)
+        for name, edit, refusal in examined("planted long routes", plants):
+            expression = SHORT_APPLE_RUNNER if edit is None else live.replace(*edit, 1)
+            with self.subTest(plant=name):
+                self.assertNotEqual(expression, live)
+                planted = {
+                    **jobs,
+                    **{job: {**jobs[job], "runs-on": expression} for job in long_jobs},
+                }
+                refusals = apple_route_problems(planted)
+                for job_id in long_jobs:
+                    self.assertIn(f"{job_id}: {refusal}", refusals)
+        self.assertEqual(len(plants), 6)
+
+    def test_each_apple_expression_is_admitted_to_its_own_jobs_alone(self):
+        """SPEC-688 R4: the jobs holding each expression are exactly the jobs admitted to it, and
+        admitted_runner, which the hardening test reads, admits each expression by file and job to
+        its own jobs alone and refuses it under every other Apple job, under the lanes' jobs, under
+        the same job of another file and where no job owns the value."""
+        jobs = load("xcframework.yml")["jobs"]
+        holders = {
+            runner: sorted(job_id for job_id, job in jobs.items() if job.get("runs-on") == runner)
+            for runner in (LONG_APPLE_RUNNER, SHORT_APPLE_RUNNER)
+        }
+        self.assertEqual(holders[LONG_APPLE_RUNNER], ["harness", "release-and-app"])
+        self.assertEqual(
+            holders[SHORT_APPLE_RUNNER],
+            ["card-isolation", "harness-wire", "verdict", "xcframework"],
+        )
+        routes = ((SHORT_APPLE_RUNNER, SHORT_APPLE_JOBS), (LONG_APPLE_RUNNER, LONG_APPLE_JOBS))
+        for runner, admitted_jobs in examined("Apple routes", routes):
+            self.assertEqual(sorted(job for _name, job in admitted_jobs), holders[runner])
+            for name, job in examined("admitted Apple jobs", sorted(admitted_jobs)):
+                with self.subTest(admitted=job):
+                    self.assertRegex(runner, admitted_runner(name, job))
+            refused = [
+                *sorted((SHORT_APPLE_JOBS | LONG_APPLE_JOBS) - admitted_jobs),
+                *ADMITTED_JOB_RUNNERS,
+                *(("planted.yml", job) for _name, job in sorted(admitted_jobs)),
+                ("xcframework.yml", None),
+                ("xcframework.yml", "planted"),
+            ]
+            for name, job in examined("refused places", refused):
+                with self.subTest(name=name, job=job):
+                    self.assertNotRegex(runner, admitted_runner(name, job))
 
 
 class TheAppHasOneRustStaticLibrary(unittest.TestCase):
@@ -12154,7 +12400,9 @@ def app_steps_problems(workflow, job_id="harness"):
     steps = job.get("steps") or []
     names = [step.get("name") for step in steps]
     problems = []
-    if job.get("runs-on") != ADMITTED_RUNNERS["xcframework.yml"]:
+    # The job's runner is its route (SPEC-688 R2): the long expression for harness and for
+    # release-and-app.
+    if job.get("runs-on") != apple_job_runner(job_id):
         problems.append(f"{job_id}: it runs on {job.get('runs-on')!r}, not the admitted runner")
     found = {}
     for name in (
@@ -12288,7 +12536,7 @@ class TheAppIsGeneratedTestedAndArchived(unittest.TestCase):
 
         def harness(steps=None, **keys):
             return {
-                "runs-on": ADMITTED_RUNNERS["xcframework.yml"],
+                "runs-on": apple_job_runner("harness"),
                 "env": {"REPORT": "harness-report"},
                 "steps": good_steps if steps is None else steps,
                 **keys,
@@ -13879,7 +14127,8 @@ def split_copy_problems(jobs):
         return [f"{SPLIT_JOB}: no such job"]
     harness = jobs.get("harness") or {}
     problems = []
-    if sibling.get("runs-on") != ADMITTED_RUNNERS["xcframework.yml"]:
+    # The sibling's runner is its route (SPEC-688 R2), the long expression `harness` holds too.
+    if sibling.get("runs-on") != apple_job_runner(SPLIT_JOB):
         problems.append(f"{SPLIT_JOB}: it does not run on the admitted runner")
     if sibling.get("env") != harness.get("env"):
         problems.append(f"{SPLIT_JOB}: its env is not the harness env")
@@ -13910,7 +14159,8 @@ def split_verdict_problems(jobs):
         )
     if verdict.get("if") != SPLIT_RESULT_OK:
         problems.append(f"{VERDICT_JOB}: it does not run on every outcome")
-    if verdict.get("runs-on") != ADMITTED_RUNNERS["xcframework.yml"]:
+    # The verdict's runner is its route (SPEC-688 R1): the short jobs' expression.
+    if verdict.get("runs-on") != apple_job_runner(VERDICT_JOB):
         problems.append(f"{VERDICT_JOB}: it does not run on the admitted runner")
     steps = verdict.get("steps") or []
     if any(step.get("uses") for step in steps):
@@ -14070,6 +14320,8 @@ def planted_split_jobs(harness=None, sibling=None):
         for step in steps:
             if action(step) == "actions/upload-artifact":
                 step["with"] = {**step["with"], "name": name}
+        # Each job's runner is its route (SPEC-688 R2): the long expression for both long jobs.
+        runner = apple_job_runner(name)
         return {"needs": ["xcframework"], "runs-on": runner, "env": {"REPORT": "r"}, "steps": steps}
 
     return {
@@ -14228,7 +14480,7 @@ class TheHarnessWorkRunsInTwoJobsAndAVerdict(unittest.TestCase):
             verdict = {
                 "needs": list(names),
                 "if": SPLIT_RESULT_OK,
-                "runs-on": ADMITTED_RUNNERS["xcframework.yml"],
+                "runs-on": apple_job_runner(VERDICT_JOB),
                 "steps": [step],
             }
             verdict.update(edit)
